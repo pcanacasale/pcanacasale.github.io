@@ -293,11 +293,7 @@ section { padding:5rem 2rem; }
   background-size:cover; background-position:center;
   display:flex; align-items:center; justify-content:center;
 }
-.story-photos .photo-wrap .photo-label {
-  font-size:0.65rem; font-weight:800; letter-spacing:1px;
-  color:var(--verde); text-transform:uppercase;
-  background:rgba(255,255,255,0.7); padding:4px 8px; border-radius:6px;
-}
+
 .story-body {
   padding:1.3rem 1.5rem 1.5rem; flex:1; display:flex; flex-direction:column; gap:0.7rem;
 }
@@ -508,6 +504,24 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
 .area-card:hover { background:var(--verde-pale); border-color:var(--verde-ch); }
 .area-card h4 { font-size:0.92rem; font-weight:800; color:var(--blu); margin-bottom:0.2rem; }
 .area-card p { font-size:0.78rem; color:var(--testo-ch); }
+.utente-row {
+  display:flex; justify-content:space-between; align-items:center;
+  background:var(--crema); border-radius:12px; padding:0.8rem 1rem;
+  margin-bottom:0.6rem; gap:0.5rem;
+}
+.utente-disattivo { opacity:0.5; }
+.utente-info { display:flex; flex-direction:column; gap:2px; flex:1; }
+.utente-info strong { font-size:0.9rem; color:var(--blu); }
+.utente-username { font-size:0.75rem; color:var(--testo-ch); }
+.utente-ruolo { font-size:0.72rem; font-weight:700; color:var(--verde); }
+.utente-tipo { font-size:0.68rem; font-weight:800; }
+.utente-tipo.master { color:#854d0e; }
+.utente-tipo.standard { color:var(--testo-ch); }
+.utente-actions { display:flex; gap:0.4rem; }
+.btn-sm { font-family:'Nunito',sans-serif; font-size:0.72rem; font-weight:800; border:none; border-radius:20px; padding:4px 10px; cursor:pointer; }
+.btn-warn { background:#fef3c7; color:#92400e; }
+.btn-ok { background:#d1fae5; color:#065f46; }
+.btn-danger { background:#fee2e2; color:#991b1b; }
 .btn-logout {
   width:100%; padding:0.85rem; background:var(--crema); color:var(--testo-ch);
   border:2px solid rgba(0,0,0,0.08); border-radius:50px; cursor:pointer;
@@ -633,8 +647,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Un gruppo di persone ordinarie,<br>capaci di cose straordinarie</h3>
         </div>
         <div class="story-photos">
-          <div class="photo-wrap" style="background-image:url('images/foto-A1.jpg')"><span class="photo-label">FOTO-A1</span></div>
-          <div class="photo-wrap" style="background-image:url('images/foto-A2.jpg')"><span class="photo-label">FOTO-A2</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-A1.jpg')"></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-A2.jpg')"></div>
         </div>
         <div class="story-body">
           <p>Dal 2001, anno di fondazione dell'Unità di PC della Sezione di Casale, i volontari sono di supporto alla popolazione in caso di emergenza pubblica.</p>
@@ -649,8 +663,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Ciao, lo sai cos'è la<br>Protezione Civile ANA?</h3>
         </div>
         <div class="story-photos">
-          <div class="photo-wrap" style="background-image:url('images/foto-B1.jpg')"><span class="photo-label">FOTO-B1</span></div>
-          <div class="photo-wrap" style="background-image:url('images/foto-B2.jpg')"><span class="photo-label">FOTO-B2</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-B1.jpg')"></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-B2.jpg')"></div>
         </div>
         <div class="story-body">
           <p>La Protezione Civile dell'ANA nasce in pratica all'inizio degli anni '80. Dal 2001, i volontari della Sezione di Casale sono al fianco della popolazione nelle emergenze.</p>
@@ -665,8 +679,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Pandemia di COVID-19:<br>un'emergenza fuori dal comune</h3>
         </div>
         <div class="story-photos">
-          <div class="photo-wrap" style="background-image:url('images/foto-C1.jpg')"><span class="photo-label">FOTO-C1</span></div>
-          <div class="photo-wrap" style="background-image:url('images/foto-C2.jpg')"><span class="photo-label">FOTO-C2</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-C1.jpg')"></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-C2.jpg')"></div>
         </div>
         <div class="story-body">
           <p>Il 2020 ci ha aperto gli occhi su un tipo di emergenza a noi sconosciuto. I volontari hanno dato supporto alle Amministrazioni Locali e alla cittadinanza, gestendo la consegna dei DPI presso le RSA del territorio.</p>
@@ -844,31 +858,55 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
       <div class="modal-badge" style="background:var(--verde-pale);color:var(--verde)">✅ Benvenuto/a!</div>
       <h2 style="margin-bottom:0.3rem">Area Volontari</h2>
       <p style="font-size:0.8rem;color:var(--testo-ch);margin-bottom:1.2rem" id="welcomeMsg"></p>
+
+      <!-- MASTER ONLY -->
       <div id="masterMenu" style="display:none">
-        <div class="area-card" onclick="alert('In costruzione: Gestione Utenti')">
+        <div class="area-card" onclick="openGestioneUtenti()">
           <h4>👥 Gestione utenti</h4>
-          <p>Aggiungi, modifica o rimuovi volontari</p>
+          <p>Aggiungi, modifica o rimuovi volontari dall'Unità</p>
         </div>
       </div>
-      <div class="area-card" onclick="alert('In costruzione: Calendario Turni')">
-        <h4>📅 Calendario turni & eventi</h4>
-        <p>Esercitazioni, turni di servizio, 25° anniversario</p>
+
+      <!-- TUTTI -->
+      <div class="area-card" onclick="openCalendario()">
+        <h4>📅 Calendario</h4>
+        <p>Esercitazioni, turni di servizio ed eventi</p>
       </div>
-      <div class="area-card" onclick="alert('In costruzione: Documenti')">
-        <h4>📄 Documenti & moduli</h4>
-        <p>Modulistica, circolari interne, verbali assemblee</p>
+      <div class="area-card" onclick="openTeable('interventi')">
+        <h4>📋 Inserimento interventi</h4>
+        <p>Registra un nuovo intervento o esercitazione</p>
       </div>
-      <div class="area-card" onclick="alert('In costruzione: Galleria')">
-        <h4>🖼️ Carica foto</h4>
-        <p>Aggiungi immagini di interventi ed esercitazioni</p>
+      <div class="area-card" id="cardVolontari" onclick="openTeable('volontari')">
+        <h4>👤 Elenco volontari</h4>
+        <p id="volontariDesc">Visualizza la lista dei volontari (sola lettura)</p>
       </div>
-      <div class="area-card" onclick="window.open('https://sites.google.com/pcanacasale.com/gestione-pc-ana-casale/home-page','_blank')">
-        <h4>⚙️ Gestionale interno</h4>
-        <p>Accesso al sito gestionale Google Sites</p>
-      </div>
+
       <button class="btn-logout" onclick="logout()">Esci dall'area riservata</button>
     </div>
   </div>
+
+  <!-- GESTIONE UTENTI PANEL -->
+  <div id="gestioneUtenti" class="modal-area" style="max-height:70vh;overflow-y:auto">
+    <button onclick="backToArea()" style="background:none;border:none;cursor:pointer;font-size:0.8rem;font-weight:700;color:var(--testo-ch);margin-bottom:1rem;padding:0">← Torna al menu</button>
+    <div class="modal-badge">👥 Gestione utenti</div>
+    <h2 style="margin-bottom:1.2rem">Utenti registrati</h2>
+    <div id="utentiList"></div>
+    <hr style="margin:1.5rem 0;border:none;border-top:2px solid var(--verde-pale)">
+    <h3 style="font-size:1rem;font-weight:800;color:var(--blu);margin-bottom:1rem">➕ Nuovo utente</h3>
+    <div class="login-error" id="nuovoUtenteErr" style="display:none"></div>
+    <div class="fi"><input type="text" id="nuovoNome" placeholder="Nome e Cognome *"></div>
+    <div class="fi"><input type="text" id="nuovoUsername" placeholder="Username *"></div>
+    <div class="fi"><input type="password" id="nuovaPassword" placeholder="Password *"></div>
+    <div class="fi"><input type="text" id="nuovoRuolo" placeholder="Ruolo (es. Volontario, Sanitario...) *"></div>
+    <div class="fi">
+      <select id="nuovoTipo">
+        <option value="standard">👤 Standard</option>
+        <option value="master">⭐ Master</option>
+      </select>
+    </div>
+    <button class="btn-submit" onclick="salvaUtente()">Salva utente</button>
+  </div>
+
 </div>
 
 <script>
@@ -903,7 +941,7 @@ async function doLogin(){
   document.querySelector('#loginForm .btn-submit').disabled = true;
 
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&select=id,nome,ruolo`, {
+    const res = await fetch(`${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&select=id,nome,ruolo,tipo_accesso`, {
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${SUPA_KEY}`
@@ -915,8 +953,9 @@ async function doLogin(){
       currentUser = data[0];
       document.getElementById('loginForm').classList.remove('active');
       document.getElementById('areaInterna').classList.add('active');
-      document.getElementById('welcomeMsg').textContent = `Ciao ${currentUser.nome}! Ruolo: ${currentUser.ruolo === 'master' ? '⭐ Master' : '👤 Standard'}`;
-      document.getElementById('masterMenu').style.display = currentUser.ruolo === 'master' ? 'block' : 'none';
+      document.getElementById('welcomeMsg').innerHTML = `Ciao <strong>${currentUser.nome}</strong> — ${currentUser.ruolo}`;
+      document.getElementById('masterMenu').style.display = currentUser.tipo_accesso === 'master' ? 'block' : 'none';
+
     } else {
       errorEl.style.display='block';
       errorEl.textContent='⚠️ Credenziali non corrette. Riprova.';
@@ -928,6 +967,19 @@ async function doLogin(){
 
   spinner.style.display='none';
   document.querySelector('#loginForm .btn-submit').disabled = false;
+}
+
+function openTeable(sezione){
+  // Sostituire con l'URL reale di Teable.io
+  const urls = {
+    interventi: 'https://app.teable.ai/share/shrm9NARRyXGOaT1L6c/view',
+    volontari: 'https://app.teable.ai/share/shre0oZ3AUhA6RnhPVi/view',
+  };
+  window.open(urls[sezione], '_blank');
+}
+
+function openGestioneUtenti(){
+  alert('In costruzione: Gestione Utenti');
 }
 
 function logout(){
