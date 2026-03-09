@@ -783,6 +783,57 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
   .celeb-days { grid-template-columns: 1fr; }
   .celeb-video-wrap { border-radius: 14px; }
 }
+
+/* ── LIGHTBOX ── */
+.gallery-slot { cursor: pointer; }
+.gallery-slot:hover img { transform: scale(1.04); transition: transform 0.3s; }
+
+#lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+#lightbox.open { display: flex; }
+#lightbox img {
+  max-width: 90vw;
+  max-height: 88vh;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  object-fit: contain;
+}
+.lb-close {
+  position: fixed;
+  top: 1.2rem; right: 1.5rem;
+  font-size: 2rem; color: white;
+  cursor: pointer; background: none; border: none;
+  line-height: 1; opacity: 0.8; transition: opacity 0.2s;
+  z-index: 10000;
+}
+.lb-close:hover { opacity: 1; }
+.lb-arrow {
+  position: fixed;
+  top: 50%; transform: translateY(-50%);
+  font-size: 2.5rem; color: white;
+  cursor: pointer; background: rgba(255,255,255,0.1);
+  border: none; border-radius: 50%;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s; z-index: 10000;
+}
+.lb-arrow:hover { background: rgba(255,255,255,0.25); }
+.lb-prev { left: 1rem; }
+.lb-next { right: 1rem; }
+.lb-counter {
+  position: fixed;
+  bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 1px;
+}
 </style>
 </head>
 <body>
@@ -1008,39 +1059,39 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
     <h2 class="section-h2">Galleria <span>fotografica</span></h2>
     <p class="section-lead">Dalla fondazione del 2001 ai giorni nostri: esercitazioni, interventi d'emergenza e la quotidianità dei volontari.</p>
     <div class="gallery-grid">
-      <div class="gallery-slot slot-large">
+      <div class="gallery-slot slot-large" onclick="openLightbox(1)">
         <img src="images/galleria-1.jpg" alt="Foto 1" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-1</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(2)">
         <img src="images/galleria-2.jpg" alt="Foto 2" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-2</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(3)">
         <img src="images/galleria-3.jpg" alt="Foto 3" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-3</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(4)">
         <img src="images/galleria-4.jpg" alt="Foto 4" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-4</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(5)">
         <img src="images/galleria-5.jpg" alt="Foto 5" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-5</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(6)">
         <img src="images/galleria-6.jpg" alt="Foto 6" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-6</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(7)">
         <img src="images/galleria-7.jpg" alt="Foto 7" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-7</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(8)">
         <img src="images/galleria-8.jpg" alt="Foto 8" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-8</p></div>
       </div>
-      <div class="gallery-slot">
+      <div class="gallery-slot" onclick="openLightbox(9)">
         <img src="images/galleria-9.jpg" alt="Foto 9" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="slot-empty"><span>📷</span><p>FOTO-9</p></div>
       </div>
@@ -1130,6 +1181,16 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
 <!-- MODAL -->
 
 
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">✕</button>
+  <button class="lb-arrow lb-prev" onclick="lbNav(-1)">&#8249;</button>
+  <img id="lbImg" src="" alt="">
+  <button class="lb-arrow lb-next" onclick="lbNav(1)">&#8250;</button>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
 <script>
 
 function scaricaCalendario() {
@@ -1159,6 +1220,44 @@ function scaricaCalendario() {
   a.href = url; a.download = '25anni-pcana-casale.ics';
   a.click(); URL.revokeObjectURL(url);
 }
+
+
+// ── LIGHTBOX ──
+const lbImages = Array.from({length: 9}, (_, i) => 'images/galleria-' + (i+1) + '.jpg');
+let lbCurrent = 0;
+
+function openLightbox(n) {
+  lbCurrent = n - 1;
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lbImg');
+  img.src = lbImages[lbCurrent];
+  document.getElementById('lbCounter').textContent = (lbCurrent + 1) + ' / ' + lbImages.length;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function lbNav(dir) {
+  lbCurrent = (lbCurrent + dir + lbImages.length) % lbImages.length;
+  document.getElementById('lbImg').src = lbImages[lbCurrent];
+  document.getElementById('lbCounter').textContent = (lbCurrent + 1) + ' / ' + lbImages.length;
+}
+
+document.addEventListener('keydown', function(e) {
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') lbNav(-1);
+  if (e.key === 'ArrowRight') lbNav(1);
+});
+
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
 
 function toggleMenu() {
   document.getElementById('navLinks').classList.toggle('open');
