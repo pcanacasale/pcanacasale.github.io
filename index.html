@@ -73,6 +73,7 @@ nav {
 /* ───── HERO ───── */
 #hero {
   min-height:100vh;
+  background: linear-gradient(160deg, #e8f5e9 0%, #dbeafe 50%, #fef9e7 100%);
   display:flex; align-items:center; justify-content:center;
   padding: 90px 2rem 4rem;
   position:relative; overflow:hidden;
@@ -104,15 +105,15 @@ nav {
   display:inline-flex; align-items:center; gap:8px;
   background:var(--bianco); border:2px solid var(--verde-pale);
   border-radius:30px; padding:6px 16px; margin-bottom:1.5rem;
-  font-size:0.78rem; font-weight:700; color:white;
-  box-shadow:0 2px 12px rgba(0,0,0,0.2);
+  font-size:0.78rem; font-weight:700; color:var(--verde);
+  box-shadow:0 2px 12px var(--ombra);
 }
 .hero-pill span { font-size:1rem; }
 .hero-h1 {
   font-size:clamp(2rem, 4.5vw, 3.2rem); font-weight:900; line-height:1.15;
   color:var(--blu); margin-bottom:0.8rem;
 }
-.hero-h1 em { font-style:normal; color:var(--verde-ch); }
+.hero-h1 em { font-style:normal; color:var(--verde); }
 .hero-lead {
   font-family:'Lora', serif; font-style:italic;
   font-size:1.1rem; color:var(--testo-ch); line-height:1.8; margin-bottom:2rem;
@@ -880,10 +881,9 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
 
 <!-- HERO -->
 <section id="hero">
-  <video class="hero-video-bg" autoplay muted loop playsinline>
-    <source src="images/video-hero.mp4" type="video/mp4">
-  </video>
-  <div class="hero-video-overlay"></div>
+  <div class="hero-blob1"></div>
+  <div class="hero-blob2"></div>
+  <div class="hero-blob3"></div>
   <div class="hero-inner">
     <div class="hero-text">
       <h1 class="hero-h1">Un gruppo di persone ordinarie,<br><em>capaci di cose straordinarie</em></h1>
