@@ -987,228 +987,254 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
 <script>
 const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
-
 let currentUser = null;
+const H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 
-function openModal(){
+function openModal() {
   document.getElementById('loginModal').classList.add('active');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
-function closeModal(){
+function closeModal() {
   document.getElementById('loginModal').classList.remove('active');
-  document.body.style.overflow='';
+  document.body.style.overflow = '';
 }
 
-async function doLogin(){
-  const username = document.getElementById('loginUser').value.trim();
-  const password = document.getElementById('loginPass').value.trim();
-  const errorEl = document.getElementById('loginError');
-  const spinner = document.getElementById('loginSpinner');
-
-  if(!username || !password){
-    errorEl.style.display='block';
-    errorEl.textContent='⚠️ Inserisci utente e password.';
-    return;
-  }
-
-  errorEl.style.display='none';
-  spinner.style.display='block';
-  document.querySelector('#loginForm .btn-submit').disabled = true;
-
+async function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  const err = document.getElementById('loginError');
+  const spin = document.getElementById('loginSpinner');
+  const btn = document.querySelector('#loginForm .btn-submit');
+  if (!u || !p) { err.textContent = 'Inserisci utente e password.'; err.style.display = 'block'; return; }
+  err.style.display = 'none'; spin.style.display = 'block'; btn.disabled = true;
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&select=id,nome,ruolo,tipo_accesso`, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`
-      }
-    });
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso', { headers: H });
     const data = await res.json();
-
-    if(data && data.length > 0){
+    if (data && data.length > 0) {
       currentUser = data[0];
       document.getElementById('loginForm').classList.remove('active');
       document.getElementById('areaInterna').classList.add('active');
-      document.getElementById('welcomeMsg').innerHTML = `Ciao <strong>${currentUser.nome}</strong> — ${currentUser.ruolo}`;
+      document.getElementById('welcomeMsg').innerHTML = 'Ciao <strong>' + currentUser.nome + '</strong> &mdash; ' + currentUser.ruolo;
       document.getElementById('masterMenu').style.display = currentUser.tipo_accesso === 'master' ? 'block' : 'none';
-    if(currentUser.tipo_accesso === 'master') caricaBadgeRichieste();
-
+      if (currentUser.tipo_accesso === 'master') caricaBadgeRichieste();
     } else {
-      errorEl.style.display='block';
-      errorEl.textContent='⚠️ Credenziali non corrette. Riprova.';
+      err.textContent = 'Credenziali non corrette.'; err.style.display = 'block';
     }
-  } catch(e) {
-    errorEl.style.display='block';
-    errorEl.textContent='⚠️ Errore di connessione. Riprova.';
-  }
-
-  spinner.style.display='none';
-  document.querySelector('#loginForm .btn-submit').disabled = false;
+  } catch(e) { err.textContent = 'Errore di connessione.'; err.style.display = 'block'; }
+  spin.style.display = 'none'; btn.disabled = false;
 }
 
-function openTeable(sezione){
-  // Sostituire con l'URL reale di Teable.io
+function logout() {
+  currentUser = null;
+  ['areaInterna','gestioneUtenti','richiestePanel'].forEach(function(id) {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('loginForm').classList.add('active');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  closeModal();
+}
+
+function backToArea() {
+  document.getElementById('gestioneUtenti').classList.remove('active');
+  document.getElementById('richiestePanel').classList.remove('active');
+  document.getElementById('areaInterna').classList.add('active');
+}
+
+function openGestioneUtenti() {
+  document.getElementById('areaInterna').classList.remove('active');
+  document.getElementById('gestioneUtenti').classList.add('active');
+  caricaUtenti();
+}
+
+function openRichieste() {
+  document.getElementById('areaInterna').classList.remove('active');
+  document.getElementById('richiestePanel').classList.add('active');
+  caricaRichieste();
+}
+
+function openTeable(sezione) {
   const urls = {
     interventi: 'https://app.teable.ai/share/shrm9NARRyXGOaT1L6c/view',
-    volontari: 'https://app.teable.ai/share/shre0oZ3AUhA6RnhPVi/view',
+    volontari: 'https://app.teable.ai/share/shre0oZ3AUhA6RnhPVi/view'
   };
   window.open(urls[sezione], '_blank');
 }
 
-function openGestioneUtenti(){
-  alert('In costruzione: Gestione Utenti');
+async function caricaUtenti() {
+  const list = document.getElementById('utentiList');
+  list.innerHTML = '<p>Caricamento...</p>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo&order=nome', { headers: H });
+    const utenti = await res.json();
+    list.innerHTML = '';
+    utenti.forEach(function(u) {
+      const div = document.createElement('div');
+      div.className = 'utente-row' + (u.attivo ? '' : ' utente-disattivo');
+      const tipoLabel = u.tipo_accesso === 'master' ? 'Master' : 'Standard';
+      div.innerHTML = '<div class="utente-info"><strong>' + u.nome + '</strong>'
+        + '<span class="utente-username">@' + u.username + '</span>'
+        + '<span class="utente-ruolo">' + u.ruolo + '</span>'
+        + '<span class="utente-tipo ' + u.tipo_accesso + '">' + tipoLabel + '</span></div>'
+        + '<div class="utente-actions">'
+        + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" '
+        + 'onclick="toggleAttivo(this,' + JSON.stringify(u.id) + ',' + JSON.stringify(u.attivo) + ')">'
+        + (u.attivo ? 'Disattiva' : 'Attiva') + '</button>'
+        + '<button class="btn-sm btn-danger" '
+        + 'onclick="eliminaUtente(' + JSON.stringify(u.id) + ',' + JSON.stringify(u.nome) + ')">Elimina</button>'
+        + '</div>';
+      list.appendChild(div);
+    });
+  } catch(e) { list.innerHTML = '<p style="color:red">Errore caricamento utenti.</p>'; }
 }
 
-async function caricaBadgeRichieste(){
+async function salvaUtente() {
+  const nome = document.getElementById('nuovoNome').value.trim();
+  const username = document.getElementById('nuovoUsername').value.trim();
+  const password = document.getElementById('nuovaPassword').value.trim();
+  const ruolo = document.getElementById('nuovoRuolo').value.trim();
+  const tipo_accesso = document.getElementById('nuovoTipo').value;
+  const errEl = document.getElementById('nuovoUtenteErr');
+  if (!nome || !username || !password || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
+    method: 'POST',
+    headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+    body: JSON.stringify({ nome, username, password, ruolo, tipo_accesso })
+  });
+  if (res.ok) {
+    document.getElementById('nuovoNome').value = '';
+    document.getElementById('nuovoUsername').value = '';
+    document.getElementById('nuovaPassword').value = '';
+    document.getElementById('nuovoRuolo').value = '';
+    caricaUtenti();
+  } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
+}
+
+async function toggleAttivo(btn, id, attivo) {
+  await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, { method: 'PATCH', headers: HJ, body: JSON.stringify({ attivo: !attivo }) });
+  caricaUtenti();
+}
+
+async function eliminaUtente(id, nome) {
+  if (!confirm('Eliminare ' + nome + '?')) return;
+  await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, { method: 'DELETE', headers: H });
+  caricaUtenti();
+}
+
+async function caricaBadgeRichieste() {
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/richieste_adesione?letta=eq.false&select=id`, {
-      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
-    });
+    const res = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?letta=eq.false&select=id', { headers: H });
     const data = await res.json();
     const badge = document.getElementById('badgeRichieste');
-    if(data.length > 0){ badge.textContent=data.length; badge.style.display='inline'; }
-  } catch(e){}
+    if (data.length > 0) { badge.textContent = data.length; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+  } catch(e) {}
 }
 
-function logout(){
-  currentUser = null;
-  document.getElementById('areaInterna').classList.remove('active');
-  document.getElementById('loginForm').classList.add('active');
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
-  closeModal();
+async function caricaRichieste() {
+  const list = document.getElementById('richiesteList');
+  list.innerHTML = '<p>Caricamento...</p>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
+    const richieste = await res.json();
+    const nonLette = richieste.filter(function(r) { return !r.letta; }).length;
+    const badge = document.getElementById('badgeRichieste');
+    if (nonLette > 0) { badge.textContent = nonLette; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+    if (!richieste.length) { list.innerHTML = '<p>Nessuna richiesta ricevuta.</p>'; return; }
+    list.innerHTML = '';
+    richieste.forEach(function(r) {
+      const data = new Date(r.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const div = document.createElement('div');
+      div.style.cssText = 'background:' + (r.letta ? 'var(--crema)' : '#e8f0fe') + ';border-radius:14px;padding:1rem 1.2rem;margin-bottom:0.8rem;border-left:3px solid ' + (r.letta ? '#aaa' : 'var(--blu)');
+      const tag = r.letta ? '' : '<span style="font-size:0.65rem;font-weight:800;background:var(--blu);color:white;border-radius:10px;padding:1px 7px;margin-left:6px">NUOVA</span>';
+      const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
+      const msg = r.messaggio ? '<div style="font-style:italic;margin-top:0.3rem">"' + r.messaggio + '"</div>' : '';
+      const tel = r.telefono ? ' · ' + r.telefono : '';
+      const btnL = r.letta
+        ? '<span style="font-size:0.72rem;color:#aaa">&#10003; Letta</span>'
+        : '<button class="btn-sm btn-ok" onclick="segnaLetta(' + JSON.stringify(r.id) + ')">Segna come letta</button>';
+      const btnE = '<button class="btn-sm btn-danger" onclick="eliminaRichiesta(' + JSON.stringify(r.id) + ')">Elimina</button>';
+      div.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:0.4rem">'
+        + '<div><strong style="color:var(--blu)">' + r.nome + '</strong>' + tag + '</div>'
+        + '<span style="font-size:0.72rem;color:#888">' + data + '</span></div>'
+        + '<div style="font-size:0.82rem;color:#555;line-height:1.6">'
+        + '<div>' + r.email + tel + '</div>' + socio + msg + '</div>'
+        + '<div style="margin-top:0.6rem;display:flex;gap:0.5rem">' + btnL + btnE + '</div>';
+      list.appendChild(div);
+    });
+  } catch(e) { list.innerHTML = '<p style="color:red">Errore caricamento.</p>'; }
 }
 
-async function inviaRichiesta(){
-  const nome = document.getElementById('formNome')?.value.trim() || document.querySelector('#aderire input[placeholder="Nome e Cognome *"]').value.trim();
+async function segnaLetta(id) {
+  await fetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method: 'PATCH', headers: HJ, body: JSON.stringify({ letta: true }) });
+  caricaRichieste();
+}
+
+async function eliminaRichiesta(id) {
+  if (!confirm('Eliminare questa richiesta?')) return;
+  await fetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method: 'DELETE', headers: H });
+  caricaRichieste();
+}
+
+async function inviaRichiesta() {
+  const nome = document.querySelector('#aderire input[placeholder="Nome e Cognome *"]').value.trim();
   const email = document.querySelector('#aderire input[type="email"]').value.trim();
   const telefono = document.querySelector('#aderire input[type="tel"]').value.trim();
   const socio = document.getElementById('socioAna').value;
-  const gruppo = document.getElementById('gruppoAna')?.value.trim() || '';
+  const gruppoEl = document.getElementById('gruppoAna');
+  const gruppo = gruppoEl ? gruppoEl.value.trim() : '';
   const messaggio = document.querySelector('#aderire textarea').value.trim();
   const btnEl = document.getElementById('btnInvia');
   const successEl = document.getElementById('formSuccess');
   const errorEl = document.getElementById('formError');
-
-  if(!nome || !email){ errorEl.textContent='⚠️ Inserisci almeno nome e email.'; errorEl.style.display='block'; return; }
-  
-  successEl.style.display='none';
-  errorEl.style.display='none';
-  btnEl.disabled=true; btnEl.textContent='Invio in corso...';
-
+  if (!nome || !email) { errorEl.textContent = 'Inserisci almeno nome e email.'; errorEl.style.display = 'block'; return; }
+  successEl.style.display = 'none'; errorEl.style.display = 'none';
+  btnEl.disabled = true; btnEl.textContent = 'Invio in corso...';
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/richieste_adesione`, {
+    const res = await fetch(SUPA_URL + '/rest/v1/richieste_adesione', {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ nome, email, telefono, socio_ana: socio, gruppo_ana: gruppo, messaggio })
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ nome: nome, email: email, telefono: telefono, socio_ana: socio, gruppo_ana: gruppo, messaggio: messaggio })
     });
-    if(res.ok){
-      successEl.style.display='block';
-      // Reset form
-      document.querySelector('#aderire input[placeholder="Nome e Cognome *"]').value='';
-      document.querySelector('#aderire input[type="email"]').value='';
-      document.querySelector('#aderire input[type="tel"]').value='';
-      document.getElementById('socioAna').value='';
-      document.getElementById('gruppoField').style.display='none';
-      document.querySelector('#aderire textarea').value='';
-    } else { errorEl.style.display='block'; }
-  } catch(e){ errorEl.style.display='block'; }
-  
-  btnEl.disabled=false; btnEl.textContent='Invia richiesta';
+    if (res.ok) {
+      successEl.style.display = 'block';
+      document.querySelector('#aderire input[placeholder="Nome e Cognome *"]').value = '';
+      document.querySelector('#aderire input[type="email"]').value = '';
+      document.querySelector('#aderire input[type="tel"]').value = '';
+      document.getElementById('socioAna').value = '';
+      document.getElementById('gruppoField').style.display = 'none';
+      document.querySelector('#aderire textarea').value = '';
+    } else { errorEl.style.display = 'block'; }
+  } catch(e) { errorEl.style.display = 'block'; }
+  btnEl.disabled = false; btnEl.textContent = 'Invia richiesta';
 }
 
-async function openRichieste(){
-  document.getElementById('areaInterna').classList.remove('active');
-  document.getElementById('richiestePanel').classList.add('active');
-  await caricaRichieste();
-}
-
-async function caricaRichieste(){
-  const list = document.getElementById('richiesteList');
-  list.innerHTML = '<p style="color:var(--testo-ch);font-size:0.85rem">⏳ Caricamento...</p>';
-  try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/richieste_adesione?select=*&order=created_at.desc`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-    });
-    const richieste = await res.json();
-    
-    // Update badge
-    const nonLette = richieste.filter(r => !r.letta).length;
-    const badge = document.getElementById('badgeRichieste');
-    if(nonLette > 0){ badge.textContent = nonLette; badge.style.display='inline'; }
-    else { badge.style.display='none'; }
-
-    if(!richieste.length){ list.innerHTML='<p style="color:var(--testo-ch);font-size:0.85rem">Nessuna richiesta ricevuta.</p>'; return; }
-    
-    list.innerHTML='';
-    richieste.forEach(r => {
-      const data = new Date(r.created_at).toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric'});
-      const div = document.createElement('div');
-      div.style.cssText = `background:${r.letta ? 'var(--crema)' : 'var(--blu-pale)'}; border-radius:14px; padding:1rem 1.2rem; margin-bottom:0.8rem; border-left:3px solid ${r.letta ? 'var(--verde-pale)' : 'var(--blu)'}`;
-      div.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem">
-          <div>
-            <strong style="font-size:0.95rem;color:var(--blu)">${r.nome}</strong>
-            ${!r.letta ? '<span style="font-size:0.65rem;font-weight:800;background:var(--blu);color:white;border-radius:10px;padding:1px 7px;margin-left:6px">NUOVA</span>' : ''}
-          </div>
-          <span style="font-size:0.72rem;color:var(--testo-ch)">${data}</span>
-        </div>
-        <div style="font-size:0.82rem;color:var(--testo-ch);line-height:1.6">
-          <div>📧 ${r.email}${r.telefono ? ' · 📞 '+r.telefono : ''}</div>
-          ${r.socio_ana ? '<div>👤 Socio ANA: '+r.socio_ana+(r.gruppo_ana ? ' — '+r.gruppo_ana : '')+'</div>' : ''}
-          ${r.messaggio ? '<div style="margin-top:0.4rem;font-style:italic">"'+r.messaggio+'"</div>' : ''}
-        </div>
-        <div style="margin-top:0.7rem;display:flex;gap:0.5rem">
-          ${!r.letta ? '<button class="btn-sm btn-ok" onclick="segnaLetta(''+r.id+'')">Segna come letta</button>' : '<span style="font-size:0.72rem;color:var(--testo-ch)">✓ Letta</span>'}
-          <button class="btn-sm btn-danger" onclick="eliminaRichiesta(''+r.id+'')">Elimina</button>
-        </div>`;
-      list.appendChild(div);
-    });
-  } catch(e){ list.innerHTML='<p style="color:red;font-size:0.85rem">⚠️ Errore nel caricamento.</p>'; }
-}
-
-async function segnaLetta(id){
-  await fetch(`${SUPA_URL}/rest/v1/richieste_adesione?id=eq.${id}`, {
-    method:'PATCH',
-    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
-    body: JSON.stringify({letta:true})
-  });
-  await caricaRichieste();
-}
-
-async function eliminaRichiesta(id){
-  if(!confirm('Eliminare questa richiesta?')) return;
-  await fetch(`${SUPA_URL}/rest/v1/richieste_adesione?id=eq.${id}`, {
-    method:'DELETE',
-    headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`}
-  });
-  await caricaRichieste();
-}
-
-function toggleGruppo(){
+function toggleGruppo() {
   const val = document.getElementById('socioAna').value;
   document.getElementById('gruppoField').style.display = val === 'si' ? 'block' : 'none';
 }
 
-function toggleMenu(){
-  const nav = document.getElementById('navLinks');
-  const btn = document.getElementById('hamburger');
-  nav.classList.toggle('open');
-  btn.classList.toggle('open');
+function toggleMenu() {
+  document.getElementById('navLinks').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open');
 }
-// Close menu on link click
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('.nav-links a').forEach(a => {
-    a.addEventListener('click', () => {
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    a.addEventListener('click', function() {
       document.getElementById('navLinks').classList.remove('open');
       document.getElementById('hamburger').classList.remove('open');
     });
   });
 });
 
-document.addEventListener('keydown', function(e){
-  if(e.key==='Escape') closeModal();
-  if(e.key==='Enter' && document.getElementById('loginModal').classList.contains('active')){
-    if(document.getElementById('loginForm').classList.contains('active')) doLogin();
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('loginModal').classList.contains('active')) {
+    if (document.getElementById('loginForm').classList.contains('active')) doLogin();
   }
 });
 </script>
