@@ -286,9 +286,17 @@ section { padding:5rem 2rem; }
 }
 .story-photos {
   display:grid; grid-template-columns:1fr 1fr; gap:3px;
+  height:150px;
 }
-.story-photos img {
-  width:100%; height:130px; object-fit:cover;
+.story-photos .photo-wrap {
+  overflow:hidden; position:relative; background:#d8f3dc;
+  background-size:cover; background-position:center;
+  display:flex; align-items:center; justify-content:center;
+}
+.story-photos .photo-wrap .photo-label {
+  font-size:0.65rem; font-weight:800; letter-spacing:1px;
+  color:var(--verde); text-transform:uppercase;
+  background:rgba(255,255,255,0.7); padding:4px 8px; border-radius:6px;
 }
 .story-body {
   padding:1.3rem 1.5rem 1.5rem; flex:1; display:flex; flex-direction:column; gap:0.7rem;
@@ -300,14 +308,7 @@ section { padding:5rem 2rem; }
   font-size:0.82rem; color:var(--blu); line-height:1.6;
   border-left:3px solid var(--blu-ch); padding-left:0.9rem; margin:0;
 }
-.photo-placeholder {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  width:100%; height:130px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:0.8rem; font-weight:800; letter-spacing:1px;
-  color:white; background:rgba(0,0,0,0.15);
-  border:2px dashed rgba(255,255,255,0.4);
-}
+.photo-placeholder { }
 .story-tag {
   margin-top:auto; padding-top:0.8rem;
   font-size:0.75rem; font-weight:800; color:var(--verde);
@@ -632,8 +633,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Un gruppo di persone ordinarie,<br>capaci di cose straordinarie</h3>
         </div>
         <div class="story-photos">
-          <img src="images/foto-A1.jpg" alt="Volontari in campo" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-A1</div>'">
-          <img src="images/foto-A2.jpg" alt="Mezzi e attrezzature" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-A2</div>'">
+          <div class="photo-wrap" style="background-image:url('images/foto-A1.jpg')"><span class="photo-label">FOTO-A1</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-A2.jpg')"><span class="photo-label">FOTO-A2</span></div>
         </div>
         <div class="story-body">
           <p>Dal 2001, anno di fondazione dell'Unità di PC della Sezione di Casale, i volontari sono di supporto alla popolazione in caso di emergenza pubblica.</p>
@@ -648,8 +649,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Ciao, lo sai cos'è la<br>Protezione Civile ANA?</h3>
         </div>
         <div class="story-photos">
-          <img src="images/foto-B1.jpg" alt="Volontari in esercitazione" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-B1</div>'">
-          <img src="images/foto-B2.jpg" alt="Squadra operativa" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-B2</div>'">
+          <div class="photo-wrap" style="background-image:url('images/foto-B1.jpg')"><span class="photo-label">FOTO-B1</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-B2.jpg')"><span class="photo-label">FOTO-B2</span></div>
         </div>
         <div class="story-body">
           <p>La Protezione Civile dell'ANA nasce in pratica all'inizio degli anni '80. Dal 2001, i volontari della Sezione di Casale sono al fianco della popolazione nelle emergenze.</p>
@@ -664,8 +665,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
           <h3>Pandemia di COVID-19:<br>un'emergenza fuori dal comune</h3>
         </div>
         <div class="story-photos">
-          <img src="images/foto-C1.jpg" alt="Operatori con DPI" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-C1</div>'">
-          <img src="images/foto-C2.jpg" alt="Distribuzione mascherine" onerror="this.parentElement.innerHTML='<div class=\"photo-placeholder\">📷 FOTO-C2</div>'">
+          <div class="photo-wrap" style="background-image:url('images/foto-C1.jpg')"><span class="photo-label">FOTO-C1</span></div>
+          <div class="photo-wrap" style="background-image:url('images/foto-C2.jpg')"><span class="photo-label">FOTO-C2</span></div>
         </div>
         <div class="story-body">
           <p>Il 2020 ci ha aperto gli occhi su un tipo di emergenza a noi sconosciuto. I volontari hanno dato supporto alle Amministrazioni Locali e alla cittadinanza, gestendo la consegna dei DPI presso le RSA del territorio.</p>
