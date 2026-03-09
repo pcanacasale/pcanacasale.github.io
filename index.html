@@ -739,6 +739,8 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  text-align: center;
   gap: 0.5rem;
   font-size: 0.85rem;
   color: rgba(255,255,255,0.6);
@@ -893,7 +895,7 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
     </div>
 
 <div class="celeb-place">
-      <a href="https://maps.google.com/?q=Piazza+Libertà,+Mirabello+Monferrato+AL" target="_blank" style="display:flex;align-items:center;gap:0.5rem;color:inherit;text-decoration:none;opacity:0.85;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85"><span>📍</span><span><strong>Piazza Libertà, Mirabello Monferrato (AL)</strong> — Campo Soccorritori <span style="font-size:0.72rem;margin-left:4px">↗</span></span></a>
+      <a href="https://maps.google.com/?q=Piazza+Libertà,+Mirabello+Monferrato+AL" target="_blank" style="display:flex;align-items:center;gap:0.5rem;color:inherit;text-decoration:none;opacity:0.85;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85"><span>📍</span><span><strong>Piazza Libertà, Mirabello Monferrato (AL)</strong> — Campo Soccorritori</span></a>
     </div>
 
     <div class="celeb-days">
@@ -1194,31 +1196,15 @@ footer p.f-info { font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1
 <script>
 
 function scaricaCalendario() {
-  const ics = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//PC ANA Casale//25 Anniversario//IT',
-    'BEGIN:VEVENT',
-    'DTSTART:20260606T080000Z',
-    'DTEND:20260606T200000Z',
-    'SUMMARY:25° Anniversario PC ANA Casale – Giorno 1',
-    'DESCRIPTION:Esercitazione Sezionale con Campo Soccorritori aperto al pubblico. Piazza Libertà\, Mirabello (AL)',
-    'LOCATION:Piazza Libertà\, Mirabello (AL)',
-    'END:VEVENT',
-    'BEGIN:VEVENT',
-    'DTSTART:20260607T070000Z',
-    'DTEND:20260607T160000Z',
-    'SUMMARY:25° Anniversario PC ANA Casale – Giorno 2',
-    'DESCRIPTION:Allocuzioni\, Santa Messa e pranzo ufficiale. Piazza Libertà\, Mirabello (AL)',
-    'LOCATION:Piazza Libertà\, Mirabello (AL)',
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ].join('\r\n');
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = '25anni-pcana-casale.ics';
-  a.click(); URL.revokeObjectURL(url);
+  const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const loc = encodeURIComponent('Piazza Libertà, Mirabello Monferrato (AL)');
+  const desc = encodeURIComponent('Esercitazione Sezionale con Campo Soccorritori. Attività per grandi e piccini. 25° Anniversario PC ANA Casale Monferrato.');
+  const url = base
+    + '&text=' + encodeURIComponent('25° PC ANA Casale – Sabato 6 e Domenica 7 Giugno')
+    + '&dates=20260606%2F20260608'
+    + '&details=' + desc
+    + '&location=' + loc;
+  window.open(url, '_blank');
 }
 
 
