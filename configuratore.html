@@ -602,20 +602,21 @@ function renderEnvironments(){
       <table class="items-table">
         <thead><tr>
           <th style="width:32%">Descrizione</th>
-          <th style="width:22%">Link</th>
+          <th style="width:22%">Note / Specifiche</th>
           <th style="width:7%;text-align:center">Qt.</th>
           <th style="width:9%;text-align:right">Prezzo €</th>
           <th style="width:9%;text-align:right">Totale</th>
-          <th style="width:9%;text-align:center">Scelto</th>
+          <th style="width:9%;text-align:center">Link</th>
           <th style="width:4%"></th>
         </tr></thead>
         <tbody id="tbody-${ei}"></tbody>
       </table>
       <div class="add-row-wrap">
-        <input class="new-desc" id="ndesc-${ei}" placeholder="Descrizione nuovo articolo..." />
+        <input class="new-desc" id="ndesc-${ei}" placeholder="Descrizione articolo *" />
+        <input id="nnote-${ei}" placeholder="Note/specifiche (opz.)" style="flex:1;min-width:120px;" />
+        <input id="nlink-${ei}" placeholder="Link (opz.)" style="flex:1;min-width:120px;" />
         <input type="number" id="nqty-${ei}" value="1" min="1" style="width:58px;" />
         <input type="number" id="nprice-${ei}" value="0" min="0" step="0.01" style="width:88px;" placeholder="€" />
-        <input id="nlink-${ei}" placeholder="Link (Amazon, ecc.)" style="flex:1;min-width:160px;" />
         <button class="btn btn-primary" onclick="addItem(${ei})">+ Aggiungi manuale</button>
         <button class="btn btn-blu" onclick="openListinoModal(${ei})">📦 Dal listino</button>
       </div>
@@ -628,7 +629,7 @@ function resolveItem(item){
   // if linked to catalog, pull desc/price/link from catalog entry
   if(item.catalogId){
     const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
-    if(cat) return {...item, desc:cat.desc, price:cat.price, link:cat.link||item.link};
+    if(cat) return {...item, desc:cat.desc, price:cat.price, link:cat.link||item.link, note:item.note||cat.note||''};
   }
   return item;
 }
@@ -655,12 +656,10 @@ function renderItems(ei){
         </div>
       </td>
       <td>
-        <div style="display:flex;align-items:center;gap:6px;">
-          ${fromCatalog
-            ? (r.link ? `<a href="${r.link}" target="_blank" style="font-size:0.72rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 8px;border-radius:20px;border:1px solid #bfdbfe;">↗ Apri</a>` : '<span style="font-size:0.72rem;color:var(--testo-ch);">—</span>')
-            : `<input class="inline-edit" style="flex:1;font-size:0.75rem;" placeholder="Incolla link..." value="${linkVal}" onchange="updateItem(${ei},${ii},'link',this.value)" />${r.link?'<a href="'+r.link+'" target="_blank" style="flex-shrink:0;font-size:0.68rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 8px;border-radius:20px;border:1px solid #bfdbfe;white-space:nowrap;">↗ Apri</a>':''}`
-          }
-        </div>
+        ${fromCatalog
+          ? `<span style="font-size:0.78rem;color:var(--testo-ch);font-style:italic;">${r.note||'—'}</span>`
+          : `<input class="inline-edit" style="font-size:0.75rem;width:100%;" placeholder="Note/specifiche..." value="${(item.note||'').replace(/"/g,'&quot;')}" onchange="updateItem(${ei},${ii},'note',this.value)" />`
+        }
       </td>
       <td style="text-align:center"><input class="inline-edit qty" type="number" min="1" value="${item.qty}" onchange="updateItem(${ei},${ii},'qty',+this.value)" /></td>
       <td style="text-align:right">
@@ -671,10 +670,11 @@ function renderItems(ei){
       </td>
       <td class="row-total">€ ${fmt(item.qty*r.price)}</td>
       <td style="text-align:center">
-        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:0.72rem;font-weight:700;color:${item.chosen?'var(--verde)':' var(--testo-ch)'   };">
-          <input type="checkbox" ${item.chosen?'checked':''} onchange="updateItem(${ei},${ii},'chosen',this.checked)" style="width:15px;height:15px;accent-color:var(--verde);cursor:pointer;" />
-          Scelto
-        </label>
+        ${r.link
+          ? `<a href="${r.link}" target="_blank" class="link-btn has-link">↗ Apri</a>`
+          : (fromCatalog ? '<span style="font-size:0.72rem;color:var(--testo-ch);">—</span>'
+            : `<input class="inline-edit" style="font-size:0.72rem;width:100%;" placeholder="Link..." value="${linkVal}" onchange="updateItem(${ei},${ii},'link',this.value)" />`)
+        }
       </td>
       <td><button class="btn btn-danger" onclick="removeItem(${ei},${ii})">✕</button></td>
     `;
@@ -689,8 +689,13 @@ async function removeItem(ei,ii){data.environments[ei].items.splice(ii,1);await 
 async function addItem(ei){
   const desc=document.getElementById('ndesc-'+ei).value.trim();if(!desc)return;
   const link=(document.getElementById('nlink-'+ei).value||'').trim();
-  data.environments[ei].items.push({id:data.nextId++,desc,qty:+document.getElementById('nqty-'+ei).value||1,price:+document.getElementById('nprice-'+ei).value||0,link,chosen:false});
-  await saveData();document.getElementById('ndesc-'+ei).value='';document.getElementById('nlink-'+ei).value='';renderItems(ei);
+  const note=(document.getElementById('nnote-'+ei)||{value:''}).value.trim();
+  data.environments[ei].items.push({id:data.nextId++,desc,qty:+document.getElementById('nqty-'+ei).value||1,price:+document.getElementById('nprice-'+ei).value||0,link,note,chosen:false});
+  await saveData();
+  document.getElementById('ndesc-'+ei).value='';
+  if(document.getElementById('nnote-'+ei)) document.getElementById('nnote-'+ei).value='';
+  document.getElementById('nlink-'+ei).value='';
+  renderItems(ei);
 }
 async function removeEnv(ei){if(!confirm('Rimuovere "'+data.environments[ei].name+'"?'))return;data.environments.splice(ei,1);await saveData();renderEnvironments();}
 async function addEnv(){
