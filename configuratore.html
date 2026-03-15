@@ -631,7 +631,10 @@ function resolveItem(item){
     const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
     if(cat){
       const link=(cat.link||'').trim()||(item.link||'').trim();
+      console.log('[resolveItem]', item.catalogId, '| cat.link='+JSON.stringify(cat.link), '| item.link='+JSON.stringify(item.link), '| resolved='+JSON.stringify(link));
       return {...item, desc:cat.desc, price:cat.price, link, note:item.note||cat.note||''};
+    } else {
+      console.warn('[resolveItem] catalogId non trovato:', item.catalogId, '| catalog ids:', (data.catalog||[]).map(c=>c.id));
     }
   }
   return item;
