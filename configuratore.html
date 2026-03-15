@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Piano Acquisti Informatica · ANA Casale Monferrato</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --verde:      #2d6a4f;
+  --verde-ch:   #52b788;
+  --verde-pale: #d8f3dc;
+  --blu:        #1a3a5c;
+  --blu-ch:     #2e6da4;
+  --blu-pale:   #dbeafe;
+  --oro:        #c8961e;
+  --oro-pale:   #fef3cd;
+  --crema:      #faf8f4;
+  --bianco:     #ffffff;
+  --testo:      #2d3748;
+  --testo-ch:   #718096;
+  --ombra:      rgba(26,58,92,0.1);
+  --ombra-md:   rgba(26,58,92,0.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Nunito',sans-serif;background:var(--crema);color:var(--testo);min-height:100vh;}
+
+nav{
+  position:fixed;top:0;width:100%;z-index:1000;
+  background:var(--blu);
+  box-shadow:0 2px 24px rgba(0,0,0,0.28);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;height:66px;
+}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.nav-logo-badge{width:42px;height:42px;border-radius:50%;background:var(--bianco);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(0,0,0,0.2);font-size:1.3rem;}
+.nav-logo-text .t1{font-size:1rem;font-weight:900;color:var(--bianco);letter-spacing:0.3px;}
+.nav-logo-text .t2{font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:1.5px;text-transform:uppercase;}
+.nav-right{display:flex;align-items:center;gap:0.5rem;}
+.nav-tag{font-size:0.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:20px;padding:4px 14px;}
+.nav-anno{font-size:0.72rem;font-weight:800;color:#fde68a;background:rgba(200,150,30,0.2);border:1px solid rgba(200,150,30,0.4);border-radius:20px;padding:4px 12px;}
+
+.page-wrap{padding-top:66px;min-height:100vh;}
+
+.hero-strip{background:linear-gradient(135deg,#1a3a5c 0%,#2d6a4f 100%);padding:2.5rem 2rem 2rem;position:relative;overflow:hidden;}
+.hero-strip::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none;}
+.hero-inner{max-width:1080px;margin:0 auto;position:relative;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap;}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#fde68a;background:rgba(200,150,30,0.2);border:1px solid rgba(200,150,30,0.4);border-radius:20px;padding:4px 14px;margin-bottom:0.9rem;}
+.hero-h1{font-size:clamp(1.4rem,3vw,2rem);font-weight:900;color:var(--bianco);line-height:1.2;margin-bottom:0.4rem;}
+.hero-h1 em{font-style:normal;color:#fde68a;}
+.hero-sub{font-size:0.82rem;color:rgba(255,255,255,0.6);font-weight:600;}
+.hero-stats{display:flex;gap:1rem;flex-wrap:wrap;}
+.hstat{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:1rem 1.3rem;text-align:center;min-width:100px;}
+.hstat .num{font-size:1.8rem;font-weight:900;color:#fde68a;line-height:1;}
+.hstat .lbl{font-size:0.65rem;font-weight:800;color:rgba(255,255,255,0.55);letter-spacing:0.8px;text-transform:uppercase;margin-top:4px;}
+
+.tabs-wrap{background:var(--blu);border-bottom:1px solid rgba(255,255,255,0.08);}
+.tabs{max-width:1080px;margin:0 auto;display:flex;padding:0 2rem;overflow-x:auto;}
+.tab{padding:0.9rem 1.4rem;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;border:none;background:none;cursor:pointer;color:rgba(255,255,255,0.5);border-bottom:3px solid transparent;font-family:'Nunito',sans-serif;white-space:nowrap;transition:all 0.2s;}
+.tab:hover:not(.active){color:rgba(255,255,255,0.8);}
+.tab.active{color:var(--bianco);border-bottom-color:var(--oro);}
+
+.content{max-width:1080px;margin:0 auto;padding:2rem;}
+.section{display:none;}
+.section.active{display:block;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
+.kpi-card{background:var(--bianco);border-radius:16px;box-shadow:0 4px 20px var(--ombra);padding:1.3rem 1.5rem;border-top:4px solid var(--verde);transition:transform 0.2s,box-shadow 0.2s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--ombra-md);}
+.kpi-card:nth-child(2){border-top-color:var(--blu-ch);}
+.kpi-card:nth-child(3){border-top-color:var(--oro);}
+.kpi-card:nth-child(4){border-top-color:var(--verde-ch);}
+.kpi-label{font-size:0.65rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--testo-ch);margin-bottom:6px;}
+.kpi-value{font-size:1.9rem;font-weight:900;color:var(--blu);line-height:1;}
+.kpi-sub{font-size:0.72rem;color:var(--testo-ch);margin-top:4px;}
+
+.section-tag{display:inline-flex;align-items:center;gap:6px;font-size:0.68rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--verde);background:var(--verde-pale);border-radius:20px;padding:4px 14px;margin-bottom:1rem;}
+
+.table-wrap{background:var(--bianco);border-radius:20px;box-shadow:0 4px 24px var(--ombra);overflow:hidden;}
+.summary-table{width:100%;border-collapse:collapse;font-size:0.83rem;}
+.summary-table th{text-align:left;padding:10px 14px;font-size:0.65rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--testo-ch);background:#f7f9fc;border-bottom:1px solid #e8edf3;}
+.summary-table td{padding:9px 14px;border-bottom:1px solid #f0f4f8;}
+.summary-table tr:last-child td{border-bottom:none;}
+.summary-table tr.env-row td{font-weight:800;background:var(--verde-pale);color:var(--verde);}
+.summary-table tr.item-row:hover td{background:#f7f9fc;}
+.summary-table tr.grand-total td{font-weight:900;background:var(--blu);color:#fff;font-size:0.9rem;}
+
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:800;}
+.badge-ok{background:var(--verde-pale);color:var(--verde);}
+.badge-warn{background:var(--oro-pale);color:var(--oro);}
+.badge-alt{background:var(--blu-pale);color:var(--blu-ch);}
+
+.env-block{background:var(--bianco);border-radius:20px;box-shadow:0 4px 20px var(--ombra);margin-bottom:1.5rem;overflow:hidden;}
+.env-block-header{background:linear-gradient(90deg,var(--blu) 0%,#2e5c8a 100%);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.env-block-header-left{display:flex;flex-direction:column;gap:4px;}
+.env-name-inp{font-family:'Nunito',sans-serif;font-size:1rem;font-weight:900;color:var(--bianco);background:none;border:1px solid transparent;border-radius:6px;padding:3px 8px;width:280px;}
+.env-name-inp:focus{outline:none;border-color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);}
+.env-note-inp{font-family:'Nunito',sans-serif;font-size:0.72rem;font-weight:600;color:rgba(255,255,255,0.6);background:none;border:1px solid transparent;border-radius:6px;padding:2px 8px;width:320px;}
+.env-note-inp:focus{outline:none;border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);}
+.env-note-inp::placeholder{color:rgba(255,255,255,0.3);}
+.env-subtotal{font-size:0.75rem;font-weight:700;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 14px;white-space:nowrap;}
+.env-subtotal strong{color:#fde68a;font-weight:900;}
+
+.items-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.items-table th{text-align:left;padding:8px 12px;font-size:0.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--testo-ch);background:#f7f9fc;border-bottom:1px solid #e8edf3;}
+.items-table td{padding:8px 12px;border-bottom:1px solid #f0f4f8;vertical-align:middle;}
+.items-table tr:last-child td{border-bottom:none;}
+.items-table tr:hover td{background:#fafbfc;}
+.row-total{font-weight:900;color:var(--blu);text-align:right;}
+
+.inline-edit{border:1px solid transparent;border-radius:6px;padding:4px 7px;background:none;font-size:0.82rem;color:var(--testo);width:100%;font-family:'Nunito',sans-serif;font-weight:600;}
+.inline-edit:focus{outline:none;border-color:var(--verde);background:var(--verde-pale);}
+.inline-edit.price{width:80px;text-align:right;}
+.inline-edit.qty{width:52px;text-align:center;}
+
+.btn{padding:7px 16px;border-radius:8px;font-size:0.78rem;font-weight:800;letter-spacing:0.3px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.2s;display:inline-flex;align-items:center;gap:5px;border:none;}
+.btn-primary{background:var(--verde);color:#fff;box-shadow:0 4px 14px rgba(45,106,79,0.35);}
+.btn-primary:hover{background:#1e4d38;transform:translateY(-1px);}
+.btn-blu{background:var(--blu);color:#fff;box-shadow:0 4px 14px rgba(26,58,92,0.3);}
+.btn-blu:hover{background:#122a42;transform:translateY(-1px);}
+.btn-oro{background:var(--oro);color:#fff;box-shadow:0 4px 14px rgba(200,150,30,0.35);}
+.btn-oro:hover{background:#a57a18;transform:translateY(-1px);}
+.btn-ghost{background:none;border:2px solid var(--verde)!important;color:var(--verde);}
+.btn-ghost:hover{background:var(--verde-pale);}
+.btn-danger{background:none;border:1px solid #e2e8f0!important;color:var(--testo-ch);font-size:0.72rem;padding:4px 10px;}
+.btn-danger:hover{border-color:#feb2b2!important;color:#c53030;background:#fff5f5;}
+
+.status-sel{font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid #e2e8f0;background:var(--bianco);color:var(--testo);cursor:pointer;font-family:'Nunito',sans-serif;}
+
+.link-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.68rem;font-weight:800;border:1px solid #e2e8f0;background:none;cursor:pointer;color:var(--testo-ch);font-family:'Nunito',sans-serif;white-space:nowrap;transition:all 0.2s;text-decoration:none;}
+.link-btn:hover{border-color:var(--blu-ch);color:var(--blu-ch);background:var(--blu-pale);}
+.link-btn.has-link{border-color:var(--blu-ch);color:var(--blu-ch);background:var(--blu-pale);}
+.link-btn.has-link:hover{background:#bfdbfe;}
+
+.add-row-wrap{padding:1rem 1.5rem;background:#f7f9fc;border-top:1px solid #e8edf3;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.add-row-wrap input,.add-row-wrap select{font-size:0.78rem;font-weight:600;padding:7px 10px;border-radius:8px;border:1px solid #e2e8f0;background:var(--bianco);color:var(--testo);font-family:'Nunito',sans-serif;}
+.add-row-wrap input:focus,.add-row-wrap select:focus{outline:none;border-color:var(--verde);}
+.add-row-wrap .new-desc{flex:1;min-width:180px;}
+
+.add-env-bar{background:var(--bianco);border-radius:16px;box-shadow:0 4px 16px var(--ombra);padding:1.2rem 1.5rem;margin-bottom:1.5rem;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-left:4px solid var(--oro);}
+.add-env-bar input{font-size:0.82rem;font-weight:600;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;background:var(--crema);color:var(--testo);font-family:'Nunito',sans-serif;}
+.add-env-bar input:focus{outline:none;border-color:var(--verde);background:var(--verde-pale);}
+.add-env-bar .env-name-f{flex:1;min-width:180px;}
+.add-env-bar .env-note-f{flex:2;min-width:180px;}
+
+.decisions-grid{display:flex;flex-direction:column;gap:12px;}
+.dec-card{background:var(--bianco);border-radius:16px;box-shadow:0 4px 18px var(--ombra);padding:1.2rem 1.5rem;border-left:5px solid var(--oro);transition:box-shadow 0.2s;}
+.dec-card.done{border-left-color:var(--verde);}
+.dec-card:hover{box-shadow:0 8px 28px var(--ombra-md);}
+.dc-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.dc-num{width:28px;height:28px;border-radius:50%;background:var(--blu);color:#fff;font-size:0.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dc-title-inp{flex:1;font-size:0.9rem;font-weight:800;color:var(--blu);}
+.dc-check-label{display:flex;align-items:center;gap:6px;font-size:0.72rem;font-weight:700;color:var(--testo-ch);white-space:nowrap;cursor:pointer;}
+.dc-body-inp{resize:vertical;min-height:52px;font-size:0.8rem;color:var(--testo-ch);font-weight:600;line-height:1.6;}
+
+.export-grid{display:flex;flex-direction:column;gap:1rem;max-width:600px;}
+.export-card{background:var(--bianco);border-radius:16px;box-shadow:0 4px 18px var(--ombra);padding:1.5rem;border-top:3px solid var(--blu);}
+.export-card h3{font-size:0.9rem;font-weight:900;color:var(--blu);margin-bottom:6px;}
+.export-card p{font-size:0.82rem;color:var(--testo-ch);margin-bottom:1rem;line-height:1.7;}
+
+.link-modal-overlay{position:fixed;inset:0;background:rgba(26,58,92,0.55);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(3px);}
+.link-modal{background:var(--bianco);border-radius:20px;padding:2rem;width:500px;max-width:92vw;box-shadow:0 24px 60px rgba(26,58,92,0.25);}
+.link-modal .modal-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.link-modal .modal-icon{width:36px;height:36px;border-radius:50%;background:var(--blu-pale);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.link-modal h3{font-size:1rem;font-weight:900;color:var(--blu);}
+.link-modal .desc{font-size:0.78rem;color:var(--testo-ch);margin-bottom:1.2rem;line-height:1.5;}
+.link-modal input{width:100%;font-size:0.85rem;font-weight:600;padding:10px 12px;border-radius:8px;border:2px solid #e2e8f0;background:var(--crema);color:var(--testo);font-family:'Nunito',sans-serif;margin-bottom:10px;}
+.link-modal input:focus{outline:none;border-color:var(--verde);background:var(--verde-pale);}
+.link-preview{font-size:0.75rem;color:var(--blu-ch);word-break:break-all;margin-bottom:1rem;min-height:18px;font-weight:700;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+
+@media print{
+  nav,.tabs-wrap,.add-row-wrap,.add-env-bar,.btn,.status-sel,.link-btn,.inline-edit,.env-note-inp,.env-name-inp,#tab-decisioni,#tab-esporta{display:none!important;}
+  .section{display:block!important;}
+  .env-block{box-shadow:none;border:1px solid #ccc;break-inside:avoid;}
+  .hero-strip{background:#1a3a5c!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .env-block-header{background:#1a3a5c!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+@media(max-width:600px){
+  nav{padding:0 1rem;}
+  .content{padding:1rem;}
+  .env-name-inp,.env-note-inp{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" style="display:flex;position:fixed;inset:0;background:rgba(26,58,92,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;gap:1rem">
+  <div style="width:48px;height:48px;border:4px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  <p style="color:white;font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem">Caricamento dati...</p>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<nav style="position:fixed;top:0;left:0;right:0;height:60px;background:var(--blu);display:flex;align-items:center;padding:0 1.5rem;gap:1rem;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.2)">
+  <a href="area-riservata.html" style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.12);color:white;border:none;border-radius:8px;padding:0.4rem 0.9rem;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;text-decoration:none;transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">← Area Riservata</a>
+  <div style="flex:1;display:flex;align-items:center;gap:0.7rem">
+    <span style="font-size:0.85rem;font-weight:800;color:white">Piano Acquisti Informatica</span>
+    <span style="font-size:0.7rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:20px;padding:4px 14px">ANA Casale Monferrato</span>
+  </div>
+  <span style="font-size:0.72rem;font-weight:800;color:#fde68a;background:rgba(200,150,30,0.2);border:1px solid rgba(200,150,30,0.4);border-radius:20px;padding:4px 12px">2025 – 2026</span>
+</nav>
+
+<div class="page-wrap">
+  <div class="hero-strip">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="hero-tag">🖥️ Infrastruttura Informatica</div>
+        <div class="hero-h1">Piano Acquisti<br><em>Commissione Informatica</em></div>
+      </div>
+      <div class="hero-stats" id="hero-stats"></div>
+    </div>
+  </div>
+
+  <div class="tabs-wrap">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('riepilogo')">📊 Riepilogo</button>
+      <button class="tab" onclick="showTab('listino')">📦 Listino</button>
+      <button class="tab" onclick="showTab('ambienti')">🏢 Ambienti</button>
+      <button class="tab" onclick="showTab('abbonamenti')">🔄 Abbonamenti</button>
+      <button class="tab" onclick="showTab('decisioni')">✅ Decisioni</button>
+      <button class="tab" onclick="showTab('esporta')">📤 Esporta</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="tab-riepilogo" class="section active">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="section-tag">📋 Dettaglio per ambiente</div>
+      <div class="table-wrap">
+        <table class="summary-table" id="summary-table"></table>
+      </div>
+    </div>
+
+    <div id="tab-listino" class="section">
+      <!-- categorie -->
+      <div class="add-env-bar" style="border-left-color:var(--oro);margin-bottom:0.75rem;">
+        <input id="new-cat-name" placeholder="Nuova categoria (es. Monitor, Portatili, Rete...)" style="flex:1;min-width:180px;" />
+        <button class="btn btn-oro" onclick="addCategory()">+ Categoria</button>
+      </div>
+      <div id="cat-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;"></div>
+      <!-- form aggiunta articolo listino -->
+      <div class="add-env-bar" style="border-left-color:var(--verde);">
+        <input id="new-cat-item" placeholder="Descrizione articolo..." style="flex:3;min-width:200px;" />
+        <select id="new-cat-sel" style="font-size:0.82rem;font-weight:600;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;background:var(--crema);color:var(--testo);font-family:'Nunito',sans-serif;min-width:140px;">
+          <option value="">— Categoria —</option>
+        </select>
+        <input type="number" id="new-cat-price" placeholder="Prezzo €" min="0" step="0.01" style="width:110px;" />
+        <input id="new-cat-link" placeholder="Link (opz.)" style="flex:2;min-width:140px;" />
+        <button class="btn btn-primary" onclick="addCatalogItem()">+ Aggiungi al listino</button>
+      </div>
+      <!-- filtro categoria -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+        <span style="font-size:0.72rem;font-weight:800;color:var(--testo-ch);text-transform:uppercase;letter-spacing:1px;">Filtra:</span>
+        <div id="filter-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="table-wrap">
+        <table class="summary-table" id="catalog-table">
+          <thead><tr>
+            <th style="width:35%">Descrizione</th>
+            <th style="width:15%">Categoria</th>
+            <th style="width:18%">Link</th>
+            <th style="width:10%;text-align:right">Prezzo €</th>
+            <th style="width:14%;text-align:center">Aggiungi a...</th>
+            <th style="width:5%"></th>
+          </tr></thead>
+          <tbody id="catalog-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-ambienti" class="section">
+      <div class="add-env-bar">
+        <input class="env-name-f" id="new-env-name" placeholder="Nome nuovo ambiente..." />
+        <input class="env-note-f" id="new-env-note" placeholder="Nota (opzionale)" />
+        <button class="btn btn-oro" onclick="addEnv()">+ Nuovo ambiente</button>
+      </div>
+      <div id="environments-container"></div>
+    </div>
+
+    <div id="tab-abbonamenti" class="section">
+      <div class="add-env-bar" style="border-left-color:var(--blu-ch);">
+        <input id="new-sub-name" placeholder="Nome servizio (es. Microsoft 365, Dropbox...)" style="flex:2;min-width:180px;" />
+        <input id="new-sub-note" placeholder="Note (opzionale)" style="flex:2;min-width:140px;" />
+        <input type="number" id="new-sub-monthly" placeholder="€/mese" min="0" step="0.01" style="width:100px;" />
+        <input type="number" id="new-sub-yearly" placeholder="€/anno" min="0" step="0.01" style="width:100px;" />
+        <select id="new-sub-cycle" style="font-size:0.82rem;font-weight:600;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;background:var(--crema);color:var(--testo);font-family:'Nunito',sans-serif;">
+          <option value="mensile">Mensile</option>
+          <option value="annuale">Annuale</option>
+          <option value="entrambi">Entrambi</option>
+        </select>
+        <button class="btn btn-blu" onclick="addSub()">+ Aggiungi</button>
+      </div>
+      <div class="table-wrap">
+        <table class="summary-table" id="sub-table">
+          <thead><tr>
+            <th style="width:28%">Servizio</th>
+            <th style="width:20%">Note</th>
+            <th style="width:10%">Ciclo</th>
+            <th style="width:10%;text-align:right">€/mese</th>
+            <th style="width:10%;text-align:right">€/anno</th>
+            <th style="width:10%;text-align:center">Attivo</th>
+            <th style="width:7%">Link</th>
+            <th style="width:5%"></th>
+          </tr></thead>
+          <tbody id="sub-tbody"></tbody>
+        </table>
+      </div>
+      <div id="sub-totals" style="margin-top:1rem;display:flex;gap:1rem;flex-wrap:wrap;"></div>
+    </div>
+
+    <div id="tab-decisioni" class="section">
+      <div class="decisions-grid" id="decisions-container"></div>
+    </div>
+
+    <div id="tab-esporta" class="section">
+      <div class="export-grid">
+        <div class="export-card">
+          <h3>🖨️ Stampa / Salva PDF</h3>
+          <p>Usa la funzione di stampa del browser per salvare come PDF. Il documento includerà tutti gli ambienti e il riepilogo completo.</p>
+          <button class="btn btn-blu" onclick="window.print()">Stampa / Salva come PDF</button>
+        </div>
+        <div class="export-card" style="border-top-color:var(--verde)">
+          <h3>💾 Esporta dati JSON</h3>
+          <p>Scarica un backup completo dei dati. Utile per condividere il piano o ripristinare i dati in seguito su un altro dispositivo.</p>
+          <button class="btn btn-primary" onclick="exportJSON()">Scarica JSON</button>
+        </div>
+        <div class="export-card" style="border-top-color:var(--oro)">
+          <h3>📂 Importa dati JSON</h3>
+          <p>Ripristina un backup precedentemente esportato. I dati attuali verranno sostituiti con quelli del file selezionato.</p>
+          <input type="file" id="import-file" accept=".json" style="font-size:0.82rem;font-family:'Nunito',sans-serif;" onchange="importJSON(event)" />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY='ana_casale_piano_acquisti_v5';
+const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
+const SUPA_H = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+const SUPA_HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+const CONF_ID = 'ana_casale_piano_acquisti';
+const defaultData={
+  environments:[
+    {id:'presidenza',   name:'Ufficio Presidenza',       note:'', items:[]},
+    {id:'segreteria',   name:'Ufficio Segreteria',        note:'', items:[]},
+    {id:'protcivile',   name:'Ufficio Protezione Civile', note:'', items:[]},
+    {id:'liberouso',    name:'Postazione Libero Uso',     note:'', items:[]},
+    {id:'salariunioni', name:'Sala Riunioni',             note:'', items:[]},
+    {id:'rete',         name:'Rete, UPS e Software',      note:'', items:[]},
+  ],
+  decisions:[],
+  subscriptions:[],
+  catalog:[],
+  categories:[],
+  nextId:1
+};
+
+let data = JSON.parse(JSON.stringify(defaultData));
+
+async function loadData() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/configuratore?id=eq.' + CONF_ID + '&select=data', { headers: SUPA_H });
+    const rows = await res.json();
+    if (rows && rows.length > 0 && rows[0].data) {
+      data = rows[0].data;
+    } else {
+      data = JSON.parse(JSON.stringify(defaultData));
+      await saveData();
+    }
+  } catch(e) {
+    console.error('Errore caricamento dati:', e);
+    data = JSON.parse(JSON.stringify(defaultData));
+  }
+}
+
+async function saveData() {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/configuratore', {
+      method: 'POST',
+      headers: Object.assign({}, SUPA_HJ, { 'Prefer': 'resolution=merge-duplicates' }),
+      body: JSON.stringify({ id: CONF_ID, data: data, updated_at: new Date().toISOString() })
+    });
+  } catch(e) {
+    console.error('Errore salvataggio dati:', e);
+  }
+}
+
+function showTab(t){
+  const labels=['riepilogo','listino','ambienti','abbonamenti','decisioni','esporta'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',labels[i]===t));
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='riepilogo')renderSummary();
+  if(t==='ambienti')renderEnvironments();
+  if(t==='listino')renderCatalog();
+  if(t==='abbonamenti')renderSubs();
+  if(t==='decisioni')renderDecisions();
+}
+
+function envTotal(env){return env.items.reduce((s,i)=>{const r=resolveItem(i);return s+i.qty*r.price;},0);}
+function subYearlyTotal(){return (data.subscriptions||[]).filter(s=>s.active).reduce((sum,s)=>{
+  if(s.cycle==='mensile') return sum+(s.monthly||0)*12;
+  if(s.cycle==='annuale') return sum+(s.yearly||0);
+  return sum+(s.monthly||0)*12+(s.yearly||0);
+},0);}
+function subMonthlyTotal(){return (data.subscriptions||[]).filter(s=>s.active).reduce((sum,s)=>{
+  if(s.cycle==='mensile') return sum+(s.monthly||0);
+  if(s.cycle==='annuale') return sum+(s.yearly||0)/12;
+  return sum+(s.monthly||0)+(s.yearly||0)/12;
+},0);}
+function grandTotal(){return data.environments.reduce((s,e)=>s+envTotal(e),0);}
+function fmt(v){return v.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function renderSummary(){
+  const gt=grandTotal();
+  const ic=data.environments.reduce((s,e)=>s+e.items.length,0);
+  const wc=data.environments.reduce((s,e)=>s+e.items.filter(i=>i.status==='warn').length,0);
+  const dc=data.decisions.filter(d=>d.done).length;
+  document.getElementById('kpi-grid').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">Totale stimato</div><div class="kpi-value">€ ${fmt(gt)}</div><div class="kpi-sub">${data.environments.length} ambienti inclusi</div></div>
+    <div class="kpi-card"><div class="kpi-label">Articoli totali</div><div class="kpi-value">${ic}</div><div class="kpi-sub">voci nel piano acquisti</div></div>
+    <div class="kpi-card"><div class="kpi-label">Abbonamenti/anno</div><div class="kpi-value" style="color:var(--oro)">€ ${fmt(subYearlyTotal())}</div><div class="kpi-sub">costi ricorrenti attivi</div></div>
+    <div class="kpi-card"><div class="kpi-label">Decisioni</div><div class="kpi-value" style="color:var(--verde)">${dc}/${data.decisions.length}</div><div class="kpi-sub">completate</div></div>
+  `;
+  document.getElementById('hero-stats').innerHTML=`
+    <div class="hstat"><div class="num">€${(gt/1000).toFixed(1)}k</div><div class="lbl">Budget totale</div></div>
+    <div class="hstat"><div class="num">${data.environments.length}</div><div class="lbl">Ambienti</div></div>
+    <div class="hstat"><div class="num">€${(subYearlyTotal()/12).toFixed(0)}</div><div class="lbl">Abb./mese</div></div>
+    <div class="hstat"><div class="num">${dc}/${data.decisions.length}</div><div class="lbl">Decisioni</div></div>
+  `;
+  let rows=`<thead><tr><th>Ambiente / Articolo</th><th>Info</th><th style="text-align:right">Importo</th></tr></thead><tbody>`;
+  data.environments.forEach(env=>{
+    rows+=`<tr class="env-row"><td>🏢 ${env.name}</td><td style="font-size:0.72rem;font-weight:600">${env.note||'—'}</td><td style="text-align:right;font-size:0.9rem">€ ${fmt(envTotal(env))}</td></tr>`;
+    env.items.forEach(item=>{
+      const chosen=item.chosen?'<span class="badge badge-ok">✔ Scelto</span>':'<span style="font-size:0.68rem;color:var(--testo-ch);font-weight:600;">— </span>';
+      const lk=item.link?`<a href="${item.link}" target="_blank" style="margin-left:6px;font-size:0.65rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 8px;border-radius:20px;border:1px solid #bfdbfe;">🔗 Apri</a>`:'';
+      const ri=resolveItem(item);
+      rows+=`<tr class="item-row"><td style="padding-left:28px;color:var(--testo-ch);font-weight:600">${ri.desc}${item.catalogId?'<span style="font-size:0.6rem;font-weight:800;color:var(--blu-ch);background:var(--blu-pale);padding:1px 6px;border-radius:20px;margin-left:5px;">📦</span>':''}</td><td>${chosen}${lk}</td><td style="text-align:right;color:var(--testo-ch);font-weight:700">€ ${fmt(item.qty*ri.price)}</td></tr>`;
+    });
+  });
+  rows+=`<tr class="grand-total"><td colspan="2">🏆 TOTALE GENERALE</td><td style="text-align:right">€ ${fmt(gt)}</td></tr></tbody>`;
+  document.getElementById('summary-table').innerHTML=rows;
+}
+
+function renderEnvironments(){
+  const c=document.getElementById('environments-container');c.innerHTML='';
+  data.environments.forEach((env,ei)=>{
+    const div=document.createElement('div');div.className='env-block';
+    div.innerHTML=`
+      <div class="env-block-header">
+        <div class="env-block-header-left">
+          <input class="env-name-inp" value="${env.name.replace(/"/g,'&quot;')}" onchange="updateEnvName(${ei},this.value)" />
+          <input class="env-note-inp" value="${env.note.replace(/"/g,'&quot;')}" placeholder="Nota..." onchange="updateEnvNote(${ei},this.value)" />
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="env-subtotal">Subtotale: <strong>€ ${fmt(envTotal(env))}</strong></span>
+          <button class="btn btn-danger" style="background:rgba(255,255,255,0.1)!important;border-color:rgba(255,255,255,0.2)!important;color:rgba(255,255,255,0.7)!important;" onclick="removeEnv(${ei})">✕ Rimuovi</button>
+        </div>
+      </div>
+      <table class="items-table">
+        <thead><tr>
+          <th style="width:32%">Descrizione</th>
+          <th style="width:22%">Link</th>
+          <th style="width:7%;text-align:center">Qt.</th>
+          <th style="width:9%;text-align:right">Prezzo €</th>
+          <th style="width:9%;text-align:right">Totale</th>
+          <th style="width:9%;text-align:center">Scelto</th>
+          <th style="width:4%"></th>
+        </tr></thead>
+        <tbody id="tbody-${ei}"></tbody>
+      </table>
+      <div class="add-row-wrap">
+        <input class="new-desc" id="ndesc-${ei}" placeholder="Descrizione nuovo articolo..." />
+        <input type="number" id="nqty-${ei}" value="1" min="1" style="width:58px;" />
+        <input type="number" id="nprice-${ei}" value="0" min="0" step="0.01" style="width:88px;" placeholder="€" />
+        <input id="nlink-${ei}" placeholder="Link (Amazon, ecc.)" style="flex:1;min-width:160px;" />
+        <button class="btn btn-primary" onclick="addItem(${ei})">+ Aggiungi manuale</button>
+        <button class="btn btn-blu" onclick="openListinoModal(${ei})">📦 Dal listino</button>
+      </div>
+    `;
+    c.appendChild(div);renderItems(ei);
+  });
+}
+
+function resolveItem(item){
+  // if linked to catalog, pull desc/price/link from catalog entry
+  if(item.catalogId){
+    const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
+    if(cat) return {...item, desc:cat.desc, price:cat.price, link:cat.link||item.link};
+  }
+  return item;
+}
+function itemEffectiveTotal(item){const r=resolveItem(item);return r.qty*r.price;}
+
+function renderItems(ei){
+  const tbody=document.getElementById('tbody-'+ei);if(!tbody)return;
+  tbody.innerHTML='';
+  data.environments[ei].items.forEach((item,ii)=>{
+    const r=resolveItem(item);
+    const tr=document.createElement('tr');
+    if(item.chosen) tr.style.background='#f0fdf4';
+    const linkVal=(r.link||'').replace(/"/g,'&quot;');
+    const fromCatalog=!!item.catalogId;
+    const catBadge=fromCatalog?'<span style="font-size:0.62rem;font-weight:800;color:var(--blu-ch);background:var(--blu-pale);padding:1px 7px;border-radius:20px;border:1px solid #bfdbfe;margin-left:5px;">📦 listino</span>':''
+    tr.innerHTML=`
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          ${fromCatalog
+            ? `<span style="font-size:0.82rem;font-weight:600;color:var(--testo);">${r.desc}</span>`
+            : `<input class="inline-edit" value="${r.desc.replace(/"/g,'&quot;')}" onchange="updateItem(${ei},${ii},'desc',this.value)" />`
+          }
+          ${catBadge}
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${fromCatalog
+            ? (r.link ? `<a href="${r.link}" target="_blank" style="font-size:0.72rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 8px;border-radius:20px;border:1px solid #bfdbfe;">↗ Apri</a>` : '<span style="font-size:0.72rem;color:var(--testo-ch);">—</span>')
+            : `<input class="inline-edit" style="flex:1;font-size:0.75rem;" placeholder="Incolla link..." value="${linkVal}" onchange="updateItem(${ei},${ii},'link',this.value)" />${r.link?'<a href="'+r.link+'" target="_blank" style="flex-shrink:0;font-size:0.68rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 8px;border-radius:20px;border:1px solid #bfdbfe;white-space:nowrap;">↗ Apri</a>':''}`
+          }
+        </div>
+      </td>
+      <td style="text-align:center"><input class="inline-edit qty" type="number" min="1" value="${item.qty}" onchange="updateItem(${ei},${ii},'qty',+this.value)" /></td>
+      <td style="text-align:right">
+        ${fromCatalog
+          ? `<span style="font-size:0.82rem;font-weight:700;color:var(--testo);">€ ${fmt(r.price)}</span>`
+          : `<input class="inline-edit price" type="number" min="0" step="0.01" value="${r.price}" onchange="updateItem(${ei},${ii},'price',+this.value)" />`
+        }
+      </td>
+      <td class="row-total">€ ${fmt(item.qty*r.price)}</td>
+      <td style="text-align:center">
+        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:0.72rem;font-weight:700;color:${item.chosen?'var(--verde)':' var(--testo-ch)'   };">
+          <input type="checkbox" ${item.chosen?'checked':''} onchange="updateItem(${ei},${ii},'chosen',this.checked)" style="width:15px;height:15px;accent-color:var(--verde);cursor:pointer;" />
+          Scelto
+        </label>
+      </td>
+      <td><button class="btn btn-danger" onclick="removeItem(${ei},${ii})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function updateEnvName(ei,v){data.environments[ei].name=v;await saveData();}
+async function updateEnvNote(ei,v){data.environments[ei].note=v;await saveData();}
+async function updateItem(ei,ii,field,v){data.environments[ei].items[ii][field]=v;await saveData();renderItems(ei);}
+async function removeItem(ei,ii){data.environments[ei].items.splice(ii,1);await saveData();renderItems(ei);}
+async function addItem(ei){
+  const desc=document.getElementById('ndesc-'+ei).value.trim();if(!desc)return;
+  const link=(document.getElementById('nlink-'+ei).value||'').trim();
+  data.environments[ei].items.push({id:data.nextId++,desc,qty:+document.getElementById('nqty-'+ei).value||1,price:+document.getElementById('nprice-'+ei).value||0,link,chosen:false});
+  await saveData();document.getElementById('ndesc-'+ei).value='';document.getElementById('nlink-'+ei).value='';renderItems(ei);
+}
+async function removeEnv(ei){if(!confirm('Rimuovere "'+data.environments[ei].name+'"?'))return;data.environments.splice(ei,1);await saveData();renderEnvironments();}
+async function addEnv(){
+  const name=document.getElementById('new-env-name').value.trim();if(!name)return;
+  data.environments.push({id:'env_'+Date.now(),name,note:document.getElementById('new-env-note').value.trim(),items:[]});
+  await saveData();document.getElementById('new-env-name').value='';document.getElementById('new-env-note').value='';renderEnvironments();
+}
+
+function renderDecisions(){
+  const c=document.getElementById('decisions-container');c.innerHTML='';
+  data.decisions.forEach((d,di)=>{
+    const div=document.createElement('div');div.className='dec-card'+(d.done?' done':'');
+    div.innerHTML=`
+      <div class="dc-header">
+        <div class="dc-num">${d.id}</div>
+        <input class="inline-edit dc-title-inp" value="${d.title.replace(/"/g,'&quot;')}" onchange="updateDecision(${di},'title',this.value)" />
+        <label class="dc-check-label"><input type="checkbox" ${d.done?'checked':''} onchange="updateDecision(${di},'done',this.checked)" /> Completata</label>
+        <button class="btn btn-danger" style="margin-left:8px;" onclick="removeDecision(${di})">✕</button>
+      </div>
+      <textarea class="inline-edit dc-body-inp" rows="2" onchange="updateDecision(${di},'body',this.value)">${d.body}</textarea>
+    `;
+    c.appendChild(div);
+  });
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;';
+  row.innerHTML=`<input id="new-dec-title" placeholder="Nuova decisione..." style="flex:1;min-width:200px;font-size:0.82rem;font-weight:600;padding:9px 12px;border-radius:8px;border:2px solid #e2e8f0;background:var(--bianco);color:var(--testo);font-family:'Nunito',sans-serif;" /><button class="btn btn-primary" onclick="addDecision()">+ Aggiungi</button>`;
+  c.appendChild(row);
+}
+async function updateDecision(di,field,v){data.decisions[di][field]=v;await saveData();renderDecisions();}
+async function removeDecision(di){data.decisions.splice(di,1);await saveData();renderDecisions();}
+async function addDecision(){
+  const title=document.getElementById('new-dec-title').value.trim();if(!title)return;
+  data.decisions.push({id:data.decisions.length+1,title,body:'',done:false});
+  await saveData();renderDecisions();
+}
+
+function openLinkModal(ei,ii){
+  const item=data.environments[ei].items[ii];
+  const existing=item.link||'';
+  const overlay=document.createElement('div');
+  overlay.className='link-modal-overlay';
+
+  const modal=document.createElement('div');
+  modal.className='link-modal';
+  modal.addEventListener('click',function(e){e.stopPropagation();});
+
+  const shortDesc=item.desc.length>72?item.desc.substring(0,72)+'…':item.desc;
+  const shortUrl=existing.length>65?existing.substring(0,65)+'…':existing;
+
+  modal.innerHTML='<div class="modal-header"><div class="modal-icon">🔗</div><h3>Collegamento prodotto</h3></div>'
+    +'<div class="desc">'+shortDesc+'</div>'
+    +'<input id="link-input" type="url" placeholder="https://www.amazon.it/dp/... oppure qualsiasi URL" />'
+    +'<div class="link-preview" id="link-preview">'+(existing?'<a href="'+existing+'" target="_blank" style="color:var(--blu-ch)">'+shortUrl+'</a>':'')+'</div>'
+    +'<div class="modal-actions" id="modal-actions"></div>';
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click',closeModal);
+  document.body.appendChild(overlay);
+
+  document.getElementById('link-input').value=existing;
+  document.getElementById('link-input').addEventListener('input',function(){updateLinkPreview(this.value);});
+
+  const actions=document.getElementById('modal-actions');
+
+  if(existing){
+    const btnRimuovi=document.createElement('button');
+    btnRimuovi.className='btn btn-danger';btnRimuovi.textContent='Rimuovi';
+    btnRimuovi.addEventListener('click',function(){saveLink(ei,ii,'');});
+    actions.appendChild(btnRimuovi);
+  }
+
+  const btnAnnulla=document.createElement('button');
+  btnAnnulla.className='btn';
+  btnAnnulla.style.cssText='background:none;border:2px solid #e2e8f0;color:var(--testo-ch);font-family:"Nunito",sans-serif;font-weight:700;';
+  btnAnnulla.textContent='Annulla';
+  btnAnnulla.addEventListener('click',closeModal);
+  actions.appendChild(btnAnnulla);
+
+  if(existing){
+    const linkApri=document.createElement('a');
+    linkApri.className='btn btn-ghost';linkApri.href=existing;linkApri.target='_blank';
+    linkApri.style.textDecoration='none';linkApri.textContent='Apri ↗';
+    actions.appendChild(linkApri);
+  }
+
+  const btnSalva=document.createElement('button');
+  btnSalva.className='btn btn-primary';btnSalva.textContent='Salva';
+  btnSalva.addEventListener('click',function(){saveLink(ei,ii,document.getElementById('link-input').value);});
+  actions.appendChild(btnSalva);
+
+  setTimeout(()=>document.getElementById('link-input').focus(),50);
+}
+async function updateLinkPreview(val){
+  const p=document.getElementById('link-preview');if(!p)return;
+  p.innerHTML=val?'<a href="'+val+'" target="_blank" style="color:var(--blu-ch)">'+val.substring(0,70)+(val.length>70?'…':'')+'</a>':'';
+}
+async function saveLink(ei,ii,url){data.environments[ei].items[ii].link=url.trim();await saveData();closeModal();renderItems(ei);}
+function closeModal(){const o=document.querySelector('.link-modal-overlay');if(o)o.remove();}
+
+
+function renderSubs(){
+  if(!data.subscriptions) data.subscriptions=[];
+  const tbody=document.getElementById('sub-tbody');
+  const totals=document.getElementById('sub-totals');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  data.subscriptions.forEach((s,si)=>{
+    const tr=document.createElement('tr');
+    if(s.active) tr.style.background='#f0fdf4';
+    const linkVal=(s.link||'').replace(/"/g,'&quot;');
+    tr.innerHTML=`
+      <td><input class="inline-edit" value="${s.name.replace(/"/g,'&quot;')}" onchange="updateSub(${si},'name',this.value)" /></td>
+      <td><input class="inline-edit" style="font-size:0.75rem;" value="${(s.note||'').replace(/"/g,'&quot;')}" placeholder="Note..." onchange="updateSub(${si},'note',this.value)" /></td>
+      <td><select class="status-sel" onchange="updateSub(${si},'cycle',this.value)">
+        <option value="mensile" ${s.cycle==='mensile'?'selected':''}>Mensile</option>
+        <option value="annuale" ${s.cycle==='annuale'?'selected':''}>Annuale</option>
+        <option value="entrambi" ${s.cycle==='entrambi'?'selected':''}>Entrambi</option>
+      </select></td>
+      <td style="text-align:right"><input class="inline-edit price" type="number" min="0" step="0.01" value="${s.monthly||0}" onchange="updateSub(${si},'monthly',+this.value)" /></td>
+      <td style="text-align:right"><input class="inline-edit price" type="number" min="0" step="0.01" value="${s.yearly||0}" onchange="updateSub(${si},'yearly',+this.value)" /></td>
+      <td style="text-align:center">
+        <label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:0.72rem;font-weight:700;color:${s.active?'var(--verde)':'var(--testo-ch)'};">
+          <input type="checkbox" ${s.active?'checked':''} onchange="updateSub(${si},'active',this.checked)" style="width:15px;height:15px;accent-color:var(--verde);cursor:pointer;" />
+          Attivo
+        </label>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input class="inline-edit" style="font-size:0.72rem;width:80px;" placeholder="Link..." value="${linkVal}" onchange="updateSub(${si},'link',this.value)" />
+          ${s.link?`<a href="${s.link}" target="_blank" style="font-size:0.65rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 6px;border-radius:20px;border:1px solid #bfdbfe;white-space:nowrap;">↗</a>`:''}
+        </div>
+      </td>
+      <td><button class="btn btn-danger" onclick="removeSub(${si})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  const mt=subMonthlyTotal();const yt=subYearlyTotal();
+  totals.innerHTML=`
+    <div class="kpi-card" style="flex:1;min-width:160px;border-top-color:var(--blu-ch);">
+      <div class="kpi-label">Costo mensile attivo</div>
+      <div class="kpi-value" style="font-size:1.5rem;">€ ${fmt(mt)}</div>
+      <div class="kpi-sub">abbonamenti attivi/mese</div>
+    </div>
+    <div class="kpi-card" style="flex:1;min-width:160px;border-top-color:var(--verde);">
+      <div class="kpi-label">Costo annuale attivo</div>
+      <div class="kpi-value" style="font-size:1.5rem;">€ ${fmt(yt)}</div>
+      <div class="kpi-sub">abbonamenti attivi/anno</div>
+    </div>
+    <div class="kpi-card" style="flex:1;min-width:160px;border-top-color:var(--oro);">
+      <div class="kpi-label">Abbonamenti totali</div>
+      <div class="kpi-value" style="font-size:1.5rem;">${data.subscriptions.length}</div>
+      <div class="kpi-sub">${data.subscriptions.filter(s=>s.active).length} attivi</div>
+    </div>
+  `;
+}
+async function updateSub(si,field,v){
+  if(!data.subscriptions) data.subscriptions=[];
+  data.subscriptions[si][field]=v;await saveData();renderSubs();
+}
+async function removeSub(si){
+  data.subscriptions.splice(si,1);await saveData();renderSubs();
+}
+async function addSub(){
+  if(!data.subscriptions) data.subscriptions=[];
+  const name=document.getElementById('new-sub-name').value.trim();
+  if(!name)return;
+  data.subscriptions.push({
+    id:data.nextId++,
+    name,
+    note:document.getElementById('new-sub-note').value.trim(),
+    cycle:document.getElementById('new-sub-cycle').value,
+    monthly:+document.getElementById('new-sub-monthly').value||0,
+    yearly:+document.getElementById('new-sub-yearly').value||0,
+    active:true,
+    link:''
+  });
+  await saveData();
+  document.getElementById('new-sub-name').value='';
+  document.getElementById('new-sub-note').value='';
+  document.getElementById('new-sub-monthly').value='';
+  document.getElementById('new-sub-yearly').value='';
+  renderSubs();
+}
+
+
+// ─── LISTINO ───────────────────────────────────────────────────────
+let catalogFilter=null;
+
+function renderCatalog(){
+  if(!data.catalog) data.catalog=[];
+  if(!data.categories) data.categories=[];
+  // category chips (management)
+  const chips=document.getElementById('cat-chips');
+  if(chips){
+    chips.innerHTML='';
+    data.categories.forEach((cat,ci)=>{
+      const chip=document.createElement('span');
+      chip.style.cssText='display:inline-flex;align-items:center;gap:6px;background:var(--blu-pale);color:var(--blu-ch);border:1px solid #bfdbfe;border-radius:20px;padding:4px 12px;font-size:0.72rem;font-weight:800;';
+      chip.innerHTML=cat+' <button onclick="removeCategory('+ci+')" style="background:none;border:none;cursor:pointer;color:var(--blu-ch);font-size:0.9rem;line-height:1;padding:0;">✕</button>';
+      chips.appendChild(chip);
+    });
+  }
+  // populate category select for new item
+  const sel=document.getElementById('new-cat-sel');
+  if(sel){
+    sel.innerHTML='<option value="">— Categoria —</option>';
+    data.categories.forEach(cat=>{ const o=document.createElement('option');o.value=cat;o.textContent=cat;sel.appendChild(o); });
+  }
+  // filter chips
+  const fc=document.getElementById('filter-chips');
+  if(fc){
+    fc.innerHTML='';
+    const allChip=document.createElement('button');
+    allChip.className='btn '+(catalogFilter===null?'btn-blu':'btn-ghost');
+    allChip.style.cssText='padding:3px 14px;font-size:0.72rem;';
+    allChip.textContent='Tutti';
+    allChip.addEventListener('click',()=>{catalogFilter=null;renderCatalog();});
+    fc.appendChild(allChip);
+    data.categories.forEach(cat=>{
+      const b=document.createElement('button');
+      b.className='btn '+(catalogFilter===cat?'btn-primary':'btn-ghost');
+      b.style.cssText='padding:3px 14px;font-size:0.72rem;';
+      b.textContent=cat;
+      b.addEventListener('click',()=>{catalogFilter=cat;renderCatalog();});
+      fc.appendChild(b);
+    });
+  }
+  // table
+  const tbody=document.getElementById('catalog-tbody');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  const filtered=catalogFilter?data.catalog.filter(c=>c.category===catalogFilter):data.catalog;
+  if(filtered.length===0){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td colspan="6" style="text-align:center;color:var(--testo-ch);padding:2rem;font-size:0.85rem;font-weight:600;">Nessun articolo nel listino. Aggiungine uno con il form sopra.</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  filtered.forEach((item)=>{
+    const realIdx=data.catalog.indexOf(item);
+    const tr=document.createElement('tr');
+    const linkVal=(item.link||'').replace(/"/g,'&quot;');
+    tr.innerHTML=`
+      <td><input class="inline-edit" value="${item.desc.replace(/"/g,'&quot;')}" onchange="updateCatalogItem(${realIdx},'desc',this.value)" /></td>
+      <td>
+        <select class="status-sel" onchange="updateCatalogItem(${realIdx},'category',this.value)">
+          ${data.categories.map(c=>`<option value="${c}" ${item.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <input class="inline-edit" style="flex:1;font-size:0.72rem;" placeholder="Link..." value="${linkVal}" onchange="updateCatalogItem(${realIdx},'link',this.value)" />
+          ${item.link?`<a href="${item.link}" target="_blank" style="font-size:0.65rem;font-weight:800;color:var(--blu-ch);text-decoration:none;background:var(--blu-pale);padding:2px 7px;border-radius:20px;border:1px solid #bfdbfe;white-space:nowrap;">↗</a>`:''}
+        </div>
+      </td>
+      <td style="text-align:right"><input class="inline-edit price" type="number" min="0" step="0.01" value="${item.price}" onchange="updateCatalogItem(${realIdx},'price',+this.value)" /></td>
+      <td style="text-align:center">
+        <select class="status-sel" onchange="openAddToEnvFromCatalog(${realIdx},this)" style="background:var(--verde);color:#fff;border-color:var(--verde);font-size:0.7rem;">
+          <option value="">+ Ambiente</option>
+          ${data.environments.map((e,ei)=>`<option value="${ei}">${e.name}</option>`).join('')}
+        </select>
+      </td>
+      <td><button class="btn btn-danger" onclick="removeCatalogItem(${realIdx})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function addCategory(){
+  if(!data.categories)data.categories=[];
+  const name=document.getElementById('new-cat-name').value.trim();
+  if(!name||data.categories.includes(name))return;
+  data.categories.push(name);await saveData();
+  document.getElementById('new-cat-name').value='';
+  renderCatalog();
+}
+async function removeCategory(ci){
+  if(!confirm('Rimuovere la categoria "'+data.categories[ci]+'"?'))return;
+  data.categories.splice(ci,1);await saveData();renderCatalog();
+}
+async function addCatalogItem(){
+  if(!data.catalog)data.catalog=[];
+  const desc=document.getElementById('new-cat-item').value.trim();
+  if(!desc)return;
+  data.catalog.push({
+    id:'cat_'+Date.now()+'_'+(data.nextId++),
+    desc,
+    category:document.getElementById('new-cat-sel').value||'',
+    price:+document.getElementById('new-cat-price').value||0,
+    link:(document.getElementById('new-cat-link').value||'').trim()
+  });
+  await saveData();
+  document.getElementById('new-cat-item').value='';
+  document.getElementById('new-cat-price').value='';
+  document.getElementById('new-cat-link').value='';
+  renderCatalog();
+}
+async function updateCatalogItem(ci,field,v){
+  data.catalog[ci][field]=v;
+  await saveData();
+  // re-render all environment tables so prices update live
+  data.environments.forEach((_,ei)=>renderItems(ei));
+  renderCatalog();
+}
+async function removeCatalogItem(ci){
+  const id=data.catalog[ci].id;
+  if(!confirm('Rimuovere "'+data.catalog[ci].desc+'" dal listino?'))return;
+  data.catalog.splice(ci,1);
+  // remove linked items from environments
+  data.environments.forEach(env=>{env.items=env.items.filter(i=>i.catalogId!==id);});
+  await saveData();renderCatalog();renderEnvironments();
+}
+function openAddToEnvFromCatalog(ci,sel){
+  const ei=parseInt(sel.value);
+  if(isNaN(ei)){return;}
+  const cat=data.catalog[ci];
+  data.environments[ei].items.push({id:data.nextId++,catalogId:cat.id,qty:1,chosen:false,link:''});
+  await saveData();
+  sel.value='';
+  renderCatalog();
+  // show feedback
+  const envName=data.environments[ei].name;
+  const fb=document.createElement('div');
+  fb.style.cssText='position:fixed;bottom:2rem;right:2rem;background:var(--verde);color:#fff;padding:0.8rem 1.4rem;border-radius:12px;font-family:"Nunito",sans-serif;font-weight:800;font-size:0.85rem;box-shadow:0 8px 24px rgba(45,106,79,0.4);z-index:3000;';
+  fb.textContent='✔ Aggiunto a "'+envName+'"';
+  document.body.appendChild(fb);setTimeout(()=>fb.remove(),2500);
+}
+
+// ─── MODALE LISTINO (dal bottone nell'ambiente) ────────────────────
+function openListinoModal(ei){
+  if(!data.catalog||data.catalog.length===0){
+    alert('Il listino è vuoto. Aggiungi prima degli articoli nella tab Listino.');return;
+  }
+  const overlay=document.createElement('div');
+  overlay.className='link-modal-overlay';
+  overlay.addEventListener('click',closeModal);
+  const modal=document.createElement('div');
+  modal.className='link-modal';
+  modal.style.cssText='width:680px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;';
+  modal.addEventListener('click',e=>e.stopPropagation());
+
+  const header=document.createElement('div');
+  header.innerHTML='<div class="modal-header"><div class="modal-icon">📦</div><h3>Aggiungi dal listino</h3></div><div class="desc" style="margin-bottom:1rem;">Ambiente: <strong>'+data.environments[ei].name+'</strong></div>';
+  modal.appendChild(header);
+
+  // filter bar
+  const filterBar=document.createElement('div');
+  filterBar.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;';
+  const allBtn=document.createElement('button');
+  allBtn.className='btn btn-blu';allBtn.style.cssText='padding:3px 14px;font-size:0.72rem;';allBtn.textContent='Tutti';
+  filterBar.appendChild(allBtn);
+  if(data.categories){
+    data.categories.forEach(cat=>{
+      const b=document.createElement('button');
+      b.className='btn btn-ghost';b.style.cssText='padding:3px 14px;font-size:0.72rem;';b.textContent=cat;
+      filterBar.appendChild(b);
+    });
+  }
+  modal.appendChild(filterBar);
+
+  // items list
+  const listWrap=document.createElement('div');
+  listWrap.style.cssText='overflow-y:auto;flex:1;border:1px solid #e2e8f0;border-radius:12px;';
+  modal.appendChild(listWrap);
+
+  function renderModalList(filter){
+    filterBar.querySelectorAll('.btn').forEach(b=>{
+      b.className='btn '+(b.textContent==='Tutti'&&filter===null?'btn-blu':b.textContent===filter?'btn-primary':'btn-ghost');
+      b.style.cssText='padding:3px 14px;font-size:0.72rem;';
+    });
+    const items=filter?data.catalog.filter(c=>c.category===filter):data.catalog;
+    listWrap.innerHTML='';
+    items.forEach(cat=>{
+      const already=data.environments[ei].items.some(i=>i.catalogId===cat.id);
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f0f4f8;gap:10px;'+(already?'opacity:0.5;':'');
+      row.innerHTML=`
+        <div style="flex:1;">
+          <div style="font-size:0.85rem;font-weight:700;color:var(--testo);">${cat.desc}</div>
+          <div style="font-size:0.7rem;color:var(--testo-ch);margin-top:2px;">${cat.category?'<span style="background:var(--blu-pale);color:var(--blu-ch);padding:1px 8px;border-radius:20px;font-weight:800;">'+cat.category+'</span> ':''} € ${fmt(cat.price)} ${cat.link?'· <a href="'+cat.link+'" target="_blank" style="color:var(--blu-ch);font-weight:800;">↗ link</a>':''}</div>
+        </div>
+        <button class="btn ${already?'btn-ghost':'btn-primary'}" style="flex-shrink:0;font-size:0.75rem;padding:5px 14px;" ${already?'disabled':''} onclick="addFromCatalog(${ei},'${cat.id}')">
+          ${already?'✔ Già aggiunto':'+  Aggiungi'}
+        </button>
+      `;
+      listWrap.appendChild(row);
+    });
+  }
+
+  filterBar.querySelectorAll('.btn').forEach(b=>{
+    b.addEventListener('click',()=>renderModalList(b.textContent==='Tutti'?null:b.textContent));
+  });
+
+  const footer=document.createElement('div');
+  footer.style.cssText='margin-top:1rem;display:flex;justify-content:flex-end;';
+  const closeBtn=document.createElement('button');
+  closeBtn.className='btn';closeBtn.style.cssText='background:none;border:2px solid #e2e8f0;color:var(--testo-ch);font-family:"Nunito",sans-serif;font-weight:700;';
+  closeBtn.textContent='Chiudi';closeBtn.addEventListener('click',closeModal);
+  footer.appendChild(closeBtn);
+  modal.appendChild(footer);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  renderModalList(null);
+}
+
+async function addFromCatalog(ei,catalogId){
+  if(data.environments[ei].items.some(i=>i.catalogId===catalogId))return;
+  data.environments[ei].items.push({id:data.nextId++,catalogId,qty:1,chosen:false,link:''});
+  await saveData();
+  // refresh modal list
+  const modal=document.querySelector('.link-modal');
+  if(modal){
+    const btns=modal.querySelectorAll('button');
+    btns.forEach(b=>{if(b.textContent.trim()==='+ Aggiungi'&&b.closest('div').querySelector('div').textContent.includes(
+      (data.catalog.find(c=>c.id===catalogId)||{}).desc||''
+    )){b.textContent='✔ Già aggiunto';b.disabled=true;b.className='btn btn-ghost';b.style.cssText='flex-shrink:0;font-size:0.75rem;padding:5px 14px;';}});
+  }
+  renderEnvironments();
+}
+
+function exportJSON(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='ana_casale_piano_acquisti.json';a.click();
+}
+async function importJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{try{data=JSON.parse(ev.target.result);await saveData();renderSummary();alert('Dati importati correttamente.');}catch{alert('Errore nel file JSON.');}};
+  reader.readAsText(file);
+}
+
+async function init() {
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  await loadData();
+  document.getElementById('loadingOverlay').style.display = 'none';
+  renderSummary();
+}
+init();
+</script>
+</body>
+</html>
