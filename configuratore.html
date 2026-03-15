@@ -298,11 +298,52 @@ nav{
 .rel-note { font-size: 0.78rem; color: #888; font-style: italic; margin-top: 0.5rem; }
 
 @media print {
-  .rel-toolbar, nav, .tabs-wrap, .add-row-wrap, .btn, #tab-riepilogo, #tab-listino, #tab-ambienti, #tab-abbonamenti, #tab-decisioni, #tab-esporta { display: none !important; }
+  /* Nascondi tutto tranne la relazione */
+  nav, .tabs-wrap, .rel-toolbar,
+  #tab-riepilogo, #tab-listino, #tab-ambienti,
+  #tab-abbonamenti, #tab-decisioni, #tab-esporta,
+  #loadingOverlay { display: none !important; }
+
+  /* Mostra solo la relazione */
   #tab-relazione { display: block !important; }
-  .rel-doc { box-shadow: none; border-radius: 0; }
-  .rel-editable { border: none; background: transparent; }
-  .content { padding: 0; }
+  .section { display: none !important; }
+  #tab-relazione.section { display: block !important; }
+
+  /* Layout pagina */
+  html, body { margin: 0; padding: 0; background: white !important; }
+  .page-wrap { padding-top: 0 !important; }
+  .content { padding: 0 !important; max-width: 100% !important; }
+  .rel-doc { box-shadow: none !important; border-radius: 0 !important; max-width: 100% !important; }
+  .rel-page { padding: 1.5cm !important; font-size: 10pt !important; }
+
+  /* Copertina su pagina intera */
+  .rel-cover {
+    page-break-after: always !important;
+    min-height: 80vh;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 3cm 2cm !important;
+    border-bottom: none !important;
+  }
+
+  /* Sezioni — evita tagli nelle tabelle */
+  .rel-section { page-break-inside: avoid; margin-bottom: 1cm; }
+  .rel-section:has(table) { page-break-inside: auto; }
+  .rel-table { page-break-inside: auto; font-size: 9pt; }
+  .rel-table tr { page-break-inside: avoid; }
+  .rel-table thead { display: table-header-group; }
+
+  /* Campi editabili — mostra testo pulito */
+  .rel-editable {
+    border: none !important;
+    background: transparent !important;
+    resize: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  textarea.rel-editable { display: block; width: 100%; }
 }
 </style>
 </head>
@@ -606,6 +647,7 @@ function renderEnvironments(){
           <th style="width:7%;text-align:center">Qt.</th>
           <th style="width:9%;text-align:right">Prezzo €</th>
           <th style="width:9%;text-align:right">Totale</th>
+          <th style="width:9%;text-align:center">Link</th>
           <th style="width:4%"></th>
         </tr></thead>
         <tbody id="tbody-${ei}"></tbody>
@@ -628,10 +670,7 @@ function resolveItem(item){
   // if linked to catalog, pull desc/price/link from catalog entry
   if(item.catalogId){
     const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
-    if(cat){
-      const link=(cat.link||'').trim()||(item.link||'').trim();
-      return {...item, desc:cat.desc, price:cat.price, link, note:item.note||cat.note||''};
-    }
+    if(cat) return {...item, desc:cat.desc, price:cat.price, link:(cat.link&&cat.link.trim())||item.link||'', note:item.note||cat.note||''};
   }
   return item;
 }
@@ -668,6 +707,12 @@ function renderItems(ei){
         }
       </td>
       <td class="row-total">€ ${fmt(item.qty*r.price)}</td>
+      <td style="text-align:center">
+        ${r.link && r.link.trim()
+          ? `<a href="${r.link}" target="_blank" class="link-btn has-link">↗ Apri</a>`
+          : `<span style="font-size:0.65rem;color:#aaa">${fromCatalog ? 'no link' : '—'}</span>`
+        }
+      </td>
       <td><button class="btn btn-danger" onclick="removeItem(${ei},${ii})">✕</button></td>
     `;
     tbody.appendChild(tr);
@@ -1309,19 +1354,37 @@ function resolveItem(item) {
   if (!item) return null;
   if (item.catalogId) {
     const cat = (data.catalog||[]).find(c=>c.id===item.catalogId);
-    if (cat) return { desc: cat.desc, note: cat.note||'', price: cat.price||0 };
+    if (cat) {
+      const link = (cat.link||'').trim() || (item.link||'').trim();
+      return { ...item, desc: cat.desc, note: item.note||cat.note||'', price: cat.price||0, link };
+    }
   }
-  return { desc: item.desc||'Articolo', note: item.note||'', price: item.price||0 };
+  return { ...item, desc: item.desc||'Articolo', note: item.note||'', price: item.price||0, link: (item.link||'').trim() };
 }
 
 async function scaricaDocx() {
-  // Usa docx.js via CDN
-  if (!window.docx) {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
-    document.head.appendChild(script);
-    await new Promise(r => script.onload = r);
+  // Feedback visivo
+  const btn = document.querySelector('[onclick="scaricaDocx()"]');
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳ Generazione...'; btn.disabled = true; }
+
+  try {
+    if (!window.docx) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Impossibile caricare libreria docx.js'));
+        document.head.appendChild(s);
+      });
+    }
+    if (!window.docx) throw new Error('Libreria docx non disponibile');
+  } catch(e) {
+    alert('Errore: ' + e.message + '\nVerifica la connessione internet.');
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+    return;
   }
+
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
           AlignmentType, WidthType, ShadingType, BorderStyle, HeadingLevel } = window.docx;
 
@@ -1413,13 +1476,19 @@ async function scaricaDocx() {
   children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{before:400,after:200}, children:[new TextRun({text:'Note Finali e Raccomandazioni',bold:true,size:28,font:'Arial',color:'1A3A5C'})] }));
   children.push(new Paragraph({ children:[new TextRun({text:meta.noteFinali||'Si raccomanda di richiedere almeno 3 preventivi per gli articoli principali. Valutare acquisti coordinati con il Coordinamento Piemonte per ottenere sconti volume.',font:'Arial',size:22})] }));
 
-  const doc = new Document({ sections:[{ properties:{ page:{ size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:1134,left:1134} } }, children }] });
-  const blob = new Blob([await Packer.toBlob(doc)], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'piano_acquisti_ANA_Casale.docx';
-  a.click();
-  URL.revokeObjectURL(a.href);
+  try {
+    const doc = new Document({ sections:[{ properties:{ page:{ size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:1134,left:1134} } }, children }] });
+    const blob = new Blob([await Packer.toBlob(doc)], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'piano_acquisti_ANA_Casale.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    if (btn) { btn.innerHTML = '✔ Scaricato!'; setTimeout(()=>{ btn.innerHTML = origText; btn.disabled = false; }, 2000); }
+  } catch(e) {
+    alert('Errore generazione DOCX: ' + e.message);
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+  }
 }
 
 async function init() {
