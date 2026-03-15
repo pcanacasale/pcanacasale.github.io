@@ -864,7 +864,7 @@ async function removeCatalogItem(ci){
   data.environments.forEach(env=>{env.items=env.items.filter(i=>i.catalogId!==id);});
   await saveData();renderCatalog();renderEnvironments();
 }
-function openAddToEnvFromCatalog(ci,sel){
+async function openAddToEnvFromCatalog(ci,sel){
   const ei=parseInt(sel.value);
   if(isNaN(ei)){return;}
   const cat=data.catalog[ci];
