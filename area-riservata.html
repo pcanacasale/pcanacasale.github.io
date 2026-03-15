@@ -497,35 +497,35 @@ body {
   <div class="sidebar" id="sidebar">
     <div class="sidebar-section">Generale</div>
     <button class="nav-item active" onclick="showPanel('home', this)">
-      <span class="icon">🏠</span> Home
+      <span class="icon">&#x1F3E0;</span> Home
     </button>
 
     <div class="sidebar-section">Operativo</div>
     <button class="nav-item" id="navInterventi" onclick="showPanel('interventi', this)">
-      <span class="icon">📋</span> Interventi
+      <span class="icon">&#x1F4CB;</span> Interventi
     </button>
     <button class="nav-item" id="navVolontari" onclick="showPanel('volontari', this)">
-      <span class="icon">👤</span> Elenco volontari
+      <span class="icon">&#x1F464;</span> Elenco volontari
     </button>
 
     <button class="nav-item" id="navRichieste" style="display:none" onclick="showPanel('richieste', this)">
-      <span class="icon">📬</span> Richieste adesione
+      <span class="icon">&#x1F4EC;</span> Richieste adesione
     </button>
     <button class="nav-item" id="navPianoAcquisti" style="display:none" onclick="window.location.href='configuratore.html'">
-      <span class="icon">🖥️</span> Piano acquisti
+      <span class="icon">&#x1F5A5;</span> Piano acquisti
     </button>
 
     <div id="masterNav" style="display:none">
       <div class="sidebar-section">Master</div>
       <button class="nav-item" onclick="showPanel('richieste', this)">
-        <span class="icon">📬</span> Richieste adesione
+        <span class="icon">&#x1F4EC;</span> Richieste adesione
         <span class="badge" id="badgeRichieste" style="display:none"></span>
       </button>
       <button class="nav-item" onclick="showPanel('utenti', this)">
-        <span class="icon">👥</span> Gestione utenti
+        <span class="icon">&#x1F465;</span> Gestione utenti
       </button>
       <button class="nav-item" onclick="window.location.href='configuratore.html'">
-        <span class="icon">🖥️</span> Piano acquisti
+        <span class="icon">&#x1F5A5;</span> Piano acquisti
       </button>
     </div>
   </div>
@@ -541,26 +541,26 @@ body {
       </div>
       <div class="home-cards" id="homeCards">
         <div class="home-card" id="cardInterventi" onclick="showPanel('interventi', null)">
-          <div class="card-icon">📋</div>
+          <div class="card-icon">&#x1F4CB;</div>
           <h3>Interventi</h3>
           <p>Registra e consulta gli interventi dell'unità</p>
         </div>
         <div class="home-card" id="cardVolontari" onclick="showPanel('volontari', null)">
-          <div class="card-icon">👤</div>
+          <div class="card-icon">&#x1F464;</div>
           <h3>Elenco volontari</h3>
           <p>Visualizza i dati dei volontari attivi</p>
         </div>
       </div>
       <div id="cardRichieste" style="display:none">
         <div class="home-card" onclick="showPanel('richieste', null)">
-          <div class="card-icon">📬</div>
+          <div class="card-icon">&#x1F4EC;</div>
           <h3>Richieste adesione</h3>
           <p>Gestisci le richieste ricevute dal sito</p>
         </div>
       </div>
       <div id="cardPianoAcquisti" style="display:none">
         <div class="home-card" onclick="window.location.href='configuratore.html'">
-          <div class="card-icon">🖥️</div>
+          <div class="card-icon">&#x1F5A5;</div>
           <h3>Piano acquisti</h3>
           <p>Infrastruttura informatica sezionale</p>
         </div>
@@ -569,12 +569,12 @@ body {
       <div id="masterCards" style="display:none">
         <div class="home-cards">
           <div class="home-card" onclick="showPanel('richieste', null)">
-            <div class="card-icon">📬</div>
+            <div class="card-icon">&#x1F4EC;</div>
             <h3>Richieste adesione</h3>
             <p>Gestisci le richieste ricevute dal sito</p>
           </div>
           <div class="home-card" onclick="showPanel('utenti', null)">
-            <div class="card-icon">👥</div>
+            <div class="card-icon">&#x1F465;</div>
             <h3>Gestione utenti</h3>
             <p>Aggiungi, modifica o rimuovi volontari</p>
           </div>
@@ -585,7 +585,7 @@ body {
     <!-- INTERVENTI -->
     <div class="panel" id="panelInterventi">
       <div class="panel-header">
-        <h2>📋 Interventi</h2>
+        <h2>&#x1F4CB; Interventi</h2>
         <p>Inserimento e consultazione interventi</p>
       </div>
       <iframe class="teable-frame" src="https://app.teable.ai/share/shrm9NARRyXGOaT1L6c/view"></iframe>
@@ -594,7 +594,7 @@ body {
     <!-- VOLONTARI -->
     <div class="panel" id="panelVolontari">
       <div class="panel-header">
-        <h2>👤 Elenco volontari</h2>
+        <h2>&#x1F464; Elenco volontari</h2>
         <p>Lista aggiornata dei volontari dell'unità</p>
       </div>
       <iframe class="teable-frame" src="https://app.teable.ai/share/shre0oZ3AUhA6RnhPVi/view"></iframe>
@@ -603,7 +603,7 @@ body {
     <!-- RICHIESTE (master) -->
     <div class="panel" id="panelRichieste">
       <div class="panel-header">
-        <h2>📬 Richieste di adesione</h2>
+        <h2>&#x1F4EC; Richieste di adesione</h2>
         <p>Richieste ricevute dal modulo sul sito</p>
       </div>
       <div id="richiesteList"></div>
@@ -612,7 +612,7 @@ body {
     <!-- UTENTI (master) -->
     <div class="panel" id="panelUtenti">
       <div class="panel-header">
-        <h2>👥 Gestione utenti</h2>
+        <h2>&#x1F465; Gestione utenti</h2>
         <p>Aggiungi, attiva o rimuovi gli accessi</p>
       </div>
       <div id="utentiList"></div>
@@ -633,16 +633,16 @@ body {
         <div style="margin-bottom:0.8rem;background:#f7f9fc;border-radius:10px;padding:0.8rem 1rem;border:2px solid #e2e8f0">
           <div style="font-size:0.72rem;font-weight:800;color:var(--testo-ch);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem">Permessi</div>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permInterventi" checked style="width:16px;height:16px;accent-color:var(--verde)"> 📋 Interventi
+            <input type="checkbox" id="permInterventi" checked style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F4CB; Interventi
           </label>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permVolontari" checked style="width:16px;height:16px;accent-color:var(--verde)"> 👤 Elenco volontari
+            <input type="checkbox" id="permVolontari" checked style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F464; Elenco volontari
           </label>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permRichieste" style="width:16px;height:16px;accent-color:var(--verde)"> 📬 Richieste adesione
+            <input type="checkbox" id="permRichieste" style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F4EC; Richieste adesione
           </label>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;cursor:pointer">
-            <input type="checkbox" id="permPianoAcquisti" style="width:16px;height:16px;accent-color:var(--verde)"> 🖥️ Piano acquisti
+            <input type="checkbox" id="permPianoAcquisti" style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F5A5; Piano acquisti
           </label>
         </div>
         <button class="btn-primary" onclick="salvaUtente()">Salva utente</button>
@@ -750,7 +750,7 @@ async function caricaUtenti() {
     utenti.forEach(function(u) {
       const div = document.createElement('div');
       div.className = 'utente-row' + (u.attivo ? '' : ' utente-disattivo');
-      const tipoLabel = u.tipo_accesso === 'master' ? '⭐ Master' : '👤 Standard';
+      const tipoLabel = u.tipo_accesso === 'master' ? '&#x2B50; Master' : '&#x1F464; Standard';
       const p = u.permessi || {};
       const permBadges = u.tipo_accesso === 'master' ? '<span style="font-size:0.68rem;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-weight:700">Accesso completo</span>' :
         [p.interventi?'<span class="perm-badge">Interventi</span>':'', p.volontari?'<span class="perm-badge">Volontari</span>':'', p.richieste?'<span class="perm-badge">Richieste</span>':'', p.piano_acquisti?'<span class="perm-badge">Piano acquisti</span>':''].filter(Boolean).join('') || '<span style="font-size:0.68rem;color:#aaa">nessun permesso</span>';
@@ -877,4 +877,4 @@ document.addEventListener('keydown', function(e) {
 </script>
 </body>
 </html>
-<!-- end -->
+
