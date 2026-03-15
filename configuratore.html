@@ -183,6 +183,127 @@ nav{
   .content{padding:1rem;}
   .env-name-inp,.env-note-inp{width:100%;}
 }
+
+/* ── RELAZIONE ── */
+.rel-doc {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px var(--ombra);
+  overflow: hidden;
+}
+.rel-toolbar {
+  display: flex;
+  gap: 0.7rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.rel-page {
+  padding: 3rem;
+  font-family: 'Georgia', serif;
+  font-size: 0.92rem;
+  color: #1a1a1a;
+  line-height: 1.7;
+}
+.rel-cover {
+  text-align: center;
+  padding: 3rem 2rem 2rem;
+  border-bottom: 3px solid #1a3a5c;
+  margin-bottom: 2rem;
+}
+.rel-cover-logo {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+.rel-cover h1 {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #1a3a5c;
+  margin-bottom: 0.3rem;
+}
+.rel-cover h2 {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d6a4f;
+  margin-bottom: 1.5rem;
+}
+.rel-cover-meta {
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 2;
+}
+.rel-section {
+  margin-bottom: 2rem;
+}
+.rel-section h3 {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #1a3a5c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #dbeafe;
+  padding-bottom: 0.4rem;
+  margin-bottom: 1rem;
+}
+.rel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  margin-bottom: 1rem;
+}
+.rel-table th {
+  background: #1a3a5c;
+  color: white;
+  padding: 8px 12px;
+  text-align: left;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+}
+.rel-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #e8edf3;
+}
+.rel-table tr:nth-child(even) td { background: #f7f9fc; }
+.rel-table tr.env-header td {
+  background: #dbeafe;
+  font-weight: 800;
+  color: #1a3a5c;
+  font-family: 'Nunito', sans-serif;
+}
+.rel-table tr.total-row td {
+  background: #1a3a5c;
+  color: white;
+  font-weight: 900;
+  font-family: 'Nunito', sans-serif;
+}
+.rel-editable {
+  border: none;
+  border-bottom: 1px dashed #ccc;
+  background: #fffef5;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-family: 'Georgia', serif;
+  font-size: 0.92rem;
+  color: #1a1a1a;
+  width: 100%;
+  resize: vertical;
+}
+.rel-editable:focus { outline: none; border-bottom: 1px solid #2d6a4f; background: #f0fdf4; }
+.rel-note { font-size: 0.78rem; color: #888; font-style: italic; margin-top: 0.5rem; }
+
+@media print {
+  .rel-toolbar, nav, .tabs-wrap, .add-row-wrap, .btn, #tab-riepilogo, #tab-listino, #tab-ambienti, #tab-abbonamenti, #tab-decisioni, #tab-esporta { display: none !important; }
+  #tab-relazione { display: block !important; }
+  .rel-doc { box-shadow: none; border-radius: 0; }
+  .rel-editable { border: none; background: transparent; }
+  .content { padding: 0; }
+}
 </style>
 </head>
 <body>
@@ -221,6 +342,7 @@ nav{
       <button class="tab" onclick="showTab('abbonamenti')">🔄 Abbonamenti</button>
       <button class="tab" onclick="showTab('decisioni')">✅ Decisioni</button>
       <button class="tab" onclick="showTab('esporta')">📤 Esporta</button>
+      <button class="tab" onclick="showTab('relazione')">📄 Relazione</button>
     </div>
   </div>
 
@@ -314,6 +436,21 @@ nav{
       <div class="decisions-grid" id="decisions-container"></div>
     </div>
 
+
+    <!-- RELAZIONE -->
+    <div id="tab-relazione" class="section">
+      <div class="rel-toolbar">
+        <button class="btn btn-blu" onclick="window.print()">🖨️ Stampa / PDF</button>
+        <button class="btn btn-primary" onclick="scaricaDocx()">📄 Scarica .docx</button>
+        <span style="font-size:0.78rem;color:var(--testo-ch);align-self:center">I campi con sfondo giallo sono modificabili</span>
+      </div>
+      <div class="rel-doc">
+        <div class="rel-page" id="relazioneContent">
+          <!-- generato da renderRelazione() -->
+        </div>
+      </div>
+    </div>
+
     <div id="tab-esporta" class="section">
       <div class="export-grid">
         <div class="export-card">
@@ -390,7 +527,7 @@ async function saveData() {
 }
 
 function showTab(t){
-  const labels=['riepilogo','listino','ambienti','abbonamenti','decisioni','esporta'];
+  const labels=['riepilogo','listino','ambienti','abbonamenti','decisioni','esporta','relazione'];
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',labels[i]===t));
   document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
@@ -399,6 +536,7 @@ function showTab(t){
   if(t==='listino')renderCatalog();
   if(t==='abbonamenti')renderSubs();
   if(t==='decisioni')renderDecisions();
+  if(t==='relazione')renderRelazione();
 }
 
 function envTotal(env){return env.items.reduce((s,i)=>{const r=resolveItem(i);return s+i.qty*r.price;},0);}
@@ -983,6 +1121,266 @@ async function importJSON(e){
   const reader=new FileReader();
   reader.onload=async ev=>{try{data=JSON.parse(ev.target.result);await saveData();renderSummary();alert('Dati importati correttamente.');}catch{alert('Errore nel file JSON.');}};
   reader.readAsText(file);
+}
+
+
+// ── RELAZIONE ──
+function fmt2(v) { return v.toLocaleString('it-IT', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function renderRelazione() {
+  const gt = grandTotal();
+  const ic = data.environments.reduce((s,e)=>s+e.items.length,0);
+  const today = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'long',year:'numeric'});
+
+  // Dati meta modificabili
+  const meta = data.relazioneMeta || {};
+
+  let html = `
+    <div class="rel-cover">
+      <img src="images/logo-sezione.png" alt="Logo ANA Casale" style="height:90px;width:90px;object-fit:contain;border-radius:50%;margin-bottom:0.8rem" onerror="this.style.display='none'">
+      <h1>ASSOCIAZIONE NAZIONALE ALPINI</h1>
+      <h2>Sezione di Casale Monferrato</h2>
+      <div style="font-family:'Nunito',sans-serif;font-size:1.2rem;font-weight:900;color:#1a3a5c;margin:1rem 0 0.3rem">PIANO ACQUISTI<br>INFRASTRUTTURA INFORMATICA</div>
+      <div style="font-family:'Nunito',sans-serif;font-size:0.85rem;color:#2d6a4f;margin-bottom:1.5rem">Rifacimento e ammodernamento della struttura informatica sezionale</div>
+      <div class="rel-cover-meta">
+        <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center">Redatto da: <textarea class="rel-editable" rows="1" style="width:280px" onchange="saveRelMeta('redattore',this.value)">${meta.redattore || 'Consiglio Direttivo – Resp. Informatica'}</textarea></div>
+        <div>Data: <strong>${today}</strong></div>
+        <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center">Versione: <textarea class="rel-editable" rows="1" style="width:200px" onchange="saveRelMeta('versione',this.value)">${meta.versione || 'Bozza per approvazione CD'}</textarea></div>
+        <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center">Destinatari: <textarea class="rel-editable" rows="1" style="width:320px" onchange="saveRelMeta('destinatari',this.value)">${meta.destinatari || 'Consiglio Direttivo ANA – Sezione di Casale Monferrato'}</textarea></div>
+      </div>
+    </div>
+
+    <div class="rel-section">
+      <h3>1. Sommario Esecutivo</h3>
+      <textarea class="rel-editable" rows="4" onchange="saveRelMeta('sommario',this.value)">${meta.sommario || 'Il presente documento definisce il piano di acquisto per il rifacimento dell\'infrastruttura informatica della Sezione ANA di Casale Monferrato. Il piano è organizzato per ambiente fisico, ciascuno con le proprie dotazioni specifiche.'}</textarea>
+    </div>
+
+    <div class="rel-section">
+      <h3>2. Ambienti e Dotazioni</h3>
+      <table class="rel-table">
+        <thead><tr><th>Ambiente</th><th>Dotazione principale</th><th style="text-align:right">Stima (€)</th></tr></thead>
+        <tbody>`;
+
+  data.environments.forEach(env => {
+    const tot = envTotal(env);
+    const items = env.items.map(i => { const r=resolveItem(i); return r?r.desc:''; }).filter(Boolean);
+    const dotazione = items.slice(0,3).join(', ') + (items.length > 3 ? '...' : '') || '—';
+    html += `<tr><td>■ ${env.name}</td><td>${dotazione}</td><td style="text-align:right">${tot > 0 ? '€ '+fmt2(tot) : '—'}</td></tr>`;
+  });
+
+  html += `<tr class="total-row"><td colspan="2"><strong>TOTALE GENERALE</strong></td><td style="text-align:right"><strong>€ ${fmt2(gt)}</strong></td></tr>
+        </tbody>
+      </table>
+      <p class="rel-note">* Prezzi indicativi IVA inclusa. Richiedere preventivi prima dell'acquisto.</p>
+    </div>`;
+
+  // Sezione per ogni ambiente — scheda dettagliata separata
+  data.environments.forEach((env, ei) => {
+    if (!env.items.length) return;
+    const envMeta = (data.relazioneEnv && data.relazioneEnv[env.id]) || {};
+    html += `<div class="rel-section" style="page-break-inside:avoid;border:1px solid #dbeafe;border-radius:12px;padding:1.5rem;margin-bottom:2rem;background:#fafcff">
+      <div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:1rem;padding-bottom:0.8rem;border-bottom:2px solid #1a3a5c">
+        <span style="font-size:1.4rem">🏢</span>
+        <div style="flex:1">
+          <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.5px">${env.name}</div>
+        </div>
+        <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:1.1rem;color:#2d6a4f">€ ${fmt2(envTotal(env))}</div>
+      </div>
+      <div style="margin-bottom:0.8rem">
+        <div style="font-size:0.72rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem">Descrizione ambiente / destinazione d'uso</div>
+        <textarea class="rel-editable" rows="2" style="width:100%" onchange="saveRelEnvMeta('${env.id}','descrizione',this.value)">${envMeta.descrizione || env.note || ''}</textarea>
+      </div>
+      <table class="rel-table">
+        <thead><tr>
+          <th>Articolo</th>
+          <th>Descrizione / Specifiche</th>
+          <th style="text-align:center">Qt.</th>
+          <th style="text-align:right">Prezzo unit.</th>
+          <th style="text-align:right">Totale</th>
+        </tr></thead>
+        <tbody>`;
+    env.items.forEach(item => {
+      const r = resolveItem(item);
+      if (!r) return;
+      const tot = item.qty * r.price;
+      html += `<tr>
+        <td><strong>${r.desc}</strong></td>
+        <td style="font-size:0.78rem;color:#555">${r.note||'—'}</td>
+        <td style="text-align:center">${item.qty}</td>
+        <td style="text-align:right">€ ${fmt2(r.price)}</td>
+        <td style="text-align:right">€ ${fmt2(tot)}</td>
+      </tr>`;
+    });
+    html += `<tr class="env-header">
+        <td colspan="4"><strong>SUBTOTALE ${env.name.toUpperCase()}</strong></td>
+        <td style="text-align:right"><strong>€ ${fmt2(envTotal(env))}</strong></td>
+      </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:0.8rem">
+        <div style="font-size:0.72rem;font-weight:800;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem">Note aggiuntive</div>
+        <textarea class="rel-editable" rows="2" style="width:100%" onchange="saveRelEnvMeta('${env.id}','note',this.value)">${envMeta.note || ''}</textarea>
+      </div>
+    </div>`;
+  });
+
+  // Abbonamenti
+  if (data.subscriptions && data.subscriptions.filter(s=>s.active).length > 0) {
+    html += `<div class="rel-section"><h3>Software e Abbonamenti</h3>
+      <table class="rel-table">
+        <thead><tr><th>Servizio</th><th>Ciclo</th><th style="text-align:right">Costo annuo</th></tr></thead><tbody>`;
+    data.subscriptions.filter(s=>s.active).forEach(s => {
+      const annuo = s.cycle==='mensile' ? (s.monthly||0)*12 : (s.yearly||0);
+      html += `<tr><td>${s.name}</td><td>${s.cycle}</td><td style="text-align:right">€ ${fmt2(annuo)}</td></tr>`;
+    });
+    html += `<tr class="total-row"><td colspan="2"><strong>TOTALE ANNUO ABBONAMENTI</strong></td><td style="text-align:right"><strong>€ ${fmt2(subYearlyTotal())}</strong></td></tr>
+      </tbody></table></div>`;
+  }
+
+  // Note finali
+  html += `<div class="rel-section">
+    <h3>Note Finali e Raccomandazioni</h3>
+    <textarea class="rel-editable" rows="5" onchange="saveRelMeta('noteFinali',this.value)">${meta.noteFinali || 'Si raccomanda di richiedere almeno 3 preventivi per gli articoli principali. Valutare acquisti coordinati con il Coordinamento Piemonte per ottenere sconti volume. Verificare programmi Microsoft e Dell per ONLUS/ETS prima dell\'acquisto.'}</textarea>
+  </div>
+
+  <div style="margin-top:2rem;padding-top:1rem;border-top:1px solid #e0e0e0;font-size:0.75rem;color:#999;text-align:center">
+    Documento riservato – uso interno | Generato il ${today}
+  </div>`;
+
+  document.getElementById('relazioneContent').innerHTML = html;
+}
+
+async function saveRelEnvMeta(envId, key, val) {
+  if (!data.relazioneEnv) data.relazioneEnv = {};
+  if (!data.relazioneEnv[envId]) data.relazioneEnv[envId] = {};
+  data.relazioneEnv[envId][key] = val;
+  await saveData();
+}
+
+async function saveRelMeta(key, val) {
+  if (!data.relazioneMeta) data.relazioneMeta = {};
+  data.relazioneMeta[key] = val;
+  await saveData();
+}
+
+async function saveRelEnvNote(ei, val) {
+  data.environments[ei].note = val;
+  await saveData();
+}
+
+function resolveItem(item) {
+  if (!item) return null;
+  if (item.catalogId) {
+    const cat = (data.catalog||[]).find(c=>c.id===item.catalogId);
+    if (cat) return { desc: cat.desc, note: cat.note||'', price: cat.price||0 };
+  }
+  return { desc: item.desc||'Articolo', note: item.note||'', price: item.price||0 };
+}
+
+async function scaricaDocx() {
+  // Usa docx.js via CDN
+  if (!window.docx) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
+    document.head.appendChild(script);
+    await new Promise(r => script.onload = r);
+  }
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          AlignmentType, WidthType, ShadingType, BorderStyle, HeadingLevel } = window.docx;
+
+  const today = new Date().toLocaleDateString('it-IT');
+  const meta = data.relazioneMeta || {};
+  const gt = grandTotal();
+  const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  const borders = { top: border, bottom: border, left: border, right: border };
+  const cellM = { top: 80, bottom: 80, left: 120, right: 120 };
+  const W = 9360;
+  const fmt = v => '€ ' + v.toLocaleString('it-IT', {minimumFractionDigits:2});
+
+  const children = [];
+
+  // Cover
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: 'ASSOCIAZIONE NAZIONALE ALPINI', bold: true, size: 32, font: 'Arial', color: '1A3A5C' })] }));
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 100 }, children: [new TextRun({ text: 'Sezione di Casale Monferrato', size: 24, font: 'Arial', color: '2D6A4F' })] }));
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 400, after: 200 }, children: [new TextRun({ text: 'PIANO ACQUISTI – INFRASTRUTTURA INFORMATICA', bold: true, size: 28, font: 'Arial' })] }));
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: 'Rifacimento e ammodernamento della struttura informatica sezionale 2025–2026', size: 22, font: 'Arial', italics: true })] }));
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Data: ' + today + '   |   Versione: ' + (meta.versione||'Bozza'), size: 20, font: 'Arial', color: '555555' })] }));
+
+  // Sommario
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 }, children: [new TextRun({ text: '1. Sommario Esecutivo', bold: true, size: 28, font: 'Arial', color: '1A3A5C' })] }));
+  children.push(new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: meta.sommario || 'Il presente documento definisce il piano di acquisto per il rifacimento dell\'infrastruttura informatica della Sezione ANA di Casale Monferrato.', font: 'Arial', size: 22 })] }));
+
+  // Tabella sommario
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 300, after: 200 }, children: [new TextRun({ text: '2. Ambienti e Dotazioni', bold: true, size: 28, font: 'Arial', color: '1A3A5C' })] }));
+
+  const summaryRows = [
+    new TableRow({ children: [
+      new TableCell({ borders, width:{size:4000,type:WidthType.DXA}, margins:cellM, shading:{fill:'1A3A5C',type:ShadingType.CLEAR}, children:[new Paragraph({children:[new TextRun({text:'Ambiente',bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+      new TableCell({ borders, width:{size:3360,type:WidthType.DXA}, margins:cellM, shading:{fill:'1A3A5C',type:ShadingType.CLEAR}, children:[new Paragraph({children:[new TextRun({text:'Dotazione principale',bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+      new TableCell({ borders, width:{size:2000,type:WidthType.DXA}, margins:cellM, shading:{fill:'1A3A5C',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Stima (€)',bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+    ]})
+  ];
+  data.environments.forEach(env => {
+    const tot = envTotal(env);
+    const items = env.items.map(i=>{const r=resolveItem(i);return r?r.desc:'';}).filter(Boolean);
+    summaryRows.push(new TableRow({ children: [
+      new TableCell({ borders, width:{size:4000,type:WidthType.DXA}, margins:cellM, children:[new Paragraph({children:[new TextRun({text:'■ '+env.name,font:'Arial',size:20})]})] }),
+      new TableCell({ borders, width:{size:3360,type:WidthType.DXA}, margins:cellM, children:[new Paragraph({children:[new TextRun({text:items.slice(0,3).join(', ')||(env.note||'—'),font:'Arial',size:18,italics:true})]})] }),
+      new TableCell({ borders, width:{size:2000,type:WidthType.DXA}, margins:cellM, children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:tot>0?fmt(tot):'—',font:'Arial',size:20})]})] }),
+    ]}));
+  });
+  summaryRows.push(new TableRow({ children: [
+    new TableCell({ borders, width:{size:7360,type:WidthType.DXA}, margins:cellM, shading:{fill:'1A3A5C',type:ShadingType.CLEAR}, columnSpan:2, children:[new Paragraph({children:[new TextRun({text:'TOTALE GENERALE',bold:true,color:'FFFFFF',font:'Arial',size:22})]})] }),
+    new TableCell({ borders, width:{size:2000,type:WidthType.DXA}, margins:cellM, shading:{fill:'1A3A5C',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(gt),bold:true,color:'FFFFFF',font:'Arial',size:22})]})] }),
+  ]}));
+  children.push(new Table({ width:{size:W,type:WidthType.DXA}, columnWidths:[4000,3360,2000], rows:summaryRows }));
+  children.push(new Paragraph({ spacing:{after:200}, children:[new TextRun({text:'* Prezzi indicativi IVA inclusa. Richiedere preventivi prima dell\'acquisto.',font:'Arial',size:18,italics:true,color:'888888'})] }));
+
+  // Sezione per ogni ambiente
+  data.environments.forEach((env, ei) => {
+    if (!env.items.length) return;
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{before:400,after:200}, children:[new TextRun({text:(ei+3)+'. '+env.name,bold:true,size:28,font:'Arial',color:'1A3A5C'})] }));
+    if (env.note) children.push(new Paragraph({ spacing:{after:200}, children:[new TextRun({text:env.note,font:'Arial',size:22,italics:true})] }));
+
+    const rows = [new TableRow({ children:[
+      new TableCell({borders,width:{size:2500,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:'Articolo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:3460,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:'Descrizione',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:700,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Qt.',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:1300,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Prezzo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Totale',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+    ]})];
+    env.items.forEach((item,ii) => {
+      const r = resolveItem(item);
+      if (!r) return;
+      const tot = item.qty * r.price;
+      const fill = ii%2===0?'FFFFFF':'F7F9FC';
+      rows.push(new TableRow({ children:[
+        new TableCell({borders,width:{size:2500,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:r.desc,font:'Arial',size:20})]})] }),
+        new TableCell({borders,width:{size:3460,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:r.note||'—',font:'Arial',size:18,italics:true,color:'555555'})]})] }),
+        new TableCell({borders,width:{size:700,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:String(item.qty),font:'Arial',size:20})]})] }),
+        new TableCell({borders,width:{size:1300,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(r.price),font:'Arial',size:20})]})] }),
+        new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(tot),font:'Arial',size:20})]})] }),
+      ]}));
+    });
+    rows.push(new TableRow({ children:[
+      new TableCell({borders,width:{size:8360,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},columnSpan:4,children:[new Paragraph({children:[new TextRun({text:'SUBTOTALE '+env.name.toUpperCase(),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+      new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(envTotal(env)),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+    ]}));
+    children.push(new Table({width:{size:W,type:WidthType.DXA},columnWidths:[2500,3460,700,1300,1400],rows}));
+    children.push(new Paragraph({spacing:{after:300}}));
+  });
+
+  // Note finali
+  children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing:{before:400,after:200}, children:[new TextRun({text:'Note Finali e Raccomandazioni',bold:true,size:28,font:'Arial',color:'1A3A5C'})] }));
+  children.push(new Paragraph({ children:[new TextRun({text:meta.noteFinali||'Si raccomanda di richiedere almeno 3 preventivi per gli articoli principali. Valutare acquisti coordinati con il Coordinamento Piemonte per ottenere sconti volume.',font:'Arial',size:22})] }));
+
+  const doc = new Document({ sections:[{ properties:{ page:{ size:{width:11906,height:16838}, margin:{top:1134,right:1134,bottom:1134,left:1134} } }, children }] });
+  const blob = new Blob([await Packer.toBlob(doc)], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'piano_acquisti_ANA_Casale.docx';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 async function init() {

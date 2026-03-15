@@ -500,11 +500,18 @@ body {
     </button>
 
     <div class="sidebar-section">Operativo</div>
-    <button class="nav-item" onclick="showPanel('interventi', this)">
+    <button class="nav-item" id="navInterventi" onclick="showPanel('interventi', this)">
       <span class="icon">📋</span> Interventi
     </button>
-    <button class="nav-item" onclick="showPanel('volontari', this)">
+    <button class="nav-item" id="navVolontari" onclick="showPanel('volontari', this)">
       <span class="icon">👤</span> Elenco volontari
+    </button>
+
+    <button class="nav-item" id="navRichieste" style="display:none" onclick="showPanel('richieste', this)">
+      <span class="icon">📬</span> Richieste adesione
+    </button>
+    <button class="nav-item" id="navPianoAcquisti" style="display:none" onclick="window.location.href='configuratore.html'">
+      <span class="icon">🖥️</span> Piano acquisti
     </button>
 
     <div id="masterNav" style="display:none">
@@ -532,17 +539,32 @@ body {
         <p>Seleziona una sezione dalla barra laterale</p>
       </div>
       <div class="home-cards" id="homeCards">
-        <div class="home-card" onclick="showPanel('interventi', null)">
+        <div class="home-card" id="cardInterventi" onclick="showPanel('interventi', null)">
           <div class="card-icon">📋</div>
           <h3>Interventi</h3>
           <p>Registra e consulta gli interventi dell'unità</p>
         </div>
-        <div class="home-card" onclick="showPanel('volontari', null)">
+        <div class="home-card" id="cardVolontari" onclick="showPanel('volontari', null)">
           <div class="card-icon">👤</div>
           <h3>Elenco volontari</h3>
           <p>Visualizza i dati dei volontari attivi</p>
         </div>
       </div>
+      <div id="cardRichieste" style="display:none">
+        <div class="home-card" onclick="showPanel('richieste', null)">
+          <div class="card-icon">📬</div>
+          <h3>Richieste adesione</h3>
+          <p>Gestisci le richieste ricevute dal sito</p>
+        </div>
+      </div>
+      <div id="cardPianoAcquisti" style="display:none">
+        <div class="home-card" onclick="window.location.href='configuratore.html'">
+          <div class="card-icon">🖥️</div>
+          <h3>Piano acquisti</h3>
+          <p>Infrastruttura informatica sezionale</p>
+        </div>
+      </div>
+
       <div id="masterCards" style="display:none">
         <div class="home-cards">
           <div class="home-card" onclick="showPanel('richieste', null)">
@@ -605,8 +627,22 @@ body {
         <div style="margin-bottom:0.8rem">
           <select id="nuovoTipo" style="width:100%;padding:0.65rem 0.9rem;border:2px solid #e2e8f0;border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.82rem">
             <option value="standard">Standard</option>
-            <option value="master">Master</option>
           </select>
+        </div>
+        <div style="margin-bottom:0.8rem;background:#f7f9fc;border-radius:10px;padding:0.8rem 1rem;border:2px solid #e2e8f0">
+          <div style="font-size:0.72rem;font-weight:800;color:var(--testo-ch);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem">Permessi</div>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
+            <input type="checkbox" id="permInterventi" checked style="width:16px;height:16px;accent-color:var(--verde)"> 📋 Interventi
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
+            <input type="checkbox" id="permVolontari" checked style="width:16px;height:16px;accent-color:var(--verde)"> 👤 Elenco volontari
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
+            <input type="checkbox" id="permRichieste" style="width:16px;height:16px;accent-color:var(--verde)"> 📬 Richieste adesione
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="permPianoAcquisti" style="width:16px;height:16px;accent-color:var(--verde)"> 🖥️ Piano acquisti
+          </label>
         </div>
         <button class="btn-primary" onclick="salvaUtente()">Salva utente</button>
       </div>
@@ -632,7 +668,7 @@ async function doLogin() {
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'Accesso in corso...';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso,permessi', { headers: H });
     const data = await res.json();
     if (data && data.length > 0) {
       currentUser = data[0];
@@ -651,11 +687,25 @@ function avviaDashboard() {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('topbarWelcome').innerHTML = 'Ciao <strong>' + currentUser.nome + '</strong> &mdash; ' + currentUser.ruolo;
   document.getElementById('homeWelcome').textContent = 'Benvenuto, ' + currentUser.nome + '!';
-  if (currentUser.tipo_accesso === 'master') {
-    document.getElementById('masterNav').style.display = 'block';
-    document.getElementById('masterCards').style.display = 'block';
-    caricaBadgeRichieste();
-  }
+
+  const p = currentUser.permessi || {};
+  const isMaster = currentUser.tipo_accesso === 'master';
+
+  // Sidebar voci
+  document.getElementById('navInterventi').style.display = (isMaster || p.interventi) ? 'flex' : 'none';
+  document.getElementById('navVolontari').style.display = (isMaster || p.volontari) ? 'flex' : 'none';
+  document.getElementById('masterNav').style.display = isMaster ? 'block' : 'none';
+  document.getElementById('navRichieste').style.display = (!isMaster && p.richieste) ? 'flex' : 'none';
+  document.getElementById('navPianoAcquisti').style.display = (!isMaster && p.piano_acquisti) ? 'flex' : 'none';
+
+  // Home cards
+  document.getElementById('cardInterventi').style.display = (isMaster || p.interventi) ? 'block' : 'none';
+  document.getElementById('cardVolontari').style.display = (isMaster || p.volontari) ? 'block' : 'none';
+  document.getElementById('masterCards').style.display = isMaster ? 'block' : 'none';
+  document.getElementById('cardRichieste').style.display = (!isMaster && p.richieste) ? 'block' : 'none';
+  document.getElementById('cardPianoAcquisti').style.display = (!isMaster && p.piano_acquisti) ? 'block' : 'none';
+
+  if (isMaster) caricaBadgeRichieste();
 }
 
 function logout() {
@@ -700,11 +750,15 @@ async function caricaUtenti() {
       const div = document.createElement('div');
       div.className = 'utente-row' + (u.attivo ? '' : ' utente-disattivo');
       const tipoLabel = u.tipo_accesso === 'master' ? '⭐ Master' : '👤 Standard';
+      const p = u.permessi || {};
+      const permBadges = u.tipo_accesso === 'master' ? '<span style="font-size:0.68rem;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-weight:700">Accesso completo</span>' :
+        [p.interventi?'📋':'', p.volontari?'👤':'', p.richieste?'📬':'', p.piano_acquisti?'🖥️':''].filter(Boolean).join(' ') || '<span style="font-size:0.68rem;color:#aaa">nessun permesso</span>';
       div.innerHTML = '<div class="utente-info">'
         + '<strong>' + u.nome + '</strong>'
         + '<span class="utente-username">@' + u.username + '</span>'
         + '<span class="utente-ruolo">' + u.ruolo + '</span>'
         + '<span class="utente-tipo ' + u.tipo_accesso + '">' + tipoLabel + '</span>'
+        + '<span style="font-size:0.72rem;margin-left:4px">' + permBadges + '</span>'
         + '</div>'
         + '<div class="utente-actions">'
         + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" onclick="toggleAttivo(' + JSON.stringify(u.id) + ',' + JSON.stringify(u.attivo) + ')">' + (u.attivo ? 'Disattiva' : 'Attiva') + '</button>'
@@ -724,16 +778,26 @@ async function salvaUtente() {
   const errEl = document.getElementById('nuovoUtenteErr');
   if (!nome || !username || !password || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
+  const permessi = {
+    interventi: document.getElementById('permInterventi').checked,
+    volontari: document.getElementById('permVolontari').checked,
+    richieste: document.getElementById('permRichieste').checked,
+    piano_acquisti: document.getElementById('permPianoAcquisti').checked
+  };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
     headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-    body: JSON.stringify({ nome: nome, username: username, password: password, ruolo: ruolo, tipo_accesso: tipo_accesso })
+    body: JSON.stringify({ nome: nome, username: username, password: password, ruolo: ruolo, tipo_accesso: tipo_accesso, permessi: permessi })
   });
   if (res.ok) {
     document.getElementById('nuovoNome').value = '';
     document.getElementById('nuovoUsername').value = '';
     document.getElementById('nuovaPassword').value = '';
     document.getElementById('nuovoRuolo').value = '';
+    document.getElementById('permInterventi').checked = true;
+    document.getElementById('permVolontari').checked = true;
+    document.getElementById('permRichieste').checked = false;
+    document.getElementById('permPianoAcquisti').checked = false;
     caricaUtenti();
   } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
 }
