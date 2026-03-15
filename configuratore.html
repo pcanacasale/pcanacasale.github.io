@@ -629,7 +629,7 @@ function resolveItem(item){
   // if linked to catalog, pull desc/price/link from catalog entry
   if(item.catalogId){
     const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
-    if(cat) return {...item, desc:cat.desc, price:cat.price, link:cat.link||item.link, note:item.note||cat.note||''};
+    if(cat) return {...item, desc:cat.desc, price:cat.price, link:(cat.link&&cat.link.trim())||item.link||'', note:item.note||cat.note||''};
   }
   return item;
 }
@@ -667,10 +667,9 @@ function renderItems(ei){
       </td>
       <td class="row-total">€ ${fmt(item.qty*r.price)}</td>
       <td style="text-align:center">
-        ${r.link
+        ${r.link && r.link.trim()
           ? `<a href="${r.link}" target="_blank" class="link-btn has-link">↗ Apri</a>`
-          : (fromCatalog ? '<span style="font-size:0.72rem;color:var(--testo-ch);">—</span>'
-            : `<input class="inline-edit" style="font-size:0.72rem;width:100%;" placeholder="Link..." value="${linkVal}" onchange="updateItem(${ei},${ii},'link',this.value)" />`)
+          : `<span style="font-size:0.65rem;color:#aaa">${fromCatalog ? 'no link' : '—'}</span>`
         }
       </td>
       <td><button class="btn btn-danger" onclick="removeItem(${ei},${ii})">✕</button></td>
