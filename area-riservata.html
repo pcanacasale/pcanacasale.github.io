@@ -744,7 +744,7 @@ async function caricaUtenti() {
   const list = document.getElementById('utentiList');
   list.innerHTML = '<p style="color:var(--testo-ch);padding:1rem 0">Caricamento...</p>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo&order=nome', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
     const utenti = await res.json();
     list.innerHTML = '';
     utenti.forEach(function(u) {
