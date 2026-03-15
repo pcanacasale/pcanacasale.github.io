@@ -337,6 +337,7 @@ body {
 }
 .utente-tipo.master { background: #fef3c7; color: #92400e; }
 .utente-tipo.standard { background: var(--blu-pale); color: var(--blu); }
+.perm-badge { font-size:0.65rem; font-weight:700; background:var(--verde-pale); color:var(--verde); padding:2px 7px; border-radius:20px; margin-left:3px; }
 .utente-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
 /* Nuovo utente form */
@@ -752,7 +753,7 @@ async function caricaUtenti() {
       const tipoLabel = u.tipo_accesso === 'master' ? '⭐ Master' : '👤 Standard';
       const p = u.permessi || {};
       const permBadges = u.tipo_accesso === 'master' ? '<span style="font-size:0.68rem;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-weight:700">Accesso completo</span>' :
-        [p.interventi?'📋':'', p.volontari?'👤':'', p.richieste?'📬':'', p.piano_acquisti?'🖥️':''].filter(Boolean).join(' ') || '<span style="font-size:0.68rem;color:#aaa">nessun permesso</span>';
+        [p.interventi?'<span class="perm-badge">Interventi</span>':'', p.volontari?'<span class="perm-badge">Volontari</span>':'', p.richieste?'<span class="perm-badge">Richieste</span>':'', p.piano_acquisti?'<span class="perm-badge">Piano acquisti</span>':''].filter(Boolean).join('') || '<span style="font-size:0.68rem;color:#aaa">nessun permesso</span>';
       div.innerHTML = '<div class="utente-info">'
         + '<strong>' + u.nome + '</strong>'
         + '<span class="utente-username">@' + u.username + '</span>'
