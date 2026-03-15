@@ -1193,22 +1193,28 @@ function renderRelazione() {
       <table class="rel-table">
         <thead><tr>
           <th>Articolo</th>
-          <th>Descrizione / Specifiche</th>
           <th style="text-align:center">Qt.</th>
           <th style="text-align:right">Prezzo unit.</th>
           <th style="text-align:right">Totale</th>
         </tr></thead>
         <tbody>`;
-    env.items.forEach(item => {
+    env.items.forEach((item, ii) => {
       const r = resolveItem(item);
       if (!r) return;
       const tot = item.qty * r.price;
+      const itemKey = env.id + '_item_' + ii;
+      const itemMeta = (data.relazioneEnv && data.relazioneEnv[env.id] && data.relazioneEnv[env.id].items && data.relazioneEnv[env.id].items[ii]) || {};
+      const specifica = itemMeta.specifica || r.note || '';
       html += `<tr>
-        <td><strong>${r.desc}</strong></td>
-        <td style="font-size:0.78rem;color:#555">${r.note||'—'}</td>
-        <td style="text-align:center">${item.qty}</td>
-        <td style="text-align:right">€ ${fmt2(r.price)}</td>
-        <td style="text-align:right">€ ${fmt2(tot)}</td>
+        <td>
+          <strong>${r.desc}</strong>
+          <div style="margin-top:4px">
+            <textarea class="rel-editable" rows="1" placeholder="Descrizione / Specifiche (opzionale)" style="font-size:0.75rem;color:#555;font-style:italic;width:100%" onchange="saveRelItemSpecifica('${env.id}',${ii},this.value)">${specifica}</textarea>
+          </div>
+        </td>
+        <td style="text-align:center;vertical-align:top;padding-top:10px">${item.qty}</td>
+        <td style="text-align:right;vertical-align:top;padding-top:10px">€ ${fmt2(r.price)}</td>
+        <td style="text-align:right;vertical-align:top;padding-top:10px">€ ${fmt2(tot)}</td>
       </tr>`;
     });
     html += `<tr class="env-header">
@@ -1224,17 +1230,42 @@ function renderRelazione() {
     </div>`;
   });
 
-  // Abbonamenti
-  if (data.subscriptions && data.subscriptions.filter(s=>s.active).length > 0) {
-    html += `<div class="rel-section"><h3>Software e Abbonamenti</h3>
+  // Abbonamenti — tutti, attivi e non
+  if (data.subscriptions && data.subscriptions.length > 0) {
+    const relSubs = data.relazioneMeta || {};
+    html += `<div class="rel-section" style="border:1px solid #e2e8f0;border-radius:12px;padding:1.5rem;margin-bottom:2rem">
+      <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #1a3a5c;padding-bottom:0.4rem;margin-bottom:1rem">Software e Abbonamenti</div>
       <table class="rel-table">
-        <thead><tr><th>Servizio</th><th>Ciclo</th><th style="text-align:right">Costo annuo</th></tr></thead><tbody>`;
-    data.subscriptions.filter(s=>s.active).forEach(s => {
+        <thead><tr>
+          <th>Servizio</th>
+          <th style="text-align:center">Stato</th>
+          <th>Ciclo</th>
+          <th style="text-align:right">Costo annuo</th>
+          <th>Note</th>
+        </tr></thead>
+        <tbody>`;
+    data.subscriptions.forEach((s, si) => {
       const annuo = s.cycle==='mensile' ? (s.monthly||0)*12 : (s.yearly||0);
-      html += `<tr><td>${s.name}</td><td>${s.cycle}</td><td style="text-align:right">€ ${fmt2(annuo)}</td></tr>`;
+      const statoStyle = s.active ? 'color:#2d6a4f;font-weight:800' : 'color:#aaa;font-weight:600';
+      const statoLabel = s.active ? '✅ Attivo' : '⏸ Non attivo';
+      const rowStyle = s.active ? '' : 'opacity:0.65;background:#fafafa';
+      const subNoteKey = 'subNote_' + si;
+      html += `<tr style="${rowStyle}">
+        <td><strong>${s.name}</strong></td>
+        <td style="text-align:center;${statoStyle}">${statoLabel}</td>
+        <td>${s.cycle||'—'}</td>
+        <td style="text-align:right">${annuo > 0 ? '€ '+fmt2(annuo) : '—'}</td>
+        <td><textarea class="rel-editable" rows="1" style="min-width:140px;font-size:0.78rem" onchange="saveRelMeta('${subNoteKey}',this.value)">${relSubs[subNoteKey]||''}</textarea></td>
+      </tr>`;
     });
-    html += `<tr class="total-row"><td colspan="2"><strong>TOTALE ANNUO ABBONAMENTI</strong></td><td style="text-align:right"><strong>€ ${fmt2(subYearlyTotal())}</strong></td></tr>
-      </tbody></table></div>`;
+    html += `<tr class="total-row">
+        <td colspan="3"><strong>TOTALE ANNUO ATTIVI</strong></td>
+        <td style="text-align:right"><strong>€ ${fmt2(subYearlyTotal())}</strong></td>
+        <td></td>
+      </tr>
+        </tbody>
+      </table>
+    </div>`;
   }
 
   // Note finali
@@ -1248,6 +1279,15 @@ function renderRelazione() {
   </div>`;
 
   document.getElementById('relazioneContent').innerHTML = html;
+}
+
+async function saveRelItemSpecifica(envId, itemIdx, val) {
+  if (!data.relazioneEnv) data.relazioneEnv = {};
+  if (!data.relazioneEnv[envId]) data.relazioneEnv[envId] = {};
+  if (!data.relazioneEnv[envId].items) data.relazioneEnv[envId].items = {};
+  if (!data.relazioneEnv[envId].items[itemIdx]) data.relazioneEnv[envId].items[itemIdx] = {};
+  data.relazioneEnv[envId].items[itemIdx].specifica = val;
+  await saveData();
 }
 
 async function saveRelEnvMeta(envId, key, val) {
@@ -1343,30 +1383,32 @@ async function scaricaDocx() {
     if (env.note) children.push(new Paragraph({ spacing:{after:200}, children:[new TextRun({text:env.note,font:'Arial',size:22,italics:true})] }));
 
     const rows = [new TableRow({ children:[
-      new TableCell({borders,width:{size:2500,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:'Articolo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
-      new TableCell({borders,width:{size:3460,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:'Descrizione',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:5460,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:'Articolo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
       new TableCell({borders,width:{size:700,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Qt.',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
-      new TableCell({borders,width:{size:1300,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Prezzo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
-      new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Totale',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:1500,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Prezzo',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
+      new TableCell({borders,width:{size:1700,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'Totale',bold:true,color:'FFFFFF',font:'Arial',size:18})]})] }),
     ]})];
     env.items.forEach((item,ii) => {
       const r = resolveItem(item);
       if (!r) return;
       const tot = item.qty * r.price;
       const fill = ii%2===0?'FFFFFF':'F7F9FC';
+      const envMeta2 = (data.relazioneEnv && data.relazioneEnv[env.id] && data.relazioneEnv[env.id].items && data.relazioneEnv[env.id].items[ii]) || {};
+      const specifica = envMeta2.specifica || r.note || '';
+      const articleChildren = [new Paragraph({children:[new TextRun({text:r.desc,bold:true,font:'Arial',size:20})]})];
+      if (specifica) articleChildren.push(new Paragraph({children:[new TextRun({text:specifica,font:'Arial',size:18,italics:true,color:'555555'})]}));
       rows.push(new TableRow({ children:[
-        new TableCell({borders,width:{size:2500,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:r.desc,font:'Arial',size:20})]})] }),
-        new TableCell({borders,width:{size:3460,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({children:[new TextRun({text:r.note||'—',font:'Arial',size:18,italics:true,color:'555555'})]})] }),
+        new TableCell({borders,width:{size:5460,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:articleChildren }),
         new TableCell({borders,width:{size:700,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:String(item.qty),font:'Arial',size:20})]})] }),
-        new TableCell({borders,width:{size:1300,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(r.price),font:'Arial',size:20})]})] }),
-        new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(tot),font:'Arial',size:20})]})] }),
+        new TableCell({borders,width:{size:1500,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(r.price),font:'Arial',size:20})]})] }),
+        new TableCell({borders,width:{size:1700,type:WidthType.DXA},margins:cellM,shading:{fill,type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(tot),font:'Arial',size:20})]})] }),
       ]}));
     });
     rows.push(new TableRow({ children:[
-      new TableCell({borders,width:{size:8360,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},columnSpan:4,children:[new Paragraph({children:[new TextRun({text:'SUBTOTALE '+env.name.toUpperCase(),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
-      new TableCell({borders,width:{size:1400,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(envTotal(env)),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+      new TableCell({borders,width:{size:7660,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},columnSpan:3,children:[new Paragraph({children:[new TextRun({text:'SUBTOTALE '+env.name.toUpperCase(),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
+      new TableCell({borders,width:{size:1700,type:WidthType.DXA},margins:cellM,shading:{fill:'1A3A5C',type:ShadingType.CLEAR},children:[new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:fmt(envTotal(env)),bold:true,color:'FFFFFF',font:'Arial',size:20})]})] }),
     ]}));
-    children.push(new Table({width:{size:W,type:WidthType.DXA},columnWidths:[2500,3460,700,1300,1400],rows}));
+    children.push(new Table({width:{size:W,type:WidthType.DXA},columnWidths:[5460,700,1500,1700],rows}));
     children.push(new Paragraph({spacing:{after:300}}));
   });
 
