@@ -481,7 +481,7 @@ nav{
     <!-- RELAZIONE -->
     <div id="tab-relazione" class="section">
       <div class="rel-toolbar">
-        <button class="btn btn-blu" onclick="window.print()">🖨️ Stampa / PDF</button>
+        <button class="btn btn-blu" onclick="stampaPDF()">🖨️ Stampa / PDF</button>
         <button class="btn btn-primary" onclick="scaricaDocx()">📄 Scarica .docx</button>
         <span style="font-size:0.78rem;color:var(--testo-ch);align-self:center">I campi con sfondo giallo sono modificabili</span>
       </div>
@@ -1489,6 +1489,98 @@ async function scaricaDocx() {
     alert('Errore generazione DOCX: ' + e.message);
     if (btn) { btn.innerHTML = origText; btn.disabled = false; }
   }
+}
+
+function stampaPDF() {
+  // Assicurati che la relazione sia renderizzata
+  if (!document.getElementById('relazioneContent').innerHTML.trim()) {
+    renderRelazione();
+  }
+  const contenuto = document.getElementById('relazioneContent').innerHTML;
+  const win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write(`<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<title>Piano Acquisti Informatica – ANA Casale Monferrato</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Georgia', serif; font-size: 10pt; color: #1a1a1a; background: white; }
+
+  /* COPERTINA */
+  .rel-cover {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 3cm 2cm;
+    page-break-after: always;
+    border-bottom: none;
+  }
+  .rel-cover img { height: 90px; width: 90px; object-fit: contain; border-radius: 50%; margin-bottom: 1rem; }
+  .rel-cover h1 { font-family: 'Nunito', sans-serif; font-size: 18pt; font-weight: 900; color: #1a3a5c; margin-bottom: 0.3rem; }
+  .rel-cover h2 { font-family: 'Nunito', sans-serif; font-size: 13pt; font-weight: 700; color: #2d6a4f; margin-bottom: 1.5rem; }
+  .rel-cover-meta { font-size: 10pt; line-height: 2; color: #444; }
+  .rel-cover-meta strong { color: #1a3a5c; }
+
+  /* SEZIONI */
+  .rel-section { margin-bottom: 1.5rem; padding-bottom: 0.5rem; page-break-inside: avoid; }
+  .rel-section h3 {
+    font-family: 'Nunito', sans-serif; font-size: 13pt; font-weight: 900;
+    color: #1a3a5c; border-bottom: 2px solid #1a3a5c;
+    padding-bottom: 0.3rem; margin-bottom: 0.8rem;
+  }
+
+  /* Blocchi ambiente */
+  .rel-section > div[style*="border:1px solid #dbeafe"] {
+    border: 1px solid #dbeafe !important;
+    border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+    page-break-inside: avoid;
+  }
+
+  /* TABELLE */
+  .rel-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem; }
+  .rel-table th {
+    background: #1a3a5c; color: white; padding: 6px 10px;
+    font-family: 'Nunito', sans-serif; font-size: 8pt; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px; text-align: left;
+  }
+  .rel-table td { padding: 6px 10px; border-bottom: 1px solid #e8edf3; }
+  .rel-table tr:nth-child(even) td { background: #f7f9fc; }
+  .rel-table tr.env-header td { background: #dbeafe; font-weight: 800; color: #1a3a5c; font-family: 'Nunito', sans-serif; }
+  .rel-table tr.total-row td { background: #1a3a5c; color: white; font-weight: 900; font-family: 'Nunito', sans-serif; }
+  .rel-table thead { display: table-header-group; }
+  .rel-table tr { page-break-inside: avoid; }
+
+  /* CAMPI EDITABILI — mostra come testo */
+  textarea.rel-editable, .rel-editable {
+    border: none; background: transparent; resize: none;
+    font-family: 'Georgia', serif; font-size: 10pt; color: #1a1a1a;
+    width: 100%; display: block; overflow: visible; height: auto;
+    line-height: 1.6;
+  }
+
+  .rel-note { font-size: 8pt; color: #888; font-style: italic; margin-top: 0.3rem; }
+
+  @media print {
+    body { font-size: 10pt; }
+    .rel-cover { page-break-after: always; min-height: 95vh; }
+    .rel-section { page-break-inside: avoid; }
+    .rel-table { page-break-inside: auto; }
+    .rel-table tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+${contenuto}
+<script>
+  // Aspetta fonts poi stampa
+  document.fonts.ready.then(() => {
+    setTimeout(() => { window.print(); }, 400);
+  });
+<\/script>
+</body>
+</html>`);
+  win.document.close();
 }
 
 async function init() {
