@@ -606,7 +606,6 @@ function renderEnvironments(){
           <th style="width:7%;text-align:center">Qt.</th>
           <th style="width:9%;text-align:right">Prezzo €</th>
           <th style="width:9%;text-align:right">Totale</th>
-          <th style="width:9%;text-align:center">Link</th>
           <th style="width:4%"></th>
         </tr></thead>
         <tbody id="tbody-${ei}"></tbody>
@@ -669,12 +668,6 @@ function renderItems(ei){
         }
       </td>
       <td class="row-total">€ ${fmt(item.qty*r.price)}</td>
-      <td style="text-align:center">
-        ${r.link && r.link.trim()
-          ? `<a href="${r.link}" target="_blank" class="link-btn has-link">↗ Apri</a>`
-          : `<span style="font-size:0.65rem;color:#aaa">${fromCatalog ? 'no link' : '—'}</span>`
-        }
-      </td>
       <td><button class="btn btn-danger" onclick="removeItem(${ei},${ii})">✕</button></td>
     `;
     tbody.appendChild(tr);
