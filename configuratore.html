@@ -656,11 +656,9 @@ function renderItems(ei){
         </div>
       </td>
       <td>
-        ${fromCatalog
-          ? `<span style="font-size:0.78rem;color:var(--testo-ch);font-style:italic;">${r.note||'—'}</span>`
-          : `<input class="inline-edit" style="font-size:0.75rem;width:100%;" placeholder="Note/specifiche..." value="${(item.note||'').replace(/"/g,'&quot;')}" onchange="updateItem(${ei},${ii},'note',this.value)" />`
-        }
+        <input class="inline-edit" style="font-size:0.75rem;width:100%;" placeholder="Note/specifiche..." value="${(item.note||'').replace(/\"/g,'&quot;')}" onchange="updateItem(${ei},${ii},'note',this.value)" />
       </td>
+td>
       <td style="text-align:center"><input class="inline-edit qty" type="number" min="1" value="${item.qty}" onchange="updateItem(${ei},${ii},'qty',+this.value)" /></td>
       <td style="text-align:right">
         ${fromCatalog
