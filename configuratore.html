@@ -629,7 +629,10 @@ function resolveItem(item){
   // if linked to catalog, pull desc/price/link from catalog entry
   if(item.catalogId){
     const cat=(data.catalog||[]).find(c=>c.id===item.catalogId);
-    if(cat) return {...item, desc:cat.desc, price:cat.price, link:(cat.link&&cat.link.trim())||item.link||'', note:item.note||cat.note||''};
+    if(cat){
+      const link=(cat.link||'').trim()||(item.link||'').trim();
+      return {...item, desc:cat.desc, price:cat.price, link, note:item.note||cat.note||''};
+    }
   }
   return item;
 }
