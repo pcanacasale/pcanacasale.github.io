@@ -405,6 +405,7 @@
         <select id="luogo" style="flex:1" onchange="onLuogoChange(this)">
           <option value="sede">Sede Sezione – via T. de Cristoforis 16</option>
           <option value="coc">COC Occimiano – Piazza Carlo Alberto 1</option>
+          <option value="videoconferenza">Videoconferenza</option>
           <option value="nuovo">+ Aggiungi nuovo luogo…</option>
         </select>
         <button type="button" id="btn-del-luogo" onclick="window.eliminaLuogo()" title="Elimina luogo"
@@ -645,6 +646,11 @@ function removeOdg(i) {
     optCoc.value = 'coc';
     optCoc.textContent = 'COC Occimiano – Piazza Carlo Alberto 1';
     sel.appendChild(optCoc);
+    // Rimetti Videoconferenza come opzione fissa
+    const optVc = document.createElement('option');
+    optVc.value = 'videoconferenza';
+    optVc.textContent = 'Videoconferenza';
+    sel.appendChild(optVc);
     // Aggiungi luoghi salvati
     const luoghi = window.getLuoghiSalvati();
     luoghi.forEach(function(l, i) {
@@ -752,6 +758,8 @@ function genera() {
     luogoStr = 'la Sede della Sezione Alpini di Casale Monferrato in via T. de Cristoforis 16';
   } else if (luogoVal === 'coc') {
     luogoStr = 'il Centro Operativo Comunale di Occimiano, in Piazza Carlo Alberto 1 a Occimiano';
+  } else if (luogoVal === 'videoconferenza') {
+    luogoStr = 'videoconferenza';
   } else if (luogoVal.startsWith('saved_')) {
     const idx = parseInt(luogoVal.replace('saved_', ''));
     luogoStr = luoghiSalvati[idx] || 'luogo da definire';
@@ -764,25 +772,34 @@ function genera() {
   const giornoSett = dayName(dataRiunioneRaw);
   const dataGrande = (giornoSett + ' ' + dataRiunione).toUpperCase();
 
+  // Frase introduttiva varia se è videoconferenza
+  const isVideoconf = luogoVal === 'videoconferenza';
+  const introConvocata = isVideoconf
+    ? 'Viene convocata in videoconferenza, per il giorno'
+    : 'Viene convocata presso ' + luogoStr + ', per il giorno';
+  const introFissata = isVideoconf
+    ? 'Viene fissata in videoconferenza, per il giorno'
+    : 'Viene fissata presso ' + luogoStr + ', per il giorno';
+
   const templates = {
     commissione: {
       oggetto: 'Convocazione Commissione di Unità.',
-      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
+      testoIntro: introConvocata,
       titoloRiunione: "la riunione della Commissione di Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     squadre: {
       oggetto: 'Convocazione Riunione a Squadre Congiunte.',
-      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
+      testoIntro: introConvocata,
       titoloRiunione: "la riunione a Squadre Congiunte dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     assemblea: {
       oggetto: "Assemblea Generale Annuale dell'Unità.",
-      testoIntro: 'Viene fissata presso ' + luogoStr + ', per il giorno',
+      testoIntro: introFissata,
       titoloRiunione: "l'Assemblea Annuale Ordinaria dei Volontari dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     altro: {
       oggetto: 'Convocazione ' + (tipoCustom || 'Riunione') + '.',
-      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
+      testoIntro: introConvocata,
       titoloRiunione: "la riunione" + (tipoCustom ? ' – ' + tipoCustom : '') + " dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     }
   };
@@ -791,11 +808,16 @@ function genera() {
   let titoloRiunione = tpl.titoloRiunione;
   if (note) titoloRiunione += '<br><br>' + note;
 
+  const chiusura = tipo === 'assemblea'
+    ? 'Confidando nella tua presenza <strong><u>IN DIVISA GIALLO-BLU</u></strong> per il necessario confronto di idee e di proposte, invio cordiali saluti alpini.'
+    : 'Confidando nella tua presenza per il necessario confronto di idee e di proposte, invio cordiali saluti alpini.';
+
   renderPreview({
     dataLettera, destA, destPc,
     oggetto: tpl.oggetto,
     testoIntro: tpl.testoIntro,
     dataGrande, titoloRiunione,
+    chiusura,
     odg: odgItems,
   });
 }
@@ -844,9 +866,7 @@ function renderPreview(d) {
     <div class="doc-odg-title">ORDINE DEL GIORNO:</div>
     <ol class="doc-odg">${odgHtml}</ol>
 
-    <div class="doc-chiusura">
-      Confidando nella tua presenza <strong><u>IN DIVISA GIALLO-BLU</u></strong> per il necessario confronto di idee e di proposte, invio cordiali saluti alpini.
-    </div>
+    <div class="doc-chiusura">${d.chiusura}</div>
 
     <div class="doc-firma">
       <div class="ruolo">IL COORDINATORE SEZIONALE</div>
