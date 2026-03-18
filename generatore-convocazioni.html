@@ -481,17 +481,78 @@
   <!-- ── ANTEPRIMA ── -->
   <div class="preview-panel" id="preview-panel">
     <div class="preview-toolbar">
-      <div id="font-calibrator" style="display:none; background:#fffbea; border:1px solid #f0c040; border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px;">
-        <strong>🎚️ Calibra dimensione testo intestazione</strong>
-        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-          <span style="white-space:nowrap;">Piccolo</span>
-          <input type="range" min="7" max="18" value="12" step="0.5" id="font-scale-slider" style="flex:1;" oninput="aggiornaFontScale(this.value)">
-          <span style="white-space:nowrap;">Grande</span>
-          <span id="font-scale-label" style="font-weight:700; min-width:36px;">12pt</span>
+      <div id="font-calibrator" style="display:none; background:#f7f9ff; border:1px solid #b0c4f0; border-radius:10px; padding:14px 16px; margin-bottom:10px; font-size:13px;">
+        <strong style="font-size:14px;">🎚️ Calibrazione tipografia</strong>
+        <div style="margin-top:2px; font-size:11px; color:#666; margin-bottom:12px;">Regola i valori — l'anteprima si aggiorna in tempo reale. Poi clicca Stampa.</div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 20px;">
+
+          <div>
+            <div style="font-weight:600; font-size:12px; margin-bottom:4px; color:#333;">📌 Intestazione</div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">ASSOCIAZIONE</span>
+              <input type="range" min="7" max="18" value="15" step="0.5" id="sl-ente" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-ente" style="font-size:11px; font-weight:700; min-width:32px;">15pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">MEDAGLIA D'ORO</span>
+              <input type="range" min="6" max="14" value="11" step="0.5" id="sl-medaglia" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-medaglia" style="font-size:11px; font-weight:700; min-width:32px;">11pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">UNITA' PC ANA</span>
+              <input type="range" min="8" max="22" value="17" step="0.5" id="sl-unita" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-unita" style="font-size:11px; font-weight:700; min-width:32px;">17pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">Indirizzo</span>
+              <input type="range" min="6" max="14" value="13" step="0.5" id="sl-indirizzo" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-indirizzo" style="font-size:11px; font-weight:700; min-width:32px;">13pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">Contatti</span>
+              <input type="range" min="6" max="14" value="12" step="0.5" id="sl-contatti" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-contatti" style="font-size:11px; font-weight:700; min-width:32px;">12pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:11px; width:120px; color:#555;">Interlinea intest.</span>
+              <input type="range" min="0.8" max="2.0" value="1.1" step="0.05" id="sl-lh-header" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-lh-header" style="font-size:11px; font-weight:700; min-width:32px;">1.1</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-weight:600; font-size:12px; margin-bottom:4px; color:#333;">📄 Corpo lettera</div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">Testo principale</span>
+              <input type="range" min="8" max="16" value="11" step="0.5" id="sl-corpo" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-corpo" style="font-size:11px; font-weight:700; min-width:32px;">11pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">Data / Destinatari</span>
+              <input type="range" min="8" max="16" value="11" step="0.5" id="sl-data" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-data" style="font-size:11px; font-weight:700; min-width:32px;">11pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">Data riunione</span>
+              <input type="range" min="16" max="40" value="26" step="1" id="sl-datariunione" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-datariunione" style="font-size:11px; font-weight:700; min-width:32px;">26pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; width:120px; color:#555;">ODG / Firma</span>
+              <input type="range" min="8" max="16" value="11" step="0.5" id="sl-odg" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-odg" style="font-size:11px; font-weight:700; min-width:32px;">11pt</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:11px; width:120px; color:#555;">Interlinea corpo</span>
+              <input type="range" min="1.0" max="2.0" value="1.4" step="0.05" id="sl-lh-corpo" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-lh-corpo" style="font-size:11px; font-weight:700; min-width:32px;">1.4</span>
+            </div>
+          </div>
+
         </div>
-        <div style="margin-top:6px; font-size:11px; color:#666;">Regola finché l'intestazione sembra giusta, poi stampa. Il valore scelto verrà usato per la stampa.</div>
       </div>
-      <button type="button" style="font-size:12px; background:none; border:1px solid #ccc; border-radius:6px; padding:5px 10px; cursor:pointer; margin-bottom:8px;" onclick="toggleCalibrator()">🎚️ Calibra font intestazione</button>
+      <button type="button" style="font-size:12px; background:none; border:1px solid #ccc; border-radius:6px; padding:5px 10px; cursor:pointer; margin-bottom:8px;" onclick="toggleCalibrator()">🎚️ Calibra tipografia</button>
       <button class="btn-pdf" id="btn-pdf" onclick="stampaPDF()">
         🖨️ Scarica PDF
       </button>
@@ -791,28 +852,57 @@ function toggleCalibrator() {
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function aggiornaFontScale(val) {
-  const base = parseFloat(val);
-  document.getElementById('font-scale-label').textContent = base + 'pt';
-  // Aggiorna stili inline sull'intestazione con pt
-  const ente = document.querySelectorAll('.doc-ente-line');
-  const medaglia = document.querySelectorAll('.doc-medaglia');
-  const unita = document.querySelectorAll('.doc-unita-big');
-  const indirizzo = document.querySelectorAll('.doc-indirizzo-line');
-  const contatti = document.querySelectorAll('.doc-contatti-line');
-  const sep = document.querySelectorAll('.doc-separator');
-  ente.forEach(e => e.style.fontSize = base + 'pt');
-  medaglia.forEach(e => e.style.fontSize = (base * 0.75) + 'pt');
-  unita.forEach(e => e.style.fontSize = (base * 1.15) + 'pt');
-  indirizzo.forEach(e => e.style.fontSize = (base * 0.9) + 'pt');
-  contatti.forEach(e => e.style.fontSize = (base * 0.85) + 'pt');
-  sep.forEach(e => e.style.fontSize = (base * 0.65) + 'pt');
+function sv(id) { return parseFloat(document.getElementById(id).value); }
+function sl(id, val) { document.getElementById(id).textContent = val; }
+
+function aggiornaCalibrazione() {
+  const v = {
+    ente:        sv('sl-ente'),
+    medaglia:    sv('sl-medaglia'),
+    unita:       sv('sl-unita'),
+    indirizzo:   sv('sl-indirizzo'),
+    contatti:    sv('sl-contatti'),
+    lhHeader:    sv('sl-lh-header'),
+    corpo:       sv('sl-corpo'),
+    data:        sv('sl-data'),
+    dataRiunione:sv('sl-datariunione'),
+    odg:         sv('sl-odg'),
+    lhCorpo:     sv('sl-lh-corpo'),
+  };
+  // Aggiorna label
+  sl('lb-ente',         v.ente + 'pt');
+  sl('lb-medaglia',     v.medaglia + 'pt');
+  sl('lb-unita',        v.unita + 'pt');
+  sl('lb-indirizzo',    v.indirizzo + 'pt');
+  sl('lb-contatti',     v.contatti + 'pt');
+  sl('lb-lh-header',    v.lhHeader);
+  sl('lb-corpo',        v.corpo + 'pt');
+  sl('lb-data',         v.data + 'pt');
+  sl('lb-datariunione', v.dataRiunione + 'pt');
+  sl('lb-odg',          v.odg + 'pt');
+  sl('lb-lh-corpo',     v.lhCorpo);
+
+  // Applica stili inline all'anteprima
+  document.querySelectorAll('.doc-ente-line').forEach(e => { e.style.fontSize = v.ente+'pt'; e.style.lineHeight = v.lhHeader; });
+  document.querySelectorAll('.doc-medaglia').forEach(e => { e.style.fontSize = v.medaglia+'pt'; e.style.lineHeight = v.lhHeader; });
+  document.querySelectorAll('.doc-unita-big').forEach(e => { e.style.fontSize = v.unita+'pt'; e.style.lineHeight = v.lhHeader; });
+  document.querySelectorAll('.doc-indirizzo-line').forEach(e => { e.style.fontSize = v.indirizzo+'pt'; e.style.lineHeight = v.lhHeader; });
+  document.querySelectorAll('.doc-contatti-line').forEach(e => { e.style.fontSize = v.contatti+'pt'; e.style.lineHeight = v.lhHeader; });
+  document.querySelectorAll('.doc-separator').forEach(e => { e.style.fontSize = Math.max(6, v.contatti*0.7)+'pt'; });
+  document.querySelectorAll('.doc-header-text').forEach(e => { e.style.lineHeight = v.lhHeader; });
+
+  document.querySelectorAll('.doc-corpo, .doc-titolo-riunione, .doc-chiusura, .doc-saluto').forEach(e => { e.style.fontSize = v.corpo+'pt'; e.style.lineHeight = v.lhCorpo; });
+  document.querySelectorAll('.doc-data, .doc-dest, .doc-oggetto').forEach(e => { e.style.fontSize = v.data+'pt'; e.style.lineHeight = v.lhCorpo; });
+  document.querySelectorAll('.doc-data-riunione').forEach(e => { e.style.fontSize = v.dataRiunione+'pt'; });
+  document.querySelectorAll('.doc-odg, .doc-odg-title, .doc-firma').forEach(e => { e.style.fontSize = v.odg+'pt'; e.style.lineHeight = v.lhCorpo; });
 }
+
+// alias per compatibilità vecchio codice
+function aggiornaFontScale(val) { aggiornaCalibrazione(); }
 
 function stampaPDF() {
   // Applica il valore dello slider come stile inline pt (Chrome non può ignorarlo)
-  const sliderVal = parseFloat(document.getElementById('font-scale-slider').value);
-  aggiornaFontScale(sliderVal);
+  aggiornaCalibrazione();
 
   const a4 = document.querySelector('.a4');
   const oldWidth = a4.style.width;
