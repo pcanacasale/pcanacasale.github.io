@@ -402,6 +402,7 @@
       <div style="display:flex;gap:6px;align-items:center;">
         <select id="luogo" style="flex:1" onchange="onLuogoChange(this)">
           <option value="sede">Sede Sezione – via T. de Cristoforis 16</option>
+          <option value="coc">COC Occimiano – Piazza Carlo Alberto 1</option>
           <option value="nuovo">+ Aggiungi nuovo luogo…</option>
         </select>
         <button type="button" id="btn-del-luogo" onclick="window.eliminaLuogo()" title="Elimina luogo"
@@ -501,13 +502,13 @@
             </div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
               <span style="font-size:11px; width:120px; color:#555;">UNITA' PC ANA</span>
-              <input type="range" min="8" max="22" value="17" step="0.5" id="sl-unita" style="flex:1;" oninput="aggiornaCalibrazione()">
-              <span id="lb-unita" style="font-size:11px; font-weight:700; min-width:32px;">17pt</span>
+              <input type="range" min="8" max="22" value="18" step="0.5" id="sl-unita" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-unita" style="font-size:11px; font-weight:700; min-width:32px;">18pt</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
               <span style="font-size:11px; width:120px; color:#555;">Indirizzo</span>
-              <input type="range" min="6" max="14" value="13" step="0.5" id="sl-indirizzo" style="flex:1;" oninput="aggiornaCalibrazione()">
-              <span id="lb-indirizzo" style="font-size:11px; font-weight:700; min-width:32px;">13pt</span>
+              <input type="range" min="6" max="14" value="12.5" step="0.5" id="sl-indirizzo" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-indirizzo" style="font-size:11px; font-weight:700; min-width:32px;">12.5pt</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
               <span style="font-size:11px; width:120px; color:#555;">Contatti</span>
@@ -516,8 +517,8 @@
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="font-size:11px; width:120px; color:#555;">Interlinea intest.</span>
-              <input type="range" min="0.8" max="2.0" value="1.1" step="0.05" id="sl-lh-header" style="flex:1;" oninput="aggiornaCalibrazione()">
-              <span id="lb-lh-header" style="font-size:11px; font-weight:700; min-width:32px;">1.1</span>
+              <input type="range" min="0.8" max="2.0" value="1.0" step="0.05" id="sl-lh-header" style="flex:1;" oninput="aggiornaCalibrazione()">
+              <span id="lb-lh-header" style="font-size:11px; font-weight:700; min-width:32px;">1.0</span>
             </div>
           </div>
 
@@ -738,6 +739,8 @@ function genera() {
   let luogoStr;
   if (luogoVal === 'sede') {
     luogoStr = 'la Sede della Sezione Alpini di Casale Monferrato in via T. de Cristoforis 16';
+  } else if (luogoVal === 'coc') {
+    luogoStr = 'il Centro Operativo Comunale di Occimiano, in Piazza Carlo Alberto 1 a Occimiano';
   } else if (luogoVal.startsWith('saved_')) {
     const idx = parseInt(luogoVal.replace('saved_', ''));
     luogoStr = luoghiSalvati[idx] || 'luogo da definire';
