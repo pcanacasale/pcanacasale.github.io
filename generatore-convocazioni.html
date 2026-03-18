@@ -575,7 +575,7 @@
 
 <script>
 // ── ODG ────────────────────────────────────────────────────────────────────
-let odgItems = ['Varie ed Eventuali'];
+let odgItems = [];
 
 function renderOdg() {
   const list = document.getElementById('odg-list');
@@ -614,13 +614,12 @@ function removeOdg(i) {
   const oggi = new Date().toISOString().split('T')[0];
   document.getElementById('data-lettera').value = oggi;
 
-  // Pre-popola ODG in base al tipo default
-  odgItems = ['Adunata di Genova','Prossimi Impegni','25° Anniversario Unità','Varie ed Eventuali'];
+  // ODG parte sempre vuoto
+  odgItems = [];
   renderOdg();
 
   document.getElementById('tipo').addEventListener('change', function() {
     document.getElementById('wrap-tipo-custom').style.display = this.value === 'altro' ? '' : 'none';
-    presetOdg(this.value);
   });
   // Luogo
   // ── LUOGHI SALVATI ────────────────────────────────────────────────────────
