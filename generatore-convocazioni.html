@@ -236,73 +236,87 @@
 
   /* ── FOGLIO A4 ── */
   .a4 {
-    width: 680px;
-    min-height: 960px;
+    width: 700px;
+    min-height: 990px;
     background: white;
     box-shadow: var(--shadow-md);
-    border-radius: 4px;
-    padding: 40px 50px;
+    border-radius: 2px;
+    padding: 36px 50px 50px 50px;
     font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #222;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #000;
     display: none;
   }
 
-  /* intestazione documento */
+  /* ── INTESTAZIONE DOCUMENTO (replica PDF Word) ── */
   .doc-header {
     text-align: center;
-    padding-bottom: 4px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
   }
   .doc-logos {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
-    padding: 0 10px;
+    margin-bottom: 6px;
   }
-  .doc-logos img { height: 65px; width: auto; object-fit: contain; }
-  .doc-ente-line { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: #000; margin-top: 4px; }
+  /* Logo ANA: più grande come nel PDF */
+  .doc-logos img { height: 80px; width: auto; object-fit: contain; }
+  /* Testo intestazione centrato */
+  .doc-ente-line { font-size: 11.5px; font-weight: 700; color: #000; margin-top: 2px; letter-spacing: .01em; }
   .doc-medaglia { font-size: 11px; font-weight: 700; color: #000; margin-top: 1px; }
-  .doc-unita-big { font-size: 17px; font-weight: 700; color: #000; margin-top: 3px; letter-spacing: .01em; }
-  .doc-indirizzo-line { font-size: 11px; color: #000; margin-top: 3px; }
-  .doc-contatti-line { font-size: 11px; color: #000; margin-top: 1px; }
-  .doc-separator { border-top: 1.5px solid #000; margin-top: 6px; }
+  .doc-unita-big { font-size: 16px; font-weight: 700; color: #000; margin-top: 2px; text-transform: uppercase; }
+  .doc-indirizzo-line { font-size: 10.5px; color: #000; margin-top: 3px; }
+  .doc-contatti-line { font-size: 10.5px; color: #000; margin-top: 1px; }
+  .doc-separator { border: none; border-top: 1px solid #000; margin-top: 6px; margin-bottom: 0; }
 
-  .doc-data { text-align: right; margin-bottom: 14px; font-size: 13px; color: #555; }
+  /* Data lettera: a SINISTRA come nel PDF */
+  .doc-data { text-align: left; margin-top: 18px; margin-bottom: 16px; font-size: 12px; color: #000; }
 
-  .doc-dest { margin-bottom: 16px; font-size: 13px; text-align: right; margin-left: 45%; }
-  .doc-dest .dest-row { margin-bottom: 2px; }
-  .doc-dest .pc { font-style: italic; }
+  /* Destinatari: blocco a destra rientrato */
+  .doc-dest {
+    margin-bottom: 20px;
+    font-size: 12px;
+    text-align: right;
+    padding-left: 50%;
+    line-height: 1.7;
+  }
+  .doc-dest .pc { font-style: normal; }
   .doc-dest .llss { font-style: normal; }
 
-  .doc-oggetto { font-weight: 700; margin-bottom: 16px; font-size: 13px; }
+  /* Oggetto in grassetto */
+  .doc-oggetto { font-weight: 700; margin-bottom: 14px; font-size: 12px; }
 
-  .doc-corpo { margin-bottom: 12px; text-align: justify; font-size: 13px; }
+  /* Testo corpo giustificato */
+  .doc-corpo { margin-bottom: 10px; text-align: justify; font-size: 12px; line-height: 1.5; }
 
+  /* DATA RIUNIONE: grande, centrata, nera, in maiuscolo */
   .doc-data-riunione {
     text-align: center;
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 700;
     color: #000;
-    margin: 20px 0 14px;
-    letter-spacing: .02em;
+    margin: 22px 0 12px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    line-height: 1.1;
   }
 
-  .doc-titolo-riunione { text-align: justify; margin-bottom: 16px; font-size: 13px; }
+  .doc-titolo-riunione { text-align: justify; margin-bottom: 14px; font-size: 12px; line-height: 1.5; }
 
-  .doc-odg-title { font-weight: 700; margin-bottom: 8px; font-size: 13px; }
-  .doc-odg { margin-left: 20px; margin-bottom: 16px; font-size: 13px; }
-  .doc-odg li { margin-bottom: 4px; }
+  /* OdG */
+  .doc-odg-title { font-weight: 700; margin-bottom: 6px; font-size: 12px; }
+  .doc-odg { margin-left: 18px; margin-bottom: 14px; font-size: 12px; }
+  .doc-odg li { margin-bottom: 3px; }
 
-  .doc-chiusura { text-align: justify; font-size: 13px; margin-bottom: 8px; }
-  .doc-saluto { font-size: 13px; margin-bottom: 28px; }
+  .doc-chiusura { text-align: justify; font-size: 12px; margin-bottom: 6px; line-height: 1.5; }
+  .doc-saluto { font-size: 12px; margin-bottom: 40px; }
 
-  .doc-firma { text-align: right; font-size: 13px; }
-  .doc-firma .ruolo { font-weight: 700; }
-  .doc-firma .nome { margin-top: 4px; font-style: normal; }
+  /* Firma a destra */
+  .doc-firma { text-align: right; font-size: 12px; }
+  .doc-firma .ruolo { font-weight: 700; text-transform: uppercase; }
+  .doc-firma .nome { margin-top: 6px; font-style: normal; }
 
   /* ── AUTH GUARD ── */
   #authGuard {
@@ -600,22 +614,22 @@ function genera() {
   const templates = {
     commissione: {
       oggetto: 'Convocazione Commissione di Unità.',
-      testoIntro: 'Viene convocata la Commissione di Unità presso ' + luogoStr + ', per il giorno',
+      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
       titoloRiunione: "la riunione della Commissione di Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     squadre: {
       oggetto: 'Convocazione Riunione a Squadre Congiunte.',
-      testoIntro: 'Viene convocata la riunione a Squadre Congiunte presso ' + luogoStr + ', per il giorno',
+      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
       titoloRiunione: "la riunione a Squadre Congiunte dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     assemblea: {
       oggetto: "Assemblea Generale Annuale dell'Unità.",
-      testoIntro: 'Viene fissata, presso ' + luogoStr + ', per il giorno',
+      testoIntro: 'Viene fissata presso ' + luogoStr + ', per il giorno',
       titoloRiunione: "l'Assemblea Annuale Ordinaria dei Volontari dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     },
     altro: {
       oggetto: 'Convocazione ' + (tipoCustom || 'Riunione') + '.',
-      testoIntro: 'Viene convocata la riunione presso ' + luogoStr + ', per il giorno',
+      testoIntro: 'Viene convocata presso ' + luogoStr + ', per il giorno',
       titoloRiunione: "la riunione" + (tipoCustom ? ' – ' + tipoCustom : '') + " dell'Unità di Protezione Civile A.N.A. della Sezione di Casale Monferrato."
     }
   };
@@ -736,7 +750,7 @@ function showError(msg) {
   .a4 {
     width: 100% !important;
     box-shadow: none !important;
-    padding: 20mm !important;
+    padding: 18mm 20mm !important;
     min-height: unset !important;
   }
 </style>
