@@ -636,14 +636,21 @@ function removeOdg(i) {
   window.popolaSelectLuogo = function() {
     const sel = document.getElementById('luogo');
     const valAttuale = sel.value;
-    while (sel.options.length > 1) sel.remove(1); // mantieni solo "Sede Sezione"
+    // Rimuovi tutto tranne Sede Sezione (index 0)
+    while (sel.options.length > 1) sel.remove(1);
+    // Rimetti COC come opzione fissa
+    const optCoc = document.createElement('option');
+    optCoc.value = 'coc';
+    optCoc.textContent = 'COC Occimiano – Piazza Carlo Alberto 1';
+    sel.appendChild(optCoc);
+    // Aggiungi luoghi salvati
     const luoghi = window.getLuoghiSalvati();
     luoghi.forEach(function(l, i) {
       const opt = document.createElement('option');
       opt.value = 'saved_' + i;
       opt.textContent = l.length > 60 ? l.substring(0, 57) + '…' : l;
       opt.title = l;
-      sel.insertBefore(opt, null);
+      sel.appendChild(opt);
     });
     // aggiungi "+ Aggiungi nuovo"
     const optNew = document.createElement('option');
