@@ -18,6 +18,8 @@ async function doLogin() {
     const data = await res.json();
     if (data && data.length > 0) {
       currentUser = data[0];
+      sessionStorage.setItem('ar_user', u);
+      sessionStorage.setItem('ar_pass', p);
       avviaDashboard();
     } else {
       err.textContent = 'Credenziali non corrette. Riprova.'; err.style.display = 'block';
@@ -56,6 +58,8 @@ function avviaDashboard() {
 
 function logout() {
   currentUser = null;
+  sessionStorage.removeItem('ar_user');
+  sessionStorage.removeItem('ar_pass');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('loginUser').value = '';
