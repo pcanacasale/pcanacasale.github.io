@@ -481,6 +481,17 @@
   <!-- ── ANTEPRIMA ── -->
   <div class="preview-panel" id="preview-panel">
     <div class="preview-toolbar">
+      <div id="font-calibrator" style="display:none; background:#fffbea; border:1px solid #f0c040; border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px;">
+        <strong>🎚️ Calibra dimensione testo intestazione</strong>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+          <span style="white-space:nowrap;">Piccolo</span>
+          <input type="range" min="7" max="18" value="12" step="0.5" id="font-scale-slider" style="flex:1;" oninput="aggiornaFontScale(this.value)">
+          <span style="white-space:nowrap;">Grande</span>
+          <span id="font-scale-label" style="font-weight:700; min-width:36px;">12pt</span>
+        </div>
+        <div style="margin-top:6px; font-size:11px; color:#666;">Regola finché l'intestazione sembra giusta, poi stampa. Il valore scelto verrà usato per la stampa.</div>
+      </div>
+      <button type="button" style="font-size:12px; background:none; border:1px solid #ccc; border-radius:6px; padding:5px 10px; cursor:pointer; margin-bottom:8px;" onclick="toggleCalibrator()">🎚️ Calibra font intestazione</button>
       <button class="btn-pdf" id="btn-pdf" onclick="stampaPDF()">
         🖨️ Scarica PDF
       </button>
@@ -775,8 +786,34 @@ function renderPreview(d) {
 }
 
 // ── STAMPA PDF ──────────────────────────────────────────────────────────────
+function toggleCalibrator() {
+  const el = document.getElementById('font-calibrator');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function aggiornaFontScale(val) {
+  const base = parseFloat(val);
+  document.getElementById('font-scale-label').textContent = base + 'pt';
+  // Aggiorna stili inline sull'intestazione con pt
+  const ente = document.querySelectorAll('.doc-ente-line');
+  const medaglia = document.querySelectorAll('.doc-medaglia');
+  const unita = document.querySelectorAll('.doc-unita-big');
+  const indirizzo = document.querySelectorAll('.doc-indirizzo-line');
+  const contatti = document.querySelectorAll('.doc-contatti-line');
+  const sep = document.querySelectorAll('.doc-separator');
+  ente.forEach(e => e.style.fontSize = base + 'pt');
+  medaglia.forEach(e => e.style.fontSize = (base * 0.75) + 'pt');
+  unita.forEach(e => e.style.fontSize = (base * 1.15) + 'pt');
+  indirizzo.forEach(e => e.style.fontSize = (base * 0.9) + 'pt');
+  contatti.forEach(e => e.style.fontSize = (base * 0.85) + 'pt');
+  sep.forEach(e => e.style.fontSize = (base * 0.65) + 'pt');
+}
+
 function stampaPDF() {
-  // Forza Chrome a NON scalare: impostiamo .a4 a larghezza 100% prima di stampare
+  // Applica il valore dello slider come stile inline pt (Chrome non può ignorarlo)
+  const sliderVal = parseFloat(document.getElementById('font-scale-slider').value);
+  aggiornaFontScale(sliderVal);
+
   const a4 = document.querySelector('.a4');
   const oldWidth = a4.style.width;
   const oldMaxWidth = a4.style.maxWidth;
@@ -786,7 +823,6 @@ function stampaPDF() {
   a4.style.padding = '0';
   a4.style.boxShadow = 'none';
   window.print();
-  // Ripristina dopo stampa
   a4.style.width = oldWidth;
   a4.style.maxWidth = oldMaxWidth;
   a4.style.padding = oldPadding;
