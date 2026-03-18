@@ -704,6 +704,9 @@ function removeOdg(i) {
   document.getElementById('dest-pc').addEventListener('change', function() {
     document.getElementById('wrap-dest-pc-custom').style.display = this.value === 'Altro' ? '' : 'none';
   });
+  // Applica subito i valori di calibrazione come stili inline
+  // così la stampa usa sempre i pt corretti anche senza aprire il pannello
+  setTimeout(function() { aggiornaCalibrazione(); }, 100);
 })();
 
 function presetOdg(tipo) {
