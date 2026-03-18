@@ -399,19 +399,14 @@
 
     <div class="form-group">
       <label>Luogo della riunione</label>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <select id="luogo" style="flex:1">
-          <option value="sede">Sede Sezione – via T. de Cristoforis 16</option>
-          <option value="nuovo">+ Aggiungi nuovo luogo…</option>
-        </select>
-        <button type="button" id="btn-del-luogo" onclick="eliminaLuogo()" title="Elimina luogo selezionato"
-          style="padding:4px 8px;background:#c0392b;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;display:none">✕</button>
-      </div>
+      <select id="luogo">
+        <option value="sede">Sede Sezione – via T. de Cristoforis 16</option>
+        <option value="occimiano">Centro Operativo Comunale di Occimiano, in Piazza Carlo Alberto 1 a Occimiano</option>
+        <option value="altro">Altro luogo…</option>
+      </select>
     </div>
-    <div class="form-group" id="wrap-luogo-nuovo" style="display:none">
-      <label>Nome del nuovo luogo</label>
-      <input type="text" id="luogo-nuovo" placeholder="es. Centro Operativo Comunale di Occimiano, in Piazza Carlo Alberto 1 a Occimiano">
-      <button type="button" onclick="salvaLuogo()" style="margin-top:4px;padding:4px 10px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">💾 Salva luogo</button>
+    <div class="form-group" id="wrap-luogo-altro" style="display:none">
+      <input type="text" id="luogo-altro" placeholder="es. Sala Consiliare del Comune di Casale M.to">
     </div>
 
     <div class="form-group">
@@ -549,70 +544,9 @@ function removeOdg(i) {
     document.getElementById('wrap-tipo-custom').style.display = this.value === 'altro' ? '' : 'none';
     presetOdg(this.value);
   });
-  // ── GESTIONE LUOGHI SALVATI ──────────────────────────────────────────
-  function getLuoghiSalvati() {
-    try { return JSON.parse(localStorage.getItem('luoghi_salvati') || '[]'); } catch(e) { return []; }
-  }
-  function saveLuoghiSalvati(lst) {
-    localStorage.setItem('luoghi_salvati', JSON.stringify(lst));
-  }
-  function popolaSelectLuogo() {
-    const sel = document.getElementById('luogo');
-    const valAttuale = sel.value;
-    // Mantieni solo "Sede Sezione" e "+ Aggiungi"
-    while (sel.options.length > 2) sel.remove(1);
-    const luoghi = getLuoghiSalvati();
-    luoghi.forEach((l, i) => {
-      const opt = document.createElement('option');
-      opt.value = 'saved_' + i;
-      opt.textContent = l;
-      sel.insertBefore(opt, sel.options[sel.options.length - 1]);
-    });
-    // Ripristina selezione se ancora valida
-    const trovato = Array.from(sel.options).find(o => o.value === valAttuale);
-    if (trovato) sel.value = valAttuale;
-    aggiornaBottoneElimina();
-  }
-  function aggiornaBottoneElimina() {
-    const val = document.getElementById('luogo').value;
-    document.getElementById('btn-del-luogo').style.display = val.startsWith('saved_') ? '' : 'none';
-  }
-  window.salvaLuogo = function() {
-    const nome = document.getElementById('luogo-nuovo').value.trim();
-    if (!nome) { alert('Inserisci il nome del luogo'); return; }
-    const lst = getLuoghiSalvati();
-    if (lst.includes(nome)) { alert('Luogo già presente'); return; }
-    lst.push(nome);
-    saveLuoghiSalvati(lst);
-    popolaSelectLuogo();
-    document.getElementById('luogo').value = 'saved_' + (lst.length - 1);
-    document.getElementById('wrap-luogo-nuovo').style.display = 'none';
-    document.getElementById('luogo-nuovo').value = '';
-    aggiornaBottoneElimina();
-    aggiorna();
-  };
-  window.eliminaLuogo = function() {
-    const sel = document.getElementById('luogo');
-    const val = sel.value;
-    if (!val.startsWith('saved_')) return;
-    const idx = parseInt(val.replace('saved_', ''));
-    const lst = getLuoghiSalvati();
-    const nome = lst[idx];
-    if (!confirm('Eliminare "' + nome + '"?')) return;
-    lst.splice(idx, 1);
-    saveLuoghiSalvati(lst);
-    popolaSelectLuogo();
-    document.getElementById('luogo').value = 'sede';
-    aggiornaBottoneElimina();
-    aggiorna();
-  };
-  popolaSelectLuogo();
+  // Luogo
   document.getElementById('luogo').addEventListener('change', function() {
-    const isNuovo = this.value === 'nuovo';
-    document.getElementById('wrap-luogo-nuovo').style.display = isNuovo ? '' : 'none';
-    if (isNuovo) { document.getElementById('luogo-nuovo').focus(); }
-    aggiornaBottoneElimina();
-    if (!isNuovo) aggiorna();
+    document.getElementById('wrap-luogo-altro').style.display = this.value === 'altro' ? '' : 'none';
   });
   document.getElementById('dest-a').addEventListener('change', function() {
     document.getElementById('wrap-dest-a-custom').style.display = this.value === 'Altro' ? '' : 'none';
@@ -657,15 +591,14 @@ function genera() {
 
   // Luogo
   const luogoVal = document.getElementById('luogo').value;
-  const luoghiSalvati = getLuoghiSalvati ? getLuoghiSalvati() : [];
+  const luogoAltro = document.getElementById('luogo-altro').value.trim();
   let luogoStr;
   if (luogoVal === 'sede') {
     luogoStr = 'la Sede della Sezione Alpini di Casale Monferrato in via T. de Cristoforis 16';
-  } else if (luogoVal.startsWith('saved_')) {
-    const idx = parseInt(luogoVal.replace('saved_', ''));
-    luogoStr = luoghiSalvati[idx] || 'luogo da definire';
+  } else if (luogoVal === 'occimiano') {
+    luogoStr = 'il Centro Operativo Comunale di Occimiano, in Piazza Carlo Alberto 1 a Occimiano';
   } else {
-    luogoStr = 'luogo da definire';
+    luogoStr = luogoAltro || 'luogo da definire';
   }
 
   const dataLettera = formatDateIT(dataLetteraRaw || new Date().toISOString().split('T')[0]);
