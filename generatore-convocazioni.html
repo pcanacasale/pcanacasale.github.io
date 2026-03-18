@@ -357,6 +357,8 @@
   } catch(e) { window.location.replace('area-riservata.html'); }
 })();
 </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -912,22 +914,52 @@ function aggiornaCalibrazione() {
 function aggiornaFontScale(val) { aggiornaCalibrazione(); }
 
 function stampaPDF() {
-  // Applica il valore dello slider come stile inline pt (Chrome non può ignorarlo)
   aggiornaCalibrazione();
 
+  const btn = document.getElementById('btn-pdf');
+  btn.textContent = '⏳ Generazione...';
+  btn.disabled = true;
+
   const a4 = document.querySelector('.a4');
-  const oldWidth = a4.style.width;
-  const oldMaxWidth = a4.style.maxWidth;
-  const oldPadding = a4.style.padding;
-  a4.style.width = '100%';
-  a4.style.maxWidth = '100%';
-  a4.style.padding = '0';
+
+  // Salva stato
+  const oldBoxShadow = a4.style.boxShadow;
+  const oldBorderRadius = a4.style.borderRadius;
   a4.style.boxShadow = 'none';
-  window.print();
-  a4.style.width = oldWidth;
-  a4.style.maxWidth = oldMaxWidth;
-  a4.style.padding = oldPadding;
-  a4.style.boxShadow = '';
+  a4.style.borderRadius = '0';
+
+  html2canvas(a4, {
+    scale: 3,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    width: a4.offsetWidth,
+    height: a4.offsetHeight,
+    windowWidth: a4.offsetWidth,
+    windowHeight: a4.offsetHeight
+  }).then(function(canvas) {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+    pdf.addImage(imgData, 'JPEG', 0, 0, pageW, pageH);
+    pdf.save('Convocazione_PC_ANA.pdf');
+
+    // Ripristina
+    a4.style.boxShadow = oldBoxShadow;
+    a4.style.borderRadius = oldBorderRadius;
+    btn.innerHTML = '🖨️ Scarica PDF';
+    btn.disabled = false;
+  }).catch(function(err) {
+    console.error(err);
+    btn.innerHTML = '🖨️ Scarica PDF';
+    btn.disabled = false;
+    alert('Errore nella generazione del PDF. Riprova.');
+  });
 }
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
