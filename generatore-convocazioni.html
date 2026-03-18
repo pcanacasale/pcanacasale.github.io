@@ -776,7 +776,21 @@ function renderPreview(d) {
 
 // ── STAMPA PDF ──────────────────────────────────────────────────────────────
 function stampaPDF() {
+  // Forza Chrome a NON scalare: impostiamo .a4 a larghezza 100% prima di stampare
+  const a4 = document.querySelector('.a4');
+  const oldWidth = a4.style.width;
+  const oldMaxWidth = a4.style.maxWidth;
+  const oldPadding = a4.style.padding;
+  a4.style.width = '100%';
+  a4.style.maxWidth = '100%';
+  a4.style.padding = '0';
+  a4.style.boxShadow = 'none';
   window.print();
+  // Ripristina dopo stampa
+  a4.style.width = oldWidth;
+  a4.style.maxWidth = oldMaxWidth;
+  a4.style.padding = oldPadding;
+  a4.style.boxShadow = '';
 }
 
 // ── UTILS ───────────────────────────────────────────────────────────────────
@@ -808,7 +822,8 @@ function showError(msg) {
 </script>
 
 <!-- ── STILE STAMPA ── -->
-<style media="print">
+<style>
+@media print {
   @page {
     size: A4 portrait;
     margin: 12mm 15mm 18mm 15mm;
@@ -816,9 +831,8 @@ function showError(msg) {
 
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-  body, html { margin: 0; padding: 0; background: white !important; }
+  body, html { margin: 0 !important; padding: 0 !important; background: white !important; }
 
-  /* Nascondi tutto tranne l'anteprima */
   header, .form-panel, .preview-toolbar, .preview-placeholder,
   #btn-pdf, .sidebar, nav, footer { display: none !important; }
 
@@ -839,7 +853,7 @@ function showError(msg) {
     max-width: 100% !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    padding: 0 !important;   /* il margine lo gestisce @page */
+    padding: 0 !important;
     margin: 0 !important;
     min-height: unset !important;
     font-size: 11pt !important;
@@ -848,7 +862,6 @@ function showError(msg) {
     background: white !important;
   }
 
-  /* Intestazione */
   .doc-header { text-align: center !important; margin-bottom: 10pt !important; }
   .doc-logos {
     display: flex !important;
@@ -863,9 +876,10 @@ function showError(msg) {
   .doc-medaglia { font-size: 10pt !important; font-weight: bold !important; }
   .doc-unita-big { font-size: 18pt !important; font-weight: bold !important; text-transform: uppercase !important; }
   .doc-indirizzo-line, .doc-contatti-line { font-size: 9pt !important; }
-  .doc-separator { font-size: 8pt !important; color: #000 !important; margin: 4pt 0 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; border: none !important; letter-spacing: -0.5pt !important; }
+  .doc-separator { font-size: 8pt !important; color: #000 !important; margin: 4pt 0 0 !important;
+    overflow: hidden !important; white-space: nowrap !important; text-align: center !important;
+    border: none !important; letter-spacing: -0.5pt !important; }
 
-  /* Corpo lettera */
   .doc-data { text-align: left !important; font-size: 10pt !important; margin: 12pt 0 10pt !important; }
   .doc-dest { font-size: 10pt !important; text-align: right !important; padding-left: 50% !important; margin-bottom: 14pt !important; line-height: 1.6 !important; }
   .doc-oggetto { font-size: 10pt !important; font-weight: bold !important; margin-bottom: 10pt !important; }
@@ -889,6 +903,7 @@ function showError(msg) {
   .doc-saluto { font-size: 10pt !important; margin-bottom: 30pt !important; }
   .doc-firma { font-size: 10pt !important; text-align: right !important; }
   .doc-firma .ruolo { font-weight: bold !important; text-transform: uppercase !important; }
+}
 </style>
 
 </body>
