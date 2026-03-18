@@ -293,6 +293,15 @@
   .doc-corpo { margin-bottom: 10px; text-align: justify; font-size: 12px; line-height: 1.5; }
 
   /* DATA RIUNIONE: grande, centrata, nera, in maiuscolo */
+  .doc-orario-riunione {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    margin-top: 4px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
   .doc-data-riunione {
     text-align: center;
     font-size: 34px;
@@ -421,6 +430,11 @@
     <div class="form-group">
       <label>Data della riunione</label>
       <input type="date" id="data-riunione">
+    </div>
+
+    <div class="form-group">
+      <label>Orario</label>
+      <input type="text" id="orario-riunione" placeholder="es. 20:30" maxlength="10">
     </div>
 
     <div class="form-group">
@@ -738,6 +752,7 @@ function genera() {
   const tipo = document.getElementById('tipo').value;
   const tipoCustom = document.getElementById('tipo-custom').value.trim();
   const dataRiunioneRaw = document.getElementById('data-riunione').value;
+  const orarioRiunione = document.getElementById('orario-riunione').value.trim();
   const dataLetteraRaw = document.getElementById('data-lettera').value;
   const destA = document.getElementById('dest-a').value === 'Altro'
     ? document.getElementById('dest-a-custom').value.trim()
@@ -817,6 +832,7 @@ function genera() {
     oggetto: tpl.oggetto,
     testoIntro: tpl.testoIntro,
     dataGrande, titoloRiunione,
+    orario: orarioRiunione,
     chiusura,
     odg: odgItems,
   });
@@ -860,6 +876,7 @@ function renderPreview(d) {
     <div class="doc-corpo">${d.testoIntro}</div>
 
     <div class="doc-data-riunione">${d.dataGrande}</div>
+    ${d.orario ? '<div class="doc-orario-riunione">ore ' + d.orario + '</div>' : ''}
 
     <div class="doc-titolo-riunione">${d.titoloRiunione}</div>
 
@@ -927,6 +944,7 @@ function aggiornaCalibrazione() {
   document.querySelectorAll('.doc-corpo, .doc-titolo-riunione, .doc-chiusura').forEach(e => { e.style.fontSize = v.corpo+'pt'; e.style.lineHeight = String(v.lhCorpo); });
   document.querySelectorAll('.doc-data, .doc-dest, .doc-oggetto').forEach(e => { e.style.fontSize = v.data+'pt'; e.style.lineHeight = String(v.lhCorpo); });
   document.querySelectorAll('.doc-data-riunione').forEach(e => { e.style.fontSize = v.dataRiunione+'pt'; });
+  document.querySelectorAll('.doc-orario-riunione').forEach(e => { e.style.fontSize = Math.round(v.dataRiunione * 0.65)+'pt'; });
   document.querySelectorAll('.doc-odg, .doc-odg-title, .doc-firma').forEach(e => { e.style.fontSize = v.odg+'pt'; e.style.lineHeight = String(v.lhCorpo); });
 }
 
@@ -1074,6 +1092,7 @@ function showError(msg) {
   .doc-oggetto { font-size: 10pt !important; font-weight: bold !important; margin-bottom: 10pt !important; }
   .doc-corpo { font-size: 10pt !important; text-align: justify !important; margin-bottom: 6pt !important; }
 
+  .doc-orario-riunione { font-size: 18pt !important; font-weight: bold !important; text-align: center !important; margin-top: 2pt !important; margin-bottom: 10pt !important; }
   .doc-data-riunione {
     font-size: 28pt !important;
     font-weight: bold !important;
