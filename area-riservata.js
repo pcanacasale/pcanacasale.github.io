@@ -399,6 +399,7 @@ async function eliminaRichiesta(id) {
 async function caricaImpostazioni() {
   caricaUtenti();
   caricaLog();
+  renderSchemaList();
 }
 
 async function caricaUtenti() {
@@ -512,8 +513,9 @@ async function caricaVolontari() {
   const list = document.getElementById('volList');
   if (!list) return;
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,attivo&order=cognome', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
@@ -535,8 +537,8 @@ function renderVolontari(data) {
     const badges = [];
     if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
     if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-    else if (v.quattro_ore) badges.push('<span class="vol-badge vb-ok">4H</span>');
     if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
+    if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
     card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
       + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div></div>'
@@ -634,7 +636,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Dotazioni</div>
+        <div class="vol-section-head">Abilitazioni</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Comm. Unità</span>${fmtBool(v.comm_unita)}</div>
           <div class="vol-field"><span class="vol-field-label">Radio ANA</span>${fmtBool(v.radio_ana)}</div>
@@ -657,6 +659,8 @@ async function apriDettaglio(id) {
           <div class="vol-field"><span class="vol-field-label">Stato visita</span>${fmt(v.stato_visita)}</div>
         </div>
       </div>
+
+      ${await renderCampiCustomDettaglio(v)}
 
       <div class="vol-section">
         <div class="vol-section-head">Amministrativo</div>
@@ -735,7 +739,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Dotazioni e formazione</div>
+      <div class="vol-form-section-title">Abilitazioni e formazione</div>
       <div class="vol-form-checks">
         <label class="vol-form-check"><input type="checkbox" id="fCommUnita"> Comm. Unità</label>
         <label class="vol-form-check"><input type="checkbox" id="fRadioAna"> Radio ANA</label>
@@ -770,10 +774,13 @@ function apriFormVolontario(id) {
         <div class="vol-form-field full"><label class="vol-form-lbl">Note disponibilità</label><input class="vol-form-inp" id="fNoteDispon"></div>
       </div>
     </div>
+    ${renderCampiCustomForm()}
     ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">elimina volontario</button>' : ''}`;
 
   // Se modifica, carica i dati
-  if (id) caricaDatiForm(id);
+  // Precarica schema se vuoto
+  if (!schemaCache.length) caricaSchema().then(() => { if (id) caricaDatiForm(id); });
+  else if (id) caricaDatiForm(id);
 }
 
 async function caricaDatiForm(id) {
@@ -800,6 +807,14 @@ async function caricaDatiForm(id) {
     setVal('fScadDae', v.scad_dae); setVal('fDataVisita', v.data_visita);
     setVal('fStatoVisita', v.stato_visita); setVal('fCodEmercom', v.cod_emercom);
     setVal('fDispon', v.dispon); setVal('fVarchi', v.varchi); setVal('fNoteDispon', v.note_dispon);
+    // Campi custom
+    const extra = v.campi_extra || {};
+    schemaCache.forEach(c => {
+      const el = document.getElementById('fc_' + c.campo_id);
+      if (!el) return;
+      if (c.tipo === 'boolean') el.checked = !!extra[c.campo_id];
+      else el.value = extra[c.campo_id] || '';
+    });
   } catch(e) {}
 }
 
@@ -813,6 +828,14 @@ async function salvaVolontario() {
   const g = (id) => { const el = document.getElementById(id); return el ? el.value || null : null; };
   const b = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
   const d = (id) => { const el = document.getElementById(id); return el && el.value ? el.value : null; };
+
+  // Raccogli campi custom
+  const campi_extra = {};
+  schemaCache.forEach(c => {
+    const el = document.getElementById('fc_' + c.campo_id);
+    if (!el) return;
+    campi_extra[c.campo_id] = c.tipo === 'boolean' ? el.checked : (el.value || null);
+  });
 
   const payload = {
     cognome, nome,
@@ -831,6 +854,7 @@ async function salvaVolontario() {
     scad_dae: d('fScadDae'), data_visita: d('fDataVisita'),
     stato_visita: g('fStatoVisita'), cod_emercom: g('fCodEmercom'),
     dispon: g('fDispon'), varchi: g('fVarchi'), note_dispon: g('fNoteDispon'),
+    campi_extra,
   };
 
   try {
@@ -857,6 +881,347 @@ async function eliminaVolontario() {
 
 function chiudiForm() {
   document.getElementById('volFormPanel').classList.remove('open');
+}
+
+async function renderCampiCustomDettaglio(v) {
+  if (!schemaCache.length) await caricaSchema();
+  const campiVisibili = schemaCache.filter(c => c.visibile);
+  if (!campiVisibili.length) return '';
+  const extra = v.campi_extra || {};
+  // Raggruppa per sezione
+  const sezioni = {};
+  campiVisibili.forEach(c => {
+    if (!sezioni[c.sezione]) sezioni[c.sezione] = [];
+    sezioni[c.sezione].push(c);
+  });
+  let html = '';
+  Object.entries(sezioni).forEach(([sez, campi]) => {
+    const fields = campi.map(c => {
+      const val = extra[c.campo_id];
+      let valHtml;
+      if (c.tipo === 'boolean') {
+        valHtml = val ? '<span class="vol-field-value vol-bool-yes">✓ Sì</span>' : '<span class="vol-field-value vol-bool-no">—</span>';
+      } else if (c.tipo === 'date') {
+        valHtml = val ? '<span class="vol-field-value">' + new Date(val).toLocaleDateString('it-IT') + '</span>' : '<span class="vol-field-value null">—</span>';
+      } else {
+        valHtml = val ? '<span class="vol-field-value">' + val + '</span>' : '<span class="vol-field-value null">—</span>';
+      }
+      return '<div class="vol-field"><span class="vol-field-label">' + c.etichetta + '</span>' + valHtml + '</div>';
+    }).join('');
+    html += '<div class="vol-section"><div class="vol-section-head">' + sez + ' (custom)</div><div class="vol-section-body">' + fields + '</div></div>';
+  });
+  return html;
+}
+
+function renderCampiCustomForm() {
+  if (!schemaCache.length) return '';
+  const campiVisibili = schemaCache.filter(c => c.visibile);
+  if (!campiVisibili.length) return '';
+  const sezioni = {};
+  campiVisibili.forEach(c => {
+    if (!sezioni[c.sezione]) sezioni[c.sezione] = [];
+    sezioni[c.sezione].push(c);
+  });
+  let html = '';
+  Object.entries(sezioni).forEach(([sez, campi]) => {
+    html += '<div class="vol-form-section"><div class="vol-form-section-title">' + sez + ' (custom)</div><div class="vol-form-grid">';
+    campi.forEach(c => {
+      if (c.tipo === 'boolean') {
+        html += '<label class="vol-form-check" style="grid-column:span 1"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
+      } else {
+        const inputType = c.tipo === 'date' ? 'date' : c.tipo === 'number' ? 'number' : 'text';
+        html += '<div class="vol-form-field"><label class="vol-form-lbl">' + c.etichetta + '</label><input class="vol-form-inp" type="' + inputType + '" id="fc_' + c.campo_id + '"></div>';
+      }
+    });
+    html += '</div></div>';
+  });
+  return html;
+}
+
+
+// ── SCHEMA CAMPI VOLONTARI ──
+let schemaCache = [];
+
+async function caricaSchema() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/schema_volontari?select=*&order=sezione,ordine', { headers: H });
+    schemaCache = await res.json();
+    return schemaCache;
+  } catch(e) { return []; }
+}
+
+async function renderSchemaList() {
+  const list = document.getElementById('schemaList');
+  if (!list) return;
+  const schema = await caricaSchema();
+  if (!schema.length) {
+    list.innerHTML = '<div class="loading-msg" style="font-size:0.68rem">Nessun campo custom. Aggiungine uno qui sotto.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  // Raggruppa per sezione
+  const sezioni = {};
+  schema.forEach(c => {
+    if (!sezioni[c.sezione]) sezioni[c.sezione] = [];
+    sezioni[c.sezione].push(c);
+  });
+  Object.entries(sezioni).forEach(([sez, campi]) => {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.58rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.6px;padding:0.4rem 0 0.2rem;';
+    label.textContent = sez;
+    list.appendChild(label);
+    campi.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'schema-row' + (c.visibile ? '' : ' nascosto');
+      const tipoLabel = { text:'Testo', boolean:'Sì/No', date:'Data', number:'Numero' }[c.tipo] || c.tipo;
+      row.innerHTML = '<div class="schema-row-info">'
+        + '<div class="schema-row-label">' + c.etichetta + '</div>'
+        + '<div class="schema-row-meta"><span class="schema-tipo-pill">' + tipoLabel + '</span></div>'
+        + '</div>'
+        + '<div class="schema-row-actions">'
+        + '<button class="btn-sm ' + (c.visibile ? 'btn-warn' : 'btn-ok') + '" onclick="toggleCampo('' + c.id + '',' + c.visibile + ')">' + (c.visibile ? 'nascondi' : 'mostra') + '</button>'
+        + '<button class="btn-sm btn-danger" onclick="eliminaCampo('' + c.id + '','' + c.etichetta.replace(/'/g,"\'") + '')">elimina</button>'
+        + '</div>';
+      list.appendChild(row);
+    });
+  });
+}
+
+async function salvaNuovoCampo() {
+  const etichetta = document.getElementById('ncEtichetta').value.trim();
+  const tipo      = document.getElementById('ncTipo').value;
+  const sezione   = document.getElementById('ncSezione').value;
+  const errEl     = document.getElementById('nuovoCampoErr');
+  if (!etichetta) { errEl.textContent = 'Inserisci un nome per il campo.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  // Genera campo_id da etichetta
+  const campo_id = 'custom_' + etichetta.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  const ordine   = schemaCache.filter(c => c.sezione === sezione).length;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/schema_volontari', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ campo_id, etichetta, tipo, sezione, ordine, visibile: true })
+    });
+    if (res.ok) {
+      document.getElementById('ncEtichetta').value = '';
+      await logAttivita('ha aggiunto campo custom: ' + etichetta);
+      renderSchemaList();
+    } else {
+      const err = await res.text();
+      errEl.textContent = err.includes('unique') ? 'Campo già esistente con questo nome.' : 'Errore salvataggio.';
+      errEl.style.display = 'block';
+    }
+  } catch(e) { errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block'; }
+}
+
+async function toggleCampo(id, visibile) {
+  await fetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, {
+    method: 'PATCH', headers: HJ, body: JSON.stringify({ visibile: !visibile })
+  });
+  renderSchemaList();
+}
+
+async function eliminaCampo(id, etichetta) {
+  if (!confirm('Eliminare il campo "' + etichetta + '"?
+I dati già inseriti per questo campo andranno persi.')) return;
+  await fetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
+  await logAttivita('ha eliminato campo custom: ' + etichetta);
+  renderSchemaList();
+}
+
+
+
+// ── VISTE VOLONTARI ──
+let visteCache = [];
+let vistaAttiva = null; // null = GENERALE
+
+const VISTE_DEFAULT = [
+  { nome: 'GENERALE',        filtri: {},                           ordine: 0 },
+  { nome: 'SQUADRA',         filtri: { _group: 'squadra' },        ordine: 1 },
+  { nome: 'VISITE MEDICHE',  filtri: { stato_visita_not: 'COMPLETATA' }, ordine: 2 },
+  { nome: '4 ORE',           filtri: { quattro_ore: true },        ordine: 3 },
+  { nome: '12 ORE',          filtri: { dodici_ore: true },         ordine: 4 },
+  { nome: 'PRONTO IMPIEGO',  filtri: { pronto_impiego: true },     ordine: 5 },
+];
+
+async function caricaViste() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
+    const data = await res.json();
+    // Se non ci sono viste salvate, inserisco i default
+    if (!data.length) {
+      await seedVisteDefault();
+      const res2 = await fetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
+      visteCache = await res2.json();
+    } else {
+      visteCache = data;
+    }
+  } catch(e) { visteCache = []; }
+  renderVisteBar();
+}
+
+async function seedVisteDefault() {
+  for (const v of VISTE_DEFAULT) {
+    await fetch(SUPA_URL + '/rest/v1/viste_volontari', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(v)
+    });
+  }
+}
+
+function renderVisteBar() {
+  const bar = document.getElementById('visteBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  visteCache.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'vista-btn' + (vistaAttiva === v.id ? ' active' : '');
+    btn.textContent = v.nome;
+    btn.onclick = () => applicaVista(v);
+    bar.appendChild(btn);
+  });
+  // Bottone nuova vista (solo master)
+  const isMaster = currentUser && currentUser.tipo_accesso === 'master';
+  if (isMaster) {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'vista-btn vista-add';
+    addBtn.textContent = '+ vista';
+    addBtn.onclick = () => apriFormVista();
+    bar.appendChild(addBtn);
+  }
+}
+
+function applicaVista(v) {
+  vistaAttiva = v.id;
+  renderVisteBar();
+  const filtri = v.filtri || {};
+
+  // Resetta filtri manuali
+  document.getElementById('volSearch').value = '';
+  document.getElementById('filtroSquadra').value = '';
+  document.getElementById('filtroTipo').value = '';
+  document.getElementById('filtroMansione').value = '';
+  document.getElementById('filtroAttivo').value = '';
+
+  if (filtri._group === 'squadra') {
+    renderVolontariGrouped();
+    return;
+  }
+
+  // Applica filtri
+  let dati = [...volontariData];
+  if (filtri.quattro_ore)    dati = dati.filter(v => v.quattro_ore);
+  if (filtri.dodici_ore)     dati = dati.filter(v => v.dodici_ore);
+  if (filtri.pronto_impiego) dati = dati.filter(v => v.pronto_impiego);
+  if (filtri.attivo !== undefined) dati = dati.filter(v => v.attivo === filtri.attivo);
+  if (filtri.stato_visita_not) dati = dati.filter(v => v.stato_visita !== filtri.stato_visita_not);
+  // Filtri custom da jsonb (campi extra)
+  Object.keys(filtri).forEach(k => {
+    if (k.startsWith('_') || ['quattro_ore','dodici_ore','pronto_impiego','attivo','stato_visita_not'].includes(k)) return;
+    dati = dati.filter(v => v[k] === filtri[k]);
+  });
+
+  renderVolontari(dati);
+}
+
+function renderVolontariGrouped() {
+  const list = document.getElementById('volList');
+  if (!list) return;
+  const gruppi = {};
+  volontariData.forEach(v => {
+    const g = v.squadra || '—';
+    if (!gruppi[g]) gruppi[g] = [];
+    gruppi[g].push(v);
+  });
+  list.innerHTML = '';
+  // Ordina le squadre
+  Object.keys(gruppi).sort().forEach(squadra => {
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:0.6rem;font-weight:500;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;padding:0.7rem 0 0.3rem;border-bottom:1px solid var(--green-bdr);margin-bottom:0.4rem;';
+    header.textContent = squadra + ' (' + gruppi[squadra].length + ')';
+    list.appendChild(header);
+    gruppi[squadra].forEach(v => {
+      const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+      const [bg, fg] = avatarColor(v.cognome);
+      const card = document.createElement('div');
+      card.className = 'vol-card';
+      card.onclick = () => apriDettaglio(v.id);
+      const badges = [];
+      if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
+      if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
+      if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+      card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+        + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
+        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div></div>'
+        + '<div class="vol-card-badges">' + badges.join('') + '</div>';
+      list.appendChild(card);
+    });
+  });
+  document.getElementById('volMostrati').textContent = volontariData.length;
+}
+
+// Form nuova vista
+let vistaEditId = null;
+function apriFormVista(vista) {
+  vistaEditId = vista ? vista.id : null;
+  const overlay = document.getElementById('vistaFormOverlay');
+  overlay.classList.add('open');
+  document.getElementById('vfNome').value = vista ? vista.nome : '';
+  // Reset checkboxes
+  ['vfQ4','vfQ12','vfPI','vfAttivo','vfVisitaNonCompl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  });
+  if (vista && vista.filtri) {
+    const f = vista.filtri;
+    if (f.quattro_ore)    document.getElementById('vfQ4').checked = true;
+    if (f.dodici_ore)     document.getElementById('vfQ12').checked = true;
+    if (f.pronto_impiego) document.getElementById('vfPI').checked = true;
+    if (f.attivo === true) document.getElementById('vfAttivo').checked = true;
+    if (f.stato_visita_not) document.getElementById('vfVisitaNonCompl').checked = true;
+  }
+}
+
+function chiudiFormVista() {
+  document.getElementById('vistaFormOverlay').classList.remove('open');
+}
+
+async function salvaVista() {
+  const nome = document.getElementById('vfNome').value.trim();
+  if (!nome) return;
+  const filtri = {};
+  if (document.getElementById('vfQ4').checked)           filtri.quattro_ore = true;
+  if (document.getElementById('vfQ12').checked)          filtri.dodici_ore = true;
+  if (document.getElementById('vfPI').checked)           filtri.pronto_impiego = true;
+  if (document.getElementById('vfAttivo').checked)       filtri.attivo = true;
+  if (document.getElementById('vfVisitaNonCompl').checked) filtri.stato_visita_not = 'COMPLETATA';
+
+  if (vistaEditId) {
+    await fetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + vistaEditId, {
+      method: 'PATCH', headers: HJ, body: JSON.stringify({ nome, filtri })
+    });
+  } else {
+    await fetch(SUPA_URL + '/rest/v1/viste_volontari', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ nome, filtri, ordine: visteCache.length })
+    });
+  }
+  await logAttivita('ha ' + (vistaEditId ? 'modificato' : 'creato') + ' vista: ' + nome);
+  chiudiFormVista();
+  await caricaViste();
+  await caricaVolontari();
+}
+
+async function eliminaVista(id, nome) {
+  if (!confirm('Eliminare la vista "' + nome + '"?')) return;
+  await fetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
+  await logAttivita('ha eliminato vista: ' + nome);
+  vistaAttiva = null;
+  await caricaViste();
+  renderVolontari(volontariData);
 }
 
 // ── KEYBOARD ──
