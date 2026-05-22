@@ -578,6 +578,7 @@ async function apriDettaglio(id) {
   const detail = document.getElementById('volDetail');
   const body   = document.getElementById('volDetailBody');
   detail.classList.add('open');
+  detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
@@ -678,6 +679,7 @@ async function apriDettaglio(id) {
 
 function chiudiDettaglio() {
   document.getElementById('volDetail').classList.remove('open');
+  document.body.style.overflow = '';
   volCorrenteId = null;
 }
 
@@ -687,6 +689,7 @@ function apriFormVolontario(id) {
   const body  = document.getElementById('volFormBody');
   document.getElementById('volFormTitle').textContent = id ? 'Modifica volontario' : 'Nuovo volontario';
   panel.classList.add('open');
+  panel.scrollTop = 0;
 
   // Campi del form
   body.innerHTML = `
@@ -881,6 +884,7 @@ async function eliminaVolontario() {
 
 function chiudiForm() {
   document.getElementById('volFormPanel').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 async function renderCampiCustomDettaglio(v) {
@@ -1084,7 +1088,7 @@ function renderVisteBar() {
     wrap.appendChild(btn);
     // Tasto elimina/modifica (solo master)
     const isMasterForBtn = currentUser && currentUser.tipo_accesso === 'master';
-    if (isMasterForBtn) {
+    if (isMasterForBtn && v.nome !== 'GENERALE') {
       const editBtn = document.createElement('button');
       editBtn.className = 'vista-edit-btn';
       editBtn.textContent = '✕';

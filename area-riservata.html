@@ -62,7 +62,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 #app { display:none; flex-direction:column; min-height:100vh; min-height:100dvh; }
 
 /* Topbar */
-.topbar { position:fixed; top:0; left:0; right:0; height:52px; background:var(--bg-2); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 14px; gap:10px; z-index:200; }
+.topbar { position:fixed; top:0; left:0; right:0; height:52px; background:var(--bg-2); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 14px; padding-top:env(safe-area-inset-top, 0px); gap:10px; z-index:200; }
+.main-content { margin-top:calc(52px + env(safe-area-inset-top, 0px)); padding-bottom:2rem; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; height:calc(100dvh - 52px - env(safe-area-inset-top, 0px)); }
 .topbar-logo { width:28px; height:28px; background:var(--green-bg); border:1px solid var(--green-bdr); border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .topbar-title { font-size:0.72rem; font-weight:500; color:var(--text-1); letter-spacing:1px; text-transform:uppercase; flex:1; }
 .topbar-time { font-size:0.68rem; color:var(--text-3); flex-shrink:0; }
@@ -71,10 +72,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 .btn-logout:hover { border-color:var(--red); color:var(--red); }
 
 /* Main */
-.main-content { margin-top:52px; padding-bottom:1rem; }
+
 
 /* ── TOP NAV TABS ── */
-.top-nav { display:flex; align-items:center; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; gap:2px; flex:1; min-width:0; margin:0 0.5rem; }
+.top-nav { display:flex; align-items:center; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; touch-action:pan-x; gap:2px; flex:1; min-width:0; margin:0 0.5rem; }
 .top-nav::-webkit-scrollbar { display:none; }
 .nav-btn { display:flex; align-items:center; gap:5px; padding:5px 10px; background:none; border:none; border-radius:6px; cursor:pointer; color:var(--text-4); transition:color 0.15s,background 0.15s; white-space:nowrap; flex-shrink:0; position:relative; }
 .nav-btn:hover { background:rgba(255,255,255,0.06); color:var(--text-2); }
@@ -86,7 +87,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 
 /* ── PANELS ── */
 .panel { display:none; padding:1rem; animation:fadeIn 0.15s ease; }
-.panel.active { display:block; }
+.panel.active { display:block; min-height:100%; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 
 /* Panel header */
@@ -269,7 +270,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 .vb-off { background:var(--red-bg); border:1px solid var(--red); color:var(--red); }
 
 /* SCHEDA DETTAGLIO */
-.vol-detail { display:none; position:fixed; inset:0; background:var(--bg); z-index:400; overflow-y:auto; padding-bottom:2rem; }
+.vol-detail { display:none; position:fixed; inset:0; background:var(--bg); z-index:400; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
 .vol-detail.open { display:block; animation:fadeIn 0.15s ease; }
 .vol-detail-top { position:sticky; top:0; background:var(--bg-2); border-bottom:1px solid var(--border); padding:0.8rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; }
 .vol-detail-back { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:0.9rem; padding:0; display:flex; align-items:center; gap:0.4rem; font-family:var(--font); font-size:0.72rem; }
@@ -293,7 +294,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 .vol-bool-no { color:var(--text-4); }
 
 /* FORM EDIT/ADD */
-.vol-form { display:none; position:fixed; inset:0; background:var(--bg); z-index:500; overflow-y:auto; padding-bottom:2rem; }
+.vol-form { display:none; position:fixed; inset:0; background:var(--bg); z-index:500; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
 .vol-form.open { display:block; animation:fadeIn 0.15s ease; }
 .vol-form-top { position:sticky; top:0; background:var(--bg-2); border-bottom:1px solid var(--border); padding:0.8rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; }
 .vol-form-title { flex:1; font-size:0.78rem; font-weight:500; color:var(--text-1); }
@@ -335,7 +336,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 
 
 /* ── VISTE ── */
-.viste-bar { display:flex; gap:0.4rem; overflow-x:auto; scrollbar-width:none; padding-bottom:0.5rem; margin-bottom:0.6rem; -webkit-overflow-scrolling:touch; }
+.viste-bar { display:flex; gap:0.4rem; overflow-x:auto; scrollbar-width:none; padding-bottom:0.5rem; margin-bottom:0.6rem; -webkit-overflow-scrolling:touch; touch-action:pan-x; }
 .viste-bar::-webkit-scrollbar { display:none; }
 .vista-btn { padding:0.35rem 0.9rem; background:var(--bg-2); border:1px solid var(--border-2); border-radius:20px; font-family:var(--font); font-size:0.65rem; color:var(--text-3); cursor:pointer; white-space:nowrap; transition:all 0.15s; flex-shrink:0; }
 .vista-btn:hover { border-color:var(--green); color:var(--green); }
@@ -398,7 +399,7 @@ div:hover > .vista-edit-btn { display:flex; }
     <div class="topbar-logo">
       <svg viewBox="0 0 24 24" width="14" height="14" stroke="#3fb950" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L4 7v5c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V7L12 3z"/></svg>
     </div>
-    <span class="topbar-title" style="flex-shrink:0">PC ANA</span>
+    <span class="topbar-title" style="flex-shrink:0">PC ANA CASALE</span>
     <div class="top-nav" id="topNav">
       <button class="nav-btn active" id="navHome" onclick="showPanel('home',this)">
         <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
