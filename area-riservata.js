@@ -979,8 +979,8 @@ async function renderSchemaList() {
         + '<div class="schema-row-meta"><span class="schema-tipo-pill">' + tipoLabel + '</span></div>'
         + '</div>'
         + '<div class="schema-row-actions">'
-        + '<button class="btn-sm ' + (c.visibile ? 'btn-warn' : 'btn-ok') + '" onclick="toggleCampo('' + c.id + '',' + c.visibile + ')">' + (c.visibile ? 'nascondi' : 'mostra') + '</button>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaCampo('' + c.id + '','' + c.etichetta.replace(/'/g,"\'") + '')">elimina</button>'
+        + '<button class="btn-sm ' + (c.visibile ? 'btn-warn' : 'btn-ok') + '" onclick="toggleCampo(' + JSON.stringify(c.id) + ',' + c.visibile + ')">' + (c.visibile ? 'nascondi' : 'mostra') + '</button>'
+        + '<button class="btn-sm btn-danger" onclick="eliminaCampo(' + JSON.stringify(c.id) + ',' + JSON.stringify(c.etichetta) + ')">elimina</button>'
         + '</div>';
       list.appendChild(row);
     });
@@ -1023,8 +1023,7 @@ async function toggleCampo(id, visibile) {
 }
 
 async function eliminaCampo(id, etichetta) {
-  if (!confirm('Eliminare il campo "' + etichetta + '"?
-I dati già inseriti per questo campo andranno persi.')) return;
+  if (!confirm('Eliminare il campo "' + etichetta + '"? I dati inseriti per questo campo andranno persi.')) return;
   await fetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
   await logAttivita('ha eliminato campo custom: ' + etichetta);
   renderSchemaList();
