@@ -62,6 +62,7 @@ function avviaDashboard() {
 
   // More menu visibilità
   if (isMaster || p.pranzo)    document.getElementById('morePranzo').style.display    = 'flex';
+  if (isMaster || p.documenti) { showNav('navDocumenti'); document.getElementById('moreDocumenti').style.display = 'flex'; }
   if (isMaster || p.richieste) document.getElementById('moreRichieste').style.display = 'flex';
   if (isMaster)                document.getElementById('moreImpostazioni').style.display = 'flex';
 
@@ -113,6 +114,7 @@ function showPanel(name, btn) {
   if (name === 'richieste') caricaRichieste();
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
+  if (name === 'documenti') caricaDocumenti();
 }
 
 function toggleMore() {
@@ -452,6 +454,7 @@ async function salvaUtente() {
     mezzi:      document.getElementById('permMezzi').checked,
     richieste:  document.getElementById('permRichieste').checked,
     pranzo:     document.getElementById('permPranzo').checked,
+    documenti:  document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -577,6 +580,7 @@ function toggleVolFiltri() {
 async function apriDettaglio(id) {
   volCorrenteId = id;
   volInterventiLoaded = false;
+  volDocLoaded = false;
   const detail = document.getElementById('volDetail');
   const body   = document.getElementById('volDetailBody');
   detail.classList.add('open');
@@ -673,6 +677,13 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
+        <div class="vol-section-head" style="cursor:pointer" onclick="toggleVolDoc(${v.id})">
+          Documenti <span id="volDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>
+        </div>
+        <div class="vol-section-body" id="volDocBody" style="display:none"></div>
+      </div>
+
+      <div class="vol-section">
         <div class="vol-section-head">Amministrativo</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Iscrizione</span>${fmtBool(v.iscrizione)}</div>
@@ -690,6 +701,16 @@ function chiudiDettaglio() {
   document.getElementById('volDetail').classList.remove('open');
   document.body.style.overflow = '';
   volCorrenteId = null;
+}
+
+let volDocLoaded = false;
+
+function toggleVolDoc(volId) {
+  const body = document.getElementById('volDocBody');
+  if (!body) return;
+  if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+  body.style.display = 'block';
+  if (!volDocLoaded) { volDocLoaded = true; caricaDocVolontario(volId); }
 }
 
 let volInterventiLoaded = false;
@@ -1734,6 +1755,237 @@ async function eliminaIntervento() {
 
 function chiudiFormIntervento() {
   document.getElementById('intFormPanel').classList.remove('open');
+}
+
+
+// ── DOCUMENTI ──
+let docVolontariCache = [];
+let docUploadVolId = null;
+let docUploadFile  = null;
+
+const DOC_TIPO_LABEL = {
+  'FOTO':'📷 Foto profilo', '4_ORE':'📋 Attestato 4 Ore', '12_ORE':'📋 Attestato 12 Ore',
+  'CAPOSQ':'📋 Caposquadra', 'DAE':'🏥 DAE', 'CDC_1':'🏥 CDC 1° Step',
+  'CDC_2':'🏥 CDC 2° Step', 'VISITA':'🩺 Visita medica', 'EMERCOM':'📡 EMERCOM', 'ALTRO':'📄 Altro'
+};
+
+async function caricaDocumenti() {
+  const list = document.getElementById('docVolList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    // Carica volontari con count documenti
+    const [vRes, dRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome&order=cognome&attivo=eq.true', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/documenti?select=id,volontario_id,tipo,nome_file,url,data_carico', { headers: H })
+    ]);
+    const vols = await vRes.json();
+    const docs = await dRes.json();
+    docVolontariCache = vols;
+
+    // Raggruppa documenti per volontario
+    const docsPerVol = {};
+    docs.forEach(d => {
+      if (!docsPerVol[d.volontario_id]) docsPerVol[d.volontario_id] = [];
+      docsPerVol[d.volontario_id].push(d);
+    });
+
+    renderDocVolontari(vols, docsPerVol);
+    window._docsPerVol = docsPerVol;
+  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+function renderDocVolontari(vols, docsPerVol) {
+  const list = document.getElementById('docVolList');
+  if (!list) return;
+  list.innerHTML = '';
+  vols.forEach(v => {
+    const docs = docsPerVol[v.id] || [];
+    const [bg, fg] = avatarColor(v.cognome);
+    const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+    const card = document.createElement('div');
+    card.className = 'doc-vol-card';
+    card.id = 'docCard_' + v.id;
+    card.innerHTML = '<div class="doc-vol-head" onclick="toggleDocVol(' + v.id + ')">'
+      + '<div class="doc-vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+      + '<span class="doc-vol-name">' + v.cognome + ' ' + v.nome + '</span>'
+      + '<span class="doc-vol-count">' + (docs.length ? docs.length + ' doc.' : 'nessun doc.') + '</span>'
+      + '<span class="doc-vol-arrow">▼</span>'
+      + '</div>'
+      + '<div class="doc-vol-body" id="docBody_' + v.id + '">'
+      + renderDocListHTML(v.id, docs)
+      + '</div>';
+    list.appendChild(card);
+  });
+}
+
+function renderDocListHTML(volId, docs) {
+  let html = '<div class="doc-list">';
+  if (docs.length) {
+    docs.forEach(d => {
+      const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
+      const nome  = d.nome_file || label;
+      html += '<div class="doc-item">'
+        + '<span class="doc-item-icon">' + (label.split(' ')[0]) + '</span>'
+        + '<div class="doc-item-info">'
+        + '<div class="doc-item-name">' + nome + '</div>'
+        + '<div class="doc-item-meta">' + label + ' · ' + data + '</div>'
+        + '</div>'
+        + '<div class="doc-item-actions">'
+        + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
+        + '<button class="btn-sm btn-danger" onclick="eliminaDoc(' + d.id + ',' + volId + ')">✕</button>'
+        + '</div>'
+        + '</div>';
+    });
+  }
+  html += '</div>';
+  html += '<button class="doc-add-btn" onclick="apriUploadDoc(' + volId + ')">+ aggiungi documento</button>';
+  return html;
+}
+
+function toggleDocVol(volId) {
+  const card = document.getElementById('docCard_' + volId);
+  if (card) card.classList.toggle('open');
+}
+
+function filtraDocVolontari() {
+  const q = (document.getElementById('docSearch').value || '').toLowerCase().trim();
+  document.querySelectorAll('.doc-vol-card').forEach(card => {
+    const nome = card.querySelector('.doc-vol-name').textContent.toLowerCase();
+    card.style.display = !q || nome.includes(q) ? '' : 'none';
+  });
+}
+
+function apriUploadDoc(volId) {
+  docUploadVolId = volId;
+  docUploadFile  = null;
+  const v = docVolontariCache.find(v => v.id === volId);
+  document.getElementById('docUploadTitle').textContent = 'Carica documento — ' + (v ? v.cognome + ' ' + v.nome : '');
+  document.getElementById('docUploadErr').style.display = 'none';
+  document.getElementById('docDropText').innerHTML = '📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span>';
+  document.getElementById('docNome').value = '';
+  document.getElementById('docProgress').style.display = 'none';
+  document.getElementById('docProgressBar').style.width = '0%';
+  document.getElementById('docFileInput').value = '';
+  document.getElementById('docUploadOverlay').classList.add('open');
+}
+
+function chiudiUploadDoc() {
+  document.getElementById('docUploadOverlay').classList.remove('open');
+  docUploadVolId = null;
+  docUploadFile  = null;
+}
+
+function docFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    document.getElementById('docUploadErr').textContent = 'File troppo grande (max 10MB).';
+    document.getElementById('docUploadErr').style.display = 'block';
+    return;
+  }
+  docUploadFile = file;
+  document.getElementById('docDropText').innerHTML = '✓ ' + file.name + '<br><span style="font-size:0.62rem;opacity:0.6">' + (file.size / 1024).toFixed(0) + ' KB</span>';
+}
+
+async function eseguiUploadDoc() {
+  if (!docUploadFile || !docUploadVolId) {
+    document.getElementById('docUploadErr').textContent = 'Seleziona un file.';
+    document.getElementById('docUploadErr').style.display = 'block';
+    return;
+  }
+  const tipo    = document.getElementById('docTipo').value;
+  const nomeDoc = document.getElementById('docNome').value.trim() || docUploadFile.name;
+  const bucket  = tipo === 'FOTO' ? 'foto-volontari' : 'attestati';
+  const path    = docUploadVolId + '/' + tipo + '_' + Date.now() + '_' + docUploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const errEl   = document.getElementById('docUploadErr');
+  const btn     = document.getElementById('docUploadBtn');
+  const progress = document.getElementById('docProgress');
+  const bar      = document.getElementById('docProgressBar');
+
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'caricamento...';
+  progress.style.display = 'block';
+
+  try {
+    // Upload su Supabase Storage
+    bar.style.width = '30%';
+    const uploadRes = await fetch(
+      SUPA_URL + '/storage/v1/object/' + bucket + '/' + path,
+      { method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': docUploadFile.type }, body: docUploadFile }
+    );
+    bar.style.width = '70%';
+    if (!uploadRes.ok) throw new Error('Errore upload storage');
+
+    // URL pubblico
+    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+
+    // Salva record in documenti
+    const docRes = await fetch(SUPA_URL + '/rest/v1/documenti', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ volontario_id: docUploadVolId, tipo, nome_file: nomeDoc, url })
+    });
+    bar.style.width = '100%';
+    if (!docRes.ok) throw new Error('Errore salvataggio record');
+
+    // Se è foto, aggiorna avatar volontario
+    if (tipo === 'FOTO') {
+      await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + docUploadVolId, {
+        method: 'PATCH', headers: HJ, body: JSON.stringify({ foto_url: url })
+      });
+    }
+
+    await logAttivita('ha caricato documento: ' + nomeDoc + ' per volontario ' + docUploadVolId);
+    chiudiUploadDoc();
+    caricaDocumenti();
+  } catch(e) {
+    errEl.textContent = 'Errore: ' + e.message;
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'carica';
+}
+
+async function eliminaDoc(docId, volId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId, { method: 'DELETE', headers: H });
+  await logAttivita('ha eliminato un documento');
+  caricaDocumenti();
+}
+
+// Mostra documenti nella scheda volontario
+async function caricaDocVolontario(volId) {
+  const section = document.getElementById('volDocSection');
+  const body    = document.getElementById('volDocBody');
+  if (!section || !body) return;
+  try {
+    const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
+    const docs = await res.json();
+    const count = document.getElementById('volDocCount');
+    if (count) count.textContent = '(' + docs.length + ')';
+    if (!docs.length) {
+      body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun documento.</div>'
+        + '<button class="doc-add-btn" style="margin-top:0.3rem" onclick="apriDocDaScheda(' + volId + ')">+ carica documento</button>';
+      return;
+    }
+    body.innerHTML = docs.map(d => {
+      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
+      const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+      return '<div class="vol-field">'
+        + '<span class="vol-field-label">' + label.replace(/^[^ ]+ /,'') + '</span>'
+        + '<a href="' + d.url + '" target="_blank" style="color:var(--blue);font-size:0.72rem;text-decoration:none">'
+        + (d.nome_file || label) + ' ↗</a>'
+        + '</div>';
+    }).join('')
+    + '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi</button>';
+  } catch(e) {}
+}
+
+function apriDocDaScheda(volId) {
+  chiudiDettaglio();
+  showPanel('documenti', null);
+  setTimeout(() => apriUploadDoc(volId), 400);
 }
 
 // ── KEYBOARD ──

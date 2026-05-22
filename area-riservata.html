@@ -410,6 +410,44 @@ div:hover > .vista-edit-btn { display:flex; }
 .vol-picker-item label { font-size:0.75rem; color:var(--text-1); cursor:pointer; flex:1; }
 .vol-picker-search { width:100%; padding:0.55rem 0.7rem; background:var(--bg-2); border:none; border-bottom:1px solid var(--border-2); font-family:var(--font); font-size:0.75rem; color:var(--text-1); outline:none; border-radius:var(--r) var(--r) 0 0; }
 
+
+/* ── DOCUMENTI ── */
+.doc-search { width:100%; padding:0.65rem 0.9rem; background:var(--bg-2); border:1px solid var(--border-2); border-radius:var(--r); font-family:var(--font); font-size:0.78rem; color:var(--text-1); outline:none; transition:border-color 0.2s; margin-bottom:0.8rem; }
+.doc-search:focus { border-color:var(--green); }
+.doc-vol-card { background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); margin-bottom:0.5rem; overflow:hidden; }
+.doc-vol-head { display:flex; align-items:center; gap:0.7rem; padding:0.75rem 0.9rem; cursor:pointer; transition:background 0.12s; }
+.doc-vol-head:active { background:var(--bg-3); }
+.doc-vol-avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:500; flex-shrink:0; }
+.doc-vol-name { font-size:0.82rem; font-weight:500; color:var(--text-1); flex:1; }
+.doc-vol-count { font-size:0.62rem; color:var(--text-3); }
+.doc-vol-arrow { font-size:0.6rem; color:var(--text-4); transition:transform 0.2s; }
+.doc-vol-card.open .doc-vol-arrow { transform:rotate(180deg); }
+.doc-vol-body { display:none; border-top:1px solid var(--border); padding:0.6rem 0.9rem; }
+.doc-vol-card.open .doc-vol-body { display:block; }
+
+/* Lista documenti per volontario */
+.doc-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.6rem; }
+.doc-item { display:flex; align-items:center; gap:0.6rem; padding:0.5rem 0.7rem; background:var(--bg); border:1px solid var(--border-2); border-radius:var(--r); }
+.doc-item-icon { font-size:1rem; flex-shrink:0; }
+.doc-item-info { flex:1; min-width:0; }
+.doc-item-name { font-size:0.75rem; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.doc-item-meta { font-size:0.6rem; color:var(--text-3); margin-top:0.1rem; }
+.doc-item-actions { display:flex; gap:0.3rem; flex-shrink:0; }
+.doc-add-btn { width:100%; padding:0.55rem; background:var(--green-bg); border:1px dashed var(--green-bdr); border-radius:var(--r); font-family:var(--font); font-size:0.68rem; color:var(--green); cursor:pointer; text-align:center; transition:opacity 0.2s; }
+.doc-add-btn:hover { opacity:0.8; }
+
+/* Upload overlay */
+.doc-upload-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:600; align-items:flex-end; justify-content:center; }
+.doc-upload-overlay.open { display:flex; }
+.doc-upload-card { background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-width:480px; animation:slideUp 0.2s ease; }
+.doc-upload-card h4 { font-size:0.72rem; font-weight:500; color:var(--green); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:1rem; }
+.doc-drop-zone { border:2px dashed var(--border-2); border-radius:var(--r); padding:1.5rem; text-align:center; cursor:pointer; transition:border-color 0.2s; margin-bottom:0.7rem; }
+.doc-drop-zone:hover,.doc-drop-zone.dragover { border-color:var(--green); }
+.doc-drop-zone p { font-size:0.75rem; color:var(--text-3); }
+.doc-drop-zone input { display:none; }
+.doc-progress { display:none; background:var(--bg); border-radius:var(--r); overflow:hidden; height:6px; margin-bottom:0.7rem; }
+.doc-progress-bar { height:100%; background:var(--green); transition:width 0.3s; width:0%; }
+
 </style>
 </head>
 <body>
@@ -456,6 +494,10 @@ div:hover > .vista-edit-btn { display:flex; }
       <button class="nav-btn" id="navMezzi" onclick="showPanel('mezzi',this)" style="display:none">
         <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         <span class="nav-label">Mezzi</span>
+      </button>
+      <button class="nav-btn" id="navDocumenti" onclick="showPanel('documenti',this)" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span class="nav-label">Documenti</span>
       </button>
       <button class="nav-btn" id="navMore" onclick="toggleMore()">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
@@ -578,6 +620,49 @@ div:hover > .vista-edit-btn { display:flex; }
         <button class="vol-form-save" onclick="salvaIntervento()">salva</button>
       </div>
       <div class="vol-form-body" id="intFormBody"></div>
+    </div>
+
+    <!-- DOCUMENTI -->
+    <div class="panel" id="panelDocumenti">
+      <div class="panel-hdr"><h2>Documenti</h2><p>Foto, attestati e certificati</p></div>
+      <input class="doc-search" type="search" id="docSearch" placeholder="cerca volontario..." oninput="filtraDocVolontari()">
+      <div id="docVolList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- UPLOAD DOCUMENTO -->
+    <div class="doc-upload-overlay" id="docUploadOverlay">
+      <div class="doc-upload-card">
+        <h4 id="docUploadTitle">Carica documento</h4>
+        <div class="form-err" id="docUploadErr"></div>
+        <div class="form-field" style="margin-bottom:0.6rem">
+          <label class="form-lbl">Categoria</label>
+          <select class="form-inp" id="docTipo">
+            <option value="FOTO">📷 Foto profilo</option>
+            <option value="4_ORE">📋 Attestato 4 Ore</option>
+            <option value="12_ORE">📋 Attestato 12 Ore</option>
+            <option value="CAPOSQ">📋 Attestato Caposquadra</option>
+            <option value="DAE">🏥 Attestato DAE</option>
+            <option value="CDC_1">🏥 CDC 1° Step</option>
+            <option value="CDC_2">🏥 CDC 2° Step</option>
+            <option value="VISITA">🩺 Visita medica</option>
+            <option value="EMERCOM">📡 EMERCOM</option>
+            <option value="ALTRO">📄 Altro</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.6rem">
+          <label class="form-lbl">Nome documento (opz.)</label>
+          <input class="form-inp" id="docNome" placeholder="es. Attestato 4 ore 2024">
+        </div>
+        <div class="doc-drop-zone" id="docDropZone" onclick="document.getElementById('docFileInput').click()">
+          <p id="docDropText">📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span></p>
+          <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="docFileSelected(this)">
+        </div>
+        <div class="doc-progress" id="docProgress"><div class="doc-progress-bar" id="docProgressBar"></div></div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn-sm btn-warn" onclick="chiudiUploadDoc()" style="flex:1;padding:0.6rem">annulla</button>
+          <button class="btn-primary" id="docUploadBtn" onclick="eseguiUploadDoc()" style="padding:0.6rem">carica</button>
+        </div>
+      </div>
     </div>
 
     <!-- MEZZI -->
@@ -704,6 +789,10 @@ div:hover > .vista-edit-btn { display:flex; }
     <button class="more-item" id="morePranzo" onclick="showPanel('pranzo',null);closeMore();" style="display:none">
       <div class="more-item-icon">🍽️</div>
       <div><div class="more-item-title">Pranzo 25° anniversario</div><div class="more-item-sub">Tracker risposte invitati</div></div>
+    </button>
+    <button class="more-item" id="moreDocumenti" onclick="showPanel('documenti',null);closeMore();" style="display:none">
+      <div class="more-item-icon">📁</div>
+      <div><div class="more-item-title">Documenti</div><div class="more-item-sub">Foto, attestati, certificati</div></div>
     </button>
     <button class="more-item" id="moreRichieste" onclick="showPanel('richieste',null);closeMore();" style="display:none">
       <div class="more-item-icon">📬</div>
