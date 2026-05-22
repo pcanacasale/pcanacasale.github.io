@@ -112,6 +112,7 @@ function showPanel(name, btn) {
   }
   if (name === 'richieste') caricaRichieste();
   if (name === 'volontari') caricaVolontari();
+  if (name === 'interventi') caricaInterventi();
 }
 
 function toggleMore() {
@@ -575,6 +576,7 @@ function toggleVolFiltri() {
 
 async function apriDettaglio(id) {
   volCorrenteId = id;
+  volInterventiLoaded = false;
   const detail = document.getElementById('volDetail');
   const body   = document.getElementById('volDetailBody');
   detail.classList.add('open');
@@ -663,6 +665,13 @@ async function apriDettaglio(id) {
 
       ${await renderCampiCustomDettaglio(v)}
 
+      <div class="vol-section" id="volInterventiSection">
+        <div class="vol-section-head" style="cursor:pointer" onclick="toggleVolInterventi(${v.id})">
+          Interventi <span id="volInterventiCount" style="font-size:0.6rem;color:var(--green);margin-left:4px">caricamento...</span>
+        </div>
+        <div class="vol-section-body" id="volInterventiBody" style="display:none"></div>
+      </div>
+
       <div class="vol-section">
         <div class="vol-section-head">Amministrativo</div>
         <div class="vol-section-body">
@@ -681,6 +690,47 @@ function chiudiDettaglio() {
   document.getElementById('volDetail').classList.remove('open');
   document.body.style.overflow = '';
   volCorrenteId = null;
+}
+
+let volInterventiLoaded = false;
+async function toggleVolInterventi(volId) {
+  const body  = document.getElementById('volInterventiBody');
+  const count = document.getElementById('volInterventiCount');
+  if (!body) return;
+
+  // Toggle visibilità
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    return;
+  }
+  body.style.display = 'block';
+
+  if (volInterventiLoaded) return;
+  volInterventiLoaded = true;
+
+  try {
+    // Cerca interventi dove volontari_ids contiene questo id
+    const res = await fetch(
+      SUPA_URL + '/rest/v1/interventi?volontari_ids=cs.[' + volId + ']&select=id,evento,data,tipo_attivita&order=data.desc',
+      { headers: H }
+    );
+    const interventi = await res.json();
+    if (count) count.textContent = '(' + interventi.length + ')';
+    if (!interventi.length) {
+      body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun intervento registrato.</div>';
+      return;
+    }
+    body.innerHTML = interventi.map(i => {
+      const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+      const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
+      return '<div class="vol-field" style="cursor:pointer" onclick="' + onclick + '">'
+        + '<span class="vol-field-label">' + dataFmt + '</span>'
+        + '<span class="vol-field-value" style="color:var(--text-1)">' + (i.evento||'—') + (i.tipo_attivita ? ' <span style="color:var(--green);font-size:0.6rem">&middot; ' + i.tipo_attivita + '</span>' : '') + '</span>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+  }
 }
 
 function apriFormVolontario(id) {
@@ -1369,6 +1419,321 @@ async function eliminaVista(id, nome) {
   vistaAttiva = null;
   await caricaViste();
   renderVolontari(volontariData);
+}
+
+
+// ── INTERVENTI ──
+let interventiData = [];
+let intCorrenteId = null;
+
+const TIPO_ATTIVITA = [
+  'EMERGENZA', 'ESERCITAZIONE', 'FORMAZIONE', 'MANIFESTAZIONE',
+  'SERVIZIO', 'SUPPORTO LOGISTICO', 'ALTRO'
+];
+
+async function caricaInterventi() {
+  const list    = document.getElementById('intList');
+  const toolbar = document.getElementById('intToolbar');
+  const stats   = document.getElementById('intStatsBox');
+  if (!list) return;
+
+  const isMaster = currentUser && currentUser.tipo_accesso === 'master';
+
+  // Utente standard — mostra solo form nuovo intervento
+  if (!isMaster) {
+    if (stats)   stats.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    list.innerHTML = '';
+    // Mostra direttamente il form nuovo intervento inline
+    const btn = document.createElement('button');
+    btn.className = 'int-add-btn';
+    btn.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
+    btn.textContent = '+ Registra nuovo intervento';
+    btn.onclick = () => apriFormIntervento(null);
+    list.appendChild(btn);
+    return;
+  }
+
+  // Master — mostra tutto
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=*&order=data.desc', { headers: H });
+    interventiData = await res.json();
+    aggiornaStatsInterventi();
+    renderInterventi(interventiData);
+  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+function aggiornaStatsInterventi() {
+  const tot     = interventiData.length;
+  const volTot  = interventiData.reduce((s, i) => s + (i.n_volontari || 0), 0);
+  const oreTot  = interventiData.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0);
+  document.getElementById('intTot').textContent     = tot;
+  document.getElementById('intVolTot').textContent  = volTot;
+  document.getElementById('intOreTot').textContent  = Math.round(oreTot * 10) / 10;
+}
+
+function renderInterventi(data) {
+  const list = document.getElementById('intList');
+  if (!list) return;
+  if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(i => {
+    const card = document.createElement('div');
+    card.className = 'int-card';
+    card.onclick = () => apriDettaglioIntervento(i.id);
+    const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+    const pills = [];
+    if (i.tipo_attivita) pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
+    if (i.luogo)         pills.push('<span class="int-pill">' + i.luogo + '</span>');
+    if (i.n_volontari)   pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
+    if (i.n_ore)         pills.push('<span class="int-pill blue">' + i.n_ore + 'h</span>');
+    if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
+    card.innerHTML = '<div class="int-card-top">'
+      + '<div class="int-card-evento">' + (i.evento || '—') + '</div>'
+      + '<div class="int-card-data">' + dataFmt + '</div>'
+      + '</div>'
+      + '<div class="int-card-meta">' + pills.join('') + '</div>';
+    list.appendChild(card);
+  });
+}
+
+function filtraInterventi() {
+  const q = (document.getElementById('intSearch').value || '').toLowerCase().trim();
+  if (!q) { renderInterventi(interventiData); return; }
+  const filtered = interventiData.filter(i =>
+    (i.evento||'').toLowerCase().includes(q) ||
+    (i.luogo||'').toLowerCase().includes(q) ||
+    (i.tipo_attivita||'').toLowerCase().includes(q) ||
+    (i.note||'').toLowerCase().includes(q)
+  );
+  renderInterventi(filtered);
+}
+
+async function apriDettaglioIntervento(id) {
+  intCorrenteId = id;
+  const detail = document.getElementById('intDetail');
+  const body   = document.getElementById('intDetailBody');
+  detail.classList.add('open');
+  detail.scrollTop = 0;
+  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id + '&select=*', { headers: H });
+    const data = await res.json();
+    const i = data[0];
+    if (!i) { body.innerHTML = '<div class="loading-msg">intervento non trovato.</div>'; return; }
+    document.getElementById('intDetailTitle').textContent = i.evento || '—';
+
+    const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+    const fmt = (v) => v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>';
+    const fmtBool = (v) => v ? '<span class="vol-field-value vol-bool-yes">✓ Sì</span>' : '<span class="vol-field-value vol-bool-no">—</span>';
+
+    // Carica nomi volontari se ci sono
+    let volNomi = '—';
+    if (i.volontari_ids && i.volontari_ids.length > 0) {
+      try {
+        const ids = i.volontari_ids.join(',');
+        const vRes = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids + ')&select=id,cognome,nome', { headers: H });
+        const vols = await vRes.json();
+        volNomi = vols.map(v => v.cognome + ' ' + v.nome).join(', ') || '—';
+      } catch(e) {}
+    }
+
+    body.innerHTML = `
+      <div class="vol-detail-hero">
+        <div class="vol-detail-avatar" style="background:#1a3a1f;color:#3fb950;font-size:1.2rem">⚡</div>
+        <div>
+          <div class="vol-detail-name">${i.evento || '—'}</div>
+          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} · ${dataFmt}</div>
+        </div>
+      </div>
+      <div class="vol-section">
+        <div class="vol-section-head">Dettagli</div>
+        <div class="vol-section-body">
+          <div class="vol-field"><span class="vol-field-label">Data</span>${fmt(dataFmt)}</div>
+          <div class="vol-field"><span class="vol-field-label">Tipo attività</span>${fmt(i.tipo_attivita)}</div>
+          <div class="vol-field"><span class="vol-field-label">Luogo</span>${fmt(i.luogo)}</div>
+          <div class="vol-field"><span class="vol-field-label">Utente</span>${fmt(i.utente)}</div>
+        </div>
+      </div>
+      <div class="vol-section">
+        <div class="vol-section-head">Numeri</div>
+        <div class="vol-section-body">
+          <div class="vol-field"><span class="vol-field-label">N° volontari</span>${fmt(i.n_volontari)}</div>
+          <div class="vol-field"><span class="vol-field-label">N° ore</span>${fmt(i.n_ore)}</div>
+          <div class="vol-field"><span class="vol-field-label">Utilizzo radio</span>${fmtBool(i.utilizzo_radio)}</div>
+        </div>
+      </div>
+      <div class="vol-section">
+        <div class="vol-section-head">Volontari intervenuti</div>
+        <div class="vol-section-body">
+          <div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${volNomi}</div>
+        </div>
+      </div>
+      ${i.note ? `<div class="vol-section">
+        <div class="vol-section-head">Note</div>
+        <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
+      </div>` : ''}
+      <button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>`;
+  } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+function chiudiDettaglioIntervento() {
+  document.getElementById('intDetail').classList.remove('open');
+  intCorrenteId = null;
+}
+
+function apriFormIntervento(id) {
+  intCorrenteId = id;
+  const panel = document.getElementById('intFormPanel');
+  const body  = document.getElementById('intFormBody');
+  document.getElementById('intFormTitle').textContent = id ? 'Modifica intervento' : 'Nuovo intervento';
+
+  const tipoOpts = TIPO_ATTIVITA.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+
+  body.innerHTML = `
+    <div class="vol-form-err" id="intFormErr"></div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Intervento</div>
+      <div class="vol-form-grid">
+        <div class="vol-form-field full"><label class="vol-form-lbl">Evento *</label><input class="vol-form-inp" id="ifEvento" placeholder="es. Alluvione Mirabello"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Data *</label><input class="vol-form-inp" type="date" id="ifData"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Tipo attività</label><select class="vol-form-inp" id="ifTipo"><option value="">—</option>${tipoOpts}</select></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Luogo</label><input class="vol-form-inp" id="ifLuogo" placeholder="es. Via Roma, Casale M.to"></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Utente</label><input class="vol-form-inp" id="ifUtente" placeholder="Chi registra"></div>
+      </div>
+    </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Numeri</div>
+      <div class="vol-form-grid">
+        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">N° ore</label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5"></div>
+        <div class="vol-form-field full"><label class="vol-form-check" style="margin-top:0.3rem"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
+      </div>
+    </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Volontari intervenuti</div>
+      <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario..." oninput="filtraVolPicker(this.value)">
+      <div class="vol-picker" id="volPicker"><div class="loading-msg" style="padding:0.5rem">caricamento volontari...</div></div>
+    </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Note</div>
+      <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..." style="resize:vertical"></textarea>
+    </div>
+    ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>' : ''}`;
+
+  panel.classList.add('open');
+  panel.scrollTop = 0;
+  caricaVolPicker();
+  if (id) caricaDatiFormIntervento(id);
+}
+
+async function caricaVolPicker() {
+  const picker = document.getElementById('volPicker');
+  if (!picker) return;
+  // Usa i dati già in cache se disponibili
+  const vols = volontariData.length ? volontariData : await (async () => {
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome&order=cognome&attivo=eq.true', { headers: H });
+      return await res.json();
+    } catch(e) { return []; }
+  })();
+  renderVolPicker(vols);
+}
+
+function renderVolPicker(vols) {
+  const picker = document.getElementById('volPicker');
+  if (!picker) return;
+  picker.innerHTML = '';
+  vols.forEach(v => {
+    const item = document.createElement('div');
+    item.className = 'vol-picker-item';
+    item.innerHTML = '<input type="checkbox" id="vp_' + v.id + '" value="' + v.id + '">'
+      + '<label for="vp_' + v.id + '">' + v.cognome + ' ' + v.nome + '</label>';
+    picker.appendChild(item);
+  });
+}
+
+function filtraVolPicker(q) {
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('.vol-picker-item').forEach(item => {
+    item.style.display = !term || item.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+
+async function caricaDatiFormIntervento(id) {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id + '&select=*', { headers: H });
+    const data = await res.json();
+    const i = data[0]; if (!i) return;
+    const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+    setVal('ifEvento', i.evento); setVal('ifData', i.data);
+    setVal('ifTipo', i.tipo_attivita); setVal('ifLuogo', i.luogo);
+    setVal('ifUtente', i.utente); setVal('ifNVol', i.n_volontari);
+    setVal('ifNOre', i.n_ore); setVal('ifNote', i.note);
+    const radio = document.getElementById('ifRadio');
+    if (radio) radio.checked = !!i.utilizzo_radio;
+    // Spunta volontari
+    if (i.volontari_ids && i.volontari_ids.length) {
+      i.volontari_ids.forEach(vid => {
+        const cb = document.getElementById('vp_' + vid);
+        if (cb) cb.checked = true;
+      });
+    }
+  } catch(e) {}
+}
+
+async function salvaIntervento() {
+  const evento = document.getElementById('ifEvento').value.trim();
+  const data   = document.getElementById('ifData').value;
+  const errEl  = document.getElementById('intFormErr');
+  if (!evento || !data) { errEl.textContent = 'Evento e data sono obbligatori.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  // Raccogli volontari selezionati
+  const volontari_ids = Array.from(document.querySelectorAll('.vol-picker-item input:checked')).map(cb => parseInt(cb.value));
+
+  const payload = {
+    evento,
+    data,
+    tipo_attivita: document.getElementById('ifTipo').value || null,
+    luogo:         document.getElementById('ifLuogo').value.trim() || null,
+    utente:        document.getElementById('ifUtente').value.trim() || currentUser.nome,
+    n_volontari:   parseInt(document.getElementById('ifNVol').value) || 0,
+    n_ore:         parseFloat(document.getElementById('ifNOre').value) || 0,
+    utilizzo_radio: document.getElementById('ifRadio').checked,
+    volontari_ids,
+    note:          document.getElementById('ifNote').value.trim() || null,
+  };
+
+  try {
+    let res;
+    if (intCorrenteId) {
+      res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+    } else {
+      res = await fetch(SUPA_URL + '/rest/v1/interventi', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+    }
+    if (res.ok) {
+      await logAttivita((intCorrenteId ? 'ha modificato' : 'ha registrato') + ' intervento: ' + evento);
+      chiudiFormIntervento();
+      chiudiDettaglioIntervento();
+      caricaInterventi();
+    } else { errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block'; }
+  } catch(e) { errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block'; }
+}
+
+async function eliminaIntervento() {
+  if (!intCorrenteId) return;
+  if (!confirm('Eliminare questo intervento?')) return;
+  await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'DELETE', headers: H });
+  await logAttivita('ha eliminato un intervento');
+  chiudiFormIntervento();
+  chiudiDettaglioIntervento();
+  caricaInterventi();
+}
+
+function chiudiFormIntervento() {
+  document.getElementById('intFormPanel').classList.remove('open');
 }
 
 // ── KEYBOARD ──

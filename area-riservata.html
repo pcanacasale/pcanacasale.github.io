@@ -370,6 +370,46 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 .vista-edit-btn { position:absolute; top:-4px; right:-4px; width:14px; height:14px; border-radius:50%; background:var(--red-bg); border:1px solid var(--red); color:var(--red); font-size:0.5rem; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; line-height:1; z-index:10; }
 div:hover > .vista-edit-btn { display:flex; }
 
+
+/* ── INTERVENTI ── */
+.int-toolbar { display:flex; gap:0.5rem; margin-bottom:0.8rem; }
+.int-search { flex:1; min-width:0; padding:0.65rem 0.9rem; background:var(--bg-2); border:1px solid var(--border-2); border-radius:var(--r); font-family:var(--font); font-size:0.78rem; color:var(--text-1); outline:none; transition:border-color 0.2s; }
+.int-search:focus { border-color:var(--green); }
+.int-add-btn { padding:0.65rem 0.9rem; background:var(--green-bg); border:1px solid var(--green-bdr); border-radius:var(--r); font-family:var(--font); font-size:0.72rem; color:var(--green); cursor:pointer; white-space:nowrap; }
+.int-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.5rem; margin-bottom:0.8rem; }
+.int-stat { background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:0.7rem; text-align:center; }
+.int-stat-num { font-size:1.3rem; font-weight:500; color:var(--green); line-height:1; }
+.int-stat-label { font-size:0.55rem; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.2rem; }
+.int-list { display:flex; flex-direction:column; gap:0.5rem; }
+.int-card { background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r); padding:0.8rem 0.9rem; cursor:pointer; transition:border-color 0.15s; }
+.int-card:hover,.int-card:active { border-color:var(--green); }
+.int-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:0.5rem; margin-bottom:0.4rem; }
+.int-card-evento { font-size:0.85rem; font-weight:500; color:var(--text-1); flex:1; }
+.int-card-data { font-size:0.65rem; color:var(--text-3); flex-shrink:0; }
+.int-card-meta { display:flex; gap:0.5rem; flex-wrap:wrap; }
+.int-pill { font-size:0.6rem; padding:2px 8px; border-radius:3px; background:var(--bg); border:1px solid var(--border-2); color:var(--text-3); }
+.int-pill.green { background:var(--green-bg); border-color:var(--green-bdr); color:var(--green); }
+.int-pill.blue { background:var(--blue-bg); border-color:#1c3a5a; color:var(--blue); }
+
+/* Scheda dettaglio intervento */
+.int-detail { display:none; position:fixed; inset:0; background:var(--bg); z-index:400; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
+.int-detail.open { display:block; animation:fadeIn 0.15s ease; }
+.int-detail-top { position:sticky; top:0; background:var(--bg-2); border-bottom:1px solid var(--border); padding:0.8rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; }
+
+/* Form intervento */
+.int-form { display:none; position:fixed; inset:0; background:var(--bg); z-index:500; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
+.int-form.open { display:block; animation:fadeIn 0.15s ease; }
+.int-form-top { position:sticky; top:0; background:var(--bg-2); border-bottom:1px solid var(--border); padding:0.8rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; }
+
+/* Selezione volontari */
+.vol-picker { background:var(--bg); border:1px solid var(--border-2); border-radius:var(--r); max-height:200px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.vol-picker-item { display:flex; align-items:center; gap:0.6rem; padding:0.5rem 0.7rem; border-bottom:1px solid var(--bg-3); cursor:pointer; transition:background 0.12s; }
+.vol-picker-item:last-child { border-bottom:none; }
+.vol-picker-item:active { background:var(--bg-3); }
+.vol-picker-item input { accent-color:var(--green); width:14px; height:14px; flex-shrink:0; }
+.vol-picker-item label { font-size:0.75rem; color:var(--text-1); cursor:pointer; flex:1; }
+.vol-picker-search { width:100%; padding:0.55rem 0.7rem; background:var(--bg-2); border:none; border-bottom:1px solid var(--border-2); font-family:var(--font); font-size:0.75rem; color:var(--text-1); outline:none; border-radius:var(--r) var(--r) 0 0; }
+
 </style>
 </head>
 <body>
@@ -507,8 +547,37 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <!-- INTERVENTI -->
     <div class="panel" id="panelInterventi">
-      <div class="panel-hdr"><h2>Interventi</h2><p>Registro operativo</p></div>
-      <div class="coming-soon"><div class="cs-icon">🚧</div><h3>In sviluppo</h3><p>Il registro interventi è in costruzione.</p></div>
+      <div class="panel-hdr"><h2>Interventi</h2><p>Registro operativo unità</p></div>
+      <div class="int-stats" id="intStatsBox">
+        <div class="int-stat"><div class="int-stat-num" id="intTot">0</div><div class="int-stat-label">Interventi</div></div>
+        <div class="int-stat"><div class="int-stat-num" id="intVolTot">0</div><div class="int-stat-label">Volontari tot.</div></div>
+        <div class="int-stat"><div class="int-stat-num" id="intOreTot">0</div><div class="int-stat-label">Ore tot.</div></div>
+      </div>
+      <div class="int-toolbar" id="intToolbar">
+        <input class="int-search" type="search" id="intSearch" placeholder="cerca evento, luogo..." oninput="filtraInterventi()">
+        <button class="int-add-btn" onclick="apriFormIntervento(null)">+ nuovo</button>
+      </div>
+      <div class="int-list" id="intList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA INTERVENTO -->
+    <div class="int-detail" id="intDetail">
+      <div class="int-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioIntervento()">← indietro</button>
+        <span class="vol-detail-title" id="intDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="apriFormIntervento(intCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="intDetailBody"></div>
+    </div>
+
+    <!-- FORM INTERVENTO -->
+    <div class="int-form" id="intFormPanel">
+      <div class="int-form-top">
+        <button class="vol-detail-back" onclick="chiudiFormIntervento()">← annulla</button>
+        <span class="vol-form-title" id="intFormTitle">Nuovo intervento</span>
+        <button class="vol-form-save" onclick="salvaIntervento()">salva</button>
+      </div>
+      <div class="vol-form-body" id="intFormBody"></div>
     </div>
 
     <!-- MEZZI -->
