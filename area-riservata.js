@@ -1118,11 +1118,20 @@ function applicaVista(v) {
   document.getElementById('filtroAttivo').value = '';
 
   if (filtri._group === 'squadra') {
-    renderVolontariGrouped('squadra', 'squadra');
+    renderVolontariGrouped('squadra', null, null);
     return;
   }
   if (filtri._group_bool) {
-    renderVolontariGrouped('_boolean', filtri._group_bool);
+    const label = filtri._bool_label || 'Con spunta';
+    renderVolontariGrouped('_boolean', filtri._group_bool, label);
+    return;
+  }
+  if (filtri._group_field) {
+    renderVolontariGrouped('_field', filtri._group_field, null);
+    return;
+  }
+  if (filtri._group === 'mansione' || filtri._group === 'tipo_volontario') {
+    renderVolontariGrouped('_field', filtri._group, null);
     return;
   }
 
@@ -1142,57 +1151,91 @@ function applicaVista(v) {
   renderVolontari(dati);
 }
 
-function renderVolontariGrouped(campo, labelCampo) {
+// Colori per stato visita
+const STATO_VISITA_COLORS = {
+  'COMPLETATA':  ['#0d2014','#3fb950'],
+  'DA FARE':     ['#2d0f0f','#f85149'],
+  'SOLO ESAMI':  ['#1c1800','#d29922'],
+  'VERIFICA':    ['#1c2a3a','#58a6ff'],
+  'ESONERO':     ['#21262d','#8b949e'],
+};
+
+function renderVolontariGrouped(tipo, campo, boolLabel) {
   const list = document.getElementById('volList');
   if (!list) return;
+  list.innerHTML = '';
 
   let gruppi = {};
-  const isBoolean = campo === '_boolean';
+  let chiavi = [];
 
-  if (campo === 'squadra') {
-    // Raggruppa per valore del campo squadra
+  if (tipo === 'squadra') {
+    // Raggruppa per squadra
+    volontariData.forEach(v => {
+      const g = v.squadra || '—';
+      if (!gruppi[g]) gruppi[g] = [];
+      gruppi[g].push(v);
+    });
+    chiavi = Object.keys(gruppi).sort();
+
+  } else if (tipo === '_boolean') {
+    // Due gruppi: completato / non completato
+    gruppi['si']  = volontariData.filter(v => !!v[campo]);
+    gruppi['no']  = volontariData.filter(v => !v[campo]);
+    chiavi = ['si', 'no'];
+
+  } else if (tipo === '_field') {
+    // Raggruppa per valore del campo (es. stato_visita)
+    // Ordine fisso per stato_visita
+    const ordine = ['ESONERO','DA FARE','VERIFICA','SOLO ESAMI','COMPLETATA'];
     volontariData.forEach(v => {
       const g = v[campo] || '—';
       if (!gruppi[g]) gruppi[g] = [];
       gruppi[g].push(v);
     });
-  } else {
-    // Vista booleana — due gruppi: con spunta e senza
-    const campoBool = labelCampo; // nome del campo effettivo
-    gruppi['con'] = volontariData.filter(v => !!v[campoBool]);
-    gruppi['senza'] = volontariData.filter(v => !v[campoBool]);
+    // Prima i valori in ordine fisso, poi eventuali altri
+    chiavi = ordine.filter(k => gruppi[k]);
+    Object.keys(gruppi).forEach(k => { if (!chiavi.includes(k)) chiavi.push(k); });
   }
 
-  list.innerHTML = '';
-
-  const chiavi = campo === 'squadra'
-    ? Object.keys(gruppi).sort()
-    : ['con', 'senza'];
-
   chiavi.forEach((chiave, idx) => {
-    const items = gruppi[chiave];
-    const isCollapsed = campo !== 'squadra' && chiave === 'senza';
+    const items = gruppi[chiave] || [];
 
-    // Header collassabile
-    const header = document.createElement('div');
-    header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
-    header.dataset.group = 'g' + idx;
-
-    let headerLabel;
-    if (campo === 'squadra') {
+    // Determina etichetta e colore header
+    let headerLabel, headerBg, headerFg;
+    if (tipo === 'squadra') {
       headerLabel = chiave;
-    } else {
-      headerLabel = chiave === 'con' ? '✓ Con spunta' : '— Senza spunta';
+      headerBg = '#1c2a3a'; headerFg = '#58a6ff';
+    } else if (tipo === '_boolean') {
+      if (chiave === 'si') {
+        headerLabel = '✓ ' + (boolLabel || 'Completato');
+        headerBg = '#0d2014'; headerFg = '#3fb950';
+      } else {
+        headerLabel = '— Non ' + (boolLabel ? boolLabel.toLowerCase() : 'completato');
+        headerBg = '#21262d'; headerFg = '#8b949e';
+      }
+    } else if (tipo === '_field') {
+      headerLabel = chiave;
+      const colors = STATO_VISITA_COLORS[chiave] || ['#1c2a3a','#58a6ff'];
+      headerBg = colors[0]; headerFg = colors[1];
     }
 
-    header.innerHTML = '<span class="vgh-label">' + headerLabel + '</span>'
-      + '<span class="vgh-count">' + items.length + '</span>'
-      + '<span class="vgh-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
+    // Collassa di default i gruppi "negativi"
+    const isCollapsed = (tipo === '_boolean' && chiave === 'no')
+      || (tipo === '_field' && ['DA FARE','VERIFICA'].includes(chiave));
 
+    const header = document.createElement('div');
+    header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
+    header.style.cssText = 'background:' + headerBg + ';border-color:' + headerFg + '30;';
+    header.innerHTML = '<span class="vgh-label" style="color:' + headerFg + '">' + headerLabel + '</span>'
+      + '<span class="vgh-count" style="background:' + headerBg + ';color:' + headerFg + ';border:1px solid ' + headerFg + '50">' + items.length + '</span>'
+      + '<span class="vgh-arrow" style="color:' + headerFg + '">' + (isCollapsed ? '▶' : '▼') + '</span>';
+
+    const bodyId = 'gb' + idx;
     header.onclick = () => {
       header.classList.toggle('collapsed');
       const arrow = header.querySelector('.vgh-arrow');
-      const body  = list.querySelector('[data-body="g' + idx + '"]');
+      const body  = document.getElementById(bodyId);
+      const col   = isCollapsed ? headerFg : headerFg;
       if (header.classList.contains('collapsed')) {
         arrow.textContent = '▶';
         if (body) body.style.display = 'none';
@@ -1203,10 +1246,9 @@ function renderVolontariGrouped(campo, labelCampo) {
     };
     list.appendChild(header);
 
-    // Body gruppo
     const body = document.createElement('div');
     body.className = 'vol-group-body';
-    body.dataset.body = 'g' + idx;
+    body.id = bodyId;
     if (isCollapsed) body.style.display = 'none';
 
     items.forEach(v => {
@@ -1217,11 +1259,13 @@ function renderVolontariGrouped(campo, labelCampo) {
       card.onclick = () => apriDettaglio(v.id);
       const badges = [];
       if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-      if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
-      if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+      if (v.dae)     badges.push('<span class="vol-badge vb-ok">DAE</span>');
       card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
-        + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div></div>'
+        + '<div class="vol-card-info">'
+        + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
+        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
+        + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div>'
+        + '</div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
       body.appendChild(card);
     });
@@ -1279,10 +1323,14 @@ async function salvaVista() {
   const tipoGruppo = document.getElementById('vfTipoGruppo').value;
   const filtri = {};
 
+  const campiField = ['stato_visita','mansione','tipo_volontario'];
   if (tipoGruppo === 'squadra') {
     filtri._group = 'squadra';
+  } else if (tipoGruppo && campiField.includes(tipoGruppo)) {
+    filtri._group_field = tipoGruppo;
   } else if (tipoGruppo) {
     filtri._group_bool = tipoGruppo;
+    filtri._bool_label = 'Corso completato';
   } else {
     // Filtri manuali
     if (document.getElementById('vfQ4').checked)             filtri.quattro_ore = true;
