@@ -1038,10 +1038,10 @@ let vistaAttiva = null; // null = GENERALE
 const VISTE_DEFAULT = [
   { nome: 'GENERALE',        filtri: {},                           ordine: 0 },
   { nome: 'SQUADRA',         filtri: { _group: 'squadra' },        ordine: 1 },
-  { nome: 'VISITE MEDICHE',  filtri: { stato_visita_not: 'COMPLETATA' }, ordine: 2 },
-  { nome: '4 ORE',           filtri: { quattro_ore: true },        ordine: 3 },
-  { nome: '12 ORE',          filtri: { dodici_ore: true },         ordine: 4 },
-  { nome: 'PRONTO IMPIEGO',  filtri: { pronto_impiego: true },     ordine: 5 },
+  { nome: 'VISITE MEDICHE',  filtri: { _group_bool: 'cdc_2_step' },  ordine: 2 },
+  { nome: '4 ORE',           filtri: { _group_bool: 'quattro_ore' }, ordine: 3 },
+  { nome: '12 ORE',          filtri: { _group_bool: 'dodici_ore' },  ordine: 4 },
+  { nome: 'PRONTO IMPIEGO',  filtri: { _group_bool: 'pronto_impiego' }, ordine: 5 },
 ];
 
 async function caricaViste() {
@@ -1075,11 +1075,24 @@ function renderVisteBar() {
   if (!bar) return;
   bar.innerHTML = '';
   visteCache.forEach(v => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-flex;flex-shrink:0;';
     const btn = document.createElement('button');
     btn.className = 'vista-btn' + (vistaAttiva === v.id ? ' active' : '');
     btn.textContent = v.nome;
     btn.onclick = () => applicaVista(v);
-    bar.appendChild(btn);
+    wrap.appendChild(btn);
+    // Tasto elimina/modifica (solo master)
+    const isMasterForBtn = currentUser && currentUser.tipo_accesso === 'master';
+    if (isMasterForBtn) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'vista-edit-btn';
+      editBtn.textContent = '✕';
+      editBtn.title = 'Elimina vista';
+      editBtn.onclick = (e) => { e.stopPropagation(); eliminaVista(v.id, v.nome); };
+      wrap.appendChild(editBtn);
+    }
+    bar.appendChild(wrap);
   });
   // Bottone nuova vista (solo master)
   const isMaster = currentUser && currentUser.tipo_accesso === 'master';
@@ -1105,7 +1118,11 @@ function applicaVista(v) {
   document.getElementById('filtroAttivo').value = '';
 
   if (filtri._group === 'squadra') {
-    renderVolontariGrouped();
+    renderVolontariGrouped('squadra', 'squadra');
+    return;
+  }
+  if (filtri._group_bool) {
+    renderVolontariGrouped('_boolean', filtri._group_bool);
     return;
   }
 
@@ -1125,23 +1142,74 @@ function applicaVista(v) {
   renderVolontari(dati);
 }
 
-function renderVolontariGrouped() {
+function renderVolontariGrouped(campo, labelCampo) {
   const list = document.getElementById('volList');
   if (!list) return;
-  const gruppi = {};
-  volontariData.forEach(v => {
-    const g = v.squadra || '—';
-    if (!gruppi[g]) gruppi[g] = [];
-    gruppi[g].push(v);
-  });
+
+  let gruppi = {};
+  const isBoolean = campo === '_boolean';
+
+  if (campo === 'squadra') {
+    // Raggruppa per valore del campo squadra
+    volontariData.forEach(v => {
+      const g = v[campo] || '—';
+      if (!gruppi[g]) gruppi[g] = [];
+      gruppi[g].push(v);
+    });
+  } else {
+    // Vista booleana — due gruppi: con spunta e senza
+    const campoBool = labelCampo; // nome del campo effettivo
+    gruppi['con'] = volontariData.filter(v => !!v[campoBool]);
+    gruppi['senza'] = volontariData.filter(v => !v[campoBool]);
+  }
+
   list.innerHTML = '';
-  // Ordina le squadre
-  Object.keys(gruppi).sort().forEach(squadra => {
+
+  const chiavi = campo === 'squadra'
+    ? Object.keys(gruppi).sort()
+    : ['con', 'senza'];
+
+  chiavi.forEach((chiave, idx) => {
+    const items = gruppi[chiave];
+    const isCollapsed = campo !== 'squadra' && chiave === 'senza';
+
+    // Header collassabile
     const header = document.createElement('div');
-    header.style.cssText = 'font-size:0.6rem;font-weight:500;color:var(--green);text-transform:uppercase;letter-spacing:0.8px;padding:0.7rem 0 0.3rem;border-bottom:1px solid var(--green-bdr);margin-bottom:0.4rem;';
-    header.textContent = squadra + ' (' + gruppi[squadra].length + ')';
+    header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
+    header.dataset.group = 'g' + idx;
+
+    let headerLabel;
+    if (campo === 'squadra') {
+      headerLabel = chiave;
+    } else {
+      headerLabel = chiave === 'con' ? '✓ Con spunta' : '— Senza spunta';
+    }
+
+    header.innerHTML = '<span class="vgh-label">' + headerLabel + '</span>'
+      + '<span class="vgh-count">' + items.length + '</span>'
+      + '<span class="vgh-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
+
+    header.onclick = () => {
+      header.classList.toggle('collapsed');
+      const arrow = header.querySelector('.vgh-arrow');
+      const body  = list.querySelector('[data-body="g' + idx + '"]');
+      if (header.classList.contains('collapsed')) {
+        arrow.textContent = '▶';
+        if (body) body.style.display = 'none';
+      } else {
+        arrow.textContent = '▼';
+        if (body) body.style.display = 'flex';
+      }
+    };
     list.appendChild(header);
-    gruppi[squadra].forEach(v => {
+
+    // Body gruppo
+    const body = document.createElement('div');
+    body.className = 'vol-group-body';
+    body.dataset.body = 'g' + idx;
+    if (isCollapsed) body.style.display = 'none';
+
+    items.forEach(v => {
       const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
       const [bg, fg] = avatarColor(v.cognome);
       const card = document.createElement('div');
@@ -1155,9 +1223,12 @@ function renderVolontariGrouped() {
         + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
         + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div></div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
-      list.appendChild(card);
+      body.appendChild(card);
     });
+
+    list.appendChild(body);
   });
+
   document.getElementById('volMostrati').textContent = volontariData.length;
 }
 
@@ -1168,18 +1239,27 @@ function apriFormVista(vista) {
   const overlay = document.getElementById('vistaFormOverlay');
   overlay.classList.add('open');
   document.getElementById('vfNome').value = vista ? vista.nome : '';
-  // Reset checkboxes
-  ['vfQ4','vfQ12','vfPI','vfAttivo','vfVisitaNonCompl'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.checked = false;
+  // Reset
+  ['vfQ4','vfQ12','vfPI','vfAttivo','vfVisitaNonCompl','vfDae'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
   });
+  const selGruppo = document.getElementById('vfTipoGruppo');
+  if (selGruppo) selGruppo.value = '';
+  const box = document.getElementById('vfFiltriBox');
+  if (box) box.style.display = 'block';
+
   if (vista && vista.filtri) {
     const f = vista.filtri;
-    if (f.quattro_ore)    document.getElementById('vfQ4').checked = true;
-    if (f.dodici_ore)     document.getElementById('vfQ12').checked = true;
-    if (f.pronto_impiego) document.getElementById('vfPI').checked = true;
-    if (f.attivo === true) document.getElementById('vfAttivo').checked = true;
-    if (f.stato_visita_not) document.getElementById('vfVisitaNonCompl').checked = true;
+    if (f._group === 'squadra' && selGruppo) { selGruppo.value = 'squadra'; if (box) box.style.display = 'none'; }
+    else if (f._group_bool && selGruppo)     { selGruppo.value = f._group_bool; if (box) box.style.display = 'none'; }
+    else {
+      if (f.quattro_ore)     document.getElementById('vfQ4').checked = true;
+      if (f.dodici_ore)      document.getElementById('vfQ12').checked = true;
+      if (f.pronto_impiego)  document.getElementById('vfPI').checked = true;
+      if (f.attivo === true) document.getElementById('vfAttivo').checked = true;
+      if (f.stato_visita_not) document.getElementById('vfVisitaNonCompl').checked = true;
+      if (f.dae)             document.getElementById('vfDae').checked = true;
+    }
   }
 }
 
@@ -1187,15 +1267,31 @@ function chiudiFormVista() {
   document.getElementById('vistaFormOverlay').classList.remove('open');
 }
 
+function aggiornaFormVista() {
+  const tipo = document.getElementById('vfTipoGruppo').value;
+  const box  = document.getElementById('vfFiltriBox');
+  if (box) box.style.display = tipo ? 'none' : 'block';
+}
+
 async function salvaVista() {
   const nome = document.getElementById('vfNome').value.trim();
   if (!nome) return;
+  const tipoGruppo = document.getElementById('vfTipoGruppo').value;
   const filtri = {};
-  if (document.getElementById('vfQ4').checked)           filtri.quattro_ore = true;
-  if (document.getElementById('vfQ12').checked)          filtri.dodici_ore = true;
-  if (document.getElementById('vfPI').checked)           filtri.pronto_impiego = true;
-  if (document.getElementById('vfAttivo').checked)       filtri.attivo = true;
-  if (document.getElementById('vfVisitaNonCompl').checked) filtri.stato_visita_not = 'COMPLETATA';
+
+  if (tipoGruppo === 'squadra') {
+    filtri._group = 'squadra';
+  } else if (tipoGruppo) {
+    filtri._group_bool = tipoGruppo;
+  } else {
+    // Filtri manuali
+    if (document.getElementById('vfQ4').checked)             filtri.quattro_ore = true;
+    if (document.getElementById('vfQ12').checked)            filtri.dodici_ore = true;
+    if (document.getElementById('vfPI').checked)             filtri.pronto_impiego = true;
+    if (document.getElementById('vfAttivo').checked)         filtri.attivo = true;
+    if (document.getElementById('vfVisitaNonCompl').checked) filtri.stato_visita_not = 'COMPLETATA';
+    if (document.getElementById('vfDae').checked)            filtri.dae = true;
+  }
 
   if (vistaEditId) {
     await fetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + vistaEditId, {

@@ -354,6 +354,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
 .vista-form-actions { display:flex; gap:0.5rem; }
 .vista-form-actions button { flex:1; }
 
+
+/* ── GRUPPI COLLASSABILI ── */
+.vol-group-header { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.9rem; cursor:pointer; user-select:none; border-bottom:1px solid var(--border); margin-bottom:0; background:var(--bg); border-radius:var(--r) var(--r) 0 0; margin-top:0.6rem; }
+.vol-group-header:first-child { margin-top:0; }
+.vgh-label { font-size:0.65rem; font-weight:500; color:var(--text-2); text-transform:uppercase; letter-spacing:0.6px; flex:1; }
+.vol-group-header:not(.collapsed) .vgh-label { color:var(--green); }
+.vgh-count { font-size:0.6rem; background:var(--bg-3); color:var(--text-3); padding:1px 7px; border-radius:10px; }
+.vol-group-header:not(.collapsed) .vgh-count { background:var(--green-bg); color:var(--green); border:1px solid var(--green-bdr); }
+.vgh-arrow { font-size:0.55rem; color:var(--text-4); }
+.vol-group-body { display:flex; flex-direction:column; gap:0.4rem; padding:0.4rem 0 0.4rem; background:var(--bg-2); border:1px solid var(--border); border-top:none; border-radius:0 0 var(--r) var(--r); margin-bottom:0.6rem; padding:0.5rem; }
+
+
+.vista-edit-btn { position:absolute; top:-4px; right:-4px; width:14px; height:14px; border-radius:50%; background:var(--red-bg); border:1px solid var(--red); color:var(--red); font-size:0.5rem; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; line-height:1; z-index:10; }
+div:hover > .vista-edit-btn { display:flex; }
+
 </style>
 </head>
 <body>
@@ -643,12 +658,34 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-1); mi
         <input class="form-inp" id="vfNome" placeholder="es. DISPONIBILI">
       </div>
       <div style="font-size:0.62rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:0.3rem">Filtri</div>
-      <div class="vf-filtri">
-        <label class="vf-check"><input type="checkbox" id="vfQ4"> 4 Ore</label>
-        <label class="vf-check"><input type="checkbox" id="vfQ12"> 12 Ore</label>
-        <label class="vf-check"><input type="checkbox" id="vfPI"> Pronto impiego</label>
-        <label class="vf-check"><input type="checkbox" id="vfAttivo"> Solo attivi</label>
-        <label class="vf-check"><input type="checkbox" id="vfVisitaNonCompl"> Visita non completata</label>
+      <div style="font-size:0.6rem;color:var(--text-3);margin-bottom:0.3rem">Tipo di raggruppamento</div>
+      <select class="form-inp" id="vfTipoGruppo" style="margin-bottom:0.7rem" onchange="aggiornaFormVista()">
+        <option value="">Nessun raggruppamento (filtro)</option>
+        <option value="squadra">Raggruppa per squadra</option>
+        <option value="quattro_ore">Raggruppa per 4 Ore</option>
+        <option value="dodici_ore">Raggruppa per 12 Ore</option>
+        <option value="pronto_impiego">Raggruppa per Pronto impiego</option>
+        <option value="dae">Raggruppa per DAE</option>
+        <option value="comm_unita">Raggruppa per Comm. Unità</option>
+        <option value="radio_ana">Raggruppa per Radio ANA</option>
+        <option value="emercom">Raggruppa per EMERCOM</option>
+        <option value="corso_caposq">Raggruppa per Corso Caposq.</option>
+        <option value="cdc_1_step">Raggruppa per CDC 1° Step</option>
+        <option value="cdc_2_step">Raggruppa per CDC 2° Step</option>
+        <option value="iscrizione">Raggruppa per Iscrizione</option>
+        <option value="tutela_legale_cap">Raggruppa per Tutela legale</option>
+        <option value="attivo">Raggruppa per Attivo</option>
+      </select>
+      <div id="vfFiltriBox" style="display:none">
+        <div style="font-size:0.6rem;color:var(--text-3);margin-bottom:0.3rem">Oppure applica filtro</div>
+        <div class="vf-filtri">
+          <label class="vf-check"><input type="checkbox" id="vfQ4"> Solo 4 Ore</label>
+          <label class="vf-check"><input type="checkbox" id="vfQ12"> Solo 12 Ore</label>
+          <label class="vf-check"><input type="checkbox" id="vfPI"> Solo Pronto impiego</label>
+          <label class="vf-check"><input type="checkbox" id="vfAttivo"> Solo attivi</label>
+          <label class="vf-check"><input type="checkbox" id="vfVisitaNonCompl"> Visita non compl.</label>
+          <label class="vf-check"><input type="checkbox" id="vfDae"> Solo DAE</label>
+        </div>
       </div>
       <div class="vista-form-actions">
         <button class="btn-sm btn-warn" onclick="chiudiFormVista()" style="padding:0.6rem">annulla</button>
