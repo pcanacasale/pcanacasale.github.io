@@ -2,666 +2,350 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Area Riservata — PC ANA Casale Monferrato</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PC ANA Casale">
+<meta name="theme-color" content="#0f1f35">
+<link rel="manifest" href="manifest.json">
+<title>PC ANA Casale — Area Riservata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --verde:      #2d6a4f;
-  --verde-ch:   #52b788;
-  --verde-pale: #d8f3dc;
-  --blu:        #1a3a5c;
-  --blu-ch:     #2e6da4;
-  --blu-pale:   #dbeafe;
-  --giallo:     #f5c518;
-  --arancio:    #e07b39;
-  --crema:      #fdf8f0;
-  --bianco:     #ffffff;
-  --testo:      #2d3748;
-  --testo-ch:   #718096;
-  --ombra:      rgba(45,106,79,0.12);
-  --sidebar-w:  260px;
+  --navy:     #0f1f35;
+  --navy-2:   #162b48;
+  --navy-3:   #1e3a5f;
+  --verde:    #1a7a4a;
+  --verde-ch: #25a863;
+  --verde-pale: #e6f7ee;
+  --oro:      #c9a84c;
+  --oro-pale: #fdf3dc;
+  --bianco:   #ffffff;
+  --grigio-1: #f4f6f9;
+  --grigio-2: #e8ecf2;
+  --grigio-3: #b0bac8;
+  --testo:    #1a2332;
+  --testo-ch: #5a6a7e;
+  --rosso:    #d94040;
+  --rosso-pale: #fdeaea;
+  --giallo:   #e8a020;
+  --giallo-pale: #fef6e4;
+  --r: 16px;
+  --r-sm: 10px;
+  --shadow: 0 4px 20px rgba(15,31,53,0.10);
+  --shadow-lg: 0 8px 32px rgba(15,31,53,0.18);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'DM Sans', sans-serif; background: var(--grigio-1); color: var(--testo); min-height: 100vh; min-height: 100dvh; overscroll-behavior: none; }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* LOGIN */
+#loginScreen { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; background:var(--navy); padding:1.5rem; position:relative; overflow:hidden; }
+#loginScreen::before { content:''; position:absolute; width:400px; height:400px; border-radius:50%; background:radial-gradient(circle,rgba(26,122,74,0.18) 0%,transparent 70%); top:-100px; right:-80px; }
+#loginScreen::after { content:''; position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle,rgba(201,168,76,0.12) 0%,transparent 70%); bottom:-60px; left:-60px; }
+.login-card { background:var(--bianco); border-radius:24px; padding:2.5rem 2rem; width:100%; max-width:380px; box-shadow:0 32px 80px rgba(0,0,0,0.35); position:relative; z-index:1; }
+.login-logo { text-align:center; margin-bottom:2rem; }
+.login-logo img { height:60px; margin-bottom:1rem; }
+.login-logo h1 { font-size:1rem; font-weight:700; color:var(--navy); line-height:1.3; }
+.login-logo p { font-size:0.72rem; color:var(--testo-ch); margin-top:0.25rem; }
+.login-label { display:block; font-size:0.7rem; font-weight:600; color:var(--testo-ch); text-transform:uppercase; letter-spacing:0.6px; margin:1rem 0 0.4rem; }
+.login-input { width:100%; padding:0.85rem 1rem; border:2px solid var(--grigio-2); border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--testo); outline:none; transition:border-color 0.2s; background:var(--grigio-1); }
+.login-input:focus { border-color:var(--verde-ch); background:white; }
+.btn-login { width:100%; margin-top:1.5rem; padding:0.9rem; background:var(--navy); color:white; border:none; border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+.btn-login:hover { opacity:0.88; }
+.btn-login:disabled { opacity:0.5; cursor:not-allowed; }
+.login-error { display:none; margin-top:0.8rem; background:var(--rosso-pale); color:var(--rosso); padding:0.65rem 0.9rem; border-radius:var(--r-sm); font-size:0.78rem; font-weight:600; }
+.back-link { display:block; text-align:center; margin-top:1.2rem; font-size:0.75rem; color:var(--testo-ch); text-decoration:none; }
+.back-link:hover { color:var(--verde); }
 
-body {
-  font-family: 'Nunito', sans-serif;
-  background: var(--crema);
-  color: var(--testo);
-  min-height: 100vh;
-}
+/* APP SHELL */
+#app { display:none; min-height:100vh; min-height:100dvh; flex-direction:column; }
+.topbar { position:fixed; top:0; left:0; right:0; height:56px; background:var(--navy); display:flex; align-items:center; padding:0 1rem; gap:0.8rem; z-index:200; box-shadow:0 2px 16px rgba(0,0,0,0.25); }
+.topbar-logo { display:flex; align-items:center; gap:0.6rem; flex:1; min-width:0; }
+.topbar-logo img { height:28px; flex-shrink:0; }
+.topbar-title { font-size:0.82rem; font-weight:700; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-user { font-size:0.72rem; color:rgba(255,255,255,0.6); white-space:nowrap; flex-shrink:0; }
+.btn-logout { background:rgba(255,255,255,0.1); color:white; border:none; border-radius:8px; padding:0.4rem 0.75rem; font-family:'DM Sans',sans-serif; font-size:0.72rem; font-weight:600; cursor:pointer; flex-shrink:0; transition:background 0.2s; }
+.btn-logout:hover { background:rgba(255,255,255,0.2); }
+.main-content { margin-top:56px; padding-bottom:calc(72px + var(--safe-bottom)); }
 
-/* ── LOGIN SCREEN ── */
-#loginScreen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1a3a5c 0%, #2d6a4f 100%);
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
+/* BOTTOM NAV */
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; height:calc(64px + var(--safe-bottom)); background:var(--bianco); border-top:1px solid var(--grigio-2); display:flex; align-items:flex-start; padding-top:6px; padding-bottom:var(--safe-bottom); z-index:200; box-shadow:0 -4px 20px rgba(15,31,53,0.08); }
+.nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; background:none; border:none; cursor:pointer; color:var(--grigio-3); transition:color 0.15s; position:relative; }
+.nav-btn.active { color:var(--navy); }
+.nav-btn .nav-icon { font-size:1.3rem; line-height:1; transition:transform 0.15s; }
+.nav-btn.active .nav-icon { transform:scale(1.1); }
+.nav-btn .nav-label { font-size:0.58rem; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; line-height:1; }
+.nav-badge { position:absolute; top:4px; right:calc(50% - 18px); background:var(--rosso); color:white; font-size:0.55rem; font-weight:700; width:16px; height:16px; border-radius:50%; display:none; align-items:center; justify-content:center; border:2px solid white; }
+.nav-badge.show { display:flex; }
 
-#loginScreen::before {
-  content: '';
-  position: absolute;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.04);
-  top: -100px; right: -100px;
-}
-#loginScreen::after {
-  content: '';
-  position: absolute;
-  width: 300px; height: 300px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.03);
-  bottom: -80px; left: -80px;
-}
+/* PANELS */
+.panel { display:none; padding:1rem; animation:fadeIn 0.18s ease; }
+.panel.active { display:block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.panel-header { margin-bottom:1.2rem; }
+.panel-header h2 { font-size:1.2rem; font-weight:700; color:var(--navy); }
+.panel-header p { font-size:0.78rem; color:var(--testo-ch); margin-top:0.2rem; }
 
-.login-card {
-  background: var(--bianco);
-  border-radius: 24px;
-  padding: 2.5rem 2rem;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.25);
-  position: relative;
-  z-index: 1;
-}
+/* HOME */
+.home-hero { background:var(--navy); border-radius:var(--r); padding:1.5rem; margin-bottom:1rem; color:white; position:relative; overflow:hidden; }
+.home-hero::after { content:'🏔'; position:absolute; right:1rem; bottom:-0.5rem; font-size:4rem; opacity:0.12; }
+.home-hero h2 { font-size:1.1rem; font-weight:700; }
+.home-hero p { font-size:0.78rem; opacity:0.7; margin-top:0.3rem; }
+.home-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+.home-card { background:var(--bianco); border-radius:var(--r); padding:1.1rem; box-shadow:var(--shadow); cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; border:2px solid transparent; display:flex; flex-direction:column; gap:0.5rem; }
+.home-card:active { transform:scale(0.97); }
+.home-card:hover { border-color:var(--grigio-2); box-shadow:var(--shadow-lg); }
+.home-card .hc-icon { font-size:1.6rem; }
+.home-card h3 { font-size:0.82rem; font-weight:700; color:var(--navy); }
+.home-card p { font-size:0.7rem; color:var(--testo-ch); line-height:1.4; }
+.home-card.featured { grid-column:span 2; background:linear-gradient(135deg,var(--navy-2),var(--navy-3)); }
+.home-card.featured h3,.home-card.featured p { color:white; }
+.home-card.featured p { opacity:0.7; }
 
-.login-logo {
-  text-align: center;
-  margin-bottom: 1.8rem;
-}
-.login-logo img {
-  height: 56px;
-  margin-bottom: 0.8rem;
-}
-.login-logo h1 {
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: var(--blu);
-  line-height: 1.3;
-}
-.login-logo p {
-  font-size: 0.75rem;
-  color: var(--testo-ch);
-  margin-top: 0.2rem;
-}
+/* COMING SOON */
+.coming-soon { background:var(--bianco); border-radius:var(--r); padding:2.5rem 1.5rem; text-align:center; box-shadow:var(--shadow); }
+.coming-soon .cs-icon { font-size:3rem; margin-bottom:0.8rem; }
+.coming-soon h3 { font-size:1rem; font-weight:700; color:var(--navy); }
+.coming-soon p { font-size:0.78rem; color:var(--testo-ch); margin-top:0.4rem; line-height:1.5; }
 
-.login-card label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--testo-ch);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.4rem;
-  margin-top: 1rem;
-}
-.login-card input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  color: var(--testo);
-  transition: border-color 0.2s;
-  outline: none;
-}
-.login-card input:focus { border-color: var(--verde-ch); }
+/* TRACKER PRANZO */
+.pranzo-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:0.6rem; margin-bottom:1rem; }
+.ps-card { background:var(--bianco); border-radius:var(--r); padding:0.9rem 0.8rem; text-align:center; box-shadow:var(--shadow); }
+.ps-num { font-size:1.7rem; font-weight:700; color:var(--navy); font-family:'DM Mono',monospace; line-height:1; }
+.ps-label { font-size:0.58rem; font-weight:600; color:var(--testo-ch); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.2rem; }
+.ps-card.accent-verde .ps-num { color:var(--verde); }
+.ps-card.accent-oro .ps-num { color:var(--oro); }
+.ps-card.accent-rosso .ps-num { color:var(--rosso); }
+.pranzo-search { margin-bottom:0.8rem; }
+.pranzo-search input { width:100%; padding:0.75rem 1rem; border:2px solid var(--grigio-2); border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.85rem; outline:none; background:var(--bianco); transition:border-color 0.2s; }
+.pranzo-search input:focus { border-color:var(--verde-ch); }
+.settore-block { background:var(--bianco); border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:0.8rem; overflow:hidden; }
+.settore-head { display:flex; align-items:center; padding:0.85rem 1rem; cursor:pointer; user-select:none; gap:0.7rem; }
+.sh-color { width:4px; border-radius:2px; align-self:stretch; flex-shrink:0; }
+.sh-info { flex:1; }
+.sh-info h4 { font-size:0.85rem; font-weight:700; color:var(--navy); }
+.sh-info span { font-size:0.68rem; color:var(--testo-ch); }
+.sh-arrow { font-size:0.7rem; color:var(--grigio-3); transition:transform 0.2s; }
+.settore-head.collapsed .sh-arrow { transform:rotate(-90deg); }
+.settore-body { border-top:1px solid var(--grigio-2); }
+.settore-body.hidden { display:none; }
+.inv-row { display:grid; grid-template-columns:1fr auto; gap:0.5rem; align-items:center; padding:0.65rem 1rem; border-bottom:1px solid var(--grigio-1); }
+.inv-row:last-child { border-bottom:none; }
+.inv-row.si { border-left:3px solid var(--verde-ch); }
+.inv-row.no { border-left:3px solid var(--rosso); }
+.inv-row.attesa { border-left:3px solid var(--giallo); }
+.inv-row.nascosta { display:none; }
+.inv-info { min-width:0; }
+.inv-ente { font-size:0.58rem; font-weight:700; color:var(--testo-ch); text-transform:uppercase; letter-spacing:0.4px; }
+.inv-nome { font-size:0.82rem; font-weight:600; color:var(--testo); }
+.inv-controls { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }
+.risposta-sel { padding:4px 6px; border:1.5px solid var(--grigio-2); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.68rem; font-weight:600; background:var(--grigio-1); color:var(--testo-ch); outline:none; cursor:pointer; }
+.risposta-sel.si { background:var(--verde-pale); color:var(--verde); border-color:var(--verde-pale); }
+.risposta-sel.no { background:var(--rosso-pale); color:var(--rosso); border-color:var(--rosso-pale); }
+.coperti-ctrl { display:flex; align-items:center; gap:3px; }
+.coperti-ctrl button { width:22px; height:22px; border-radius:6px; border:1.5px solid var(--grigio-2); background:var(--grigio-1); font-size:0.85rem; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--testo-ch); padding:0; }
+.coperti-ctrl button:active { background:var(--grigio-2); }
+.coperti-num { font-size:0.8rem; font-weight:700; font-family:'DM Mono',monospace; color:var(--testo); min-width:16px; text-align:center; }
+.btn-export { width:100%; padding:0.8rem; margin-top:0.5rem; background:var(--navy); color:white; border:none; border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.82rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+.btn-export:hover { opacity:0.85; }
 
-.btn-login-submit {
-  width: 100%;
-  margin-top: 1.5rem;
-  padding: 0.85rem;
-  background: linear-gradient(90deg, var(--verde), var(--blu));
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 800;
-  cursor: pointer;
-  letter-spacing: 0.5px;
-  transition: opacity 0.2s, transform 0.1s;
-}
-.btn-login-submit:hover { opacity: 0.92; transform: translateY(-1px); }
-.btn-login-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+/* RICHIESTE */
+.richiesta-card { background:var(--bianco); border-radius:var(--r); box-shadow:var(--shadow); margin-bottom:0.75rem; overflow:hidden; }
+.richiesta-card.nuova { border-left:4px solid var(--verde-ch); }
+.richiesta-card.letta { opacity:0.75; }
+.richiesta-top { display:flex; align-items:flex-start; justify-content:space-between; padding:0.9rem 1rem 0.5rem; }
+.richiesta-nome { font-size:0.9rem; font-weight:700; color:var(--navy); }
+.richiesta-data { font-size:0.68rem; color:var(--testo-ch); flex-shrink:0; }
+.badge-nuova { display:inline-block; background:var(--verde-ch); color:white; font-size:0.6rem; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:6px; }
+.richiesta-body { padding:0 1rem 0.5rem; font-size:0.78rem; color:var(--testo-ch); line-height:1.6; }
+.richiesta-msg { margin-top:0.4rem; font-style:italic; color:var(--testo); background:var(--grigio-1); padding:0.5rem 0.7rem; border-radius:var(--r-sm); font-size:0.78rem; }
+.richiesta-actions { padding:0.5rem 1rem 0.9rem; display:flex; gap:0.5rem; }
 
-.login-error {
-  display: none;
-  margin-top: 0.8rem;
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 0.6rem 0.9rem;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
+/* UTENTI */
+.utente-row { background:var(--bianco); border-radius:var(--r); box-shadow:var(--shadow); padding:0.9rem 1rem; margin-bottom:0.6rem; display:flex; align-items:flex-start; justify-content:space-between; gap:0.8rem; }
+.utente-row.utente-disattivo { opacity:0.55; }
+.utente-info { flex:1; min-width:0; }
+.utente-info strong { display:block; font-size:0.88rem; color:var(--navy); font-weight:700; }
+.utente-username,.utente-ruolo { font-size:0.72rem; color:var(--testo-ch); display:block; }
+.utente-tipo { font-size:0.65rem; font-weight:700; display:inline-block; padding:2px 8px; border-radius:20px; margin-top:0.3rem; }
+.utente-tipo.master { background:var(--oro-pale); color:#8a6a00; }
+.utente-tipo.standard { background:var(--grigio-1); color:var(--testo-ch); }
+.perm-badge { display:inline-block; font-size:0.6rem; font-weight:700; background:var(--verde-pale); color:var(--verde); padding:2px 7px; border-radius:20px; margin:2px 2px 0 0; }
+.utente-actions { display:flex; flex-direction:column; gap:0.4rem; flex-shrink:0; }
+.new-user-form { background:var(--bianco); border-radius:var(--r); box-shadow:var(--shadow); padding:1.2rem; margin-top:1rem; }
+.new-user-form h3 { font-size:0.9rem; font-weight:700; color:var(--navy); margin-bottom:0.8rem; }
+.form-field { margin-bottom:0.7rem; }
+.form-label { display:block; font-size:0.68rem; font-weight:600; color:var(--testo-ch); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.3rem; }
+.form-input { width:100%; padding:0.7rem 0.9rem; border:2px solid var(--grigio-2); border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.85rem; color:var(--testo); outline:none; background:var(--grigio-1); transition:border-color 0.2s; }
+.form-input:focus { border-color:var(--verde-ch); background:white; }
+.perm-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; background:var(--grigio-1); border-radius:var(--r-sm); padding:0.8rem; margin-bottom:0.8rem; }
+.perm-check { display:flex; align-items:center; gap:0.5rem; font-size:0.78rem; font-weight:500; cursor:pointer; }
+.perm-check input { accent-color:var(--verde); width:15px; height:15px; }
+.form-err { display:none; background:var(--rosso-pale); color:var(--rosso); padding:0.5rem 0.8rem; border-radius:var(--r-sm); font-size:0.75rem; font-weight:600; margin-bottom:0.7rem; }
 
-.back-link {
-  display: block;
-  text-align: center;
-  margin-top: 1.2rem;
-  font-size: 0.78rem;
-  color: var(--testo-ch);
-  text-decoration: none;
-}
-.back-link:hover { color: var(--verde); }
+/* BUTTONS */
+.btn-sm { padding:0.3rem 0.7rem; border:none; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.7rem; font-weight:700; cursor:pointer; transition:opacity 0.15s; white-space:nowrap; }
+.btn-sm:hover { opacity:0.8; }
+.btn-ok { background:var(--verde-pale); color:var(--verde); }
+.btn-warn { background:var(--giallo-pale); color:#8a5a00; }
+.btn-danger { background:var(--rosso-pale); color:var(--rosso); }
+.btn-primary { width:100%; padding:0.8rem; background:var(--navy); color:white; border:none; border-radius:var(--r-sm); font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+.btn-primary:hover { opacity:0.85; }
+.loading-msg { text-align:center; padding:2.5rem 1rem; color:var(--testo-ch); font-size:0.82rem; }
 
-/* ── DASHBOARD ── */
-#dashboard {
-  display: none;
-  min-height: 100vh;
-}
-
-/* Topbar */
-.topbar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 60px;
-  background: var(--blu);
-  display: flex;
-  align-items: center;
-  padding: 0 1.5rem;
-  gap: 1rem;
-  z-index: 100;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-}
-.topbar-logo {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  flex: 1;
-}
-.topbar-logo img { height: 32px; }
-.topbar-logo span {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: white;
-  letter-spacing: 0.2px;
-}
-.topbar-welcome {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.7);
-}
-.topbar-welcome strong { color: white; }
-
-.btn-logout {
-  background: rgba(255,255,255,0.12);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.4rem 0.9rem;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn-logout:hover { background: rgba(255,255,255,0.22); }
-
-/* Sidebar */
-.sidebar {
-  position: fixed;
-  top: 60px; left: 0; bottom: 0;
-  width: var(--sidebar-w);
-  background: var(--bianco);
-  border-right: 1px solid #e2e8f0;
-  padding: 1.5rem 0;
-  overflow-y: auto;
-  z-index: 90;
-}
-
-.sidebar-section {
-  padding: 0 1rem 0.5rem;
-  font-size: 0.65rem;
-  font-weight: 900;
-  color: var(--testo-ch);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 1rem;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem 1.2rem;
-  margin: 0.1rem 0.6rem;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--testo);
-  transition: background 0.15s, color 0.15s;
-  border: none;
-  background: none;
-  width: calc(100% - 1.2rem);
-  text-align: left;
-}
-.nav-item:hover { background: var(--verde-pale); color: var(--verde); }
-.nav-item.active { background: var(--verde-pale); color: var(--verde); }
-.nav-item .icon { font-size: 1.1rem; flex-shrink: 0; }
-.nav-item .badge {
-  margin-left: auto;
-  background: #e11d48;
-  color: white;
-  border-radius: 20px;
-  padding: 1px 7px;
-  font-size: 0.65rem;
-  font-weight: 900;
-}
-
-/* Main content */
-.main {
-  margin-left: var(--sidebar-w);
-  padding-top: 60px;
-  min-height: 100vh;
-}
-
-.panel {
-  display: none;
-  padding: 2rem;
-  max-width: 900px;
-}
-.panel.active { display: block; }
-
-.panel-header {
-  margin-bottom: 1.8rem;
-}
-.panel-header h2 {
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--blu);
-}
-.panel-header p {
-  font-size: 0.85rem;
-  color: var(--testo-ch);
-  margin-top: 0.2rem;
-}
-
-/* Cards home */
-.home-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-.home-card {
-  background: var(--bianco);
-  border-radius: 16px;
-  padding: 1.4rem;
-  border: 2px solid #e2e8f0;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-}
-.home-card:hover {
-  border-color: var(--verde-ch);
-  box-shadow: 0 4px 20px var(--ombra);
-  transform: translateY(-2px);
-}
-.home-card .card-icon { font-size: 2rem; margin-bottom: 0.7rem; }
-.home-card h3 { font-size: 0.9rem; font-weight: 800; color: var(--blu); margin-bottom: 0.3rem; }
-.home-card p { font-size: 0.75rem; color: var(--testo-ch); line-height: 1.5; }
-
-/* Utenti */
-.utente-row {
-  background: var(--bianco);
-  border-radius: 14px;
-  padding: 1rem 1.2rem;
-  margin-bottom: 0.7rem;
-  border: 2px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.utente-row.utente-disattivo { opacity: 0.5; }
-.utente-info { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.utente-info strong { font-size: 0.9rem; color: var(--blu); }
-.utente-username { font-size: 0.75rem; color: var(--testo-ch); font-weight: 600; }
-.utente-ruolo {
-  font-size: 0.7rem; font-weight: 700;
-  background: var(--verde-pale); color: var(--verde);
-  padding: 2px 8px; border-radius: 20px;
-}
-.utente-tipo {
-  font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
-}
-.utente-tipo.master { background: #fef3c7; color: #92400e; }
-.utente-tipo.standard { background: var(--blu-pale); color: var(--blu); }
-.perm-badge { font-size:0.65rem; font-weight:700; background:var(--verde-pale); color:var(--verde); padding:2px 7px; border-radius:20px; margin-left:3px; }
-.utente-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
-
-/* Nuovo utente form */
-.new-user-form {
-  background: var(--bianco);
-  border-radius: 16px;
-  padding: 1.5rem;
-  border: 2px dashed #c8d6e5;
-  margin-top: 1.5rem;
-}
-.new-user-form h3 {
-  font-size: 0.9rem; font-weight: 800; color: var(--blu);
-  margin-bottom: 1rem;
-}
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
-  margin-bottom: 0.7rem;
-}
-.new-user-form input, .new-user-form select {
-  width: 100%;
-  padding: 0.65rem 0.9rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.82rem;
-  color: var(--testo);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.new-user-form input:focus, .new-user-form select:focus { border-color: var(--verde-ch); }
-.form-err {
-  display: none;
-  font-size: 0.78rem; font-weight: 700;
-  background: #fee2e2; color: #991b1b;
-  padding: 0.5rem 0.8rem; border-radius: 8px;
-  margin-bottom: 0.7rem;
-}
-
-/* Richieste */
-.richiesta-card {
-  background: var(--bianco);
-  border-radius: 14px;
-  padding: 1.2rem 1.4rem;
-  margin-bottom: 0.8rem;
-  border: 2px solid #e2e8f0;
-  border-left-width: 4px;
-}
-.richiesta-card.nuova { border-left-color: var(--blu); background: #f0f6ff; }
-.richiesta-card.letta { border-left-color: #c8d6e5; }
-.richiesta-top {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 0.6rem;
-}
-.richiesta-nome { font-size: 0.95rem; font-weight: 800; color: var(--blu); }
-.richiesta-data { font-size: 0.72rem; color: var(--testo-ch); }
-.badge-nuova {
-  font-size: 0.62rem; font-weight: 900;
-  background: var(--blu); color: white;
-  border-radius: 10px; padding: 1px 7px; margin-left: 6px;
-}
-.richiesta-body { font-size: 0.82rem; color: var(--testo-ch); line-height: 1.7; }
-.richiesta-msg { font-style: italic; margin-top: 0.3rem; }
-.richiesta-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
-
-/* Iframe Teable */
-.teable-frame {
-  width: 100%;
-  height: calc(100vh - 140px);
-  border: none;
-  border-radius: 16px;
-  background: white;
-  box-shadow: 0 2px 12px var(--ombra);
-}
-
-/* Buttons */
-.btn-sm {
-  padding: 0.3rem 0.8rem;
-  border: none; border-radius: 8px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem; font-weight: 800;
-  cursor: pointer; transition: opacity 0.15s;
-}
-.btn-sm:hover { opacity: 0.8; }
-.btn-ok { background: var(--verde-pale); color: var(--verde); }
-.btn-warn { background: #fef3c7; color: #92400e; }
-.btn-danger { background: #fee2e2; color: #991b1b; }
-.btn-primary {
-  padding: 0.65rem 1.4rem;
-  background: linear-gradient(90deg, var(--verde), var(--blu));
-  color: white; border: none; border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.82rem; font-weight: 800;
-  cursor: pointer; transition: opacity 0.2s;
-}
-.btn-primary:hover { opacity: 0.88; }
-
-/* Mobile */
-@media (max-width: 700px) {
-  .sidebar { transform: translateX(-100%); transition: transform 0.25s; }
-  .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; }
-  .panel { padding: 1.2rem; }
-  .form-grid { grid-template-columns: 1fr; }
-  .topbar-welcome { display: none; }
-  .hamburger-btn {
-    display: flex !important;
-    flex-direction: column; gap: 4px;
-    background: none; border: none; cursor: pointer; padding: 4px;
-  }
-  .hamburger-btn span {
-    display: block; width: 20px; height: 2px;
-    background: white; border-radius: 2px;
-  }
-}
-.hamburger-btn { display: none; }
+/* MORE MENU */
+.more-menu { position:fixed; bottom:calc(64px + var(--safe-bottom) + 8px); left:0; right:0; background:var(--bianco); border-radius:20px 20px 0 0; box-shadow:0 -8px 32px rgba(15,31,53,0.15); padding:1rem; z-index:300; display:none; }
+.more-menu.open { display:block; animation:slideUp 0.2s ease; }
+.more-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:299; display:none; }
+.more-overlay.open { display:block; }
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.more-menu h4 { font-size:0.68rem; font-weight:700; color:var(--testo-ch); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.8rem; }
+.more-item { display:flex; align-items:center; gap:0.9rem; padding:0.8rem 0.5rem; cursor:pointer; border-radius:var(--r-sm); transition:background 0.12s; border:none; background:none; width:100%; text-align:left; font-family:'DM Sans',sans-serif; }
+.more-item:hover { background:var(--grigio-1); }
+.more-item .mi-icon { font-size:1.2rem; width:28px; text-align:center; }
+.more-item .mi-label { font-size:0.85rem; font-weight:600; color:var(--testo); }
+.more-item .mi-sub { font-size:0.68rem; color:var(--testo-ch); margin-top:1px; }
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
+<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <img src="images/logo-ana.gif" alt="Logo ANA" onerror="this.style.display='none'">
+      <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
       <h1>PC ANA Casale Monferrato</h1>
       <p>Area Riservata — accesso volontari</p>
     </div>
-    <label>Username</label>
-    <input type="text" id="loginUser" placeholder="Il tuo username" autocomplete="username">
-    <label>Password</label>
-    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-    <button class="btn-login-submit" id="btnLogin" onclick="doLogin()">Accedi</button>
+    <label class="login-label">Username</label>
+    <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
+    <label class="login-label">Password</label>
+    <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
     <div class="login-error" id="loginError"></div>
     <a href="index.html" class="back-link">← Torna al sito</a>
   </div>
 </div>
 
-<!-- ── DASHBOARD ── -->
-<div id="dashboard">
-
-  <!-- Topbar -->
+<!-- APP -->
+<div id="app">
   <div class="topbar">
-    <button class="hamburger-btn" onclick="toggleSidebar()">
-      <span></span><span></span><span></span>
-    </button>
     <div class="topbar-logo">
-      <img src="images/logo-ana.gif" alt="Logo" onerror="this.style.display='none'">
-      <span>PC ANA Casale — Area Riservata</span>
+      <img src="images/logo-ana.gif" alt="" onerror="this.style.display='none'">
+      <span class="topbar-title">PC ANA Casale</span>
     </div>
-    <div class="topbar-welcome" id="topbarWelcome"></div>
+    <span class="topbar-user" id="topbarUser"></span>
     <button class="btn-logout" onclick="logout()">Esci</button>
   </div>
 
-  <!-- Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-section">Generale</div>
-    <button class="nav-item active" onclick="showPanel('home', this)">
-      <span class="icon">&#x1F3E0;</span> Home
-    </button>
-
-    <div class="sidebar-section">Operativo</div>
-    <button class="nav-item" id="navInterventi" onclick="showPanel('interventi', this)">
-      <span class="icon">&#x1F4CB;</span> Interventi
-    </button>
-    <button class="nav-item" id="navVolontari" onclick="showPanel('volontari', this)">
-      <span class="icon">&#x1F464;</span> Elenco volontari
-    </button>
-
-    <button class="nav-item" id="navRichieste" style="display:none" onclick="showPanel('richieste', this)">
-      <span class="icon">&#x1F4EC;</span> Richieste adesione
-    </button>
-    <button class="nav-item" id="navPianoAcquisti" style="display:none" onclick="window.location.href='configuratore.html'">
-      <span class="icon">&#x1F5A5;</span> Piano acquisti
-    </button>
-
-    <div id="masterNav" style="display:none">
-      <div class="sidebar-section">Master</div>
-      <button class="nav-item" onclick="showPanel('richieste', this)">
-        <span class="icon">&#x1F4EC;</span> Richieste adesione
-        <span class="badge" id="badgeRichieste" style="display:none"></span>
-      </button>
-      <button class="nav-item" onclick="showPanel('utenti', this)">
-        <span class="icon">&#x1F465;</span> Gestione utenti
-      </button>
-      <button class="nav-item" onclick="window.location.href='configuratore.html'">
-        <span class="icon">&#x1F5A5;</span> Piano acquisti
-      </button>
-      <button class="nav-item" onclick="window.location.href='generatore-convocazioni.html'">
-        <span class="icon">&#x1F4C4;</span> Generatore convocazioni
-      </button>
-    </div>
-  </div>
-
-  <!-- Main -->
-  <div class="main">
+  <div class="main-content">
 
     <!-- HOME -->
     <div class="panel active" id="panelHome">
-      <div class="panel-header">
+      <div class="home-hero">
         <h2 id="homeWelcome">Benvenuto</h2>
-        <p>Seleziona una sezione dalla barra laterale</p>
+        <p>Protezione Civile ANA Casale Monferrato</p>
       </div>
-      <div class="home-cards" id="homeCards">
-        <div class="home-card" id="cardInterventi" onclick="showPanel('interventi', null)">
-          <div class="card-icon">&#x1F4CB;</div>
-          <h3>Interventi</h3>
-          <p>Registra e consulta gli interventi dell'unità</p>
-        </div>
-        <div class="home-card" id="cardVolontari" onclick="showPanel('volontari', null)">
-          <div class="card-icon">&#x1F464;</div>
-          <h3>Elenco volontari</h3>
-          <p>Visualizza i dati dei volontari attivi</p>
-        </div>
-      </div>
-      <div id="cardRichieste" style="display:none">
-        <div class="home-card" onclick="showPanel('richieste', null)">
-          <div class="card-icon">&#x1F4EC;</div>
-          <h3>Richieste adesione</h3>
-          <p>Gestisci le richieste ricevute dal sito</p>
-        </div>
-      </div>
-      <div id="cardPianoAcquisti" style="display:none">
-        <div class="home-card" onclick="window.location.href='configuratore.html'">
-          <div class="card-icon">&#x1F5A5;</div>
-          <h3>Piano acquisti</h3>
-          <p>Infrastruttura informatica sezionale</p>
-        </div>
-      </div>
+      <div class="home-grid" id="homeGrid"></div>
+    </div>
 
-      <div id="masterCards" style="display:none">
-        <div class="home-cards">
-          <div class="home-card" onclick="showPanel('richieste', null)">
-            <div class="card-icon">&#x1F4EC;</div>
-            <h3>Richieste adesione</h3>
-            <p>Gestisci le richieste ricevute dal sito</p>
-          </div>
-          <div class="home-card" onclick="showPanel('utenti', null)">
-            <div class="card-icon">&#x1F465;</div>
-            <h3>Gestione utenti</h3>
-            <p>Aggiungi, modifica o rimuovi volontari</p>
-          </div>
-          <div class="home-card" onclick="window.location.href='generatore-convocazioni.html'">
-            <div class="card-icon">&#x1F4C4;</div>
-            <h3>Generatore convocazioni</h3>
-            <p>Crea e stampa le convocazioni per riunioni e assemblee</p>
-          </div>
-        </div>
+    <!-- PRANZO -->
+    <div class="panel" id="panelPranzo">
+      <div class="panel-header">
+        <h2>🍽️ Pranzo 25° Anniversario</h2>
+        <p>Tendone Alpini Mirabello — €25 ospiti / €10 volontari</p>
       </div>
+      <div class="pranzo-stats">
+        <div class="ps-card"><div class="ps-num" id="psInvitati">0</div><div class="ps-label">Invitati</div></div>
+        <div class="ps-card accent-verde"><div class="ps-num" id="psConferme">0</div><div class="ps-label">Confermati</div></div>
+        <div class="ps-card accent-rosso"><div class="ps-num" id="psDecline">0</div><div class="ps-label">Declinati</div></div>
+        <div class="ps-card accent-oro"><div class="ps-num" id="psCoperti">0</div><div class="ps-label">Coperti tot.</div></div>
+      </div>
+      <div class="pranzo-search">
+        <input type="search" id="pranzoSearch" placeholder="🔍 Cerca invitato..." oninput="filtraPranzo(this.value)">
+      </div>
+      <div id="pranzoSettori"></div>
+      <button class="btn-export" onclick="exportPranzoCSV()">↓ Esporta CSV</button>
     </div>
 
     <!-- INTERVENTI -->
     <div class="panel" id="panelInterventi">
-      <div class="panel-header">
-        <h2>&#x1F4CB; Interventi</h2>
-        <p>Inserimento e consultazione interventi</p>
-      </div>
-      <iframe class="teable-frame" src="https://app.teable.ai/share/shrm9NARRyXGOaT1L6c/view"></iframe>
+      <div class="panel-header"><h2>📋 Interventi</h2><p>Registro interventi dell'unità</p></div>
+      <div class="coming-soon"><div class="cs-icon">🚧</div><h3>In sviluppo</h3><p>Il database interventi è in costruzione.<br>Presto disponibile.</p></div>
     </div>
 
     <!-- VOLONTARI -->
     <div class="panel" id="panelVolontari">
-      <div class="panel-header">
-        <h2>&#x1F464; Elenco volontari</h2>
-        <p>Lista aggiornata dei volontari dell'unità</p>
-      </div>
-      <iframe class="teable-frame" src="https://app.teable.ai/share/shre0oZ3AUhA6RnhPVi/view"></iframe>
+      <div class="panel-header"><h2>👤 Volontari</h2><p>Elenco volontari dell'unità</p></div>
+      <div class="coming-soon"><div class="cs-icon">🚧</div><h3>In sviluppo</h3><p>Il database volontari è in costruzione.<br>Presto disponibile.</p></div>
     </div>
 
-    <!-- RICHIESTE (master) -->
+    <!-- RICHIESTE -->
     <div class="panel" id="panelRichieste">
-      <div class="panel-header">
-        <h2>&#x1F4EC; Richieste di adesione</h2>
-        <p>Richieste ricevute dal modulo sul sito</p>
-      </div>
-      <div id="richiesteList"></div>
+      <div class="panel-header"><h2>📬 Richieste di adesione</h2><p>Richieste ricevute dal modulo sul sito</p></div>
+      <div id="richiesteList"><div class="loading-msg">Caricamento...</div></div>
     </div>
 
-    <!-- UTENTI (master) -->
+    <!-- UTENTI -->
     <div class="panel" id="panelUtenti">
-      <div class="panel-header">
-        <h2>&#x1F465; Gestione utenti</h2>
-        <p>Aggiungi, attiva o rimuovi gli accessi</p>
-      </div>
-      <div id="utentiList"></div>
+      <div class="panel-header"><h2>👥 Gestione utenti</h2><p>Aggiungi, attiva o rimuovi gli accessi</p></div>
+      <div id="utentiList"><div class="loading-msg">Caricamento...</div></div>
       <div class="new-user-form">
         <h3>+ Nuovo utente</h3>
         <div class="form-err" id="nuovoUtenteErr"></div>
-        <div class="form-grid">
-          <input type="text" id="nuovoNome" placeholder="Nome e Cognome *">
-          <input type="text" id="nuovoUsername" placeholder="Username *">
-          <input type="password" id="nuovaPassword" placeholder="Password *">
-          <input type="text" id="nuovoRuolo" placeholder="Ruolo (es. Coordinatore)">
-        </div>
-        <div style="margin-bottom:0.8rem">
-          <select id="nuovoTipo" style="width:100%;padding:0.65rem 0.9rem;border:2px solid #e2e8f0;border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.82rem">
-            <option value="standard">Standard</option>
-          </select>
-        </div>
-        <div style="margin-bottom:0.8rem;background:#f7f9fc;border-radius:10px;padding:0.8rem 1rem;border:2px solid #e2e8f0">
-          <div style="font-size:0.72rem;font-weight:800;color:var(--testo-ch);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem">Permessi</div>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permInterventi" checked style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F4CB; Interventi
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permVolontari" checked style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F464; Elenco volontari
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer">
-            <input type="checkbox" id="permRichieste" style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F4EC; Richieste adesione
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;font-weight:600;cursor:pointer">
-            <input type="checkbox" id="permPianoAcquisti" style="width:16px;height:16px;accent-color:var(--verde)"> &#x1F5A5; Piano acquisti
-          </label>
+        <div class="form-field"><label class="form-label">Nome e Cognome</label><input class="form-input" type="text" id="nuovoNome" placeholder="Mario Rossi"></div>
+        <div class="form-field"><label class="form-label">Username</label><input class="form-input" type="text" id="nuovoUsername" placeholder="mrossi"></div>
+        <div class="form-field"><label class="form-label">Password</label><input class="form-input" type="password" id="nuovaPassword" placeholder="••••••••"></div>
+        <div class="form-field"><label class="form-label">Ruolo</label><input class="form-input" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" id="permInterventi" checked> 📋 Interventi</label>
+          <label class="perm-check"><input type="checkbox" id="permVolontari" checked> 👤 Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="permRichieste"> 📬 Richieste</label>
+          <label class="perm-check"><input type="checkbox" id="permPranzo"> 🍽️ Pranzo</label>
         </div>
         <button class="btn-primary" onclick="salvaUtente()">Salva utente</button>
       </div>
     </div>
 
-  </div><!-- /main -->
-</div><!-- /dashboard -->
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="navHome" onclick="showPanel('home',this)">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </button>
+    <button class="nav-btn" id="navPranzo" onclick="showPanel('pranzo',this)" style="display:none">
+      <span class="nav-icon">🍽️</span><span class="nav-label">Pranzo</span>
+    </button>
+    <button class="nav-btn" id="navInterventi" onclick="showPanel('interventi',this)" style="display:none">
+      <span class="nav-icon">📋</span><span class="nav-label">Interventi</span>
+    </button>
+    <button class="nav-btn" id="navVolontari" onclick="showPanel('volontari',this)" style="display:none">
+      <span class="nav-icon">👤</span><span class="nav-label">Volontari</span>
+    </button>
+    <button class="nav-btn" id="navMore" onclick="toggleMore()">
+      <span class="nav-icon">⋯</span><span class="nav-label">Altro</span>
+      <span class="nav-badge" id="badgeMore"></span>
+    </button>
+  </nav>
+
+  <div class="more-overlay" id="moreOverlay" onclick="closeMore()"></div>
+  <div class="more-menu" id="moreMenu">
+    <h4>Altro</h4>
+    <button class="more-item" id="moreRichieste" onclick="showPanel('richieste',null);closeMore();" style="display:none">
+      <span class="mi-icon">📬</span><div><div class="mi-label">Richieste adesione</div><div class="mi-sub">Gestisci le richieste dal sito</div></div>
+    </button>
+    <button class="more-item" id="moreUtenti" onclick="showPanel('utenti',null);closeMore();" style="display:none">
+      <span class="mi-icon">👥</span><div><div class="mi-label">Gestione utenti</div><div class="mi-sub">Accessi e permessi</div></div>
+    </button>
+    <button class="more-item" onclick="window.location.href='generatore-convocazioni.html';closeMore();">
+      <span class="mi-icon">📄</span><div><div class="mi-label">Generatore convocazioni</div><div class="mi-sub">Crea e stampa convocazioni</div></div>
+    </button>
+  </div>
+</div>
 
 <script src="area-riservata.js"></script>
-
 </body>
 </html>
-
