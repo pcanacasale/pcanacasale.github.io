@@ -81,6 +81,7 @@ function avviaDashboard() {
   if (isMaster || p.pranzo)     showSi('siPranzo');
   if (isMaster || p.richieste)  showSi('siRichieste');
   if (isMaster)                 showSi('siImpostazioni');
+  if (isMaster || p.volontari)  showSi('siDb');
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
   if (su) su.textContent = currentUser.nome + ' - ' + currentUser.ruolo;
@@ -131,6 +132,7 @@ function showPanel(name, btn) {
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
   if (name === 'documenti') caricaDocumenti();
+  if (name === 'db') caricaDb();
 }
 
 function toggleMore(){} function closeMore(){}
@@ -988,7 +990,7 @@ async function caricaVolontari() {
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo&order=cognome', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,foto_url&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
@@ -1804,7 +1806,10 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
       const badges = [];
       if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
       if (v.dae)     badges.push('<span class="vol-badge vb-ok">DAE</span>');
-      card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+      var avatarEl = v.foto_url
+        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
+        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>';
+      card.innerHTML = avatarEl
         + '<div class="vol-card-info">'
         + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
         + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
@@ -2477,3 +2482,269 @@ function apriDocDaScheda(volId) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
 });
+
+// -- DB AVANZATO (Teable) --
+const TEABLE_URL   = 'https://app.teable.ai/api';
+const TEABLE_TABLE = 'tblWzROoBsoOV1vymPE';
+const TEABLE_TOKEN = 'teable_accBtzxBKfRqci5PjO2_WWRnxGLPRbYY1tE/L6g7+9g4uq/t7/m1D29yd9Sko7Y=';
+const TEABLE_H     = { 'Authorization': 'Bearer ' + TEABLE_TOKEN, 'Content-Type': 'application/json' };
+
+const DB_ALL_COLS = [
+  { key: 'COGNOME',        label: 'Cognome',         type: 'text' },
+  { key: 'NOME',           label: 'Nome',            type: 'text' },
+  { key: 'SQUADRA',        label: 'Squadra',         type: 'text' },
+  { key: 'TIPO VOLONTARIO',label: 'Tipo',            type: 'text' },
+  { key: 'MANSIONE',       label: 'Mansione',        type: 'text' },
+  { key: 'SPECIALIZZAZIONE',label:'Specializ.',      type: 'text' },
+  { key: 'TELEFONO',       label: 'Telefono',        type: 'text' },
+  { key: 'EMAIL',          label: 'Email',           type: 'text' },
+  { key: 'CODICE FISCALE', label: 'Cod. Fiscale',    type: 'text' },
+  { key: 'DATA DI NASCITA',label: 'Data Nascita',    type: 'date' },
+  { key: 'LUOGO DI NASCITA',label:'Luogo Nascita',   type: 'text' },
+  { key: 'INDIRIZZO',      label: 'Indirizzo',       type: 'text' },
+  { key: 'CAP',            label: 'CAP',             type: 'text' },
+  { key: 'CITTA',          label: 'Città',           type: 'text' },
+  { key: 'GRUPPO ALPINI',  label: 'Gruppo Alpini',   type: 'text' },
+  { key: 'PROFESSIONE',    label: 'Professione',     type: 'text' },
+  { key: 'PATENTI',        label: 'Patenti',         type: 'text' },
+  { key: 'COMM UNITA',     label: 'Comm. Unità',     type: 'bool' },
+  { key: 'RADIO ANA',      label: 'Radio ANA',       type: 'bool' },
+  { key: 'EMERCOM',        label: 'EMERCOM',         type: 'bool' },
+  { key: 'COD EMERCOM',    label: 'Cod. EMERCOM',    type: 'text' },
+  { key: '4 ORE',          label: '4 Ore',           type: 'bool' },
+  { key: '12 ORE',         label: '12 Ore',          type: 'bool' },
+  { key: 'C.SO CAPOSQ',    label: 'Corso Caposq.',   type: 'bool' },
+  { key: 'DAE',            label: 'DAE',             type: 'bool' },
+  { key: 'SCAD DAE',       label: 'Scad. DAE',       type: 'date' },
+  { key: 'CDC 1 STEP',     label: 'CDC 1',           type: 'bool' },
+  { key: 'CDC 2 STEP',     label: 'CDC 2',           type: 'bool' },
+  { key: 'DATA VISITA',    label: 'Data Visita',     type: 'date' },
+  { key: 'STATO VISITA',   label: 'Stato Visita',    type: 'select', options: ['ESONERO','DA FARE','VERIFICA','SOLO ESAMI','COMPLETATA'] },
+  { key: 'ISCRIZIONE',     label: 'Iscrizione',      type: 'bool' },
+  { key: 'TUTELA LEGALE CAP',label:'Tutela CAP',     type: 'bool' },
+  { key: 'NO 2026',        label: 'No 2026',         type: 'bool' },
+  { key: 'DISPON',         label: 'Disponibile',     type: 'bool' },
+  { key: 'NOTE DISPON',    label: 'Note Dispon.',    type: 'text' },
+  { key: 'VARCHI',         label: 'Varchi',          type: 'bool' },
+];
+
+// Colonne visibili di default
+var DB_VISIBLE_COLS = JSON.parse(localStorage.getItem('db_cols') || 'null') ||
+  ['COGNOME','NOME','SQUADRA','TIPO VOLONTARIO','TELEFONO','EMAIL','4 ORE','12 ORE','DAE','STATO VISITA'];
+
+var dbRecords    = [];
+var dbTotal      = 0;
+var dbSkip       = 0;
+var dbPageSize   = 50;
+var dbSearch     = '';
+var dbSortField  = null;
+var dbSortOrder  = 'asc';
+var dbEditRecId  = null;
+
+async function caricaDb() {
+  var tbody = document.getElementById('dbTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="99" class="db-loading">caricamento da Teable...</td></tr>';
+  dbRenderHead();
+  try {
+    var params = new URLSearchParams({
+      fieldKeyType: 'name',
+      take: dbPageSize,
+      skip: dbSkip
+    });
+    if (dbSearch) params.set('search', dbSearch);
+    var url = TEABLE_URL + '/table/' + TEABLE_TABLE + '/record?' + params.toString();
+    var res  = await fetch(url, { headers: TEABLE_H });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    dbRecords = data.records || [];
+    dbTotal   = data.total  || 0;
+    dbRenderBody();
+    dbRenderPag();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading" style="color:var(--red)">Errore: ' + e.message + '<br><small>Verifica connessione a Teable</small></td></tr>';
+  }
+}
+
+function dbRenderHead() {
+  var thead = document.getElementById('dbThead');
+  if (!thead) return;
+  var cols  = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
+  thead.innerHTML = '<tr>'
+    + '<th style="width:36px">#</th>'
+    + cols.map(function(c){
+        var arrow = (dbSortField === c.key) ? (dbSortOrder === 'asc' ? ' ↑' : ' ↓') : '';
+        return '<th class="sortable" onclick="dbSort(\'' + c.key + '\')">' + c.label + arrow + '</th>';
+      }).join('')
+    + '<th style="width:60px">Azioni</th>'
+    + '</tr>';
+}
+
+function dbRenderBody() {
+  var tbody = document.getElementById('dbTbody');
+  if (!tbody) return;
+  var cols = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
+  if (!dbRecords.length) {
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading">Nessun record trovato.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  dbRecords.forEach(function(rec, idx) {
+    var f   = rec.fields || {};
+    var tr  = document.createElement('tr');
+    var tds = '<td style="color:var(--testo-3);font-size:0.68rem">' + (dbSkip + idx + 1) + '</td>';
+    cols.forEach(function(c) {
+      var val = f[c.key];
+      var cell = '';
+      if (c.type === 'bool') {
+        cell = val ? '<span class="db-check">✓</span>' : '<span class="db-empty">—</span>';
+      } else if (c.type === 'date') {
+        cell = val ? new Date(val).toLocaleDateString('it-IT') : '<span class="db-empty">—</span>';
+      } else if (c.type === 'select') {
+        cell = val ? '<span style="font-size:0.7rem;padding:1px 7px;border-radius:10px;background:var(--bg-2)">' + val + '</span>' : '<span class="db-empty">—</span>';
+      } else {
+        cell = val ? String(val) : '<span class="db-empty">—</span>';
+      }
+      tds += '<td title="' + (val || '') + '">' + cell + '</td>';
+    });
+    tds += '<td><button class="db-btn" style="padding:2px 8px;font-size:0.65rem" onclick="dbModificaRecord(\'' + rec.id + '\')">✏</button></td>';
+    tr.innerHTML = tds;
+    tbody.appendChild(tr);
+  });
+}
+
+function dbRenderPag() {
+  var info = document.getElementById('dbPagInfo');
+  var prev = document.getElementById('dbPrev');
+  var next = document.getElementById('dbNext');
+  if (info) info.textContent = (dbSkip + 1) + '-' + Math.min(dbSkip + dbPageSize, dbTotal) + ' di ' + dbTotal;
+  if (prev) prev.disabled = dbSkip === 0;
+  if (next) next.disabled = dbSkip + dbPageSize >= dbTotal;
+}
+
+function dbPagina(dir) {
+  dbSkip = Math.max(0, dbSkip + dir * dbPageSize);
+  caricaDb();
+}
+
+function dbFiltra(q) {
+  dbSearch = q;
+  dbSkip   = 0;
+  clearTimeout(window._dbSearchTimer);
+  window._dbSearchTimer = setTimeout(caricaDb, 400);
+}
+
+function dbSort(key) {
+  if (dbSortField === key) {
+    dbSortOrder = dbSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    dbSortField = key;
+    dbSortOrder = 'asc';
+  }
+  dbSkip = 0;
+  caricaDb();
+}
+
+function dbToggleCols() {
+  var grid = document.getElementById('dbColsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  DB_ALL_COLS.forEach(function(c) {
+    var item = document.createElement('div');
+    item.className = 'db-col-item';
+    var checked = DB_VISIBLE_COLS.includes(c.key) ? 'checked' : '';
+    item.innerHTML = '<input type="checkbox" id="dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + c.key + '" ' + checked + '>'
+      + '<label for="dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '">' + c.label + '</label>';
+    grid.appendChild(item);
+  });
+  document.getElementById('dbColsOverlay').classList.add('open');
+}
+
+function dbSalvaColonne() {
+  DB_VISIBLE_COLS = [];
+  DB_ALL_COLS.forEach(function(c) {
+    var el = document.getElementById('dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_'));
+    if (el && el.checked) DB_VISIBLE_COLS.push(c.key);
+  });
+  localStorage.setItem('db_cols', JSON.stringify(DB_VISIBLE_COLS));
+  caricaDb();
+}
+
+function dbNuovoRecord() {
+  dbEditRecId = null;
+  document.getElementById('dbRecordTitle').textContent = 'Nuovo volontario';
+  dbBuildForm({});
+  document.getElementById('dbRecordErr').style.display = 'none';
+  document.getElementById('dbRecordOverlay').classList.add('open');
+}
+
+async function dbModificaRecord(recId) {
+  dbEditRecId = recId;
+  document.getElementById('dbRecordTitle').textContent = 'Modifica record';
+  document.getElementById('dbRecordErr').style.display = 'none';
+  // Carica dati record
+  try {
+    var res  = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record/' + recId + '?fieldKeyType=name', { headers: TEABLE_H });
+    var data = await res.json();
+    dbBuildForm(data.fields || {});
+    document.getElementById('dbRecordOverlay').classList.add('open');
+  } catch(e) { alert('Errore caricamento record'); }
+}
+
+function dbBuildForm(fields) {
+  var form = document.getElementById('dbRecordForm');
+  form.innerHTML = '';
+  var editableCols = DB_ALL_COLS.filter(function(c){ return c.type !== 'link'; });
+  editableCols.forEach(function(c) {
+    var div = document.createElement('div');
+    div.className = 'db-record-field' + (c.type === 'text' && (c.key === 'INDIRIZZO' || c.key === 'NOTE DISPON') ? ' full' : '');
+    var val = fields[c.key];
+    if (c.type === 'bool') {
+      div.innerHTML = '<label class="db-record-check"><input type="checkbox" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" ' + (val ? 'checked' : '') + '> ' + c.label + '</label>';
+    } else if (c.type === 'select') {
+      var opts = c.options.map(function(o){ return '<option value="' + o + '" ' + (val===o?'selected':'') + '>' + o + '</option>'; }).join('');
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
+        + '<select class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '"><option value="">—</option>' + opts + '</select>';
+    } else if (c.type === 'date') {
+      var dateVal = val ? new Date(val).toISOString().slice(0,10) : '';
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
+        + '<input type="date" class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + dateVal + '">';
+    } else {
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
+        + '<input class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + (val||'') + '">';
+    }
+    form.appendChild(div);
+  });
+}
+
+async function dbSalvaRecord() {
+  var errEl  = document.getElementById('dbRecordErr');
+  var fields = {};
+  DB_ALL_COLS.forEach(function(c) {
+    var el = document.getElementById('dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_'));
+    if (!el) return;
+    if (c.type === 'bool') fields[c.key] = el.checked;
+    else if (c.type === 'date') fields[c.key] = el.value ? new Date(el.value).toISOString() : null;
+    else fields[c.key] = el.value || null;
+  });
+  // Rimuovi null per non sovrascrivere campi non editabili
+  Object.keys(fields).forEach(function(k){ if (fields[k] === null) delete fields[k]; });
+  try {
+    var res;
+    if (dbEditRecId) {
+      res = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record/' + dbEditRecId, {
+        method: 'PATCH', headers: TEABLE_H,
+        body: JSON.stringify({ fieldKeyType: 'name', record: { fields: fields } })
+      });
+    } else {
+      res = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record', {
+        method: 'POST', headers: TEABLE_H,
+        body: JSON.stringify({ fieldKeyType: 'name', records: [{ fields: fields }] })
+      });
+    }
+    if (!res.ok) { var err = await res.text(); throw new Error(err); }
+    document.getElementById('dbRecordOverlay').classList.remove('open');
+    await logAttivita(dbEditRecId ? 'ha modificato record Teable' : 'ha aggiunto record Teable');
+    caricaDb();
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
+}

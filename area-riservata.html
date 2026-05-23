@@ -518,6 +518,58 @@ div:hover > .vista-edit-btn { display:flex; }
   overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
   height:calc(100dvh - 50px - var(--safe-t)); }
 
+
+/* -- DB AVANZATO -- */
+.db-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem; flex-wrap:wrap; }
+.db-search { flex:1; min-width:140px; padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
+.db-search:focus { border-color:var(--green); }
+.db-btn { padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.75rem; color:var(--testo-2); cursor:pointer; white-space:nowrap; }
+.db-btn.green { background:var(--green); color:#fff; border-color:var(--green); }
+.db-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:0.5px solid var(--border); background:var(--bg-card); }
+.db-table { border-collapse:collapse; min-width:100%; font-size:0.8rem; }
+.db-table th { background:var(--bg-2); padding:0.5rem 0.8rem; text-align:left; font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; border-bottom:0.5px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
+.db-table th.sortable { cursor:pointer; user-select:none; }
+.db-table th.sortable:hover { color:var(--green); }
+.db-table td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); color:var(--testo); white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+.db-table tr:last-child td { border-bottom:none; }
+.db-table tr:hover td { background:var(--bg-2); }
+.db-check { color:var(--green); font-size:0.85rem; }
+.db-empty { color:var(--testo-4); font-style:italic; }
+.db-loading { text-align:center; padding:2rem; color:var(--testo-3); }
+.db-add-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.8rem; cursor:pointer; color:var(--green); font-size:0.78rem; border-top:0.5px solid var(--border); background:var(--bg-card); }
+.db-add-row:hover { background:var(--green-pale); }
+.db-pagination { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.8rem; border-top:0.5px solid var(--border); background:var(--bg-card); border-radius:0 0 var(--r) var(--r); }
+.db-pag-info { font-size:0.72rem; color:var(--testo-3); }
+.db-pag-btns { display:flex; gap:0.4rem; }
+.db-pag-btn { padding:0.3rem 0.7rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.72rem; color:var(--testo-2); cursor:pointer; }
+.db-pag-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.db-pag-btn.active { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* Colonne overlay */
+.db-cols-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:600; align-items:flex-end; }
+.db-cols-overlay.open { display:flex; }
+.db-cols-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:70vh; overflow-y:auto; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
+.db-cols-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:0.8rem; }
+.db-cols-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; }
+.db-col-item { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.5rem; border-radius:6px; cursor:pointer; }
+.db-col-item:hover { background:var(--bg-2); }
+.db-col-item input { accent-color:var(--green); width:14px; height:14px; }
+.db-col-item label { font-size:0.78rem; color:var(--testo-2); cursor:pointer; }
+
+/* Form nuovo/modifica record */
+.db-record-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:700; align-items:flex-end; }
+.db-record-overlay.open { display:flex; }
+.db-record-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:85vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
+.db-record-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:1rem; }
+.db-record-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.8rem; }
+.db-record-field { }
+.db-record-field.full { grid-column:span 2; }
+.db-record-lbl { font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:0.2rem; display:block; }
+.db-record-inp { width:100%; padding:0.6rem 0.8rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
+.db-record-inp:focus { border-color:var(--green); }
+.db-record-check { display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0; font-size:0.82rem; color:var(--testo-2); cursor:pointer; }
+.db-record-check input { accent-color:var(--green); width:15px; height:15px; }
+
 </style>
 </head>
 <body>
@@ -590,6 +642,11 @@ div:hover > .vista-edit-btn { display:flex; }
       <button class="sidebar-item" id="siMezzi" onclick="navTo('mezzi','Mezzi',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
         <span class="si-label">Mezzi</span>
+      </button>
+
+      <button class="sidebar-item" id="siDb" onclick="navTo('db','DB Avanzato',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <span class="si-label">DB Avanzato</span>
       </button>
 
       <button class="sidebar-item" id="siDocumenti" onclick="navTo('documenti','Documenti',this)" style="display:none">
@@ -785,6 +842,54 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
 
+    <!-- DB AVANZATO -->
+    <div class="panel" id="panelDb">
+      <div class="panel-hdr"><h2>DB Avanzato</h2><p>Database volontari — Teable</p></div>
+      <div class="db-toolbar">
+        <input class="db-search" id="dbSearch" placeholder="🔍 cerca..." oninput="dbFiltra(this.value)">
+        <button class="db-btn" onclick="dbToggleCols()">⚙ Colonne</button>
+        <button class="db-btn green" onclick="dbNuovoRecord()">+ Nuovo</button>
+      </div>
+      <div class="db-wrap">
+        <table class="db-table" id="dbTable">
+          <thead id="dbThead"></thead>
+          <tbody id="dbTbody"><tr><td colspan="99" class="db-loading">caricamento...</td></tr></tbody>
+        </table>
+        <div class="db-add-row" onclick="dbNuovoRecord()">+ aggiungi record</div>
+      </div>
+      <div class="db-pagination">
+        <span class="db-pag-info" id="dbPagInfo">—</span>
+        <div class="db-pag-btns">
+          <button class="db-pag-btn" id="dbPrev" onclick="dbPagina(-1)" disabled>←</button>
+          <button class="db-pag-btn" id="dbNext" onclick="dbPagina(+1)">→</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay colonne DB -->
+    <div class="db-cols-overlay" id="dbColsOverlay">
+      <div class="db-cols-card">
+        <h4>Colonne visibili</h4>
+        <div class="db-cols-grid" id="dbColsGrid"></div>
+        <div style="display:flex;gap:0.5rem;margin-top:1rem">
+          <button class="db-btn" onclick="dbSalvaColonne();document.getElementById('dbColsOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">salva</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay record DB -->
+    <div class="db-record-overlay" id="dbRecordOverlay">
+      <div class="db-record-card">
+        <h4 id="dbRecordTitle">Nuovo volontario</h4>
+        <div class="form-err" id="dbRecordErr"></div>
+        <div class="db-record-grid" id="dbRecordForm"></div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="db-btn" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">annulla</button>
+          <button class="db-btn green" onclick="dbSalvaRecord()" style="flex:1;padding:0.7rem">salva</button>
+        </div>
+      </div>
+    </div>
+
     <!-- MEZZI -->
     <div class="panel" id="panelMezzi">
       <div class="panel-hdr"><h2>Mezzi</h2><p>Parco veicoli</p></div>
@@ -903,6 +1008,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 </div>
 
-<script src="area-riservata.js?v=7"></script>
+<script src="area-riservata.js?v=8"></script>
 </body>
 </html>
