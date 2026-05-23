@@ -408,7 +408,11 @@ function renderPranzo() {
       const row = document.createElement('div');
       row.className = 'inv-row ' + risposta;
       row.id = 'row-' + inv.id;
-      row.innerHTML = '<div class="inv-info"><div class="inv-ente">' + inv.ente + '</div><div class="inv-nome">' + inv.nome + '</div></div>'
+      const nomeHtml = inv.nome && inv.nome.trim() ? '<div class="inv-nome">' + inv.nome + '</div>' : '';
+      const delBtnHtml = (isMaster && inv.dbId)
+        ? '<button class="inv-del-btn" onclick="eliminaInvitato(' + inv.dbId + ',event)">×</button>'
+        : '';
+      row.innerHTML = '<div class="inv-info"><div class="inv-ente">' + inv.ente + '</div>' + nomeHtml + '</div>'
         + '<div class="inv-controls">'
         + '<select class="risposta-sel ' + risposta + '" onchange="setRisposta(\'' + inv.id + '\',this)">'
         + '<option value="attesa"' + (risposta==='attesa'?' selected':'') + '>⏳</option>'
@@ -419,9 +423,22 @@ function renderPranzo() {
         + '<button onclick="setCoperti(\'' + inv.id + '\',-1)">−</button>'
         + '<span class="coperti-num" id="cop-' + inv.id + '">' + coperti + '</span>'
         + '<button onclick="setCoperti(\'' + inv.id + '\',+1)">+</button>'
-        + '</div></div>';
+        + '</div>'
+        + delBtnHtml
+        + '</div>';
       body.appendChild(row);
     });
+    // Bottone aggiungi (solo master)
+    if (isMaster) {
+      const addRow = document.createElement('div');
+      addRow.style.cssText = 'padding:0.5rem 1rem;border-top:0.5px solid var(--border);';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'doc-add-btn';
+      addBtn.textContent = '+ Aggiungi invitato';
+      addBtn.onclick = () => apriFormInvitato(settore);
+      addRow.appendChild(addBtn);
+      block.appendChild(addRow);
+    }
     block.appendChild(head); block.appendChild(body);
     container.appendChild(block);
   });
