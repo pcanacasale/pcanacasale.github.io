@@ -190,7 +190,7 @@ async function caricaHomeDashboard() {
           + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
           + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</div>'
           + '</div>'
-          + '<div class="home-list-badge">' + giorno + '</div>'
+  
           + '</div>';
       });
       html += '</div>';
@@ -1987,8 +1987,9 @@ let interventiData = [];
 let intCorrenteId = null;
 
 const TIPO_ATTIVITA = [
-  'EMERGENZA', 'ESERCITAZIONE', 'FORMAZIONE', 'MANIFESTAZIONE',
-  'SERVIZIO', 'SUPPORTO LOGISTICO', 'ALTRO'
+  'EMERGENZA', 'ESERCITAZIONE', 'CORSI', 'PREVENZIONE INFORTUNI',
+  'RAPPRESENTANZA', 'ASSEMBLEE E RIUNIONI', 'CONTROLLO TERRITORIO',
+  'SEGRETERIA', 'MAGAZZINO'
 ];
 
 async function caricaInterventi() {
@@ -2051,11 +2052,15 @@ function renderInterventi(data) {
     if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
     if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
     if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
-    card.innerHTML = '<div class="int-card-top">'
+    card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.7rem">'
+      + getTipoAttivitaAvatar(i.tipo_attivita, 38)
+      + '<div style="flex:1;min-width:0">'
+      + '<div class="int-card-top">'
       + '<div class="int-card-evento">' + (i.evento || '—') + '</div>'
       + '<div class="int-card-data">' + dataFmt + '</div>'
       + '</div>'
-      + '<div class="int-card-meta">' + pills.join('') + '</div>';
+      + '<div class="int-card-meta">' + pills.join('') + '</div>'
+      + '</div></div>';
     list.appendChild(card);
   });
 }
@@ -2101,9 +2106,10 @@ async function apriDettaglioIntervento(id) {
       } catch(e) {}
     }
 
+    var _heroAvatar = getTipoAttivitaAvatar(i.tipo_attivita, 50);
     body.innerHTML = `
       <div class="vol-detail-hero">
-        <div class="vol-detail-avatar" style="background:#1a3a1f;color:#3fb950;font-size:1.2rem">⚡</div>
+        ${_heroAvatar}
         <div>
           <div class="vol-detail-name">${i.evento || '—'}</div>
           <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} . ${dataFmt}</div>
@@ -2541,6 +2547,43 @@ function apriDocDaScheda(volId) {
   chiudiDettaglio();
   showPanel('documenti', null);
   setTimeout(() => apriUploadDoc(volId), 400);
+}
+
+
+function getTipoAttivitaIcon(tipo, size, color) {
+  size = size || 20;
+  var icons = {
+    'EMERGENZA': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    'ESERCITAZIONE': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/></svg>',
+    'CORSI': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    'PREVENZIONE INFORTUNI': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    'RAPPRESENTANZA': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M12 11v3"/><path d="M8 21l1-4h6l1 4"/><path d="M5 21h14"/></svg>',
+    'ASSEMBLEE E RIUNIONI': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    'CONTROLLO TERRITORIO': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="4"/><circle cx="18" cy="12" r="4"/><path d="M2 12h4"/><path d="M20 12h2"/><path d="M10 12h4"/><path d="M6 8v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>',
+    'SEGRETERIA': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 8h2"/><path d="M7 12h2"/><path d="M11 8h6"/><path d="M11 12h6"/></svg>',
+    'MAGAZZINO': '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  };
+  return icons[tipo] || '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+}
+
+var TIPO_ATTIVITA_COLORS = {
+  'EMERGENZA':            { bg:'#fde8e8', stroke:'#c0392b' },
+  'ESERCITAZIONE':        { bg:'#e8f0fb', stroke:'#185fa5' },
+  'CORSI':                { bg:'#eaf3de', stroke:'#3b6d11' },
+  'PREVENZIONE INFORTUNI':{ bg:'#faeeda', stroke:'#854f0b' },
+  'RAPPRESENTANZA':       { bg:'#eeedfe', stroke:'#534ab7' },
+  'ASSEMBLEE E RIUNIONI': { bg:'#e1f5ee', stroke:'#0f6e56' },
+  'CONTROLLO TERRITORIO': { bg:'#e6f1fb', stroke:'#185fa5' },
+  'SEGRETERIA':           { bg:'#f1efe8', stroke:'#5f5e5a' },
+  'MAGAZZINO':            { bg:'#faeeda', stroke:'#854f0b' },
+};
+
+function getTipoAttivitaAvatar(tipo, size) {
+  size = size || 36;
+  var c = TIPO_ATTIVITA_COLORS[tipo] || { bg:'var(--green-pale)', stroke:'var(--green)' };
+  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:9px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+    + getTipoAttivitaIcon(tipo, Math.round(size*0.55), c.stroke)
+    + '</div>';
 }
 
 // -- KEYBOARD --
