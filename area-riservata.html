@@ -844,7 +844,7 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <!-- DB AVANZATO -->
     <div class="panel" id="panelDb">
-      <div class="panel-hdr"><h2>DB Avanzato</h2><p>Database volontari — Teable</p></div>
+      <div class="panel-hdr"><h2>DB Avanzato</h2><p>Database volontari completo</p></div>
       <div class="db-toolbar">
         <input class="db-search" id="dbSearch" placeholder="🔍 cerca..." oninput="dbFiltra(this.value)">
         <button class="db-btn" onclick="dbToggleCols()">⚙ Colonne</button>
@@ -883,10 +883,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <h4 id="dbRecordTitle">Nuovo volontario</h4>
         <div class="form-err" id="dbRecordErr"></div>
         <div class="db-record-grid" id="dbRecordForm"></div>
-        <div style="display:flex;gap:0.5rem">
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
           <button class="db-btn" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">annulla</button>
           <button class="db-btn green" onclick="dbSalvaRecord()" style="flex:1;padding:0.7rem">salva</button>
         </div>
+        <button class="db-btn" onclick="dbEliminaRecord()" style="width:100%;padding:0.6rem;color:var(--red);border-color:var(--red)" id="dbDelBtn">elimina</button>
       </div>
     </div>
 
@@ -1008,6 +1009,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 </div>
 
-<script src="area-riservata.js?v=8"></script>
+<script src="area-riservata.js?v=9"></script>
 </body>
 </html>

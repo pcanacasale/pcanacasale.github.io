@@ -2483,101 +2483,99 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
 });
 
-// -- DB AVANZATO (Teable) --
-const TEABLE_URL   = 'https://app.teable.ai/api';
-const TEABLE_TABLE = 'tblWzROoBsoOV1vymPE';
-const TEABLE_TOKEN = 'teable_accBtzxBKfRqci5PjO2_WWRnxGLPRbYY1tE/L6g7+9g4uq/t7/m1D29yd9Sko7Y=';
-const TEABLE_H     = { 'Authorization': 'Bearer ' + TEABLE_TOKEN, 'Content-Type': 'application/json' };
+
+// -- DB AVANZATO (Supabase) --
 
 const DB_ALL_COLS = [
-  { key: 'COGNOME',        label: 'Cognome',         type: 'text' },
-  { key: 'NOME',           label: 'Nome',            type: 'text' },
-  { key: 'SQUADRA',        label: 'Squadra',         type: 'text' },
-  { key: 'TIPO VOLONTARIO',label: 'Tipo',            type: 'text' },
-  { key: 'MANSIONE',       label: 'Mansione',        type: 'text' },
-  { key: 'SPECIALIZZAZIONE',label:'Specializ.',      type: 'text' },
-  { key: 'TELEFONO',       label: 'Telefono',        type: 'text' },
-  { key: 'EMAIL',          label: 'Email',           type: 'text' },
-  { key: 'CODICE FISCALE', label: 'Cod. Fiscale',    type: 'text' },
-  { key: 'DATA DI NASCITA',label: 'Data Nascita',    type: 'date' },
-  { key: 'LUOGO DI NASCITA',label:'Luogo Nascita',   type: 'text' },
-  { key: 'INDIRIZZO',      label: 'Indirizzo',       type: 'text' },
-  { key: 'CAP',            label: 'CAP',             type: 'text' },
-  { key: 'CITTA',          label: 'Città',           type: 'text' },
-  { key: 'GRUPPO ALPINI',  label: 'Gruppo Alpini',   type: 'text' },
-  { key: 'PROFESSIONE',    label: 'Professione',     type: 'text' },
-  { key: 'PATENTI',        label: 'Patenti',         type: 'text' },
-  { key: 'COMM UNITA',     label: 'Comm. Unità',     type: 'bool' },
-  { key: 'RADIO ANA',      label: 'Radio ANA',       type: 'bool' },
-  { key: 'EMERCOM',        label: 'EMERCOM',         type: 'bool' },
-  { key: 'COD EMERCOM',    label: 'Cod. EMERCOM',    type: 'text' },
-  { key: '4 ORE',          label: '4 Ore',           type: 'bool' },
-  { key: '12 ORE',         label: '12 Ore',          type: 'bool' },
-  { key: 'C.SO CAPOSQ',    label: 'Corso Caposq.',   type: 'bool' },
-  { key: 'DAE',            label: 'DAE',             type: 'bool' },
-  { key: 'SCAD DAE',       label: 'Scad. DAE',       type: 'date' },
-  { key: 'CDC 1 STEP',     label: 'CDC 1',           type: 'bool' },
-  { key: 'CDC 2 STEP',     label: 'CDC 2',           type: 'bool' },
-  { key: 'DATA VISITA',    label: 'Data Visita',     type: 'date' },
-  { key: 'STATO VISITA',   label: 'Stato Visita',    type: 'select', options: ['ESONERO','DA FARE','VERIFICA','SOLO ESAMI','COMPLETATA'] },
-  { key: 'ISCRIZIONE',     label: 'Iscrizione',      type: 'bool' },
-  { key: 'TUTELA LEGALE CAP',label:'Tutela CAP',     type: 'bool' },
-  { key: 'NO 2026',        label: 'No 2026',         type: 'bool' },
-  { key: 'DISPON',         label: 'Disponibile',     type: 'bool' },
-  { key: 'NOTE DISPON',    label: 'Note Dispon.',    type: 'text' },
-  { key: 'VARCHI',         label: 'Varchi',          type: 'bool' },
+  { key:'cognome',        label:'Cognome',         type:'text',   full:false },
+  { key:'nome',           label:'Nome',            type:'text',   full:false },
+  { key:'squadra',        label:'Squadra',         type:'text',   full:false },
+  { key:'tipo_volontario',label:'Tipo',            type:'text',   full:false },
+  { key:'mansione',       label:'Mansione',        type:'text',   full:false },
+  { key:'specializzazione',label:'Specializ.',     type:'text',   full:false },
+  { key:'telefono',       label:'Telefono',        type:'text',   full:false },
+  { key:'email',          label:'Email',           type:'text',   full:false },
+  { key:'codice_fiscale', label:'Cod. Fiscale',    type:'text',   full:false },
+  { key:'data_nascita',   label:'Data Nascita',    type:'date',   full:false },
+  { key:'luogo_nascita',  label:'Luogo Nascita',   type:'text',   full:false },
+  { key:'indirizzo',      label:'Indirizzo',       type:'text',   full:true  },
+  { key:'cap',            label:'CAP',             type:'text',   full:false },
+  { key:'citta',          label:'Città',           type:'text',   full:false },
+  { key:'gruppo_alpini',  label:'Gruppo Alpini',   type:'text',   full:false },
+  { key:'professione',    label:'Professione',     type:'text',   full:false },
+  { key:'patenti',        label:'Patenti',         type:'text',   full:false },
+  { key:'comm_unita',     label:'Comm. Unità',     type:'bool',   full:false },
+  { key:'radio_ana',      label:'Radio ANA',       type:'bool',   full:false },
+  { key:'emercom',        label:'EMERCOM',         type:'bool',   full:false },
+  { key:'cod_emercom',    label:'Cod. EMERCOM',    type:'text',   full:false },
+  { key:'quattro_ore',    label:'4 Ore',           type:'bool',   full:false },
+  { key:'dodici_ore',     label:'12 Ore',          type:'bool',   full:false },
+  { key:'corso_caposq',   label:'Corso Caposq.',   type:'bool',   full:false },
+  { key:'caposq_att',     label:'Caposq. Att.',    type:'bool',   full:false },
+  { key:'dae',            label:'DAE',             type:'bool',   full:false },
+  { key:'scad_dae',       label:'Scad. DAE',       type:'date',   full:false },
+  { key:'cdc_1_step',     label:'CDC 1',           type:'bool',   full:false },
+  { key:'cdc_2_step',     label:'CDC 2',           type:'bool',   full:false },
+  { key:'data_visita',    label:'Data Visita',     type:'date',   full:false },
+  { key:'stato_visita',   label:'Stato Visita',    type:'select', full:false,
+    options:['ESONERO','DA FARE','VERIFICA','SOLO ESAMI','COMPLETATA'] },
+  { key:'iscrizione',     label:'Iscrizione',      type:'bool',   full:false },
+  { key:'tutela_legale_cap',label:'Tutela CAP',    type:'bool',   full:false },
+  { key:'no_2026',        label:'No 2026',         type:'bool',   full:false },
+  { key:'dispon',         label:'Disponibile',     type:'bool',   full:false },
+  { key:'note_dispon',    label:'Note Dispon.',    type:'text',   full:true  },
+  { key:'varchi',         label:'Varchi',          type:'text',   full:false },
+  { key:'pronto_impiego', label:'Pronto Impiego',  type:'bool',   full:false },
+  { key:'attivo',         label:'Attivo',          type:'bool',   full:false },
 ];
 
-// Colonne visibili di default
-var DB_VISIBLE_COLS = JSON.parse(localStorage.getItem('db_cols') || 'null') ||
-  ['COGNOME','NOME','SQUADRA','TIPO VOLONTARIO','TELEFONO','EMAIL','4 ORE','12 ORE','DAE','STATO VISITA'];
+var DB_VISIBLE_COLS = JSON.parse(localStorage.getItem('db_cols_supa') || 'null') ||
+  ['cognome','nome','squadra','tipo_volontario','telefono','email','quattro_ore','dodici_ore','dae','stato_visita'];
 
-var dbRecords    = [];
-var dbTotal      = 0;
-var dbSkip       = 0;
-var dbPageSize   = 50;
-var dbSearch     = '';
-var dbSortField  = null;
-var dbSortOrder  = 'asc';
-var dbEditRecId  = null;
+var dbRecords   = [];
+var dbTotal     = 0;
+var dbPage      = 0;
+var dbPageSize  = 50;
+var dbSearchTerm= '';
+var dbSortKey   = 'cognome';
+var dbSortAsc   = true;
+var dbEditId    = null;
 
 async function caricaDb() {
   var tbody = document.getElementById('dbTbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="99" class="db-loading">caricamento da Teable...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="99" class="db-loading">caricamento...</td></tr>';
   dbRenderHead();
   try {
-    var params = new URLSearchParams({
-      fieldKeyType: 'name',
-      take: dbPageSize,
-      skip: dbSkip
-    });
-    if (dbSearch) params.set('search', dbSearch);
-    var url = TEABLE_URL + '/table/' + TEABLE_TABLE + '/record?' + params.toString();
-    var res  = await fetch(url, { headers: TEABLE_H });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    dbRecords = data.records || [];
-    dbTotal   = data.total  || 0;
+    var visKeys = DB_VISIBLE_COLS.concat(['id']);
+    var select  = visKeys.join(',');
+    var order   = dbSortKey + '.' + (dbSortAsc ? 'asc' : 'desc') + '.nullslast';
+    var url     = SUPA_URL + '/rest/v1/volontari?select=' + select + '&order=' + order
+                + '&limit=' + dbPageSize + '&offset=' + (dbPage * dbPageSize);
+    if (dbSearchTerm) {
+      url += '&or=(cognome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,nome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,squadra.ilike.*' + encodeURIComponent(dbSearchTerm) + '*)';
+    }
+    var res  = await fetch(url, { headers: Object.assign({}, H, { 'Prefer': 'count=exact' }) });
+    var total = parseInt(res.headers.get('Content-Range')?.split('/')[1] || '0');
+    dbTotal   = total;
+    dbRecords = await res.json();
     dbRenderBody();
     dbRenderPag();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="99" class="db-loading" style="color:var(--red)">Errore: ' + e.message + '<br><small>Verifica connessione a Teable</small></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading" style="color:var(--red)">Errore: ' + e.message + '</td></tr>';
   }
 }
 
 function dbRenderHead() {
   var thead = document.getElementById('dbThead');
   if (!thead) return;
-  var cols  = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
-  thead.innerHTML = '<tr>'
-    + '<th style="width:36px">#</th>'
+  var cols = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
+  thead.innerHTML = '<tr><th style="width:32px;text-align:center">#</th>'
     + cols.map(function(c){
-        var arrow = (dbSortField === c.key) ? (dbSortOrder === 'asc' ? ' ↑' : ' ↓') : '';
+        var arrow = dbSortKey === c.key ? (dbSortAsc ? ' ↑' : ' ↓') : '';
         return '<th class="sortable" onclick="dbSort(\'' + c.key + '\')">' + c.label + arrow + '</th>';
       }).join('')
-    + '<th style="width:60px">Azioni</th>'
-    + '</tr>';
+    + '<th style="width:52px"></th></tr>';
 }
 
 function dbRenderBody() {
@@ -2585,29 +2583,29 @@ function dbRenderBody() {
   if (!tbody) return;
   var cols = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
   if (!dbRecords.length) {
-    tbody.innerHTML = '<tr><td colspan="99" class="db-loading">Nessun record trovato.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading">Nessun record.</td></tr>';
     return;
   }
   tbody.innerHTML = '';
   dbRecords.forEach(function(rec, idx) {
-    var f   = rec.fields || {};
     var tr  = document.createElement('tr');
-    var tds = '<td style="color:var(--testo-3);font-size:0.68rem">' + (dbSkip + idx + 1) + '</td>';
+    var tds = '<td style="color:var(--testo-3);font-size:0.65rem;text-align:center">' + (dbPage * dbPageSize + idx + 1) + '</td>';
     cols.forEach(function(c) {
-      var val = f[c.key];
-      var cell = '';
+      var val = rec[c.key];
+      var cell;
       if (c.type === 'bool') {
         cell = val ? '<span class="db-check">✓</span>' : '<span class="db-empty">—</span>';
       } else if (c.type === 'date') {
         cell = val ? new Date(val).toLocaleDateString('it-IT') : '<span class="db-empty">—</span>';
       } else if (c.type === 'select') {
-        cell = val ? '<span style="font-size:0.7rem;padding:1px 7px;border-radius:10px;background:var(--bg-2)">' + val + '</span>' : '<span class="db-empty">—</span>';
+        var colors = { 'COMPLETATA':'var(--green)','DA FARE':'var(--red)','SOLO ESAMI':'var(--amber)','VERIFICA':'var(--blue)','ESONERO':'var(--testo-3)' };
+        cell = val ? '<span style="font-size:0.68rem;padding:2px 8px;border-radius:10px;background:var(--bg-2);color:' + (colors[val]||'var(--testo-2)') + '">' + val + '</span>' : '<span class="db-empty">—</span>';
       } else {
-        cell = val ? String(val) : '<span class="db-empty">—</span>';
+        cell = val ? '<span title="' + String(val).replace(/"/g,'') + '">' + String(val).substring(0,30) + (String(val).length > 30 ? '…' : '') + '</span>' : '<span class="db-empty">—</span>';
       }
-      tds += '<td title="' + (val || '') + '">' + cell + '</td>';
+      tds += '<td>' + cell + '</td>';
     });
-    tds += '<td><button class="db-btn" style="padding:2px 8px;font-size:0.65rem" onclick="dbModificaRecord(\'' + rec.id + '\')">✏</button></td>';
+    tds += '<td><button class="db-btn" style="padding:2px 7px;font-size:0.62rem" onclick="dbApriModifica(' + JSON.stringify(rec.id) + ')">✏</button></td>';
     tr.innerHTML = tds;
     tbody.appendChild(tr);
   });
@@ -2617,31 +2615,29 @@ function dbRenderPag() {
   var info = document.getElementById('dbPagInfo');
   var prev = document.getElementById('dbPrev');
   var next = document.getElementById('dbNext');
-  if (info) info.textContent = (dbSkip + 1) + '-' + Math.min(dbSkip + dbPageSize, dbTotal) + ' di ' + dbTotal;
-  if (prev) prev.disabled = dbSkip === 0;
-  if (next) next.disabled = dbSkip + dbPageSize >= dbTotal;
+  var from = dbPage * dbPageSize + 1;
+  var to   = Math.min(from + dbPageSize - 1, dbTotal);
+  if (info) info.textContent = from + '-' + to + ' di ' + dbTotal;
+  if (prev) prev.disabled = dbPage === 0;
+  if (next) next.disabled = to >= dbTotal;
 }
 
 function dbPagina(dir) {
-  dbSkip = Math.max(0, dbSkip + dir * dbPageSize);
+  dbPage = Math.max(0, dbPage + dir);
   caricaDb();
 }
 
 function dbFiltra(q) {
-  dbSearch = q;
-  dbSkip   = 0;
-  clearTimeout(window._dbSearchTimer);
-  window._dbSearchTimer = setTimeout(caricaDb, 400);
+  dbSearchTerm = q;
+  dbPage = 0;
+  clearTimeout(window._dbTimer);
+  window._dbTimer = setTimeout(caricaDb, 400);
 }
 
 function dbSort(key) {
-  if (dbSortField === key) {
-    dbSortOrder = dbSortOrder === 'asc' ? 'desc' : 'asc';
-  } else {
-    dbSortField = key;
-    dbSortOrder = 'asc';
-  }
-  dbSkip = 0;
+  if (dbSortKey === key) dbSortAsc = !dbSortAsc;
+  else { dbSortKey = key; dbSortAsc = true; }
+  dbPage = 0;
   caricaDb();
 }
 
@@ -2652,9 +2648,10 @@ function dbToggleCols() {
   DB_ALL_COLS.forEach(function(c) {
     var item = document.createElement('div');
     item.className = 'db-col-item';
-    var checked = DB_VISIBLE_COLS.includes(c.key) ? 'checked' : '';
-    item.innerHTML = '<input type="checkbox" id="dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + c.key + '" ' + checked + '>'
-      + '<label for="dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '">' + c.label + '</label>';
+    var id  = 'dbc_' + c.key;
+    var chk = DB_VISIBLE_COLS.includes(c.key) ? 'checked' : '';
+    item.innerHTML = '<input type="checkbox" id="' + id + '" value="' + c.key + '" ' + chk + '>'
+      + '<label for="' + id + '">' + c.label + '</label>';
     grid.appendChild(item);
   });
   document.getElementById('dbColsOverlay').classList.add('open');
@@ -2663,88 +2660,99 @@ function dbToggleCols() {
 function dbSalvaColonne() {
   DB_VISIBLE_COLS = [];
   DB_ALL_COLS.forEach(function(c) {
-    var el = document.getElementById('dbc_' + c.key.replace(/[^a-zA-Z0-9]/g,'_'));
+    var el = document.getElementById('dbc_' + c.key);
     if (el && el.checked) DB_VISIBLE_COLS.push(c.key);
   });
-  localStorage.setItem('db_cols', JSON.stringify(DB_VISIBLE_COLS));
+  if (!DB_VISIBLE_COLS.length) DB_VISIBLE_COLS = ['cognome','nome'];
+  localStorage.setItem('db_cols_supa', JSON.stringify(DB_VISIBLE_COLS));
+  document.getElementById('dbColsOverlay').classList.remove('open');
   caricaDb();
 }
 
 function dbNuovoRecord() {
-  dbEditRecId = null;
+  dbEditId = null;
   document.getElementById('dbRecordTitle').textContent = 'Nuovo volontario';
+  document.getElementById('dbRecordErr').style.display = 'none';
   dbBuildForm({});
-  document.getElementById('dbRecordErr').style.display = 'none';
   document.getElementById('dbRecordOverlay').classList.add('open');
+  var delBtn = document.getElementById('dbDelBtn'); if (delBtn) delBtn.style.display = 'none';
 }
 
-async function dbModificaRecord(recId) {
-  dbEditRecId = recId;
-  document.getElementById('dbRecordTitle').textContent = 'Modifica record';
+async function dbApriModifica(id) {
+  dbEditId = id;
+  document.getElementById('dbRecordTitle').textContent = 'Modifica volontario';
   document.getElementById('dbRecordErr').style.display = 'none';
-  // Carica dati record
   try {
-    var res  = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record/' + recId + '?fieldKeyType=name', { headers: TEABLE_H });
+    var res  = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
     var data = await res.json();
-    dbBuildForm(data.fields || {});
+    dbBuildForm(data[0] || {});
     document.getElementById('dbRecordOverlay').classList.add('open');
-  } catch(e) { alert('Errore caricamento record'); }
+  var delBtn = document.getElementById('dbDelBtn'); if (delBtn) delBtn.style.display = 'block';
+  } catch(e) { alert('Errore caricamento: ' + e.message); }
 }
 
-function dbBuildForm(fields) {
+function dbBuildForm(rec) {
   var form = document.getElementById('dbRecordForm');
+  if (!form) return;
   form.innerHTML = '';
-  var editableCols = DB_ALL_COLS.filter(function(c){ return c.type !== 'link'; });
-  editableCols.forEach(function(c) {
+  DB_ALL_COLS.forEach(function(c) {
     var div = document.createElement('div');
-    div.className = 'db-record-field' + (c.type === 'text' && (c.key === 'INDIRIZZO' || c.key === 'NOTE DISPON') ? ' full' : '');
-    var val = fields[c.key];
+    div.className = 'db-record-field' + (c.full ? ' full' : '');
+    var val = rec[c.key];
     if (c.type === 'bool') {
-      div.innerHTML = '<label class="db-record-check"><input type="checkbox" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" ' + (val ? 'checked' : '') + '> ' + c.label + '</label>';
+      div.innerHTML = '<label class="db-record-check"><input type="checkbox" id="dbf_' + c.key + '" ' + (val ? 'checked' : '') + '> ' + c.label + '</label>';
     } else if (c.type === 'select') {
-      var opts = c.options.map(function(o){ return '<option value="' + o + '" ' + (val===o?'selected':'') + '>' + o + '</option>'; }).join('');
-      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
-        + '<select class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '"><option value="">—</option>' + opts + '</select>';
+      var opts = '<option value="">—</option>' + c.options.map(function(o){
+        return '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + o + '</option>';
+      }).join('');
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label><select class="db-record-inp" id="dbf_' + c.key + '">' + opts + '</select>';
     } else if (c.type === 'date') {
-      var dateVal = val ? new Date(val).toISOString().slice(0,10) : '';
-      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
-        + '<input type="date" class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + dateVal + '">';
+      var dv = val ? val.slice(0,10) : '';
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label><input type="date" class="db-record-inp" id="dbf_' + c.key + '" value="' + dv + '">';
     } else {
-      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label>'
-        + '<input class="db-record-inp" id="dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_') + '" value="' + (val||'') + '">';
+      div.innerHTML = '<label class="db-record-lbl">' + c.label + '</label><input class="db-record-inp" id="dbf_' + c.key + '" value="' + (val || '') + '">';
     }
     form.appendChild(div);
   });
 }
 
 async function dbSalvaRecord() {
-  var errEl  = document.getElementById('dbRecordErr');
-  var fields = {};
+  var errEl   = document.getElementById('dbRecordErr');
+  var payload = {};
   DB_ALL_COLS.forEach(function(c) {
-    var el = document.getElementById('dbf_' + c.key.replace(/[^a-zA-Z0-9]/g,'_'));
+    var el = document.getElementById('dbf_' + c.key);
     if (!el) return;
-    if (c.type === 'bool') fields[c.key] = el.checked;
-    else if (c.type === 'date') fields[c.key] = el.value ? new Date(el.value).toISOString() : null;
-    else fields[c.key] = el.value || null;
+    if (c.type === 'bool')        payload[c.key] = el.checked;
+    else if (c.type === 'date')   payload[c.key] = el.value || null;
+    else                          payload[c.key] = el.value.trim() || null;
   });
-  // Rimuovi null per non sovrascrivere campi non editabili
-  Object.keys(fields).forEach(function(k){ if (fields[k] === null) delete fields[k]; });
   try {
     var res;
-    if (dbEditRecId) {
-      res = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record/' + dbEditRecId, {
-        method: 'PATCH', headers: TEABLE_H,
-        body: JSON.stringify({ fieldKeyType: 'name', record: { fields: fields } })
+    if (dbEditId) {
+      res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, {
+        method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
       });
     } else {
-      res = await fetch(TEABLE_URL + '/table/' + TEABLE_TABLE + '/record', {
-        method: 'POST', headers: TEABLE_H,
-        body: JSON.stringify({ fieldKeyType: 'name', records: [{ fields: fields }] })
+      res = await fetch(SUPA_URL + '/rest/v1/volontari', {
+        method: 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
       });
     }
-    if (!res.ok) { var err = await res.text(); throw new Error(err); }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await logAttivita(dbEditId ? 'ha modificato volontario (DB)' : 'ha aggiunto volontario (DB)');
     document.getElementById('dbRecordOverlay').classList.remove('open');
-    await logAttivita(dbEditRecId ? 'ha modificato record Teable' : 'ha aggiunto record Teable');
     caricaDb();
+    caricaVolontari(); // aggiorna anche la vista normale
   } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
+}
+
+async function dbEliminaRecord() {
+  if (!dbEditId) return;
+  if (!confirm('Eliminare definitivamente questo volontario?')) return;
+  await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, { method: 'DELETE', headers: H });
+  await logAttivita('ha eliminato un volontario (DB)');
+  document.getElementById('dbRecordOverlay').classList.remove('open');
+  caricaDb();
+  caricaVolontari();
 }
