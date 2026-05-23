@@ -74,16 +74,18 @@ function avviaDashboard() {
   document.getElementById('homeWelcome').textContent = currentUser.nome;
   document.getElementById('homeUnit').textContent    = currentUser.ruolo + ' . PC ANA Casale Monferrato';
 
-  // Bottom nav visibilità
-  if (isMaster || p.volontari)  showNav('navVolontari');
-  if (isMaster || p.interventi) showNav('navInterventi');
-  if (isMaster || p.mezzi)      showNav('navMezzi');
-
-  // More menu visibilità
-  if (isMaster || p.pranzo)    document.getElementById('morePranzo').style.display    = 'flex';
-  if (isMaster || p.documenti) { showNav('navDocumenti'); document.getElementById('moreDocumenti').style.display = 'flex'; }
-  if (isMaster || p.richieste) document.getElementById('moreRichieste').style.display = 'flex';
-  if (isMaster)                document.getElementById('moreImpostazioni').style.display = 'flex';
+  // Sidebar voci visibilita
+  var showSi = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
+  if (isMaster || p.volontari)  { showSi('siVolontari'); showSi('siLabelOperativo'); }
+  if (isMaster || p.interventi) { showSi('siInterventi'); showSi('siLabelOperativo'); }
+  if (isMaster || p.mezzi)      { showSi('siMezzi'); showSi('siLabelOperativo'); }
+  if (isMaster || p.documenti)  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
+  if (isMaster || p.pranzo)     showSi('siPranzo');
+  if (isMaster || p.richieste)  showSi('siRichieste');
+  if (isMaster)                 showSi('siImpostazioni');
+  // Nome utente in sidebar
+  var su = document.getElementById('sidebarUser');
+  if (su) su.textContent = currentUser.nome + ' - ' + currentUser.ruolo;
 
   // Badge richieste
   if (isMaster || p.richieste) caricaBadgeRichieste();
@@ -98,10 +100,7 @@ function avviaDashboard() {
   if (isMaster || p.pranzo) initPranzo();
 }
 
-function showNav(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'flex';
-}
+
 
 function logout() {
   logAttivita('ha effettuato il logout');
