@@ -635,7 +635,6 @@ div:hover > .vista-edit-btn { display:flex; }
     <div class="login-logo">
       <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
       <h1>PC ANA Casale Monferrato</h1>
-      <p>Area Riservata — accesso volontari</p>
     </div>
     <label class="login-label">Username</label>
     <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
@@ -643,7 +642,7 @@ div:hover > .vista-edit-btn { display:flex; }
     <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
     <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
     <div class="login-error" id="loginError"></div>
-    <a href="index.html" class="back-link">← torna al sito</a>
+    
   </div>
 </div>
 
@@ -942,8 +941,29 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <!-- MEZZI -->
     <div class="panel" id="panelMezzi">
-      <div class="panel-hdr"><h2>Mezzi</h2><p>Parco veicoli</p></div>
-      <div class="coming-soon"><div class="cs-icon">🚧</div><h3>In sviluppo</h3><p>Il parco mezzi è in costruzione.</p></div>
+      <div class="panel-hdr"><h2>Mezzi</h2><p>Parco veicoli PC ANA Casale</p></div>
+      <div id="mezziList"><div class="loading-msg">caricamento...</div></div>
+      <button class="mezzi-add-btn" onclick="apriFormMezzo(null)">+ Aggiungi mezzo</button>
+    </div>
+
+    <!-- SCHEDA MEZZO -->
+    <div class="vol-detail" id="mezzoDetail">
+      <div class="vol-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioMezzo()">← indietro</button>
+        <span class="vol-detail-title" id="mezzoDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="apriFormMezzo(mezzoCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="mezzoDetailBody"></div>
+    </div>
+
+    <!-- FORM MEZZO -->
+    <div class="vol-form" id="mezzoFormPanel">
+      <div class="vol-form-top">
+        <button class="vol-detail-back" onclick="chiudiFormMezzo()">← annulla</button>
+        <span class="vol-form-title" id="mezzoFormTitle">Nuovo mezzo</span>
+        <button class="vol-form-save" onclick="salvaMezzo()">salva</button>
+      </div>
+      <div class="vol-form-body" id="mezzoFormBody"></div>
     </div>
 
     <!-- PRANZO -->
@@ -1058,6 +1078,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 </div>
 
-<script src="area-riservata.js?v=14"></script>
+<script src="area-riservata.js?v=16"></script>
 </body>
 </html>
