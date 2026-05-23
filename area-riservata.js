@@ -44,12 +44,15 @@ async function doLogin() {
   btn.disabled = false; btn.textContent = 'Accedi';
 }
 
+let isMasterUser = false;
+
 function avviaDashboard() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
   const p        = currentUser.permessi || {};
   const isMaster = currentUser.tipo_accesso === 'master';
+  isMasterUser   = isMaster;
 
   // Topbar
   document.getElementById('homeWelcome').textContent = currentUser.nome;
@@ -387,7 +390,7 @@ async function caricaListaPranzo() {
 function renderPranzo() {
   const container = document.getElementById('pranzoSettori');
   container.innerHTML = '';
-  const isMaster = currentUser && currentUser.tipo_accesso === 'master';
+  const isMaster = isMasterUser;
   const settoriDaUsare = window.SETTORI_RUNTIME || SETTORI;
   settoriDaUsare.forEach(settore => {
     const block = document.createElement('div');
@@ -426,7 +429,7 @@ function renderPranzo() {
 }
 
 async function eliminaInvitato(dbId, event) {
-  event.stopPropagation();
+  if (event) event.stopPropagation();
   if (!confirm('Rimuovere questo invitato dalla lista?')) return;
   try {
     await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?id=eq.' + dbId, {
