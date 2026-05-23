@@ -251,7 +251,7 @@ async function caricaHomeDashboard() {
         const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
         var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
         html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
-          + '<div class="home-list-avatar" style="background:var(--green-pale);color:var(--green);font-size:1rem">⚡</div>'
+          + getTipoAttivitaAvatar(i.tipo_attivita, 36)
           + '<div class="home-list-info">'
           + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
           + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + (i.n_ore ? ' · ' + i.n_ore + 'h' : '') + '</div>'
@@ -2490,7 +2490,8 @@ function docFileSelected(input) {
     return;
   }
   docUploadFile = file;
-  document.getElementById('docDropText').innerHTML = '✓ ' + file.name + '<br><span style="font-size:0.62rem;opacity:0.6">' + (file.size / 1024).toFixed(0) + ' KB</span>';
+  var txt = document.getElementById('docDropText');
+  if (txt) txt.textContent = '✓ ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
 }
 
 async function eseguiUploadDoc() {
@@ -3191,7 +3192,8 @@ function mezzoFileSelected(input) {
     return;
   }
   mezzoUploadFile = file;
-  document.getElementById('mezzoDropText').innerHTML = '✓ ' + file.name + '<br><span style="font-size:0.62rem;opacity:0.6">' + (file.size/1024).toFixed(0) + ' KB</span>';
+  var txt = document.getElementById('mezzoDropText');
+  if (txt) txt.textContent = '✓ ' + file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
 }
 
 async function eseguiUploadDocMezzo() {

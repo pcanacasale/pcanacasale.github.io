@@ -576,15 +576,15 @@ div:hover > .vista-edit-btn { display:flex; }
 .home-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); margin-bottom:0.5rem; padding-bottom:0.4rem; border-bottom:0.5px solid var(--border); }
 .home-empty { font-size:0.78rem; color:var(--testo-3); padding:0.8rem 0; font-style:italic; }
 .home-list { background:var(--bg-card); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
-.home-list-row { display:flex; align-items:center; gap:0.75rem; padding:0.7rem 1rem; border-bottom:0.5px solid var(--border); transition:background 0.12s; }
+.home-list-row { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 0.9rem; border-bottom:0.5px solid var(--border); transition:background 0.12s; }
 .home-list-row:last-child { border-bottom:none; }
 .home-list-row:active { background:var(--bg-2); }
 .home-list-row-today { background:var(--green-pale) !important; }
-.home-list-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
-.home-list-info { flex:1; min-width:0; }
-.home-list-name { font-size:0.85rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.home-list-sub { font-size:0.7rem; color:var(--testo-3); margin-top:0.1rem; }
-.home-list-badge { font-size:0.72rem; font-weight:700; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 8px; border-radius:10px; }
+.home-list-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:600; flex-shrink:0; }
+.home-list-info { flex:1; min-width:0; overflow:hidden; }
+.home-list-name { font-size:0.82rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.home-list-sub { font-size:0.68rem; color:var(--testo-3); margin-top:0.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.home-list-badge { font-size:0.65rem; font-weight:600; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 7px; border-radius:10px; white-space:nowrap; }
 
 
 /* -- MEZZI -- */
@@ -755,7 +755,7 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="bday-text" id="bdayText"></div>
       </div>
       
-      <div class="nav-grid" id="homeGrid"></div>
+      <div id="homeGrid"></div>
     </div>
 
     <!-- VOLONTARI -->
@@ -884,9 +884,18 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="form-lbl">Nome documento (opz.)</label>
           <input class="form-inp" id="docNome" placeholder="es. Attestato 4 ore 2024">
         </div>
-        <div class="doc-drop-zone" id="docDropZone" onclick="document.getElementById('docFileInput').click()">
-          <p id="docDropText">📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span></p>
-          <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="docFileSelected(this)">
+        <div id="docDropText" style="font-size:0.75rem;color:var(--testo-3);margin-bottom:0.6rem;min-height:1.2rem"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.6rem">
+          <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
+            <span style="font-size:1.4rem">📷</span>
+            Scatta foto
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="docFileSelected(this)">
+          </label>
+          <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
+            <span style="font-size:1.4rem">📄</span>
+            Carica file
+            <input type="file" id="docFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="docFileSelected(this)">
+          </label>
         </div>
         <div class="doc-progress" id="docProgress"><div class="doc-progress-bar" id="docProgressBar"></div></div>
         <div style="display:flex;gap:0.5rem">
@@ -1097,9 +1106,18 @@ div:hover > .vista-edit-btn { display:flex; }
         <label class="form-lbl">Nome documento (opz.)</label>
         <input class="form-inp" id="mezzoDocNome" placeholder="es. Libretto 2024">
       </div>
-      <div class="doc-drop-zone" onclick="document.getElementById('mezzoFileInput').click()">
-        <p id="mezzoDropText">📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span></p>
-        <input type="file" id="mezzoFileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="mezzoFileSelected(this)">
+      <div id="mezzoDropText" style="font-size:0.75rem;color:var(--testo-3);margin-bottom:0.6rem;min-height:1.2rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.6rem">
+        <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
+          <span style="font-size:1.4rem">📷</span>
+          Scatta foto
+          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="mezzoFileSelected(this)">
+        </label>
+        <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
+          <span style="font-size:1.4rem">📄</span>
+          Carica file
+          <input type="file" id="mezzoFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="mezzoFileSelected(this)">
+        </label>
       </div>
       <div style="display:flex;gap:0.5rem">
         <button class="btn-sm btn-warn" onclick="chiudiUploadDocMezzo()" style="flex:1;padding:0.6rem">annulla</button>
@@ -1107,6 +1125,6 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=17"></script>
+<script src="area-riservata.js?v=19"></script>
 </body>
 </html>
