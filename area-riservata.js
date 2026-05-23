@@ -46,6 +46,26 @@ async function doLogin() {
 
 let isMasterUser = false;
 
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+function navTo(panel, title, btn) {
+  showPanel(panel, null);
+  // Aggiorna titolo topbar
+  const t = document.getElementById('topbarPageTitle');
+  if (t) t.textContent = title;
+  // Aggiorna active sidebar
+  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  closeSidebar();
+}
+
 function avviaDashboard() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
@@ -120,15 +140,7 @@ function showPanel(name, btn) {
   if (name === 'documenti') caricaDocumenti();
 }
 
-function toggleMore() {
-  document.getElementById('moreMenu').classList.toggle('open');
-  document.getElementById('moreOverlay').classList.toggle('open');
-  document.getElementById('navMore').classList.add('active');
-}
-function closeMore() {
-  document.getElementById('moreMenu').classList.remove('open');
-  document.getElementById('moreOverlay').classList.remove('open');
-}
+function toggleMore(){} function closeMore(){}
 
 // -- HOME CARDS --
 function buildHomeCards(isMaster, p) {
@@ -409,6 +421,9 @@ function renderPranzo() {
       row.className = 'inv-row ' + risposta;
       row.id = 'row-' + inv.id;
       const nomeHtml = inv.nome && inv.nome.trim() ? '<div class="inv-nome">' + inv.nome + '</div>' : '';
+      const editBtnHtml = (isMaster && inv.dbId)
+        ? '<button class="inv-edit-btn" onclick="apriModificaInvitato(' + inv.dbId + ',\'' + inv.ente.replace(/'/g,"\\''") + '\',\'' + (inv.nome||'').replace(/'/g,"\\''") + '\',event)">✏</button>'
+        : '';
       const delBtnHtml = (isMaster && inv.dbId)
         ? '<button class="inv-del-btn" onclick="eliminaInvitato(' + inv.dbId + ',event)">×</button>'
         : '';
@@ -424,6 +439,7 @@ function renderPranzo() {
         + '<span class="coperti-num" id="cop-' + inv.id + '">' + coperti + '</span>'
         + '<button onclick="setCoperti(\'' + inv.id + '\',+1)">+</button>'
         + '</div>'
+        + editBtnHtml
         + delBtnHtml
         + '</div>';
       body.appendChild(row);
@@ -443,6 +459,38 @@ function renderPranzo() {
     container.appendChild(block);
   });
   aggiornaStatsPranzo();
+}
+
+function apriModificaInvitato(dbId, ente, nome, event) {
+  if (event) event.stopPropagation();
+  const overlay = document.getElementById('pranzoEditOverlay');
+  document.getElementById('peiId').value = dbId;
+  document.getElementById('peiEnte').value = ente;
+  document.getElementById('peiNome').value = nome;
+  document.getElementById('peiErr').style.display = 'none';
+  overlay.classList.add('open');
+}
+
+function chiudiModificaInvitato() {
+  document.getElementById('pranzoEditOverlay').classList.remove('open');
+}
+
+async function salvaModificaInvitato() {
+  const id    = document.getElementById('peiId').value;
+  const ente  = document.getElementById('peiEnte').value.trim();
+  const nome  = document.getElementById('peiNome').value.trim();
+  const errEl = document.getElementById('peiErr');
+  if (!ente) { errEl.textContent = 'Il ruolo/ente è obbligatorio.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?id=eq.' + id, {
+      method: 'PATCH', headers: HJ, body: JSON.stringify({ ente, nome })
+    });
+    if (!res.ok) throw new Error('Errore salvataggio');
+    await logAttivita('ha modificato invitato pranzo: ' + ente);
+    chiudiModificaInvitato();
+    caricaListaPranzo();
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
 
 async function eliminaInvitato(dbId, event) {
@@ -557,25 +605,179 @@ function filtraPranzo(q) {
   });
 }
 
-function exportPranzoCSV() {
-  const rows = [['Settore','Ente','Nome/Ruolo','Risposta','Coperti']];
-  SETTORI.forEach(s => s.invitati.forEach(inv => {
-    const saved = pranzoSaved[inv.id] || { risposta:'attesa', coperti:1 };
-    rows.push([s.label, inv.ente, inv.nome, saved.risposta, saved.risposta==='si'?saved.coperti:0]);
-  }));
-  const csv  = rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8;' });
-  const a    = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'pranzo_25anni_pcana.csv'; a.click();
+
+// -- EXPORT/IMPORT CSV PRANZO --
+
+function csvEscape(val) {
+  return '"' + String(val == null ? '' : val).replace(/"/g, '""') + '"';
+}
+
+function downloadCSV(rows, filename) {
+  var csv  = rows.map(function(r){ return r.map(csvEscape).join(','); }).join('\r\n');
+  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a    = document.createElement('a');
+  a.href   = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
   URL.revokeObjectURL(a.href);
 }
+
+async function exportPranzoCSV() {
+  try {
+    var listaRes    = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine&attivo=eq.true', { headers: H });
+    var risposteRes = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti', { headers: H });
+    var lista       = await listaRes.json();
+    var risposte    = await risposteRes.json();
+    var rispMap     = {};
+    risposte.forEach(function(r){ rispMap[r.inv_id] = r; });
+    var rows = [['ID','SETTORE_ID','SETTORE_LABEL','ENTE','NOME','RISPOSTA','COPERTI']];
+    lista.forEach(function(inv) {
+      var saved = rispMap['i' + inv.id] || { risposta: 'attesa', coperti: 1 };
+      rows.push([inv.id, inv.settore_id, inv.settore_label, inv.ente, inv.nome || '', saved.risposta || 'attesa', saved.risposta === 'si' ? (saved.coperti || 1) : 0]);
+    });
+    downloadCSV(rows, 'pranzo_25anni_' + new Date().toISOString().slice(0,10) + '.csv');
+  } catch(e) { alert('Errore export: ' + e.message); }
+}
+
+async function importPranzoCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var text  = await file.text();
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+  var dataLines = lines.slice(1);
+  if (!dataLines.length) { alert('File vuoto.'); return; }
+  var aggiunti = 0, aggiornati = 0, errori = 0;
+  var btn = document.getElementById('importCsvBtn');
+  if (btn) { btn.textContent = 'importazione...'; btn.disabled = true; }
+  for (var i = 0; i < dataLines.length; i++) {
+    var line = dataLines[i];
+    var cols = [], cur = '', inQ = false;
+    for (var j = 0; j < line.length; j++) {
+      var c = line[j];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else cur += c;
+    }
+    cols.push(cur);
+    var id = (cols[0]||'').replace(/^"|"$/g,'').trim();
+    var sid = (cols[1]||'').replace(/^"|"$/g,'').trim();
+    var slabel = (cols[2]||'').replace(/^"|"$/g,'').trim();
+    var ente = (cols[3]||'').replace(/^"|"$/g,'').trim();
+    var nome = (cols[4]||'').replace(/^"|"$/g,'').trim();
+    var risposta = (cols[5]||'').replace(/^"|"$/g,'').trim();
+    var coperti = (cols[6]||'0').replace(/^"|"$/g,'').trim();
+    if (!ente) continue;
+    try {
+      if (id && !isNaN(parseInt(id))) {
+        await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?id=eq.' + parseInt(id), { method: 'PATCH', headers: HJ, body: JSON.stringify({ ente: ente, nome: nome, settore_id: sid, settore_label: slabel }) });
+        aggiornati++;
+      } else {
+        await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista', { method: 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify({ settore_id: sid, settore_label: slabel, ente: ente, nome: nome, ordine: 999 }) });
+        aggiunti++;
+      }
+      if (risposta && risposta !== 'attesa' && id) {
+        await fetch(SUPA_URL + '/rest/v1/pranzo_invitati', { method: 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }), body: JSON.stringify({ inv_id: 'i' + id, risposta: risposta, coperti: parseInt(coperti)||1 }) });
+      }
+    } catch(e) { errori++; }
+  }
+  await logAttivita('ha importato CSV pranzo: +' + aggiunti + ' nuovi, ' + aggiornati + ' aggiornati');
+  if (btn) { btn.textContent = 'importa CSV'; btn.disabled = false; }
+  input.value = '';
+  alert('Completato\n+ ' + aggiunti + ' nuovi\n~ ' + aggiornati + ' aggiornati' + (errori ? '\n! ' + errori + ' errori' : ''));
+  caricaListaPranzo();
+}
+
+// -- PDF RIEPILOGO PRANZO --
+
+async function stampaPDFPranzo() {
+  const btn = document.getElementById('pdfPranzoBtn');
+  if (btn) { btn.textContent = 'generazione...'; btn.disabled = true; }
+
+  try {
+    const [listaRes, risposteRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine&attivo=eq.true', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti', { headers: H })
+    ]);
+    const lista    = await listaRes.json();
+    const risposte = await risposteRes.json();
+    const rispMap  = {};
+    risposte.forEach(r => { rispMap[r.inv_id] = r; });
+
+    // Dividi per stato
+    const confermati = [], declinati = [], attesa = [];
+    lista.forEach(inv => {
+      const saved = rispMap['i' + inv.id] || {};
+      const obj   = { ente: inv.ente, nome: inv.nome || '', settore: inv.settore_label, coperti: saved.coperti || 1 };
+      if (saved.risposta === 'si')  confermati.push(obj);
+      else if (saved.risposta === 'si') declinati.push(obj);
+      else if (saved.risposta === 'no') declinati.push(obj);
+      else attesa.push(obj);
+    });
+
+    const totCoperti = confermati.reduce((s, i) => s + i.coperti, 0);
+    const oggi       = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+
+    const makeTable = (items, title, color) => {
+      if (!items.length) return '<p style="color:#888;font-style:italic;margin:0.3rem 0 1rem">Nessuno</p>';
+      return '<table style="width:100%;border-collapse:collapse;margin-bottom:1.2rem;font-size:9pt">'
+        + '<thead><tr style="background:' + color + ';color:white">'
+        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Ente / Ruolo</th>'
+        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Nome</th>'
+        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Settore</th>'
+        + '<th style="padding:6px 10px;text-align:center;font-weight:700">Cop.</th>'
+        + '</tr></thead><tbody>'
+        + items.map((i, idx) => '<tr style="background:' + (idx%2===0?'#f9fafb':'white') + '">'
+          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb">' + i.ente + '</td>'
+          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb">' + (i.nome || '--') + '</td>'
+          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb;font-size:8pt;color:#666">' + i.settore + '</td>'
+          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb;text-align:center">' + (title==='Confermati' ? i.coperti : '--') + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table>';
+    };
+
+    const win = window.open('', '_blank');
+    win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+      + '<title>Riepilogo Pranzo 25° Anniversario PC ANA Casale</title>'
+      + '<style>'
+      + 'body{font-family:Georgia,serif;font-size:10pt;color:#111;margin:2cm}'
+      + 'h1{font-size:16pt;font-weight:700;color:#1a7a4a;margin:0 0 0.2rem}'
+      + 'h2{font-size:11pt;font-weight:700;margin:1.2rem 0 0.5rem;padding-bottom:0.3rem;border-bottom:2px solid currentColor}'
+      + '.meta{font-size:9pt;color:#666;margin-bottom:1.5rem}'
+      + '.stats{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}'
+      + '.stat{background:#f3f4f6;border-radius:8px;padding:0.6rem 1rem;text-align:center;min-width:80px}'
+      + '.stat-num{font-size:1.4rem;font-weight:700;line-height:1}'
+      + '.stat-label{font-size:8pt;color:#666;text-transform:uppercase;letter-spacing:0.4px}'
+      + '@media print{body{margin:1.5cm}.stat{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+      + '</style></head><body>'
+      + '<h1>Pranzo 25° Anniversario PC ANA Casale</h1>'
+      + '<div class="meta">Tendone Alpini Mirabello &nbsp;|&nbsp; €25 ospiti / €10 volontari &nbsp;|&nbsp; Generato il ' + oggi + '</div>'
+      + '<div class="stats">'
+      + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">' + confermati.length + '</div><div class="stat-label">Confermati</div></div>'
+      + '<div class="stat"><div class="stat-num" style="color:#ef4444">' + declinati.length + '</div><div class="stat-label">Declinati</div></div>'
+      + '<div class="stat"><div class="stat-num" style="color:#f59e0b">' + attesa.length + '</div><div class="stat-label">In attesa</div></div>'
+      + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">' + totCoperti + '</div><div class="stat-label">Coperti tot.</div></div>'
+      + '</div>'
+      + '<h2 style="color:#1a7a4a">Confermati (' + confermati.length + ' persone, ' + totCoperti + ' coperti)</h2>'
+      + makeTable(confermati, 'Confermati', '#1a7a4a')
+      + '<h2 style="color:#ef4444">Declinati (' + declinati.length + ')</h2>'
+      + makeTable(declinati, 'Declinati', '#ef4444')
+      + '<h2 style="color:#f59e0b">In attesa di risposta (' + attesa.length + ')</h2>'
+      + makeTable(attesa, 'Attesa', '#f59e0b')
+      + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
+      + '</body></html>');
+    win.document.close();
+  } catch(e) { alert('Errore generazione PDF: ' + e.message); }
+
+  if (btn) { btn.textContent = 'scarica PDF'; btn.disabled = false; }
+}
+
 
 // -- RICHIESTE --
 async function caricaBadgeRichieste() {
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?letta=eq.false&select=id', { headers: H });
     const data = await res.json();
-    const badge = document.getElementById('badgeMore');
+    const badge = document.getElementById('siBadgeRichieste');
     if (data.length > 0) { badge.textContent = data.length; badge.classList.add('show'); }
     else badge.classList.remove('show');
   } catch(e) {}
@@ -588,7 +790,7 @@ async function caricaRichieste() {
     const res       = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
     const richieste = await res.json();
     const nonLette  = richieste.filter(r => !r.letta).length;
-    const badge     = document.getElementById('badgeMore');
+    const badge     = document.getElementById('siBadgeRichieste');
     if (nonLette > 0) { badge.textContent = nonLette; badge.classList.add('show'); }
     else badge.classList.remove('show');
     if (!richieste.length) { list.innerHTML = '<div class="loading-msg">nessuna richiesta.</div>'; return; }
