@@ -504,8 +504,8 @@ let volontariData = [];
 let volCorrenteId = null;
 
 const AVATAR_COLORS = [
-  ['#1a3a1f','#3fb950'], ['#1c2a3a','#58a6ff'], ['#3a2a00','#d29922'],
-  ['#2a1a3a','#a78bfa'], ['#3a1a1a','#f87171'], ['#0a2a2a','#34d399']
+  ['#e8f5ee','#1a7a4a'], ['#e8f0fb','#1a4a9a'], ['#fef3e8','#b45309'],
+  ['#f3e8ff','#7c3aed'], ['#fde8e8','#b91c1c'], ['#e8faf5','#0f766e']
 ];
 
 function avatarColor(str) {
@@ -1228,11 +1228,11 @@ function applicaVista(v) {
 
 // Colori per stato visita
 const STATO_VISITA_COLORS = {
-  'COMPLETATA':  ['#0d2014','#3fb950'],
-  'DA FARE':     ['#2d0f0f','#f85149'],
-  'SOLO ESAMI':  ['#1c1800','#d29922'],
-  'VERIFICA':    ['#1c2a3a','#58a6ff'],
-  'ESONERO':     ['#21262d','#8b949e'],
+  'COMPLETATA':  ['#e8f5ee','#1a7a4a'],
+  'DA FARE':     ['#fde8e8','#b91c1c'],
+  'SOLO ESAMI':  ['#fef3e8','#b45309'],
+  'VERIFICA':    ['#e8f0fb','#1a4a9a'],
+  'ESONERO':     ['#f2f2f7','#6b7280'],
 };
 
 function renderVolontariGrouped(tipo, campo, boolLabel) {
