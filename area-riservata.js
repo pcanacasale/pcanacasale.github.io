@@ -2990,8 +2990,12 @@ function apriDettaglioMezzo(id) {
   var rev = getRevisioneStatus(m.revisione);
   var sbCls = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
 
+  var _fotoHtml = m.foto_url
+    ? '<img src="' + m.foto_url + '" style="width:50px;height:50px;border-radius:12px;object-fit:cover;flex-shrink:0">'
+    : '<div class="mezzo-icon" style="width:50px;height:50px;border-radius:12px">' + getMezzoIcon(m.automezzo) + '</div>';
+
   body.innerHTML = '<div class="vol-detail-hero">'
-    + '<div class="mezzo-icon" style="width:50px;height:50px;border-radius:12px">' + getMezzoIcon(m.automezzo) + '</div>'
+    + _fotoHtml
     + '<div><div class="vol-detail-name">' + m.automezzo + '</div>'
     + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span></div></div>'
     + '</div>'
@@ -3006,7 +3010,15 @@ function apriDettaglioMezzo(id) {
     + '<div class="vol-field"><span class="vol-field-label">Assicurazione</span>' + fmtDate(m.assicurazione) + '</div>'
     + '</div></div>'
     + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value" style="text-align:left">' + m.note + '</span></div></div></div>' : '')
+    + '<div class="vol-section">'
+    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleMezzoDoc(' + m.id + ')">'
+    + 'Documenti <span id="mezzoDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '</div>'
+    + '<div class="vol-section-body" id="mezzoDocBody"></div>'
+    + '</div>'
     + '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>';
+
+  caricaDocMezzo(m.id);
 }
 
 function chiudiDettaglioMezzo() {
@@ -3091,4 +3103,132 @@ async function eliminaMezzo() {
   chiudiFormMezzo();
   chiudiDettaglioMezzo();
   caricaMezzi();
+}
+
+// -- DOCUMENTI MEZZI --
+var mezzoDocLoaded = false;
+
+function toggleMezzoDoc(mezzoId) {
+  var body = document.getElementById('mezzoDocBody');
+  if (!body) return;
+  if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+  body.style.display = 'block';
+  caricaDocMezzo(mezzoId);
+}
+
+async function caricaDocMezzo(mezzoId) {
+  var body  = document.getElementById('mezzoDocBody');
+  var count = document.getElementById('mezzoDocCount');
+  if (!body) return;
+  body.style.display = 'block';
+  try {
+    var res  = await fetch(SUPA_URL + '/rest/v1/documenti_mezzi?mezzo_id=eq.' + mezzoId + '&select=*&order=data_carico.desc', { headers: H });
+    var docs = await res.json();
+    if (count) count.textContent = '(' + docs.length + ')';
+
+    var DOC_MEZZO_LABEL = {
+      'FOTO':'📷 Foto', 'LIBRETTO':'📋 Libretto', 'ASSICURAZIONE':'📄 Assicurazione',
+      'REVISIONE':'🔧 Revisione', 'COLLAUDO':'📋 Collaudo', 'ALTRO':'📄 Altro'
+    };
+
+    var html = '';
+    if (docs.length) {
+      html += '<div class="doc-list">';
+      docs.forEach(function(d) {
+        var label = DOC_MEZZO_LABEL[d.tipo] || d.tipo;
+        var data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        html += '<div class="doc-item">'
+          + '<span class="doc-item-icon">' + label.split(' ')[0] + '</span>'
+          + '<div class="doc-item-info">'
+          + '<div class="doc-item-name">' + d.nome_file + '</div>'
+          + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' · ' + data + '</div>'
+          + '</div>'
+          + '<div class="doc-item-actions">'
+          + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
+          + '<button class="btn-sm btn-danger" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
+          + '</div></div>';
+      });
+      html += '</div>';
+    }
+    html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ aggiungi documento</button>';
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+  }
+}
+
+async function eliminaDocMezzo(docId, mezzoId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  await fetch(SUPA_URL + '/rest/v1/documenti_mezzi?id=eq.' + docId, { method:'DELETE', headers: H });
+  await logAttivita('ha eliminato documento mezzo');
+  caricaDocMezzo(mezzoId);
+}
+
+var mezzoUploadId = null;
+var mezzoUploadFile = null;
+
+function apriUploadDocMezzo(mezzoId) {
+  mezzoUploadId   = mezzoId;
+  mezzoUploadFile = null;
+  var m = mezziData.find(function(x){ return x.id === mezzoId; });
+  document.getElementById('mezzoUploadTitle').textContent = 'Carica documento — ' + (m ? m.automezzo : '');
+  document.getElementById('mezzoUploadErr').style.display = 'none';
+  document.getElementById('mezzoDropText').innerHTML = '📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span>';
+  document.getElementById('mezzoFileInput').value = '';
+  document.getElementById('mezzoUploadOverlay').classList.add('open');
+}
+
+function chiudiUploadDocMezzo() {
+  document.getElementById('mezzoUploadOverlay').classList.remove('open');
+}
+
+function mezzoFileSelected(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 10*1024*1024) {
+    document.getElementById('mezzoUploadErr').textContent = 'File troppo grande (max 10MB).';
+    document.getElementById('mezzoUploadErr').style.display = 'block';
+    return;
+  }
+  mezzoUploadFile = file;
+  document.getElementById('mezzoDropText').innerHTML = '✓ ' + file.name + '<br><span style="font-size:0.62rem;opacity:0.6">' + (file.size/1024).toFixed(0) + ' KB</span>';
+}
+
+async function eseguiUploadDocMezzo() {
+  if (!mezzoUploadFile || !mezzoUploadId) {
+    document.getElementById('mezzoUploadErr').textContent = 'Seleziona un file.';
+    document.getElementById('mezzoUploadErr').style.display = 'block';
+    return;
+  }
+  var tipo    = document.getElementById('mezzoDocTipo').value;
+  var nomeDoc = document.getElementById('mezzoDocNome').value.trim() || mezzoUploadFile.name;
+  var path    = mezzoUploadId + '/' + tipo + '_' + Date.now() + '_' + mezzoUploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  var errEl   = document.getElementById('mezzoUploadErr');
+  var btn     = document.getElementById('mezzoUploadBtn');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'caricamento...';
+  try {
+    var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/documenti-mezzi/' + path, {
+      method:'POST', headers:{ 'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
+    });
+    if (!uploadRes.ok) throw new Error('Errore upload storage');
+    var url = SUPA_URL + '/storage/v1/object/public/documenti-mezzi/' + path;
+
+    // Se è foto, aggiorna foto_url nel mezzo
+    if (tipo === 'FOTO') {
+      await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoUploadId, {
+        method:'PATCH', headers:HJ, body:JSON.stringify({ foto_url: url })
+      });
+    }
+
+    await fetch(SUPA_URL + '/rest/v1/documenti_mezzi', {
+      method:'POST', headers:Object.assign({},HJ,{'Prefer':'return=minimal'}),
+      body:JSON.stringify({ mezzo_id:mezzoUploadId, tipo:tipo, nome_file:nomeDoc, url:url })
+    });
+    await logAttivita('ha caricato documento mezzo: ' + nomeDoc);
+    chiudiUploadDocMezzo();
+    caricaDocMezzo(mezzoUploadId);
+    caricaMezzi(); // aggiorna galleria con eventuale nuova foto
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
+  btn.disabled = false; btn.textContent = 'carica';
 }
