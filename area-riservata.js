@@ -133,6 +133,7 @@ function showPanel(name, btn) {
   if (name === 'interventi') caricaInterventi();
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
+  if (name === 'mezzi') caricaMezzi();
 }
 
 function toggleMore(){} function closeMore(){}
@@ -196,6 +197,48 @@ async function caricaHomeDashboard() {
       html += '</div>';
     }
     html += '</div>';
+
+    // -- REVISIONI DEL MESE --
+    try {
+      var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
+      var mezziAll  = await mezziRes.json();
+      var oggi2     = new Date();
+      var mmPad     = String(oggi2.getMonth()+1).padStart(2,'0');
+      var yyStr     = String(oggi2.getFullYear());
+      var revMese   = (mezziAll||[]).filter(function(m){
+        if (!m.revisione) return false;
+        return m.revisione.slice(0,7) === yyStr + '-' + mmPad;
+      });
+      var revScadute = (mezziAll||[]).filter(function(m){
+        if (!m.revisione) return false;
+        return new Date(m.revisione) < oggi2;
+      });
+      // Mostro revisioni scadute + del mese
+      var revDaMostrare = [];
+      revScadute.forEach(function(m){ if (!revDaMostrare.find(function(x){return x.id===m.id;})) revDaMostrare.push(m); });
+      revMese.forEach(function(m){ if (!revDaMostrare.find(function(x){return x.id===m.id;})) revDaMostrare.push(m); });
+
+      if (revDaMostrare.length) {
+        html += '<div class="home-section">';
+        html += '<div class="home-section-title">🔧 Revisioni in scadenza</div>';
+        html += '<div class="home-list">';
+        revDaMostrare.forEach(function(m) {
+          var d    = new Date(m.revisione);
+          var diff = (d - oggi2) / (1000*60*60*24);
+          var cls  = diff < 0 ? 'var(--red)' : 'var(--amber)';
+          var lbl  = diff < 0 ? 'Scaduta' : 'Scade il';
+          html += '<div class="home-list-row" style="cursor:pointer" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
+            + '<div class="home-list-avatar" style="background:var(--bg-2);border-radius:9px">' + getMezzoIcon(m.automezzo).replace('<svg', '<svg style="width:20px;height:20px;stroke:var(--testo-3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"') + '</div>'
+            + '<div class="home-list-info">'
+            + '<div class="home-list-name">' + m.automezzo + '</div>'
+            + '<div class="home-list-sub" style="color:' + cls + '">' + lbl + ' ' + d.toLocaleDateString('it-IT') + '</div>'
+            + '</div>'
+            + '<div class="home-list-badge" style="background:var(--bg-2);color:' + cls + '">' + (m.targa||'—') + '</div>'
+            + '</div>';
+        });
+        html += '</div></div>';
+      }
+    } catch(e) {}
 
     // -- ULTIMI INTERVENTI --
     html += '<div class="home-section">';
@@ -2858,4 +2901,194 @@ async function dbEliminaRecord() {
   document.getElementById('dbRecordOverlay').classList.remove('open');
   caricaDb();
   caricaVolontari();
+}
+
+// -- MEZZI --
+var mezziData = [];
+var mezzoCorrenteId = null;
+
+var MEZZO_STATO_OPTIONS = ['OPERATIVO', 'IN MANUTENZIONE', 'FERMO'];
+
+function getMezzoIcon(tipo) {
+  var t = (tipo || '').toUpperCase();
+  if (t.includes('FURGON') || t.includes('AUTOCARRO'))
+    return '<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+  if (t.includes('IDROVORA') || t.includes('POMPA'))
+    return '<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 22V12"/><path d="M8 12h8"/></svg>';
+  if (t.includes('FARO') || t.includes('TORRE'))
+    return '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+  if (t.includes('CARRELLO') || t.includes('RIMORCHIO'))
+    return '<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><line x1="16" y1="9" x2="23" y2="9"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+  return '<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+}
+
+function getRevisioneStatus(dataStr) {
+  if (!dataStr) return { cls:'', label:'—' };
+  var d    = new Date(dataStr);
+  var oggi = new Date();
+  var diff = (d - oggi) / (1000 * 60 * 60 * 24);
+  if (diff < 0)   return { cls:'scaduta', label:'Scaduta il ' + d.toLocaleDateString('it-IT') };
+  if (diff < 60)  return { cls:'vicina',  label:'Scade il ' + d.toLocaleDateString('it-IT') };
+  return { cls:'', label:'Revisione: ' + d.toLocaleDateString('it-IT') };
+}
+
+async function caricaMezzi() {
+  var list = document.getElementById('mezziList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    var res  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
+    mezziData = await res.json();
+    renderMezzi();
+  } catch(e) { list.innerHTML = '<div class="loading-msg">Errore caricamento.</div>'; }
+}
+
+function renderMezzi() {
+  var list = document.getElementById('mezziList');
+  if (!list) return;
+  if (!mezziData.length) { list.innerHTML = '<div class="loading-msg">Nessun mezzo registrato.</div>'; return; }
+
+  var html = '<div class="mezzi-grid">';
+  mezziData.forEach(function(m) {
+    var rev   = getRevisioneStatus(m.revisione);
+    var revCls = rev.cls === 'scaduta' ? 'scad' : rev.cls === 'vicina' ? 'warn' : 'ok';
+    var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    var sbCls  = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
+
+    var fotoHtml = m.foto_url
+      ? '<img src="' + m.foto_url + '" alt="' + m.automezzo + '">'
+      : '<div class="mezzo-tile-placeholder">' + getMezzoIcon(m.automezzo).replace('viewBox', 'style="width:48px;height:48px;stroke:var(--testo-4);stroke-width:1.2;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox') + '</div>';
+
+    html += '<div class="mezzo-tile" onclick="apriDettaglioMezzo(' + m.id + ')">'
+      + '<div class="mezzo-tile-foto">'
+      + fotoHtml
+      + '<span class="mezzo-tile-stato ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span>'
+      + '</div>'
+      + '<div class="mezzo-tile-body">'
+      + '<div class="mezzo-tile-nome">' + m.automezzo + '</div>'
+      + '<div class="mezzo-tile-targa">' + (m.targa||'—') + '</div>'
+      + (m.revisione ? '<div class="mezzo-tile-rev ' + revCls + '">Rev. ' + revLabel + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+function apriDettaglioMezzo(id) {
+  mezzoCorrenteId = id;
+  var m    = mezziData.find(function(x){ return x.id === id; });
+  if (!m) return;
+  var detail = document.getElementById('mezzoDetail');
+  var body   = document.getElementById('mezzoDetailBody');
+  document.getElementById('mezzoDetailTitle').textContent = m.automezzo;
+  detail.classList.add('open');
+  detail.scrollTop = 0;
+
+  var fmt = function(v) { return v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>'; };
+  var fmtDate = function(v) { return v ? fmt(new Date(v).toLocaleDateString('it-IT')) : fmt(null); };
+  var rev = getRevisioneStatus(m.revisione);
+  var sbCls = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
+
+  body.innerHTML = '<div class="vol-detail-hero">'
+    + '<div class="mezzo-icon" style="width:50px;height:50px;border-radius:12px">' + getMezzoIcon(m.automezzo) + '</div>'
+    + '<div><div class="vol-detail-name">' + m.automezzo + '</div>'
+    + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span></div></div>'
+    + '</div>'
+    + '<div class="vol-section"><div class="vol-section-head">Identificazione</div><div class="vol-section-body">'
+    + '<div class="vol-field"><span class="vol-field-label">Targa</span>' + fmt(m.targa) + '</div>'
+    + '<div class="vol-field"><span class="vol-field-label">Marca</span>' + fmt(m.marca) + '</div>'
+    + '<div class="vol-field"><span class="vol-field-label">Modello</span>' + fmt(m.modello) + '</div>'
+    + '<div class="vol-field"><span class="vol-field-label">Immatricolazione</span>' + fmtDate(m.immatricolazione) + '</div>'
+    + '</div></div>'
+    + '<div class="vol-section"><div class="vol-section-head">Scadenze</div><div class="vol-section-body">'
+    + '<div class="vol-field"><span class="vol-field-label">Revisione</span><span class="vol-field-value ' + rev.cls + '">' + (m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT') : '—') + '</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Assicurazione</span>' + fmtDate(m.assicurazione) + '</div>'
+    + '</div></div>'
+    + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value" style="text-align:left">' + m.note + '</span></div></div></div>' : '')
+    + '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>';
+}
+
+function chiudiDettaglioMezzo() {
+  document.getElementById('mezzoDetail').classList.remove('open');
+  mezzoCorrenteId = null;
+}
+
+function apriFormMezzo(id) {
+  mezzoCorrenteId = id;
+  var panel = document.getElementById('mezzoFormPanel');
+  var body  = document.getElementById('mezzoFormBody');
+  document.getElementById('mezzoFormTitle').textContent = id ? 'Modifica mezzo' : 'Nuovo mezzo';
+
+  var m = id ? (mezziData.find(function(x){ return x.id === id; }) || {}) : {};
+  var statoOpts = MEZZO_STATO_OPTIONS.map(function(s){
+    return '<option value="' + s + '"' + (m.stato === s ? ' selected' : '') + '>' + s + '</option>';
+  }).join('');
+
+  body.innerHTML = '<div class="form-err" id="mezzoFormErr"></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Identificazione</div>'
+    + '<div class="vol-form-grid">'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Nome mezzo *</label><input class="vol-form-inp" id="mfNome" value="' + (m.automezzo||'') + '" placeholder="es. FURGONE BIANCO"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Targa</label><input class="vol-form-inp" id="mfTarga" value="' + (m.targa||'') + '" style="text-transform:uppercase"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Stato</label><select class="vol-form-inp" id="mfStato">' + statoOpts + '</select></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Marca</label><input class="vol-form-inp" id="mfMarca" value="' + (m.marca||'') + '"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Modello</label><input class="vol-form-inp" id="mfModello" value="' + (m.modello||'') + '"></div>'
+    + '</div></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Scadenze</div>'
+    + '<div class="vol-form-grid">'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Immatricolazione</label><input type="date" class="vol-form-inp" id="mfImm" value="' + (m.immatricolazione||'') + '"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Revisione</label><input type="date" class="vol-form-inp" id="mfRev" value="' + (m.revisione||'') + '"></div>'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Assicurazione</label><input type="date" class="vol-form-inp" id="mfAss" value="' + (m.assicurazione||'') + '"></div>'
+    + '</div></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Note</div>'
+    + '<textarea class="vol-form-inp" id="mfNote" rows="3" style="resize:vertical">' + (m.note||'') + '</textarea>'
+    + '</div>'
+    + (id ? '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>' : '');
+
+  panel.classList.add('open');
+  panel.scrollTop = 0;
+}
+
+function chiudiFormMezzo() {
+  document.getElementById('mezzoFormPanel').classList.remove('open');
+}
+
+async function salvaMezzo() {
+  var nome  = document.getElementById('mfNome').value.trim();
+  var errEl = document.getElementById('mezzoFormErr');
+  if (!nome) { errEl.textContent = 'Il nome del mezzo è obbligatorio.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var payload = {
+    automezzo:       nome,
+    targa:           document.getElementById('mfTarga').value.trim().toUpperCase() || null,
+    stato:           document.getElementById('mfStato').value,
+    marca:           document.getElementById('mfMarca').value.trim() || null,
+    modello:         document.getElementById('mfModello').value.trim() || null,
+    immatricolazione:document.getElementById('mfImm').value || null,
+    revisione:       document.getElementById('mfRev').value || null,
+    assicurazione:   document.getElementById('mfAss').value || null,
+    note:            document.getElementById('mfNote').value.trim() || null,
+  };
+  try {
+    var res;
+    if (mezzoCorrenteId) {
+      res = await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'PATCH', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+    } else {
+      res = await fetch(SUPA_URL + '/rest/v1/mezzi', { method:'POST', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await logAttivita((mezzoCorrenteId ? 'ha modificato' : 'ha aggiunto') + ' mezzo: ' + nome);
+    chiudiFormMezzo();
+    chiudiDettaglioMezzo();
+    caricaMezzi();
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
+}
+
+async function eliminaMezzo() {
+  if (!mezzoCorrenteId || !confirm('Eliminare questo mezzo?')) return;
+  await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'DELETE', headers: H });
+  await logAttivita('ha eliminato un mezzo');
+  chiudiFormMezzo();
+  chiudiDettaglioMezzo();
+  caricaMezzi();
 }

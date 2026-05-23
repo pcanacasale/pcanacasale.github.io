@@ -586,6 +586,45 @@ div:hover > .vista-edit-btn { display:flex; }
 .home-list-sub { font-size:0.7rem; color:var(--testo-3); margin-top:0.1rem; }
 .home-list-badge { font-size:0.72rem; font-weight:700; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 8px; border-radius:10px; }
 
+
+/* -- MEZZI -- */
+.mezzo-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
+.mezzo-card { display:flex; align-items:center; gap:0.8rem; padding:0.85rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
+.mezzo-card:last-child { border-bottom:none; }
+.mezzo-card:active { background:var(--bg-2); }
+.mezzo-icon { width:42px; height:42px; border-radius:10px; background:var(--bg-2); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.mezzo-icon svg { width:22px; height:22px; stroke:var(--testo-3); stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.mezzo-info { flex:1; min-width:0; }
+.mezzo-nome { font-size:0.88rem; font-weight:600; color:var(--testo); }
+.mezzo-targa { font-size:0.72rem; color:var(--testo-3); margin-top:0.1rem; font-family:monospace; }
+.mezzo-stato { flex-shrink:0; text-align:right; }
+.mezzo-stato-badge { font-size:0.62rem; font-weight:600; padding:3px 9px; border-radius:10px; display:inline-block; }
+.msb-ok  { background:var(--green-pale); color:var(--green); }
+.msb-warn { background:var(--amber-pale); color:var(--amber); }
+.msb-off  { background:var(--red-pale); color:var(--red); }
+.mezzo-rev { font-size:0.65rem; color:var(--testo-4); margin-top:0.2rem; }
+.mezzo-rev.scaduta { color:var(--red); }
+.mezzo-rev.vicina  { color:var(--amber); }
+.mezzi-add-btn { display:flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.8rem; margin-top:0.7rem; background:var(--green); border:none; border-radius:var(--r); font-family:var(--font); font-size:0.85rem; font-weight:600; color:#fff; cursor:pointer; width:100%; }
+
+
+/* -- MEZZI GALLERIA -- */
+.mezzi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.7rem; }
+.mezzo-tile { background:var(--bg-card); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--shadow); border:0.5px solid var(--border); cursor:pointer; transition:transform 0.12s; }
+.mezzo-tile:active { transform:scale(0.97); }
+.mezzo-tile-foto { width:100%; aspect-ratio:4/3; background:var(--bg-2); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+.mezzo-tile-foto img { width:100%; height:100%; object-fit:cover; }
+.mezzo-tile-foto .mezzo-tile-placeholder { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+.mezzo-tile-foto .mezzo-tile-placeholder svg { width:40px; height:40px; stroke:var(--testo-4); stroke-width:1.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.mezzo-tile-stato { position:absolute; top:6px; right:6px; font-size:0.58rem; font-weight:700; padding:2px 7px; border-radius:10px; }
+.mezzo-tile-body { padding:0.65rem 0.75rem; }
+.mezzo-tile-nome { font-size:0.82rem; font-weight:600; color:var(--testo); line-height:1.2; margin-bottom:0.2rem; }
+.mezzo-tile-targa { font-size:0.68rem; color:var(--testo-3); font-family:monospace; letter-spacing:0.5px; }
+.mezzo-tile-rev { font-size:0.62rem; margin-top:0.3rem; padding:2px 7px; border-radius:6px; display:inline-block; }
+.mezzo-tile-rev.ok   { background:var(--green-pale); color:var(--green); }
+.mezzo-tile-rev.warn { background:var(--amber-pale); color:var(--amber); }
+.mezzo-tile-rev.scad { background:var(--red-pale); color:var(--red); }
+
 </style>
 </head>
 <body>
@@ -1019,6 +1058,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 </div>
 
-<script src="area-riservata.js?v=12"></script>
+<script src="area-riservata.js?v=14"></script>
 </body>
 </html>
