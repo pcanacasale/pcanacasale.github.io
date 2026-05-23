@@ -963,7 +963,9 @@ async function caricaUtenti() {
         + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' . ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
+        + '<button class="btn-sm btn-ok" onclick="apriModificaUtente(' + JSON.stringify(u) + ')">✏</button>'
         + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" onclick="toggleAttivo(\'' + u.id + '\',' + u.attivo + ')">' + (u.attivo ? 'off' : 'on') + '</button>'
+        + '<button class="btn-sm btn-danger" onclick="eliminaUtente(' + JSON.stringify(u.id) + ',' + JSON.stringify(u.nome) + ')">✕</button>'
         + '</div>';
       list.appendChild(row);
     });
