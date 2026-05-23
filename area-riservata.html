@@ -570,6 +570,22 @@ div:hover > .vista-edit-btn { display:flex; }
 .db-record-check { display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0; font-size:0.82rem; color:var(--testo-2); cursor:pointer; }
 .db-record-check input { accent-color:var(--green); width:15px; height:15px; }
 
+
+/* -- HOME DASHBOARD -- */
+.home-section { margin-bottom:1rem; }
+.home-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); margin-bottom:0.5rem; padding-bottom:0.4rem; border-bottom:0.5px solid var(--border); }
+.home-empty { font-size:0.78rem; color:var(--testo-3); padding:0.8rem 0; font-style:italic; }
+.home-list { background:var(--bg-card); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+.home-list-row { display:flex; align-items:center; gap:0.75rem; padding:0.7rem 1rem; border-bottom:0.5px solid var(--border); transition:background 0.12s; }
+.home-list-row:last-child { border-bottom:none; }
+.home-list-row:active { background:var(--bg-2); }
+.home-list-row-today { background:var(--green-pale) !important; }
+.home-list-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
+.home-list-info { flex:1; min-width:0; }
+.home-list-name { font-size:0.85rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.home-list-sub { font-size:0.7rem; color:var(--testo-3); margin-top:0.1rem; }
+.home-list-badge { font-size:0.72rem; font-weight:700; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 8px; border-radius:10px; }
+
 </style>
 </head>
 <body>
@@ -857,13 +873,7 @@ div:hover > .vista-edit-btn { display:flex; }
         </table>
         <div class="db-add-row" onclick="dbNuovoRecord()">+ aggiungi record</div>
       </div>
-      <div class="db-pagination">
-        <span class="db-pag-info" id="dbPagInfo">—</span>
-        <div class="db-pag-btns">
-          <button class="db-pag-btn" id="dbPrev" onclick="dbPagina(-1)" disabled>←</button>
-          <button class="db-pag-btn" id="dbNext" onclick="dbPagina(+1)">→</button>
-        </div>
-      </div>
+      <div style="padding:0.4rem 0.8rem;font-size:0.68rem;color:var(--testo-3)" id="dbPagInfo">—</div>
     </div>
 
     <!-- Overlay colonne DB -->
@@ -1009,6 +1019,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 </div>
 
-<script src="area-riservata.js?v=9"></script>
+<script src="area-riservata.js?v=10"></script>
 </body>
 </html>

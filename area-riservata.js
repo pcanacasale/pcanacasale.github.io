@@ -70,7 +70,7 @@ function avviaDashboard() {
 
   // Topbar
   document.getElementById('homeWelcome').textContent = currentUser.nome;
-  document.getElementById('homeUnit').textContent    = currentUser.ruolo + ' . PC ANA Casale Monferrato';
+  document.getElementById('homeUnit').textContent    = currentUser.ruolo;
 
   // Sidebar voci visibilita
   var showSi = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
@@ -84,7 +84,7 @@ function avviaDashboard() {
   if (isMaster || p.volontari)  showSi('siDb');
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
-  if (su) su.textContent = currentUser.nome + ' - ' + currentUser.ruolo;
+  if (su) su.textContent = currentUser.nome + ' · ' + currentUser.ruolo;
 
   // Badge richieste
   if (isMaster || p.richieste) caricaBadgeRichieste();
@@ -139,27 +139,92 @@ function toggleMore(){} function closeMore(){}
 
 // -- HOME CARDS --
 function buildHomeCards(isMaster, p) {
-  const grid = document.getElementById('homeGrid');
-  grid.innerHTML = '';
-  const cards = [];
-  if (isMaster || p.volontari)  cards.push({ icon: volontariIcon(), title:'Volontari', sub:'Database unità', panel:'volontari', featured:true });
-  if (isMaster || p.interventi) cards.push({ icon: interventiIcon(), title:'Interventi', sub:'Registro operativo', panel:'interventi' });
-  if (isMaster || p.mezzi)      cards.push({ icon: mezziIcon(), title:'Mezzi', sub:'Parco veicoli', panel:'mezzi' });
-  cards.push({ icon: convocazioniIcon(), title:'Convocazioni', sub:'Genera e stampa', href:'generatore-convocazioni.html' });
-  if (isMaster || p.pranzo)     cards.push({ icon:'🍽️', title:'Pranzo 25°', sub:'Tracker invitati', panel:'pranzo', span2:true });
+  caricaHomeDashboard();
+}
 
-  cards.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'nav-card' + (c.featured ? ' featured' : '') + (c.span2 ? ' span2' : '');
-    if (typeof c.icon === 'string' && c.icon.length <= 2) {
-      div.innerHTML = '<span style="font-size:1.2rem">' + c.icon + '</span><div><div class="nav-card-title">' + c.title + '</div><div class="nav-card-sub">' + c.sub + '</div></div>';
+async function caricaHomeDashboard() {
+  const grid = document.getElementById('homeGrid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">caricamento...</div>';
+
+  try {
+    const oggi = new Date();
+    const mm   = String(oggi.getMonth() + 1).padStart(2,'0');
+
+    // Carica compleanni del mese e ultimi interventi in parallelo
+    const [volRes, intRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,data_nascita,squadra&attivo=eq.true&order=data_nascita', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,tipo_attivita,n_volontari,n_ore&order=data.desc&limit=5', { headers: H })
+    ]);
+    const volontari  = await volRes.json();
+    const interventi = await intRes.json();
+
+    // Filtra compleanni del mese
+    const bdayMonth = (volontari || []).filter(v => {
+      if (!v.data_nascita) return false;
+      return v.data_nascita.slice(5,7) === mm;
+    }).sort((a,b) => {
+      return parseInt(a.data_nascita.slice(8,10)) - parseInt(b.data_nascita.slice(8,10));
+    });
+
+    let html = '';
+
+    // -- COMPLEANNI DEL MESE --
+    const mesiIt = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    html += '<div class="home-section">';
+    html += '<div class="home-section-title">🎂 Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</div>';
+    if (!bdayMonth.length) {
+      html += '<div class="home-empty">Nessun compleanno questo mese</div>';
     } else {
-      div.innerHTML = c.icon + '<div><div class="nav-card-title">' + c.title + '</div><div class="nav-card-sub">' + c.sub + '</div></div>';
+      html += '<div class="home-list">';
+      bdayMonth.forEach(v => {
+        const giorno  = v.data_nascita.slice(8,10);
+        const isOggi  = v.data_nascita.slice(5,10) === (mm + '-' + String(oggi.getDate()).padStart(2,'0'));
+        const anno    = v.data_nascita.slice(0,4);
+        const eta     = oggi.getFullYear() - parseInt(anno);
+        const [bg, fg] = avatarColor(v.cognome);
+        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+        html += '<div class="home-list-row' + (isOggi ? ' home-list-row-today' : '') + '">'
+          + '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+          + '<div class="home-list-info">'
+          + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
+          + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</div>'
+          + '</div>'
+          + '<div class="home-list-badge">' + giorno + '</div>'
+          + '</div>';
+      });
+      html += '</div>';
     }
-    if (c.panel) div.onclick = () => showPanel(c.panel, null);
-    else if (c.href) div.onclick = () => window.location.href = c.href;
-    grid.appendChild(div);
-  });
+    html += '</div>';
+
+    // -- ULTIMI INTERVENTI --
+    html += '<div class="home-section">';
+    html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
+    if (!interventi || !interventi.length) {
+      html += '<div class="home-empty">Nessun intervento registrato</div>';
+    } else {
+      html += '<div class="home-list">';
+      interventi.forEach(i => {
+        const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+        var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
+        html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
+          + '<div class="home-list-avatar" style="background:var(--green-pale);color:var(--green);font-size:1rem">⚡</div>'
+          + '<div class="home-list-info">'
+          + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
+          + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + (i.n_ore ? ' · ' + i.n_ore + 'h' : '') + '</div>'
+          + '</div>'
+          + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    grid.innerHTML = html;
+
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">Errore caricamento dashboard</div>';
+  }
 }
 
 function volontariIcon() { return '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>'; }
@@ -2530,18 +2595,22 @@ const DB_ALL_COLS = [
 ];
 
 var DB_VISIBLE_COLS = JSON.parse(localStorage.getItem('db_cols_supa') || 'null') ||
-  ['cognome','nome','squadra','tipo_volontario','telefono','email','quattro_ore','dodici_ore','dae','stato_visita'];
+  DB_ALL_COLS.map(function(c){ return c.key; });
 
 var dbRecords   = [];
 var dbTotal     = 0;
 var dbPage      = 0;
-var dbPageSize  = 50;
+var dbPageSize  = 1000;
 var dbSearchTerm= '';
 var dbSortKey   = 'cognome';
 var dbSortAsc   = true;
 var dbEditId    = null;
 
 async function caricaDb() {
+  // Se non c'è preferenza salvata, mostra tutto
+  if (!localStorage.getItem('db_cols_supa')) {
+    DB_VISIBLE_COLS = DB_ALL_COLS.map(function(c){ return c.key; });
+  }
   var tbody = document.getElementById('dbTbody');
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="99" class="db-loading">caricamento...</td></tr>';
@@ -2551,7 +2620,7 @@ async function caricaDb() {
     var select  = visKeys.join(',');
     var order   = dbSortKey + '.' + (dbSortAsc ? 'asc' : 'desc') + '.nullslast';
     var url     = SUPA_URL + '/rest/v1/volontari?select=' + select + '&order=' + order
-                + '&limit=' + dbPageSize + '&offset=' + (dbPage * dbPageSize);
+                + '&limit=1000';
     if (dbSearchTerm) {
       url += '&or=(cognome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,nome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,squadra.ilike.*' + encodeURIComponent(dbSearchTerm) + '*)';
     }
@@ -2613,19 +2682,10 @@ function dbRenderBody() {
 
 function dbRenderPag() {
   var info = document.getElementById('dbPagInfo');
-  var prev = document.getElementById('dbPrev');
-  var next = document.getElementById('dbNext');
-  var from = dbPage * dbPageSize + 1;
-  var to   = Math.min(from + dbPageSize - 1, dbTotal);
-  if (info) info.textContent = from + '-' + to + ' di ' + dbTotal;
-  if (prev) prev.disabled = dbPage === 0;
-  if (next) next.disabled = to >= dbTotal;
+  if (info) info.textContent = dbRecords.length + ' volontari';
 }
 
-function dbPagina(dir) {
-  dbPage = Math.max(0, dbPage + dir);
-  caricaDb();
-}
+function dbPagina(dir) {}
 
 function dbFiltra(q) {
   dbSearchTerm = q;
@@ -2663,7 +2723,7 @@ function dbSalvaColonne() {
     var el = document.getElementById('dbc_' + c.key);
     if (el && el.checked) DB_VISIBLE_COLS.push(c.key);
   });
-  if (!DB_VISIBLE_COLS.length) DB_VISIBLE_COLS = ['cognome','nome'];
+  if (!DB_VISIBLE_COLS.length) DB_VISIBLE_COLS = DB_ALL_COLS.map(function(c){ return c.key; });
   localStorage.setItem('db_cols_supa', JSON.stringify(DB_VISIBLE_COLS));
   document.getElementById('dbColsOverlay').classList.remove('open');
   caricaDb();
