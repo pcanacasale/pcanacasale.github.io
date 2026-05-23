@@ -1,14 +1,25 @@
 {
   "name": "PC ANA Casale",
-  "short_name": "PC ANA Casale",
+  "short_name": "PC ANA",
   "description": "Area riservata volontari PC ANA Casale Monferrato",
   "start_url": "/area-riservata.html",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#0d1117",
-  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1a7a4a",
+  "orientation": "portrait-primary",
   "icons": [
-    { "src": "images/logo-ana.gif", "sizes": "192x192", "type": "image/gif" },
-    { "src": "images/logo-ana.gif", "sizes": "512x512", "type": "image/gif" }
+    {
+      "src": "images/logo-ana.gif",
+      "sizes": "192x192",
+      "type": "image/gif",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/logo-ana.gif",
+      "sizes": "512x512",
+      "type": "image/gif",
+      "purpose": "any maskable"
+    }
   ]
 }
