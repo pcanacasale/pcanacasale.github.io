@@ -1125,6 +1125,33 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=19"></script>
+  <!-- Modifica utente -->
+  <div class="vista-form-overlay" id="modUtenteOverlay">
+    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <h4>Modifica utente</h4>
+      <input type="hidden" id="modUtenteId">
+      <div class="form-err" id="modUtenteErr"></div>
+      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Nome e Cognome *</label><input class="form-inp" id="modNome"></div>
+      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Username *</label><input class="form-inp" id="modUsername"></div>
+      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Nuova password (lascia vuoto per non cambiare)</label><input class="form-inp" type="password" id="modPassword" placeholder="••••••••"></div>
+      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Ruolo *</label><input class="form-inp" id="modRuolo"></div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Permessi</label>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPranzo"> 🍽️ Pranzo</label>
+          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-sm btn-warn" onclick="chiudiModificaUtente()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="salvaModificaUtente()" style="padding:0.7rem">salva</button>
+      </div>
+    </div>
+  </div>
+<script src="area-riservata.js?v=20"></script>
 </body>
 </html>
