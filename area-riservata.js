@@ -17,7 +17,7 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 15000);
 
-// ── LOGIN ──
+// -- LOGIN --
 async function doLogin() {
   const u   = document.getElementById('loginUser').value.trim();
   const p   = document.getElementById('loginPass').value.trim();
@@ -53,7 +53,7 @@ function avviaDashboard() {
 
   // Topbar
   document.getElementById('homeWelcome').textContent = currentUser.nome;
-  document.getElementById('homeUnit').textContent    = currentUser.ruolo + ' · PC ANA Casale Monferrato';
+  document.getElementById('homeUnit').textContent    = currentUser.ruolo + ' . PC ANA Casale Monferrato';
 
   // Bottom nav visibilità
   if (isMaster || p.volontari)  showNav('navVolontari');
@@ -99,7 +99,7 @@ function logout() {
   document.getElementById('navHome').classList.add('active');
 }
 
-// ── NAVIGAZIONE ──
+// -- NAVIGAZIONE --
 function showPanel(name, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -127,7 +127,7 @@ function closeMore() {
   document.getElementById('moreOverlay').classList.remove('open');
 }
 
-// ── HOME CARDS ──
+// -- HOME CARDS --
 function buildHomeCards(isMaster, p) {
   const grid = document.getElementById('homeGrid');
   grid.innerHTML = '';
@@ -157,7 +157,7 @@ function interventiIcon() { return '<svg viewBox="0 0 24 24" width="20" height="
 function mezziIcon() { return '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'; }
 function convocazioniIcon() { return '<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'; }
 
-// ── COMPLEANNI ──
+// -- COMPLEANNI --
 async function verificaCompleanni() {
   try {
     const oggi = new Date();
@@ -180,7 +180,7 @@ async function verificaCompleanni() {
   } catch(e) {}
 }
 
-// ── LOG ATTIVITÀ ──
+// -- LOG ATTIVITÀ --
 async function logAttivita(azione) {
   if (!currentUser) return;
   try {
@@ -192,7 +192,7 @@ async function logAttivita(azione) {
   } catch(e) {}
 }
 
-// ── PRANZO ──
+// -- PRANZO --
 let pranzoSaved = {};
 
 const SETTORI = [
@@ -550,7 +550,7 @@ function exportPranzoCSV() {
   URL.revokeObjectURL(a.href);
 }
 
-// ── RICHIESTE ──
+// -- RICHIESTE --
 async function caricaBadgeRichieste() {
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?letta=eq.false&select=id', { headers: H });
@@ -580,7 +580,7 @@ async function caricaRichieste() {
       const tag   = r.letta ? '' : '<span class="badge-nuova">NUOVA</span>';
       const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
       const msg   = r.messaggio ? '<div class="richiesta-msg">"' + r.messaggio + '"</div>' : '';
-      const tel   = r.telefono  ? ' · ' + r.telefono : '';
+      const tel   = r.telefono  ? ' . ' + r.telefono : '';
       const btnL  = r.letta ? '<span style="font-size:0.65rem;color:var(--text-4)">✓ letta</span>' : '<button class="btn-sm btn-ok" onclick="segnaLetta(\'' + r.id + '\')">segna letta</button>';
       div.innerHTML = '<div class="richiesta-top"><div><span class="richiesta-nome">' + r.nome + '</span>' + tag + '</div><span class="richiesta-data">' + data + '</span></div>'
         + '<div class="richiesta-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
@@ -603,7 +603,7 @@ async function eliminaRichiesta(id) {
   caricaRichieste();
 }
 
-// ── IMPOSTAZIONI ──
+// -- IMPOSTAZIONI --
 async function caricaImpostazioni() {
   caricaUtenti();
   caricaLog();
@@ -635,7 +635,7 @@ async function caricaUtenti() {
         + (p.pranzo?'<span class="badge badge-std" style="font-size:0.5rem">Pra</span>':'')
         + '</div>';
       row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
-        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' · ' + u.ruolo + '</div>' + perms + '</div>'
+        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' . ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
         + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" onclick="toggleAttivo(\'' + u.id + '\',' + u.attivo + ')">' + (u.attivo ? 'off' : 'on') + '</button>'
@@ -704,7 +704,7 @@ async function caricaLog() {
 }
 
 
-// ── VOLONTARI ──
+// -- VOLONTARI --
 let volontariData = [];
 let volCorrenteId = null;
 
@@ -750,7 +750,7 @@ function renderVolontari(data) {
     if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
     card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div></div>'
+      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>. ' + v.mansione + '</span>' : '') + '</div></div>'
       + '<div class="vol-card-badges">' + badges.join('') + '</div>';
     list.appendChild(card);
   });
@@ -812,7 +812,7 @@ async function apriDettaglio(id) {
         <div class="vol-detail-avatar" style="background:${bg};color:${fg}">${initials}</div>
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
+          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} . ${v.squadra||'—'}</div>
         </div>
       </div>
 
@@ -1219,7 +1219,7 @@ function renderCampiCustomForm() {
 }
 
 
-// ── SCHEMA CAMPI VOLONTARI ──
+// -- SCHEMA CAMPI VOLONTARI --
 let schemaCache = [];
 
 async function caricaSchema() {
@@ -1311,7 +1311,7 @@ async function eliminaCampo(id, etichetta) {
 
 
 
-// ── VISTE VOLONTARI ──
+// -- VISTE VOLONTARI --
 let visteCache = [];
 let vistaAttiva = null; // null = GENERALE
 
@@ -1544,7 +1544,7 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
         + '<div class="vol-card-info">'
         + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
         + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
-        + (v.mansione ? '<span>· ' + v.mansione + '</span>' : '') + '</div>'
+        + (v.mansione ? '<span>. ' + v.mansione + '</span>' : '') + '</div>'
         + '</div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
       body.appendChild(card);
@@ -1648,7 +1648,7 @@ async function eliminaVista(id, nome) {
 }
 
 
-// ── INTERVENTI ──
+// -- INTERVENTI --
 let interventiData = [];
 let intCorrenteId = null;
 
@@ -1770,7 +1770,7 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-detail-avatar" style="background:#1a3a1f;color:#3fb950;font-size:1.2rem">⚡</div>
         <div>
           <div class="vol-detail-name">${i.evento || '—'}</div>
-          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} · ${dataFmt}</div>
+          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} . ${dataFmt}</div>
         </div>
       </div>
       <div class="vol-section">
@@ -1963,7 +1963,7 @@ function chiudiFormIntervento() {
 }
 
 
-// ── DOCUMENTI ──
+// -- DOCUMENTI --
 let docVolontariCache = [];
 let docUploadVolId = null;
 let docUploadFile  = null;
@@ -2035,7 +2035,7 @@ function renderDocListHTML(volId, docs) {
         + '<span class="doc-item-icon">' + (label.split(' ')[0]) + '</span>'
         + '<div class="doc-item-info">'
         + '<div class="doc-item-name">' + nome + '</div>'
-        + '<div class="doc-item-meta">' + label + ' · ' + data + '</div>'
+        + '<div class="doc-item-meta">' + label + ' . ' + data + '</div>'
         + '</div>'
         + '<div class="doc-item-actions">'
         + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
@@ -2193,7 +2193,7 @@ function apriDocDaScheda(volId) {
   setTimeout(() => apriUploadDoc(volId), 400);
 }
 
-// ── KEYBOARD ──
+// -- KEYBOARD --
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
 });
