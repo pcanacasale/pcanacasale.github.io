@@ -57,12 +57,8 @@ function closeSidebar() {
 
 function navTo(panel, title, btn) {
   showPanel(panel, null);
-  // Aggiorna titolo topbar
-  const t = document.getElementById('topbarPageTitle');
+  var t = document.getElementById('topbarPageTitle');
   if (t) t.textContent = title;
-  // Aggiorna active sidebar
-  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
   closeSidebar();
 }
 
@@ -114,6 +110,7 @@ function logout() {
   sessionStorage.removeItem('ar_pass');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  isMasterUser = false;
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPass').value = '';
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -125,15 +122,14 @@ function logout() {
 // -- NAVIGAZIONE --
 function showPanel(name, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1));
   if (panel) panel.classList.add('active');
-  if (btn) btn.classList.add('active');
-  else {
-    const nb = document.getElementById('nav' + name.charAt(0).toUpperCase() + name.slice(1));
-    if (nb) nb.classList.add('active');
-    else document.getElementById('navMore').classList.add('active');
-  }
+  // Aggiorna active sidebar
+  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+  var siId = 'si' + name.charAt(0).toUpperCase() + name.slice(1);
+  var si = document.getElementById(siId);
+  if (si) si.classList.add('active');
+  else { var siH = document.getElementById('siHome'); if(siH) siH.classList.add('active'); }
   if (name === 'richieste') caricaRichieste();
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
