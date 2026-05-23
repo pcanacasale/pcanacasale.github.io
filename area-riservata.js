@@ -344,23 +344,52 @@ const SETTORI = [
 ];
 
 async function initPranzo() {
+  // Carica risposte salvate
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti', { headers: H });
     const rows = await res.json();
     pranzoSaved = {};
     if (Array.isArray(rows)) rows.forEach(r => { pranzoSaved[r.inv_id] = { risposta: r.risposta, coperti: r.coperti }; });
   } catch(e) {}
+  // Carica lista invitati da Supabase
+  await caricaListaPranzo();
+}
+
+async function caricaListaPranzo() {
   try {
-    const stored = localStorage.getItem('pranzo_data');
-    if (stored) { const local = JSON.parse(stored); Object.keys(local).forEach(k => { if (!pranzoSaved[k]) pranzoSaved[k] = local[k]; }); }
-  } catch(e) {}
+    const res = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine&attivo=eq.true', { headers: H });
+    const lista = await res.json();
+    // Ricostruisce SETTORI da DB
+    const settoriMap = {};
+    lista.forEach(inv => {
+      if (!settoriMap[inv.settore_id]) {
+        settoriMap[inv.settore_id] = {
+          id: inv.settore_id,
+          label: inv.settore_label,
+          color: inv.settore_color || '#1a7a4a',
+          invitati: []
+        };
+      }
+      settoriMap[inv.settore_id].invitati.push({
+        id: 'i' + inv.id,
+        dbId: inv.id,
+        ente: inv.ente,
+        nome: inv.nome || ''
+      });
+    });
+    window.SETTORI_RUNTIME = Object.values(settoriMap);
+  } catch(e) {
+    window.SETTORI_RUNTIME = SETTORI; // fallback all'array statico
+  }
   renderPranzo();
 }
 
 function renderPranzo() {
   const container = document.getElementById('pranzoSettori');
   container.innerHTML = '';
-  SETTORI.forEach(settore => {
+  const isMaster = currentUser && currentUser.tipo_accesso === 'master';
+  const settoriDaUsare = window.SETTORI_RUNTIME || SETTORI;
+  settoriDaUsare.forEach(settore => {
     const block = document.createElement('div');
     block.className = 'settore-block';
     const head = document.createElement('div');
@@ -394,6 +423,57 @@ function renderPranzo() {
     container.appendChild(block);
   });
   aggiornaStatsPranzo();
+}
+
+async function eliminaInvitato(dbId, event) {
+  event.stopPropagation();
+  if (!confirm('Rimuovere questo invitato dalla lista?')) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?id=eq.' + dbId, {
+      method: 'PATCH', headers: HJ, body: JSON.stringify({ attivo: false })
+    });
+    await logAttivita('ha rimosso un invitato dal pranzo');
+    caricaListaPranzo();
+  } catch(e) { alert('Errore rimozione.'); }
+}
+
+function apriFormInvitato(settore) {
+  const overlay = document.getElementById('pranzoAddOverlay');
+  document.getElementById('paiSettoreLabel').textContent = settore.label;
+  document.getElementById('paiSettoreId').value = settore.id;
+  document.getElementById('paiSettoreLabel2').value = settore.label;
+  document.getElementById('paiSettoreColor').value = settore.color || '#1a7a4a';
+  document.getElementById('paiEnte').value = '';
+  document.getElementById('paiNome').value = '';
+  document.getElementById('paiErr').style.display = 'none';
+  overlay.classList.add('open');
+}
+
+function chiudiFormInvitato() {
+  document.getElementById('pranzoAddOverlay').classList.remove('open');
+}
+
+async function salvaInvitato() {
+  const ente  = document.getElementById('paiEnte').value.trim();
+  const nome  = document.getElementById('paiNome').value.trim();
+  const sid   = document.getElementById('paiSettoreId').value;
+  const slabel = document.getElementById('paiSettoreLabel2').value;
+  const scolor = document.getElementById('paiSettoreColor').value;
+  const errEl = document.getElementById('paiErr');
+  if (!ente) { errEl.textContent = 'Inserisci almeno il ruolo/ente.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ settore_id: sid, settore_label: slabel, settore_color: scolor, ente, nome, ordine: 999 })
+    });
+    if (res.status === 409) { errEl.textContent = 'Invitato già presente in questo settore.'; errEl.style.display = 'block'; return; }
+    if (!res.ok) throw new Error('Errore salvataggio');
+    await logAttivita('ha aggiunto invitato al pranzo: ' + ente + ' ' + nome);
+    chiudiFormInvitato();
+    caricaListaPranzo();
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
 
 async function setRisposta(id, sel) {
