@@ -57,8 +57,6 @@ function closeSidebar() {
 
 function navTo(panel, title, btn) {
   showPanel(panel, null);
-  var t = document.getElementById('topbarPageTitle');
-  if (t) t.textContent = title;
   closeSidebar();
 }
 
@@ -888,6 +886,55 @@ async function salvaUtente() {
     await logAttivita('ha aggiunto utente: ' + nome);
     caricaUtenti();
   } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
+}
+
+function apriModificaUtente(u) {
+  document.getElementById('modUtenteId').value      = u.id;
+  document.getElementById('modNome').value          = u.nome || '';
+  document.getElementById('modUsername').value      = u.username || '';
+  document.getElementById('modPassword').value      = '';
+  document.getElementById('modRuolo').value         = u.ruolo || '';
+  var p = u.permessi || {};
+  ['Volontari','Interventi','Mezzi','Richieste','Pranzo','Documenti'].forEach(function(n) {
+    var el = document.getElementById('modPerm' + n);
+    if (el) el.checked = !!(p[n.toLowerCase()]);
+  });
+  document.getElementById('modUtenteErr').style.display = 'none';
+  document.getElementById('modUtenteOverlay').classList.add('open');
+}
+
+function chiudiModificaUtente() {
+  document.getElementById('modUtenteOverlay').classList.remove('open');
+}
+
+async function salvaModificaUtente() {
+  var id       = document.getElementById('modUtenteId').value;
+  var nome     = document.getElementById('modNome').value.trim();
+  var username = document.getElementById('modUsername').value.trim();
+  var password = document.getElementById('modPassword').value.trim();
+  var ruolo    = document.getElementById('modRuolo').value.trim();
+  var errEl    = document.getElementById('modUtenteErr');
+  if (!nome || !username || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var permessi = {
+    volontari:  document.getElementById('modPermVolontari').checked,
+    interventi: document.getElementById('modPermInterventi').checked,
+    mezzi:      document.getElementById('modPermMezzi').checked,
+    richieste:  document.getElementById('modPermRichieste').checked,
+    pranzo:     document.getElementById('modPermPranzo').checked,
+    documenti:  document.getElementById('modPermDocumenti').checked,
+  };
+  var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
+  if (password) body.password = password;
+  try {
+    var res = await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, {
+      method: 'PATCH', headers: HJ, body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('Errore salvataggio');
+    await logAttivita('ha modificato utente: ' + nome);
+    chiudiModificaUtente();
+    caricaUtenti();
+  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
 
 async function toggleAttivo(id, attivo) {
@@ -1932,6 +1979,8 @@ function renderInterventi(data) {
     if (i.n_volontari)   pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
     if (i.n_ore)         pills.push('<span class="int-pill blue">' + i.n_ore + 'h</span>');
     if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
+    if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
+    if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
     card.innerHTML = '<div class="int-card-top">'
       + '<div class="int-card-evento">' + (i.evento || '—') + '</div>'
       + '<div class="int-card-data">' + dataFmt + '</div>'
@@ -2052,6 +2101,11 @@ function apriFormIntervento(id) {
         <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">N° ore</label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5"></div>
         <div class="vol-form-field full"><label class="vol-form-check" style="margin-top:0.3rem"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
+        <div class="vol-form-field" style="grid-column:span 2;display:flex;align-items:center;gap:0.7rem;margin-top:0.2rem">
+          <label class="vol-form-check" style="flex-shrink:0"><input type="checkbox" id="ifVola"> VolA</label>
+          <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA" style="flex:1">
+        </div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifVolter"> VolTer</label></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -2116,6 +2170,12 @@ async function caricaDatiFormIntervento(id) {
     setVal('ifNOre', i.n_ore); setVal('ifNote', i.note);
     const radio = document.getElementById('ifRadio');
     if (radio) radio.checked = !!i.utilizzo_radio;
+    const vola = document.getElementById('ifVola');
+    if (vola) vola.checked = !!i.vola;
+    const volaNum = document.getElementById('ifVolaNum');
+    if (volaNum) volaNum.value = i.vola_numero || '';
+    const volter = document.getElementById('ifVolter');
+    if (volter) volter.checked = !!i.volter;
     // Spunta volontari
     if (i.volontari_ids && i.volontari_ids.length) {
       i.volontari_ids.forEach(vid => {
@@ -2147,6 +2207,9 @@ async function salvaIntervento() {
     utilizzo_radio: document.getElementById('ifRadio').checked,
     volontari_ids,
     note:          document.getElementById('ifNote').value.trim() || null,
+    vola:          document.getElementById('ifVola') ? document.getElementById('ifVola').checked : false,
+    vola_numero:   document.getElementById('ifVolaNum') ? document.getElementById('ifVolaNum').value.trim() || null : null,
+    volter:        document.getElementById('ifVolter') ? document.getElementById('ifVolter').checked : false,
   };
 
   try {
