@@ -435,7 +435,7 @@ div:hover > .vista-edit-btn { display:flex; }
 .inv-row.nascosta { display:none; }
 .inv-info { min-width:0; }
 .inv-ente { font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; }
-.inv-nome { font-size:0.82rem; font-weight:500; color:var(--testo); margin-top:0.05rem; }
+.inv-nome { font-size:0.95rem; font-weight:700; color:var(--testo); margin-top:0.05rem; letter-spacing:0.2px; }
 .inv-controls { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }
 .risposta-sel { padding:4px 6px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.68rem; color:var(--testo-3); outline:none; cursor:pointer; }
 .risposta-sel.si { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
@@ -1015,11 +1015,14 @@ div:hover > .vista-edit-btn { display:flex; }
     <!-- PRANZO -->
     <div class="panel" id="panelPranzo">
       <div class="panel-hdr"><h2>Pranzo 25°</h2><p>Tendone Alpini Mirabello — €25 ospiti / €10 volontari</p></div>
-      <div class="pranzo-stats">
+      <div class="pranzo-stats" style="grid-template-columns:repeat(3,1fr)">
         <div class="ps-card"><div class="ps-num" id="psInvitati">0</div><div class="ps-label">Invitati</div></div>
         <div class="ps-card"><div class="ps-num g" id="psConferme">0</div><div class="ps-label">Confermati</div></div>
-        <div class="ps-card"><div class="ps-num r" id="psDecline">0</div><div class="ps-label">Declinati</div></div>
-        <div class="ps-card"><div class="ps-num a" id="psCoperti">0</div><div class="ps-label">Coperti tot.</div></div>
+        <div class="ps-card"><div class="ps-num a" id="psCoperti">0</div><div class="ps-label">Coperti</div></div>
+      </div>
+      <div class="pranzo-stats" style="grid-template-columns:1fr 1fr;margin-top:0.5rem">
+        <div class="ps-card" style="border:1px solid var(--green-bdr)"><div class="ps-num g" id="pranzoIncasso">€0</div><div class="ps-label">Incasso</div></div>
+        <div class="ps-card" style="border:1px solid var(--red)"><div class="ps-num r" id="pranzoCostoUnita">€0</div><div class="ps-label">Costo unità</div></div>
       </div>
       <div class="pranzo-search">
         <input type="search" id="pranzoSearch" placeholder="cerca invitato..." oninput="filtraPranzo(this.value)">
@@ -1194,6 +1197,6 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=24"></script>
+<script src="area-riservata.js?v=25"></script>
 </body>
 </html>
