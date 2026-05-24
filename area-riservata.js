@@ -283,6 +283,7 @@ async function verificaCompleanni() {
     const dd   = String(oggi.getDate()).padStart(2, '0');
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?attivo=eq.true&select=nome,cognome,data_nascita', { headers: H });
     const utenti = await res.json();
+    utentiCache = utenti;
     const compleanni = (utenti || []).filter(u => {
       if (!u.data_nascita) return false;
       const parts = u.data_nascita.split('-');
@@ -963,9 +964,9 @@ async function caricaUtenti() {
         + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' . ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
-        + '<button class="btn-sm btn-ok" onclick="apriModificaUtente(' + JSON.stringify(u) + ')">✏</button>'
+        + '<button class="btn-sm btn-ok" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏</button>'
         + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" onclick="toggleAttivo(\'' + u.id + '\',' + u.attivo + ')">' + (u.attivo ? 'off' : 'on') + '</button>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaUtente(' + JSON.stringify(u.id) + ',' + JSON.stringify(u.nome) + ')">✕</button>'
+        + '<button class="btn-sm btn-danger" onclick="eliminaUtenteById(\'' + u.id + '\')">✕</button>'
         + '</div>';
       list.appendChild(row);
     });
@@ -998,6 +999,18 @@ async function salvaUtente() {
     await logAttivita('ha aggiunto utente: ' + nome);
     caricaUtenti();
   } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
+}
+
+var utentiCache = [];
+
+function apriModificaUtenteById(id) {
+  var u = utentiCache.find(function(x){ return String(x.id) === String(id); });
+  if (u) apriModificaUtente(u);
+}
+
+function eliminaUtenteById(id) {
+  var u = utentiCache.find(function(x){ return String(x.id) === String(id); });
+  if (u) eliminaUtente(u.id, u.nome);
 }
 
 function apriModificaUtente(u) {
