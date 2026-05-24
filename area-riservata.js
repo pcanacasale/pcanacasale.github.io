@@ -283,7 +283,6 @@ async function verificaCompleanni() {
     const dd   = String(oggi.getDate()).padStart(2, '0');
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?attivo=eq.true&select=nome,cognome,data_nascita', { headers: H });
     const utenti = await res.json();
-    _utentiList = utenti;
     const compleanni = (utenti || []).filter(u => {
       if (!u.data_nascita) return false;
       const parts = u.data_nascita.split('-');
@@ -942,6 +941,7 @@ async function caricaUtenti() {
   try {
     const res    = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
     const utenti = await res.json();
+    _utentiList = utenti;
     list.innerHTML = '';
     utenti.forEach(u => {
       const row = document.createElement('div');
