@@ -81,7 +81,7 @@ function avviaDashboard() {
   if (isMaster || p.pranzo)     showSi('siPranzo');
   if (isMaster || p.richieste)  showSi('siRichieste');
   if (isMaster)                 showSi('siImpostazioni');
-  if (isMaster || p.volontari)  showSi('siDb');
+  if (isMaster || p.db)          showSi('siDb');
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
   if (su) su.textContent = currentUser.nome + ' · ' + currentUser.ruolo;
@@ -1020,9 +1020,13 @@ function apriModificaUtente(u) {
   document.getElementById('modPassword').value      = '';
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
-  ['Volontari','Interventi','Mezzi','Richieste','Pranzo','Documenti'].forEach(function(n) {
+  var permMap = {
+    'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
+    'Documenti':'documenti','Pranzo':'pranzo','Richieste':'richieste','Impostazioni':'impostazioni'
+  };
+  Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
-    if (el) el.checked = !!(p[n.toLowerCase()]);
+    if (el) el.checked = !!(p[permMap[n]]);
   });
   document.getElementById('modUtenteErr').style.display = 'none';
   document.getElementById('modUtenteOverlay').classList.add('open');
@@ -1042,12 +1046,14 @@ async function salvaModificaUtente() {
   if (!nome || !username || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   var permessi = {
-    volontari:  document.getElementById('modPermVolontari').checked,
-    interventi: document.getElementById('modPermInterventi').checked,
-    mezzi:      document.getElementById('modPermMezzi').checked,
-    richieste:  document.getElementById('modPermRichieste').checked,
-    pranzo:     document.getElementById('modPermPranzo').checked,
-    documenti:  document.getElementById('modPermDocumenti').checked,
+    volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
+    interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
+    mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
+    db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
+    documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
+    pranzo:       document.getElementById('modPermPranzo') ? document.getElementById('modPermPranzo').checked : false,
+    richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
+    impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
