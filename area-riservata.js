@@ -986,8 +986,10 @@ async function salvaUtente() {
     interventi: document.getElementById('permInterventi').checked,
     mezzi:      document.getElementById('permMezzi').checked,
     richieste:  document.getElementById('permRichieste').checked,
-    pranzo:     document.getElementById('permPranzo').checked,
-    documenti:  document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
+    pranzo:       document.getElementById('permPranzo') ? document.getElementById('permPranzo').checked : false,
+    documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
+    db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
+    impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -2649,6 +2651,18 @@ function getTipoAttivitaAvatar(tipo, size) {
   return '<div style="width:'+size+'px;height:'+size+'px;border-radius:9px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
     + getTipoAttivitaIcon(tipo, Math.round(size*0.55), c.stroke)
     + '</div>';
+}
+
+function toggleNuovoUtente() {
+  var form = document.getElementById('nuovoUtenteForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleNuovoCampo() {
+  var form = document.getElementById('nuovoCampoForm');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 // -- KEYBOARD --

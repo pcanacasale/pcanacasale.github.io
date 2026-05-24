@@ -1014,7 +1014,8 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="impo-users-list" id="utentiList">
           <div class="loading-msg">caricamento...</div>
         </div>
-        <div class="nuovo-utente-form">
+        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
+          <div class="nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
           <h4>+ Nuovo utente</h4>
           <div class="form-err" id="nuovoUtenteErr"></div>
           <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" type="text" id="nuovoNome" placeholder="Mario Rossi"></div>
@@ -1029,7 +1030,7 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permPranzo"> Pranzo 25°</label>
           </div>
           <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
-        </div>
+          </div>
       </div>
 
       <div class="impo-section">
@@ -1038,7 +1039,8 @@ div:hover > .vista-edit-btn { display:flex; }
           <span style="font-size:0.65rem;color:var(--text-3)">Gestisci i campi della scheda volontario</span>
         </div>
         <div class="schema-list" id="schemaList"><div class="loading-msg">caricamento...</div></div>
-        <div class="nuovo-campo-form">
+        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoCampo()">+ Nuovo campo</button>
+        <div class="nuovo-campo-form" id="nuovoCampoForm" style="display:none">
           <h4>+ Nuovo campo</h4>
           <div class="form-err" id="nuovoCampoErr"></div>
           <div class="nc-grid">
