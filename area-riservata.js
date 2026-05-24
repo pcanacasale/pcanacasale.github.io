@@ -532,10 +532,10 @@ const SETTORI = [
 async function initPranzo() {
   // Carica risposte salvate
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti,costo,presenza,pranzo,extra_coperti,extra_costo', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti,costo,presenza,pranzo,extra', { headers: H });
     const rows = await res.json();
     pranzoSaved = {};
-    if (Array.isArray(rows)) rows.forEach(r => { pranzoSaved[r.inv_id] = { risposta: r.risposta, coperti: r.coperti, costo: r.costo||'25', presenza: r.presenza||'attesa', pranzo: r.pranzo||false, extra_coperti: r.extra_coperti||0, extra_costo: r.extra_costo||'25' }; });
+    if (Array.isArray(rows)) rows.forEach(r => { pranzoSaved[r.inv_id] = { risposta: r.risposta, coperti: r.coperti, costo: r.costo||'25', presenza: r.presenza||'attesa', pranzo: r.pranzo||false, extra: Array.isArray(r.extra) ? r.extra : [] }; });
   } catch(e) {}
   // Carica lista invitati da Supabase
   await caricaListaPranzo();
@@ -599,48 +599,52 @@ function renderPranzo() {
       const delBtnHtml = (isMaster && inv.dbId)
         ? '<button class="inv-del-btn" onclick="eliminaInvitato(' + inv.dbId + ',event)">×</button>'
         : '';
-      const s = pranzoSaved[inv.id] || {};
+      const s          = pranzoSaved[inv.id] || {};
       const presenza   = s.presenza || 'attesa';
       const alPranzo   = s.pranzo || false;
-      const extraCop   = s.extra_coperti || 0;
       const costoVal   = s.costo || '25';
-      const extraCosto = s.extra_costo || '25';
-      const presenzaCls = presenza==='presente' ? 'si' : presenza==='assente' ? 'no' : 'attesa';
+      const extra      = Array.isArray(s.extra) ? s.extra : [];
+      const presenzaCls = presenza==='presente' ? 'presente' : presenza==='assente' ? 'assente' : 'attesa';
 
-      var costoSelHtml = '<select class="risposta-sel" onchange="setCostoInv(\''+inv.id+'\',this)" style="font-size:0.62rem;padding:2px 4px">'
-        + '<option value="25"'+(costoVal==='25'?' selected':'')+'>€25</option>'
-        + '<option value="10"'+(costoVal==='10'?' selected':'')+'>€10</option>'
-        + '<option value="offerto"'+(costoVal==='offerto'?' selected':'')+'>🎁</option>'
-        + '</select>';
-      var extraCostoHtml = '<select class="risposta-sel" onchange="setExtraCosto(\''+inv.id+'\',this)" style="font-size:0.62rem;padding:2px 4px">'
-        + '<option value="25"'+(extraCosto==='25'?' selected':'')+'>€25</option>'
-        + '<option value="10"'+(extraCosto==='10'?' selected':'')+'>€10</option>'
-        + '<option value="offerto"'+(extraCosto==='offerto'?' selected':'')+'>🎁</option>'
-        + '</select>';
+      // Selettore costo
+      function mkCostoSel(val, onch) {
+        return '<select class="risposta-sel" onchange="'+onch+'" style="font-size:0.8rem;padding:5px 7px">'
+          + '<option value="25"'+(val==='25'?' selected':'')+'>€25</option>'
+          + '<option value="10"'+(val==='10'?' selected':'')+'>€10</option>'
+          + '<option value="offerto"'+(val==='offerto'?' selected':'')+'>🎁</option>'
+          + '</select>';
+      }
+
+      // Riga extra per ogni accompagnatore
+      var extraHtml = '';
+      if (presenza==='presente' && alPranzo) {
+        extra.forEach(function(ex, ei) {
+          var eid = inv.id;
+          extraHtml += '<div class="inv-extra-row">'
+            + '<input class="inv-extra-nota" placeholder="es. moglie, collega..." value="'+(ex.nota||'')+'" onchange="setExtraNota(&quot;'+eid+'&quot;,'+ei+',this.value)" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg-2);color:var(--testo);width:110px">'
+            + mkCostoSel(ex.costo||'25', 'setExtraCosto(&quot;'+eid+'&quot;,'+ei+',this.value)')
+            + '<button class="btn-sm btn-danger" onclick="rimuoviExtra(&quot;'+eid+'&quot;,'+ei+')" style="padding:3px 8px">✕</button>'
+            + '</div>';
+        });
+        extraHtml += '<button onclick="aggiungiExtra(&quot;'+inv.id+'&quot;)" style="font-size:0.72rem;color:var(--green);background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">+ accompagnatore</button>';
+      }
 
       row.innerHTML = '<div class="inv-info"><div class="inv-ente">' + inv.ente + '</div>' + nomeHtml + '</div>'
-        + '<div class="inv-controls" style="flex-wrap:wrap;justify-content:flex-end;gap:3px">'
-        + '<select class="risposta-sel ' + presenzaCls + '" onchange="setPresenza(\'' + inv.id + '\',this)">'
+        + '<div class="inv-controls">'
+        + '<select class="risposta-sel ' + presenzaCls + '" onchange="setPresenza(&quot;'+inv.id+'&quot;,this)">'
         + '<option value="attesa"'+(presenza==='attesa'?' selected':'')+'>⏳</option>'
         + '<option value="presente"'+(presenza==='presente'?' selected':'')+'>✅ Pres.</option>'
         + '<option value="assente"'+(presenza==='assente'?' selected':'')+'>❌ Ass.</option>'
         + '</select>'
         + (presenza==='presente'
-          ? '<label style="display:flex;align-items:center;gap:3px;font-size:0.68rem;color:var(--testo-2);cursor:pointer">'
-            + '<input type="checkbox" '+(alPranzo?'checked':'')+' onchange="setPranzo(\''+inv.id+'\',this)" style="accent-color:var(--green);width:13px;height:13px"> 🍽</label>'
+          ? '<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;color:var(--testo-2);cursor:pointer">'
+            + '<input type="checkbox" '+(alPranzo?'checked':'')+' onchange="setPranzo(&quot;'+inv.id+'&quot;,this)" style="accent-color:var(--green);width:15px;height:15px"> 🍽</label>'
           : '')
-        + (presenza==='presente' && alPranzo
-          ? costoSelHtml
-            + '<div class="coperti-ctrl" id="cop-ctrl-'+inv.id+'">'
-            + '<button onclick="setCoperti(\''+inv.id+'\',-1)">−</button>'
-            + '<span class="coperti-num" id="cop-'+inv.id+'">'+(s.coperti||1)+'</span>'
-            + '<button onclick="setCoperti(\''+inv.id+'\',+1)">+</button>'
-            + '</div>'
-            + (extraCop>0 ? extraCostoHtml : '')
-          : '')
+        + (presenza==='presente' && alPranzo ? mkCostoSel(costoVal, 'setCostoInv(&quot;'+inv.id+'&quot;,this)') : '')
         + editBtnHtml
         + delBtnHtml
-        + '</div>';
+        + '</div>'
+        + (extraHtml ? '<div class="inv-extra-list">'+extraHtml+'</div>' : '');
       body.appendChild(row);
     });
     // Bottone aggiungi (solo master)
@@ -813,12 +817,40 @@ async function savePranzoInv(invId) {
         pranzo: s.pranzo || false,
         coperti: s.coperti || 1,
         costo: s.costo || '25',
-        extra_coperti: s.extra_coperti || 0,
-        extra_costo: s.extra_costo || '25',
+        extra: s.extra || [],
         risposta: s.presenza === 'presente' ? 'si' : s.presenza === 'assente' ? 'no' : 'attesa'
       })
     });
   } catch(e) {}
+}
+
+async function aggiungiExtra(invId) {
+  if (!pranzoSaved[invId]) pranzoSaved[invId] = {};
+  if (!Array.isArray(pranzoSaved[invId].extra)) pranzoSaved[invId].extra = [];
+  pranzoSaved[invId].extra.push({ nota: '', costo: '25' });
+  await savePranzoInv(invId);
+  renderPranzo();
+}
+
+async function rimuoviExtra(invId, idx) {
+  if (!pranzoSaved[invId] || !pranzoSaved[invId].extra) return;
+  pranzoSaved[invId].extra.splice(idx, 1);
+  await savePranzoInv(invId);
+  renderPranzo();
+}
+
+async function setExtraNota(invId, idx, val) {
+  if (!pranzoSaved[invId] || !pranzoSaved[invId].extra) return;
+  pranzoSaved[invId].extra[idx].nota = val;
+  await savePranzoInv(invId);
+  aggiornaStatsPranzo();
+}
+
+async function setExtraCosto(invId, idx, val) {
+  if (!pranzoSaved[invId] || !pranzoSaved[invId].extra) return;
+  pranzoSaved[invId].extra[idx].costo = val;
+  await savePranzoInv(invId);
+  aggiornaStatsPranzo();
 }
 
 async function setCosto(invId, sel) {
@@ -890,14 +922,14 @@ function aggiornaStatsPranzo() {
         else if (costo==='10')      { totIncasso += 10*cop; totCosto += 15*cop; }
         else if (costo==='offerto') { totCosto += 25*cop; }
         // Extra
-        var extraCop   = saved.extra_coperti || 0;
-        var extraCosto = saved.extra_costo || '25';
-        if (extraCop > 0) {
-          totCoperti += extraCop;
-          if (extraCosto==='25')           { totIncasso += 25*extraCop; }
-          else if (extraCosto==='10')      { totIncasso += 10*extraCop; totCosto += 15*extraCop; }
-          else if (extraCosto==='offerto') { totCosto += 25*extraCop; }
-        }
+        var extra = Array.isArray(saved.extra) ? saved.extra : [];
+        extra.forEach(function(ex) {
+          totCoperti++;
+          var ec = ex.costo || '25';
+          if (ec==='25')           { totIncasso += 25; }
+          else if (ec==='10')      { totIncasso += 10; totCosto += 15; }
+          else if (ec==='offerto') { totCosto += 25; }
+        });
       }
     });
     var el = document.getElementById('sh-stat-' + settore.id);
