@@ -283,7 +283,7 @@ async function verificaCompleanni() {
     const dd   = String(oggi.getDate()).padStart(2, '0');
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?attivo=eq.true&select=nome,cognome,data_nascita', { headers: H });
     const utenti = await res.json();
-    utentiCache = utenti;
+    _utentiList = utenti;
     const compleanni = (utenti || []).filter(u => {
       if (!u.data_nascita) return false;
       const parts = u.data_nascita.split('-');
@@ -1001,15 +1001,15 @@ async function salvaUtente() {
   } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
 }
 
-var utentiCache = [];
+var _utentiList = [];
 
 function apriModificaUtenteById(id) {
-  var u = utentiCache.find(function(x){ return String(x.id) === String(id); });
+  var u = _utentiList.find(function(x){ return String(x.id) === String(id); });
   if (u) apriModificaUtente(u);
 }
 
 function eliminaUtenteById(id) {
-  var u = utentiCache.find(function(x){ return String(x.id) === String(id); });
+  var u = _utentiList.find(function(x){ return String(x.id) === String(id); });
   if (u) eliminaUtente(u.id, u.nome);
 }
 
