@@ -202,6 +202,16 @@ function showPanel(name, btn) {
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
+  if (name === 'statistiche') {
+    if (typeof Chart === 'undefined') {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.onload = initStatistiche;
+      document.head.appendChild(s);
+    } else {
+      initStatistiche();
+    }
+  }
 }
 
 function toggleMore(){} function closeMore(){}
@@ -3589,4 +3599,221 @@ async function eseguiUploadDocMezzo() {
     caricaMezzi(); // aggiorna galleria con eventuale nuova foto
   } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
   btn.disabled = false; btn.textContent = 'carica';
+}
+
+// -- STATISTICHE --
+var statsInterventi = [];
+var statsChartTipo  = null;
+var statsChartMesi  = null;
+
+var TIPO_COLORS = {
+  'EMERGENZA':'#c0392b','ESERCITAZIONE':'#185fa5','CORSI':'#3b6d11',
+  'PREVENZIONE INFORTUNI':'#854f0b','RAPPRESENTANZA':'#534ab7',
+  'ASSEMBLEE E RIUNIONI':'#0f6e56','CONTROLLO TERRITORIO':'#185fa5',
+  'SEGRETERIA':'#5f5e5a','MAGAZZINO':'#854f0b'
+};
+
+async function caricaStatistiche() {
+  var anno = document.getElementById('statsAnno').value;
+  var url  = SUPA_URL + '/rest/v1/interventi?select=*&order=data';
+  if (anno) url += '&data=gte.' + anno + '-01-01&data=lte.' + anno + '-12-31';
+  var res = await fetch(url, { headers: H });
+  statsInterventi = await res.json();
+  renderStatCards();
+  renderChartTipo();
+  renderChartMesi(anno);
+  renderOreTable();
+}
+
+async function initStatistiche() {
+  // Popola anni disponibili
+  var res   = await fetch(SUPA_URL + '/rest/v1/interventi?select=data&order=data', { headers: H });
+  var dati  = await res.json();
+  var anni  = [...new Set((dati||[]).map(function(d){ return d.data ? d.data.slice(0,4) : null; }).filter(Boolean))].sort().reverse();
+  var sel   = document.getElementById('statsAnno');
+  if (!sel) return;
+  sel.innerHTML = anni.map(function(a){ return '<option value="'+a+'">'+a+'</option>'; }).join('');
+  if (!anni.length) sel.innerHTML = '<option value="">Tutti</option>';
+  await caricaStatistiche();
+}
+
+function renderStatCards() {
+  var el = document.getElementById('statsCards');
+  if (!el) return;
+  var totInt  = statsInterventi.length;
+  var totOre  = statsInterventi.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
+  var totVol  = statsInterventi.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
+  el.innerHTML = [
+    ['Interventi', totInt, '#1a7a4a'],
+    ['Ore totali', Math.round(totOre*10)/10, '#185fa5'],
+    ['Presenze', totVol, '#854f0b']
+  ].map(function(c){
+    return '<div style="background:var(--bg-2);border-radius:var(--r);padding:0.7rem 0.8rem">'
+      + '<div style="font-size:0.65rem;color:var(--testo-3);margin-bottom:2px">'+c[0]+'</div>'
+      + '<div style="font-size:1.3rem;font-weight:600;color:'+c[2]+'">'+c[1]+'</div></div>';
+  }).join('');
+}
+
+function renderChartTipo() {
+  var ctx = document.getElementById('chartStatsTipo');
+  if (!ctx) return;
+  var contegg = {};
+  statsInterventi.forEach(function(i){
+    var t = i.tipo_attivita || 'ALTRO';
+    contegg[t] = (contegg[t]||0) + 1;
+  });
+  var labels = Object.keys(contegg);
+  var data   = labels.map(function(l){ return contegg[l]; });
+  var colors = labels.map(function(l){ return TIPO_COLORS[l] || '#888'; });
+
+  // Legenda
+  var leg = document.getElementById('statsLegendaTipo');
+  if (leg) leg.innerHTML = labels.map(function(l,i){
+    return '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:'+colors[i]+'"></span>'+l+' '+data[i]+'</span>';
+  }).join('');
+
+  if (statsChartTipo) statsChartTipo.destroy();
+  statsChartTipo = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+  });
+}
+
+function renderChartMesi(anno) {
+  var ctx = document.getElementById('chartStatsMesi');
+  if (!ctx) return;
+  var mesi   = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  var counts = new Array(12).fill(0);
+  statsInterventi.forEach(function(i){
+    if (!i.data) return;
+    var m = parseInt(i.data.slice(5,7)) - 1;
+    if (m >= 0 && m < 12) counts[m]++;
+  });
+  var isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  var grid   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  var txt    = isDark ? '#aaa' : '#666';
+  if (statsChartMesi) statsChartMesi.destroy();
+  statsChartMesi = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: mesi, datasets: [{ data: counts, backgroundColor: '#1a7a4a', borderRadius: 4, label: 'Interventi' }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales: {
+        x:{ ticks:{ color:txt, autoSkip:false, font:{size:10} }, grid:{ color:grid } },
+        y:{ ticks:{ color:txt, font:{size:10} }, grid:{ color:grid }, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function renderOreTable() {
+  var el = document.getElementById('statsOreTable');
+  if (!el) return;
+  // Raccogli ore per volontario dagli ID
+  var volMap = {};
+  statsInterventi.forEach(function(i){
+    var ore = parseFloat(i.n_ore||0);
+    (i.volontari_ids||[]).forEach(function(vid){
+      if (!volMap[vid]) volMap[vid] = { ore:0, count:0 };
+      volMap[vid].ore   += ore;
+      volMap[vid].count += 1;
+    });
+  });
+  // Carica nomi volontari
+  var ids = Object.keys(volMap);
+  if (!ids.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--testo-3)">Nessun dato.</div>'; return; }
+  fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome', { headers: H })
+    .then(function(r){ return r.json(); })
+    .then(function(vols){
+      var rows = vols.map(function(v){
+        var s = volMap[v.id] || { ore:0, count:0 };
+        return { nome: v.cognome + ' ' + v.nome, ore: Math.round(s.ore*10)/10, count: s.count };
+      }).sort(function(a,b){ return b.ore - a.ore; });
+
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
+        + '<thead><tr style="border-bottom:0.5px solid var(--border)">'
+        + '<th style="text-align:left;padding:5px 4px;color:var(--testo-3);font-weight:500">Volontario</th>'
+        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Interventi</th>'
+        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Ore</th>'
+        + '</tr></thead><tbody>';
+      rows.forEach(function(r, i){
+        html += '<tr style="border-bottom:0.5px solid var(--border)">'
+          + '<td style="padding:5px 4px;color:var(--testo)">' + (i+1) + '. ' + r.nome + '</td>'
+          + '<td style="padding:5px 4px;text-align:right;color:var(--testo-2)">' + r.count + '</td>'
+          + '<td style="padding:5px 4px;text-align:right;font-weight:500;color:var(--green)">' + r.ore + 'h</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    });
+}
+
+async function stampaPDFStatistiche() {
+  var anno  = document.getElementById('statsAnno').value || 'tutti gli anni';
+  var oggi  = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+  var totInt = statsInterventi.length;
+  var totOre = Math.round(statsInterventi.reduce(function(s,i){ return s+parseFloat(i.n_ore||0); },0)*10)/10;
+  var totVol = statsInterventi.reduce(function(s,i){ return s+(i.n_volontari||0); },0);
+
+  // Ore per volontario
+  var volMap = {};
+  statsInterventi.forEach(function(i){
+    var ore = parseFloat(i.n_ore||0);
+    (i.volontari_ids||[]).forEach(function(vid){
+      if (!volMap[vid]) volMap[vid] = { ore:0, count:0 };
+      volMap[vid].ore += ore; volMap[vid].count++;
+    });
+  });
+  var ids = Object.keys(volMap);
+  var vols = ids.length ? await fetch(SUPA_URL+'/rest/v1/volontari?id=in.('+ids.join(',')+')&select=id,cognome,nome',{headers:H}).then(function(r){return r.json();}) : [];
+  var rows = vols.map(function(v){
+    var s = volMap[v.id]||{ore:0,count:0};
+    return { nome:v.cognome+' '+v.nome, ore:Math.round(s.ore*10)/10, count:s.count };
+  }).sort(function(a,b){ return b.ore-a.ore; });
+
+  // Tipi
+  var contegg = {};
+  statsInterventi.forEach(function(i){ var t=i.tipo_attivita||'ALTRO'; contegg[t]=(contegg[t]||0)+1; });
+
+  var win = window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Statistiche Interventi ' + anno + '</title>'
+    + '<style>body{font-family:Georgia,serif;font-size:10pt;color:#111;margin:2cm}'
+    + 'h1{font-size:16pt;font-weight:700;color:#1a7a4a;margin:0 0 0.2rem}'
+    + 'h2{font-size:11pt;font-weight:700;margin:1.2rem 0 0.5rem;padding-bottom:0.3rem;border-bottom:2px solid #1a7a4a;color:#1a7a4a}'
+    + '.meta{font-size:9pt;color:#666;margin-bottom:1.2rem}'
+    + '.stats{display:flex;gap:1rem;margin-bottom:1.2rem}'
+    + '.stat{background:#f3f4f6;border-radius:8px;padding:0.6rem 1rem;text-align:center;flex:1}'
+    + '.stat-num{font-size:1.4rem;font-weight:700;line-height:1}'
+    + '.stat-lbl{font-size:8pt;color:#666;text-transform:uppercase}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt}'
+    + 'th{text-align:left;padding:5px 8px;background:#1a7a4a;color:white;font-weight:700}'
+    + 'td{padding:5px 8px;border-bottom:0.5px solid #e5e7eb}'
+    + 'tr:nth-child(even) td{background:#f9fafb}'
+    + '@media print{body{margin:1.5cm}.stat{-webkit-print-color-adjust:exact;print-color-adjust:exact}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<h1>Statistiche Interventi — PC ANA Casale</h1>'
+    + '<div class="meta">Anno: ' + anno + ' &nbsp;|&nbsp; Generato il ' + oggi + '</div>'
+    + '<div class="stats">'
+    + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">'+totInt+'</div><div class="stat-lbl">Interventi</div></div>'
+    + '<div class="stat"><div class="stat-num" style="color:#185fa5">'+totOre+'h</div><div class="stat-lbl">Ore totali</div></div>'
+    + '<div class="stat"><div class="stat-num" style="color:#854f0b">'+totVol+'</div><div class="stat-lbl">Presenze</div></div>'
+    + '</div>'
+    + '<h2>Interventi per tipo</h2>'
+    + '<table><thead><tr><th>Tipo attività</th><th style="text-align:right">N° interventi</th></tr></thead><tbody>'
+    + Object.entries(contegg).sort(function(a,b){return b[1]-a[1];}).map(function(e,i){
+        return '<tr><td>'+(i+1)+'. '+e[0]+'</td><td style="text-align:right">'+e[1]+'</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + '<h2>Ore per volontario</h2>'
+    + '<table><thead><tr><th>Volontario</th><th style="text-align:right">Interventi</th><th style="text-align:right">Ore totali</th></tr></thead><tbody>'
+    + rows.map(function(r,i){
+        return '<tr><td>'+(i+1)+'. '+r.nome+'</td><td style="text-align:right">'+r.count+'</td><td style="text-align:right;font-weight:700;color:#1a7a4a">'+r.ore+'h</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
+    + '</body></html>');
+  win.document.close();
 }
