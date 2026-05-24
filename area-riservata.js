@@ -591,7 +591,7 @@ function renderPranzo() {
       const coperti  = saved.coperti  || 1;
       const row = document.createElement('div');
       row.className = 'inv-row ' + risposta;
-      row.id = 'row-' + inv.id;
+      row.id = 'inv-row-' + inv.id;
       const nomeHtml = inv.nome && inv.nome.trim() ? '<div class="inv-nome">' + inv.nome + '</div>' : '';
       const editBtnHtml = (isMaster && inv.dbId)
         ? '<button class="inv-edit-btn" onclick="apriModificaInvitato(' + inv.dbId + ',\'' + inv.ente.replace(/'/g,"\\''") + '\',\'' + (inv.nome||'').replace(/'/g,"\\''") + '\',event)">✏</button>'
@@ -773,6 +773,61 @@ async function salvaInvitato() {
   } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
 
+function aggiornaRigaInvitato(invId) {
+  var row = document.getElementById('inv-row-' + invId);
+  if (!row) { renderPranzo(); return; }
+  var settori = window.SETTORI_RUNTIME || SETTORI;
+  var inv = null;
+  settori.forEach(function(s) { s.invitati.forEach(function(i) { if (i.id === invId) inv = i; }); });
+  if (!inv) return;
+  // Ricrea il contenuto della riga senza spostare scroll
+  var s          = pranzoSaved[invId] || {};
+  var presenza   = s.presenza || 'attesa';
+  var alPranzo   = s.pranzo || false;
+  var costoVal   = s.costo || '25';
+  var extra      = Array.isArray(s.extra) ? s.extra : [];
+  var presenzaCls = presenza==='presente' ? 'presente' : presenza==='assente' ? 'assente' : 'attesa';
+  var nomeHtml   = inv.nome ? '<div class="inv-nome">' + inv.nome + '</div>' : '';
+  var isMaster   = currentUser && currentUser.tipo_accesso === 'master';
+  var editBtnHtml = '';
+  var delBtnHtml  = (isMaster && inv.dbId) ? '<button class="inv-del-btn" onclick="eliminaInvitato('+inv.dbId+',event)">×</button>' : '';
+
+  function mkCS(val, onch) {
+    return '<select class="risposta-sel" onchange="'+onch+'" style="font-size:0.8rem;padding:5px 7px">'
+      + '<option value="25"'+(val==='25'?' selected':'')+'>€25</option>'
+      + '<option value="10"'+(val==='10'?' selected':'')+'>€10</option>'
+      + '<option value="offerto"'+(val==='offerto'?' selected':'')+'>🎁</option>'
+      + '</select>';
+  }
+
+  var extraHtml = '';
+  if (presenza==='presente' && alPranzo) {
+    extra.forEach(function(ex, ei) {
+      extraHtml += '<div class="inv-extra-row">'
+        + '<input class="inv-extra-nota" placeholder="es. moglie, collega..." value="'+(ex.nota||'')+'" onchange="setExtraNota(&quot;'+invId+'&quot;,'+ei+',this.value)" style="font-size:0.78rem;padding:4px 8px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg-2);color:var(--testo);width:110px">'
+        + mkCS(ex.costo||'25', 'setExtraCosto(&quot;'+invId+'&quot;,'+ei+',this.value)')
+        + '<button class="btn-sm btn-danger" onclick="rimuoviExtra(&quot;'+invId+'&quot;,'+ei+')" style="padding:3px 8px">✕</button>'
+        + '</div>';
+    });
+    extraHtml += '<button onclick="aggiungiExtra(&quot;'+invId+'&quot;)" style="font-size:0.72rem;color:var(--green);background:none;border:none;cursor:pointer;padding:2px 0;margin-top:2px">+ accompagnatore</button>';
+  }
+
+  row.innerHTML = '<div class="inv-info"><div class="inv-ente">'+inv.ente+'</div>'+nomeHtml+'</div>'
+    + '<div class="inv-controls">'
+    + '<select class="risposta-sel '+presenzaCls+'" onchange="setPresenza(&quot;'+invId+'&quot;,this)">'
+    + '<option value="attesa"'+(presenza==='attesa'?' selected':'')+'>⏳</option>'
+    + '<option value="presente"'+(presenza==='presente'?' selected':'')+'>✅ Pres.</option>'
+    + '<option value="assente"'+(presenza==='assente'?' selected':'')+'>❌ Ass.</option>'
+    + '</select>'
+    + (presenza==='presente' ? '<label style="display:flex;align-items:center;gap:4px;font-size:0.78rem;color:var(--testo-2);cursor:pointer"><input type="checkbox" '+(alPranzo?'checked':'')+' onchange="setPranzo(&quot;'+invId+'&quot;,this)" style="accent-color:var(--green);width:15px;height:15px"> 🍽</label>' : '')
+    + (presenza==='presente' && alPranzo ? mkCS(costoVal, 'setCostoInv(&quot;'+invId+'&quot;,this)') : '')
+    + editBtnHtml + delBtnHtml
+    + '</div>'
+    + (extraHtml ? '<div class="inv-extra-list">'+extraHtml+'</div>' : '');
+
+  aggiornaStatsPranzo();
+}
+
 async function setPresenza(invId, sel) {
   var presenza = sel.value;
   if (!pranzoSaved[invId]) pranzoSaved[invId] = {};
@@ -780,7 +835,7 @@ async function setPresenza(invId, sel) {
   // Se assente, rimuovi pranzo
   if (presenza === 'assente') pranzoSaved[invId].pranzo = false;
   await savePranzoInv(invId);
-  renderPranzo();
+  aggiornaRigaInvitato(invId);
 }
 
 async function setPranzo(invId, cb) {
@@ -788,7 +843,7 @@ async function setPranzo(invId, cb) {
   pranzoSaved[invId].pranzo = cb.checked;
   if (!cb.checked) { pranzoSaved[invId].coperti = 1; pranzoSaved[invId].extra_coperti = 0; }
   await savePranzoInv(invId);
-  renderPranzo();
+  aggiornaRigaInvitato(invId);
 }
 
 async function setCostoInv(invId, sel) {
@@ -829,14 +884,14 @@ async function aggiungiExtra(invId) {
   if (!Array.isArray(pranzoSaved[invId].extra)) pranzoSaved[invId].extra = [];
   pranzoSaved[invId].extra.push({ nota: '', costo: '25' });
   await savePranzoInv(invId);
-  renderPranzo();
+  aggiornaRigaInvitato(invId);
 }
 
 async function rimuoviExtra(invId, idx) {
   if (!pranzoSaved[invId] || !pranzoSaved[invId].extra) return;
   pranzoSaved[invId].extra.splice(idx, 1);
   await savePranzoInv(invId);
-  renderPranzo();
+  aggiornaRigaInvitato(invId);
 }
 
 async function setExtraNota(invId, idx, val) {
