@@ -580,10 +580,11 @@ function renderPranzo() {
     block.className = 'settore-block';
     const head = document.createElement('div');
     head.className = 'settore-head';
-    head.innerHTML = '<div class="sh-color" style="background:' + settore.color + '"></div><div class="sh-info"><div class="sh-title">' + settore.label + '</div><div class="sh-sub" id="sh-stat-' + settore.id + '">—</div></div><span class="sh-arrow">▼</span>';
-    head.onclick = () => { body.classList.toggle('hidden'); head.classList.toggle('collapsed'); };
+    head.innerHTML = '<div class="sh-color" style="background:' + settore.color + '"></div><div class="sh-info"><div class="sh-title">' + settore.label + '</div><div class="sh-sub" id="sh-stat-' + settore.id + '">—</div></div><span class="sh-arrow">▶</span>';
+    head.classList.add('collapsed');
+    head.onclick = () => { body.classList.toggle('hidden'); head.classList.toggle('collapsed'); const arr = head.querySelector('.sh-arrow'); if(arr) arr.textContent = body.classList.contains('hidden') ? '▶' : '▼'; };
     const body = document.createElement('div');
-    body.className = 'settore-body';
+    body.className = 'settore-body hidden';
     settore.invitati.forEach(inv => {
       const saved    = pranzoSaved[inv.id] || { risposta:'attesa', coperti:1 };
       const risposta = saved.risposta || 'attesa';
@@ -711,7 +712,21 @@ function apriFormInvitato(settore) {
   document.getElementById('paiSettoreColor').value = settore.color || '#1a7a4a';
   document.getElementById('paiEnte').value = '';
   document.getElementById('paiNome').value = '';
+  document.getElementById('paiPresenza').value = 'attesa';
+  document.getElementById('paiPranzo').checked = false;
+  document.getElementById('paiCosto').value = '25';
+  document.getElementById('paiCoperti').value = '1';
+  document.getElementById('paiCostoBox').style.display = 'none';
   document.getElementById('paiErr').style.display = 'none';
+  // Mostra/nascondi box pranzo quando cambia presenza
+  document.getElementById('paiPresenza').onchange = function() {
+    var vis = this.value === 'presente';
+    document.getElementById('paiPranzoBox').style.display = vis ? 'block' : 'none';
+    if (!vis) { document.getElementById('paiPranzo').checked = false; document.getElementById('paiCostoBox').style.display = 'none'; }
+  };
+  document.getElementById('paiPranzo').onchange = function() {
+    document.getElementById('paiCostoBox').style.display = this.checked ? 'block' : 'none';
+  };
   overlay.classList.add('open');
 }
 
@@ -720,23 +735,35 @@ function chiudiFormInvitato() {
 }
 
 async function salvaInvitato() {
-  const ente  = document.getElementById('paiEnte').value.trim();
-  const nome  = document.getElementById('paiNome').value.trim();
-  const sid   = document.getElementById('paiSettoreId').value;
-  const slabel = document.getElementById('paiSettoreLabel2').value;
-  const scolor = document.getElementById('paiSettoreColor').value;
-  const errEl = document.getElementById('paiErr');
-  if (!ente) { errEl.textContent = 'Inserisci almeno il ruolo/ente.'; errEl.style.display = 'block'; return; }
+  const ente         = document.getElementById('paiEnte').value.trim();
+  const nome         = document.getElementById('paiNome').value.trim();
+  const sid          = document.getElementById('paiSettoreId').value;
+  const slabel       = document.getElementById('paiSettoreLabel2').value;
+  const scolor       = document.getElementById('paiSettoreColor').value;
+  const presenza     = document.getElementById('paiPresenza') ? document.getElementById('paiPresenza').value : 'attesa';
+  const pranzo       = document.getElementById('paiPranzo') ? document.getElementById('paiPranzo').checked : false;
+  const costo        = document.getElementById('paiCosto') ? document.getElementById('paiCosto').value : '25';
+  const coperti      = document.getElementById('paiCoperti') ? parseInt(document.getElementById('paiCoperti').value)||1 : 1;
+  const errEl        = document.getElementById('paiErr');
+  if (!ente) { errEl.textContent = 'Inserisci almeno il nome.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista', {
       method: 'POST',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ settore_id: sid, settore_label: slabel, settore_color: scolor, ente, nome, ordine: 999 })
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
+      body: JSON.stringify({ settore_id: sid, settore_label: slabel, settore_color: scolor, ente, nome: nome||null, ordine: 999 })
     });
-    if (res.status === 409) { errEl.textContent = 'Invitato già presente in questo settore.'; errEl.style.display = 'block'; return; }
     if (!res.ok) throw new Error('Errore salvataggio');
-    await logAttivita('ha aggiunto invitato al pranzo: ' + ente + ' ' + nome);
+    const data = await res.json();
+    const newId = data[0] && data[0].id;
+    if (newId && presenza !== 'attesa') {
+      await fetch(SUPA_URL + '/rest/v1/pranzo_invitati', {
+        method: 'POST',
+        headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }),
+        body: JSON.stringify({ inv_id: 'i'+newId, presenza, pranzo, costo, coperti, risposta: presenza==='presente'?'si':'no' })
+      });
+    }
+    await logAttivita('ha aggiunto invitato: ' + ente);
     chiudiFormInvitato();
     caricaListaPranzo();
   } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }

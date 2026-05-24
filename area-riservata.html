@@ -434,15 +434,15 @@ div:hover > .vista-edit-btn { display:flex; }
 .inv-row.attesa { border-left:3px solid var(--amber); }
 .inv-row.nascosta { display:none; }
 .inv-info { min-width:0; }
-.inv-ente { font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; }
-.inv-nome { font-size:0.95rem; font-weight:700; color:var(--testo); margin-top:0.05rem; letter-spacing:0.2px; }
-.inv-controls { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }
-.risposta-sel { padding:4px 6px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.68rem; color:var(--testo-3); outline:none; cursor:pointer; }
+.inv-ente { font-size:0.7rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; }
+.inv-nome { font-size:1.1rem; font-weight:700; color:var(--testo); margin-top:0.1rem; letter-spacing:0.2px; }
+.inv-controls { display:flex; align-items:center; gap:0.5rem; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; max-width:220px; }
+.risposta-sel { padding:6px 8px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.82rem; color:var(--testo); outline:none; cursor:pointer; }
 .risposta-sel.si { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
 .risposta-sel.no { background:var(--red-pale); color:var(--red); border-color:var(--red); }
 .risposta-sel.attesa { background:var(--amber-pale); color:var(--amber); border-color:var(--amber); }
 .coperti-ctrl { display:flex; align-items:center; gap:3px; }
-.coperti-ctrl button { width:22px; height:22px; border-radius:6px; border:0.5px solid var(--border); background:var(--bg-2); font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--testo-3); padding:0; font-family:var(--font); }
+.coperti-ctrl button { width:28px; height:28px; border-radius:6px; border:0.5px solid var(--border); background:var(--bg-2); font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--testo-3); padding:0; font-family:var(--font); }
 .coperti-ctrl button:active { background:var(--bg-3); }
 .coperti-num { font-size:0.82rem; font-weight:600; color:var(--testo); min-width:16px; text-align:center; }
 .btn-export { width:100%; padding:0.8rem; margin-top:0.5rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo-2); cursor:pointer; font-weight:500; box-shadow:var(--shadow); }
@@ -1197,6 +1197,55 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=25"></script>
+  <!-- Form aggiungi invitato pranzo -->
+  <div class="vista-form-overlay" id="pranzoAddOverlay">
+    <div class="vista-form-card">
+      <h4>Aggiungi invitato — <span id="paiSettoreLabel">—</span></h4>
+      <input type="hidden" id="paiSettoreId">
+      <input type="hidden" id="paiSettoreLabel2">
+      <input type="hidden" id="paiSettoreColor">
+      <div class="form-err" id="paiErr"></div>
+      <div class="form-field" style="margin-bottom:0.5rem">
+        <label class="form-lbl">Ente / Ruolo</label>
+        <input class="form-inp" id="paiEnte" placeholder="es. Comune di Casale">
+      </div>
+      <div class="form-field" style="margin-bottom:0.5rem">
+        <label class="form-lbl">Nome</label>
+        <input class="form-inp" id="paiNome" placeholder="es. Mario Rossi">
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Risposta</label>
+        <select class="form-inp" id="paiPresenza">
+          <option value="attesa">⏳ In attesa</option>
+          <option value="presente">✅ Presente</option>
+          <option value="assente">❌ Assente</option>
+        </select>
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem" id="paiPranzoBox">
+        <label class="form-lbl" style="display:flex;align-items:center;gap:0.5rem">
+          <input type="checkbox" id="paiPranzo" style="accent-color:var(--green)"> Si ferma a pranzo
+        </label>
+      </div>
+      <div id="paiCostoBox" style="display:none">
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">Costo pranzo</label>
+          <select class="form-inp" id="paiCosto">
+            <option value="25">€25</option>
+            <option value="10">€10</option>
+            <option value="offerto">🎁 Offerto</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.7rem">
+          <label class="form-lbl">Coperti</label>
+          <input type="number" class="form-inp" id="paiCoperti" value="1" min="1">
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-sm btn-warn" onclick="chiudiFormInvitato()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="salvaInvitato()" style="padding:0.7rem">aggiungi</button>
+      </div>
+    </div>
+  </div>
+<script src="area-riservata.js?v=26"></script>
 </body>
 </html>
