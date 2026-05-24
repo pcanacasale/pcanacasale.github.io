@@ -2492,7 +2492,8 @@ async function apriDettaglioIntervento(id) {
       <div class="vol-section">
         <div class="vol-section-head">Dettagli</div>
         <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Data</span>${fmt(dataFmt)}</div>
+          <div class="vol-field"><span class="vol-field-label">Data inizio</span>${fmt(dataFmt)}</div>
+          <div class="vol-field"><span class="vol-field-label">Data fine</span>${i.data_fine ? fmt(new Date(i.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})) : fmt(null)}</div>
           <div class="vol-field"><span class="vol-field-label">Tipo attività</span>${fmt(i.tipo_attivita)}</div>
           <div class="vol-field"><span class="vol-field-label">Luogo</span>${fmt(i.luogo)}</div>
           <div class="vol-field"><span class="vol-field-label">Utente</span>${fmt(i.utente)}</div>
@@ -2539,10 +2540,11 @@ function apriFormIntervento(id) {
       <div class="vol-form-section-title">Intervento</div>
       <div class="vol-form-grid">
         <div class="vol-form-field full"><label class="vol-form-lbl">Evento *</label><input class="vol-form-inp" id="ifEvento" placeholder="es. Alluvione Mirabello"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Data *</label><input class="vol-form-inp" type="date" id="ifData"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Data inizio *</label><input class="vol-form-inp" type="date" id="ifData"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Data fine</label><input class="vol-form-inp" type="date" id="ifDataFine"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Tipo attività</label><select class="vol-form-inp" id="ifTipo"><option value="">—</option>${tipoOpts}</select></div>
         <div class="vol-form-field full"><label class="vol-form-lbl">Luogo</label><input class="vol-form-inp" id="ifLuogo" placeholder="es. Via Roma, Casale M.to"></div>
-        <div class="vol-form-field full"><label class="vol-form-lbl">Utente</label><input class="vol-form-inp" id="ifUtente" placeholder="Chi registra"></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Registrato da</label><input class="vol-form-inp" id="ifUtente" placeholder="Chi registra"></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -2571,6 +2573,9 @@ function apriFormIntervento(id) {
 
   panel.classList.add('open');
   panel.scrollTop = 0;
+  // Precompila utente con nome utente corrente
+  var ifUtente = document.getElementById('ifUtente');
+  if (ifUtente && !id && currentUser) ifUtente.value = currentUser.nome || '';
   caricaVolPicker();
   if (id) caricaDatiFormIntervento(id);
 }
@@ -2614,7 +2619,7 @@ async function caricaDatiFormIntervento(id) {
     const data = await res.json();
     const i = data[0]; if (!i) return;
     const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
-    setVal('ifEvento', i.evento); setVal('ifData', i.data);
+    setVal('ifEvento', i.evento); setVal('ifData', i.data); setVal('ifDataFine', i.data_fine);
     setVal('ifTipo', i.tipo_attivita); setVal('ifLuogo', i.luogo);
     setVal('ifUtente', i.utente); setVal('ifNVol', i.n_volontari);
     setVal('ifNOre', i.n_ore); setVal('ifNote', i.note);
@@ -2649,6 +2654,7 @@ async function salvaIntervento() {
   const payload = {
     evento,
     data,
+    data_fine:     document.getElementById('ifDataFine') ? (document.getElementById('ifDataFine').value || null) : null,
     tipo_attivita: document.getElementById('ifTipo').value || null,
     luogo:         document.getElementById('ifLuogo').value.trim() || null,
     utente:        document.getElementById('ifUtente').value.trim() || currentUser.nome,
