@@ -2600,7 +2600,7 @@ function renderVolPicker(vols) {
   vols.forEach(v => {
     const item = document.createElement('div');
     item.className = 'vol-picker-item';
-    item.innerHTML = '<input type="checkbox" id="vp_' + v.id + '" value="' + v.id + '">'
+    item.innerHTML = '<input type="checkbox" id="vp_' + v.id + '" value="' + v.id + '" onchange="aggiornaConteggioVolontari()">'
       + '<label for="vp_' + v.id + '">' + v.cognome + ' ' + v.nome + '</label>';
     picker.appendChild(item);
   });
@@ -2611,6 +2611,12 @@ function filtraVolPicker(q) {
   document.querySelectorAll('.vol-picker-item').forEach(item => {
     item.style.display = !term || item.textContent.toLowerCase().includes(term) ? '' : 'none';
   });
+}
+
+function aggiornaConteggioVolontari() {
+  var count = document.querySelectorAll('.vol-picker-item input:checked').length;
+  var el = document.getElementById('ifNVol');
+  if (el) el.value = count;
 }
 
 async function caricaDatiFormIntervento(id) {
@@ -2637,6 +2643,7 @@ async function caricaDatiFormIntervento(id) {
         const cb = document.getElementById('vp_' + vid);
         if (cb) cb.checked = true;
       });
+      aggiornaConteggioVolontari();
     }
   } catch(e) {}
 }
