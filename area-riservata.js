@@ -582,8 +582,14 @@ function renderPranzo() {
     head.className = 'settore-head';
     head.innerHTML = '<div class="sh-color" style="background:' + settore.color + '"></div><div class="sh-info"><div class="sh-title">' + settore.label + '</div><div class="sh-sub" id="sh-stat-' + settore.id + '">—</div></div><span class="sh-arrow">▶</span>';
     head.classList.add('collapsed');
-    body.onclick = (e) => { e.stopPropagation(); };
-    head.onclick = () => { body.classList.toggle('hidden'); head.classList.toggle('collapsed'); const arr = head.querySelector('.sh-arrow'); if(arr) arr.textContent = body.classList.contains('hidden') ? '▶' : '▼'; };
+    head.onclick = (e) => {
+      // Toggle solo se il click è sull'header stesso, non su elementi dentro il body
+      if (body.contains(e.target)) return;
+      body.classList.toggle('hidden');
+      head.classList.toggle('collapsed');
+      const arr = head.querySelector('.sh-arrow');
+      if (arr) arr.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+    };
     const body = document.createElement('div');
     body.className = 'settore-body hidden';
     settore.invitati.forEach(inv => {
