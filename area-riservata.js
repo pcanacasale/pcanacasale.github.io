@@ -8,17 +8,18 @@ function avviaSplash() {
   var dot2   = document.getElementById('dot2');
   var dot3   = document.getElementById('dot3');
   var splash = document.getElementById('splashScreen');
+  if (!logo || !splash) return;
 
-  // Animazione entrata
-  setTimeout(function(){ logo.classList.add('show'); title.classList.add('show'); dots.classList.add('show'); }, 150);
-  // Pallini sequenziali
-  setTimeout(function(){ dot1.classList.add('lit'); }, 900);
-  setTimeout(function(){ dot2.classList.add('lit'); }, 1300);
-  setTimeout(function(){ dot3.classList.add('lit'); }, 1700);
-  // Fade out dopo 3 secondi
+  setTimeout(function(){ 
+    if (logo) logo.classList.add('show'); 
+    if (title) title.classList.add('show'); 
+    if (dots) dots.classList.add('show'); 
+  }, 150);
+  setTimeout(function(){ if (dot1) dot1.classList.add('lit'); }, 900);
+  setTimeout(function(){ if (dot2) dot2.classList.add('lit'); }, 1300);
+  setTimeout(function(){ if (dot3) dot3.classList.add('lit'); }, 1700);
   setTimeout(function(){
-    splash.classList.add('fade-out');
-    setTimeout(function(){ splash.style.display = 'none'; }, 500);
+    if (splash) { splash.classList.add('fade-out'); setTimeout(function(){ splash.style.display = 'none'; }, 500); }
   }, 3000);
 }
 
@@ -53,8 +54,16 @@ function mostraWelcome(utente) {
   }, 2000);
 }
 
-// Avvia splash subito
-document.addEventListener('DOMContentLoaded', avviaSplash);
+// Avvia splash dopo caricamento DOM
+function avviaSplashSafe() {
+  var logo   = document.getElementById('splashLogo');
+  var title  = document.getElementById('splashTitle');
+  var dots   = document.getElementById('splashDots');
+  var splash = document.getElementById('splashScreen');
+  if (!logo || !splash) return; // sicurezza
+  avviaSplash();
+}
+document.addEventListener('DOMContentLoaded', avviaSplashSafe);
 
 const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
