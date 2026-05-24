@@ -1,3 +1,61 @@
+
+// -- SPLASH SCREEN --
+function avviaSplash() {
+  var logo   = document.getElementById('splashLogo');
+  var title  = document.getElementById('splashTitle');
+  var dots   = document.getElementById('splashDots');
+  var dot1   = document.getElementById('dot1');
+  var dot2   = document.getElementById('dot2');
+  var dot3   = document.getElementById('dot3');
+  var splash = document.getElementById('splashScreen');
+
+  // Animazione entrata
+  setTimeout(function(){ logo.classList.add('show'); title.classList.add('show'); dots.classList.add('show'); }, 150);
+  // Pallini sequenziali
+  setTimeout(function(){ dot1.classList.add('lit'); }, 900);
+  setTimeout(function(){ dot2.classList.add('lit'); }, 1300);
+  setTimeout(function(){ dot3.classList.add('lit'); }, 1700);
+  // Fade out dopo 3 secondi
+  setTimeout(function(){
+    splash.classList.add('fade-out');
+    setTimeout(function(){ splash.style.display = 'none'; }, 500);
+  }, 3000);
+}
+
+// -- WELCOME SCREEN --
+function mostraWelcome(utente) {
+  var ws       = document.getElementById('welcomeScreen');
+  var avatar   = document.getElementById('welcomeAvatar');
+  var text     = document.getElementById('welcomeText');
+  var initials = document.getElementById('welcomeInitials');
+  var nome     = document.getElementById('welcomeName');
+  var ruolo    = document.getElementById('welcomeRuolo');
+
+  // Iniziali
+  var parts = (utente.nome || '').split(' ');
+  var ini   = parts.map(function(p){ return p[0] || ''; }).join('').substring(0,2).toUpperCase();
+  initials.textContent = ini || '?';
+  nome.textContent     = utente.nome || '—';
+  ruolo.textContent    = utente.ruolo || '—';
+
+  ws.classList.add('visible');
+  setTimeout(function(){ avatar.classList.add('show'); text.classList.add('show'); }, 100);
+
+  // Fade out dopo 2 secondi
+  setTimeout(function(){
+    ws.classList.add('fade-out');
+    setTimeout(function(){
+      ws.classList.remove('visible');
+      ws.classList.remove('fade-out');
+      avatar.classList.remove('show');
+      text.classList.remove('show');
+    }, 500);
+  }, 2000);
+}
+
+// Avvia splash subito
+document.addEventListener('DOMContentLoaded', avviaSplash);
+
 const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
 let currentUser = null;
@@ -63,6 +121,7 @@ function navTo(panel, title, btn) {
 function avviaDashboard() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+  mostraWelcome(currentUser);
 
   const p        = currentUser.permessi || {};
   const isMaster = currentUser.tipo_accesso === 'master';

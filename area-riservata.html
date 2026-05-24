@@ -625,6 +625,35 @@ div:hover > .vista-edit-btn { display:flex; }
 .mezzo-tile-rev.warn { background:var(--amber-pale); color:var(--amber); }
 .mezzo-tile-rev.scad { background:var(--red-pale); color:var(--red); }
 
+
+/* -- SPLASH SCREEN -- */
+#splashScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
+#splashScreen.fade-out { opacity:0; pointer-events:none; }
+.splash-logo-wrap { width:120px; height:120px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 24px rgba(0,0,0,0.2); opacity:0; transform:scale(0.82); transition:opacity 0.7s ease,transform 0.7s ease; }
+.splash-logo-wrap.show { opacity:1; transform:scale(1); }
+.splash-logo-wrap img { width:106px; height:106px; border-radius:50%; object-fit:cover; }
+.splash-title { text-align:center; opacity:0; transform:translateY(8px); transition:opacity 0.6s ease 0.2s,transform 0.6s ease 0.2s; }
+.splash-title.show { opacity:1; transform:translateY(0); }
+.splash-title h2 { color:white; font-size:1.1rem; font-weight:700; margin:0; }
+.splash-title p { color:rgba(255,255,255,0.6); font-size:0.75rem; margin:0.2rem 0 0; }
+.splash-dots { display:flex; gap:6px; opacity:0; transition:opacity 0.4s ease 0.4s; position:absolute; bottom:48px; }
+.splash-dots.show { opacity:1; }
+.splash-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.35); transition:background 0.3s; }
+.splash-dot.lit { background:white; }
+
+/* -- WELCOME SCREEN -- */
+#welcomeScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
+#welcomeScreen.visible { display:flex; }
+#welcomeScreen.fade-out { opacity:0; pointer-events:none; }
+.welcome-avatar { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.82); transition:opacity 0.6s ease,transform 0.6s ease; }
+.welcome-avatar.show { opacity:1; transform:scale(1); }
+.welcome-avatar span { font-size:1.8rem; font-weight:700; color:white; }
+.welcome-text { text-align:center; opacity:0; transform:translateY(8px); transition:opacity 0.5s ease 0.15s,transform 0.5s ease 0.15s; }
+.welcome-text.show { opacity:1; transform:translateY(0); }
+.welcome-text .wt-ciao { color:rgba(255,255,255,0.7); font-size:0.9rem; }
+.welcome-text .wt-nome { color:white; font-size:1.4rem; font-weight:700; margin-top:0.2rem; }
+.welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
+
 </style>
 </head>
 <body>
@@ -1156,6 +1185,6 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=22"></script>
+<script src="area-riservata.js?v=23"></script>
 </body>
 </html>
