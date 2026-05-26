@@ -3983,12 +3983,24 @@ async function setPresenzaEserc(key, presente, volId, esternoId) {
   esercPresenzeCache[key][esercTurno] = presente;
   try {
     if (volId) {
-      // Upsert tramite merge-duplicates per volontari PC ANA
-      await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
-        method: 'POST',
-        headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates', 'on-conflict': 'volontario_id,giorno,turno' }),
-        body: JSON.stringify({ volontario_id: volId, giorno: esercGiorno, turno: esercTurno, presente: presente, tipo_partecipante: 'volontario_pcana' })
-      });
+      // Controlla se esiste già una riga
+      var checkRes = await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?volontario_id=eq.'+volId+'&giorno=eq.'+esercGiorno+'&turno=eq.'+esercTurno+'&select=id', { headers: H });
+      var existing = await checkRes.json();
+      if (existing.length) {
+        // Aggiorna riga esistente
+        await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?id=eq.'+existing[0].id, {
+          method: 'PATCH',
+          headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+          body: JSON.stringify({ presente: presente })
+        });
+      } else {
+        // Inserisci nuova riga
+        await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
+          method: 'POST',
+          headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+          body: JSON.stringify({ volontario_id: volId, giorno: esercGiorno, turno: esercTurno, presente: presente, tipo_partecipante: 'volontario_pcana' })
+        });
+      }
     } else if (esternoId) {
       // PATCH per aggiornare presente su riga esistente
       await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?id=eq.' + esternoId, {
