@@ -148,7 +148,8 @@ function avviaDashboard() {
   if (isMaster || p.documenti)  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
   if (isMaster || p.pranzo)     showSi('siPranzo');
   if (isMaster || p.richieste)  showSi('siRichieste');
-  if (isMaster || p.statistiche) showSi('siStatistiche');
+  if (isMaster || p.statistiche)  showSi('siStatistiche');
+  if (isMaster || p.esercitazione) showSi('siEsercitazione');
   if (isMaster)                 showSi('siImpostazioni');
   if (isMaster || p.db)          showSi('siDb');
   // Nome utente in sidebar
@@ -203,6 +204,7 @@ function showPanel(name, btn) {
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
+  if (name === 'esercitazione') { initEsercitazione(); }
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -1377,7 +1379,8 @@ async function salvaModificaUtente() {
     pranzo:       document.getElementById('modPermPranzo') ? document.getElementById('modPermPranzo').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
-    statistiche:  document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
+    statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
+    esercitazione: document.getElementById('modPermEsercitazione') ? document.getElementById('modPermEsercitazione').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
@@ -3821,6 +3824,454 @@ async function stampaPDFStatistiche() {
         return '<tr><td>'+(i+1)+'. '+r.nome+'</td><td style="text-align:right">'+r.count+'</td><td style="text-align:right;font-weight:700;color:#1a7a4a">'+r.ore+'h</td></tr>';
       }).join('')
     + '</tbody></table>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
+    + '</body></html>');
+  win.document.close();
+}
+
+// -- ESERCITAZIONE --
+var esercGiorno = 'sabato';
+var esercTurno  = 'mattino';
+var esercScenarioCorrenteId = null;
+var esercScenariData = [];
+var esercVolontari = [];
+var esercMezzi = [];
+var esercPresenzeCache = {};
+var esercMezziCache = {};
+
+var ESERC_TURNI = {
+  sabato:   ['mattino','pomeriggio','sera'],
+  domenica: ['mattino','pomeriggio']
+};
+
+async function initEsercitazione() {
+  // Carica volontari e mezzi
+  var [rV, rM] = await Promise.all([
+    fetch(SUPA_URL + '/rest/v1/volontari?attivo=eq.true&select=id,cognome,nome&order=cognome', { headers: H }),
+    fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,stato&order=automezzo', { headers: H })
+  ]);
+  esercVolontari = await rV.json();
+  esercMezzi     = await rM.json();
+  setGiornoEserc('sabato');
+}
+
+async function setGiornoEserc(giorno) {
+  esercGiorno = giorno;
+  esercTurno  = ESERC_TURNI[giorno][0];
+  document.getElementById('tabSab').classList.toggle('active', giorno === 'sabato');
+  document.getElementById('tabDom').classList.toggle('active', giorno === 'domenica');
+  await caricaEsercDati();
+}
+
+async function caricaEsercDati() {
+  // Presenze
+  var rP = await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?giorno=eq.' + esercGiorno + '&select=*', { headers: H });
+  var presenze = await rP.json();
+  esercPresenzeCache = {};
+  presenze.forEach(function(p) {
+    if (!esercPresenzeCache[p.volontario_id]) esercPresenzeCache[p.volontario_id] = {};
+    esercPresenzeCache[p.volontario_id][p.turno] = p.presente;
+  });
+
+  // Mezzi
+  var rM2 = await fetch(SUPA_URL + '/rest/v1/esercitazione_mezzi?giorno=eq.' + esercGiorno + '&select=*', { headers: H });
+  var mezziS = await rM2.json();
+  esercMezziCache = {};
+  mezziS.forEach(function(m) { esercMezziCache[m.mezzo_id] = m.stato; });
+
+  // Scenari
+  var rS = await fetch(SUPA_URL + '/rest/v1/esercitazione_scenari?giorno=eq.' + esercGiorno + '&select=*&order=created_at.desc', { headers: H });
+  esercScenariData = await rS.json();
+
+  renderEsercDashboard();
+  renderEsercTurni();
+  renderEsercPresenze();
+  renderEsercMezzi();
+  renderEsercScenari();
+}
+
+function renderEsercDashboard() {
+  var el = document.getElementById('esercDashboard');
+  if (!el) return;
+  // Conta presenti nel turno corrente
+  var presenti = esercVolontari.filter(function(v) {
+    return esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno];
+  }).length;
+  var mezziOp = esercMezzi.filter(function(m) {
+    return (esercMezziCache[m.id] || 'disponibile') === 'disponibile';
+  }).length;
+  var scenariAttivi = esercScenariData.filter(function(s) { return s.stato === 'attivo'; }).length;
+
+  el.innerHTML = [
+    [presenti, 'Presenti', '#1a7a4a'],
+    [mezziOp,  'Mezzi op.', '#185fa5'],
+    [scenariAttivi, 'Interventi', '#854f0b']
+  ].map(function(c) {
+    return '<div class="eserc-dash-card"><div class="eserc-dash-num" style="color:'+c[2]+'">'+c[0]+'</div><div class="eserc-dash-lbl">'+c[1]+'</div></div>';
+  }).join('');
+}
+
+function renderEsercTurni() {
+  var el = document.getElementById('esercTurni');
+  if (!el) return;
+  el.innerHTML = ESERC_TURNI[esercGiorno].map(function(t) {
+    return '<button class="eserc-turno-btn'+(t===esercTurno?' active':'')+'" onclick="setTurnoEserc(\''+t+'\')">'+t.charAt(0).toUpperCase()+t.slice(1)+'</button>';
+  }).join('');
+}
+
+function setTurnoEserc(turno) {
+  esercTurno = turno;
+  renderEsercTurni();
+  renderEsercPresenze();
+  renderEsercDashboard();
+}
+
+function renderEsercPresenze() {
+  var el = document.getElementById('esercPresenzeList');
+  if (!el) return;
+  var html = '';
+  esercVolontari.forEach(function(v) {
+    var presente = !!(esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno]);
+    var ini = ((v.cognome||'')[0]||(v.nome||'')[0]||'?').toUpperCase();
+    html += '<div class="eserc-vol-row">'
+      + '<div class="eserc-vol-avatar" style="background:'+(presente?'var(--green)':'var(--bg-2)')+';color:'+(presente?'#fff':'var(--testo-3)')+'">'+ini+'</div>'
+      + '<div class="eserc-vol-nome">'+v.cognome+' '+v.nome+'</div>'
+      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('+v.id+',this.checked)">'
+      + '</div>';
+  });
+  el.innerHTML = html || '<div class="loading-msg">Nessun volontario.</div>';
+}
+
+async function setPresenzaEserc(volId, presente) {
+  if (!esercPresenzeCache[volId]) esercPresenzeCache[volId] = {};
+  esercPresenzeCache[volId][esercTurno] = presente;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }),
+      body: JSON.stringify({ volontario_id: volId, giorno: esercGiorno, turno: esercTurno, presente: presente })
+    });
+  } catch(e) {}
+  renderEsercDashboard();
+  renderEsercPresenze();
+}
+
+function renderEsercMezzi() {
+  var el = document.getElementById('esercMezziList');
+  if (!el) return;
+  var html = '';
+  var STATI = ['disponibile','impegnato','fermo'];
+  var STATI_COLORS = { disponibile:'var(--green)', impegnato:'var(--amber)', fermo:'var(--red)' };
+  esercMezzi.forEach(function(m) {
+    var stato = esercMezziCache[m.id] || 'disponibile';
+    var opts = STATI.map(function(s) {
+      return '<option value="'+s+'"'+(s===stato?' selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';
+    }).join('');
+    html += '<div class="eserc-mezzo-row">'
+      + '<div style="width:10px;height:10px;border-radius:50%;background:'+STATI_COLORS[stato]+';flex-shrink:0"></div>'
+      + '<div style="flex:1;font-size:0.82rem;font-weight:500;color:var(--testo)">'+m.automezzo+'</div>'
+      + '<div style="font-size:0.65rem;color:var(--testo-3)">'+m.targa+'</div>'
+      + '<select style="font-size:0.72rem;padding:3px 6px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg-2);color:var(--testo);font-family:var(--font)" onchange="setStatoMezzoEserc('+m.id+',this.value)">'+opts+'</select>'
+      + '</div>';
+  });
+  el.innerHTML = html;
+}
+
+async function setStatoMezzoEserc(mezzoId, stato) {
+  esercMezziCache[mezzoId] = stato;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/esercitazione_mezzi', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }),
+      body: JSON.stringify({ mezzo_id: mezzoId, giorno: esercGiorno, stato: stato })
+    });
+  } catch(e) {}
+  renderEsercDashboard();
+}
+
+function renderEsercScenari() {
+  var el = document.getElementById('esercScenariList');
+  if (!el) return;
+  if (!esercScenariData.length) { el.innerHTML = '<div class="loading-msg">Nessuno scenario.</div>'; return; }
+  el.innerHTML = esercScenariData.map(function(s) {
+    var badgeCls = 'esb-' + s.stato;
+    return '<div class="eserc-scenario-card" onclick="apriDettaglioScenario('+s.id+')">'
+      + '<div class="eserc-scenario-nome">'+s.nome+'</div>'
+      + '<div class="eserc-scenario-meta">'+(s.turno||'—')+' · '+(s.orario||'—')+'</div>'
+      + '<span class="eserc-stato-badge '+badgeCls+'">'+s.stato.charAt(0).toUpperCase()+s.stato.slice(1)+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+function toggleEsercSection(id) {
+  var body  = document.getElementById(id);
+  var arrow = document.getElementById('arrow' + id.charAt(0).toUpperCase() + id.slice(1));
+  if (!body) return;
+  body.classList.toggle('hidden');
+  if (arrow) arrow.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+}
+
+// -- FORM SCENARIO --
+var esercScenarioEditId = null;
+
+function apriFormScenario(id) {
+  esercScenarioEditId = id || null;
+  var panel = document.getElementById('esercScenarioForm');
+  var body  = document.getElementById('esercFormBody');
+  document.getElementById('esercFormTitle').textContent = id ? 'Modifica scenario' : 'Nuovo scenario';
+
+  var s = id ? (esercScenariData.find(function(x){ return x.id === id; }) || {}) : {};
+  var turni = ESERC_TURNI[esercGiorno];
+  var turnoOpts = turni.map(function(t) {
+    return '<option value="'+t+'"'+(s.turno===t?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>';
+  }).join('');
+  var statoOpts = ['preparazione','attivo','concluso'].map(function(st) {
+    return '<option value="'+st+'"'+((s.stato||'preparazione')===st?' selected':'')+'>'+st.charAt(0).toUpperCase()+st.slice(1)+'</option>';
+  }).join('');
+
+  // Lista presenti nel turno selezionato
+  var presenti = esercVolontari.filter(function(v) {
+    return esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno];
+  });
+  var volHtml = presenti.length
+    ? presenti.map(function(v) {
+        return '<label style="display:flex;align-items:center;gap:0.5rem;padding:4px 0;font-size:0.78rem;cursor:pointer">'
+          + '<input type="checkbox" class="eserc-vol-scenario-cb" value="'+v.id+'" style="accent-color:var(--green)"> '
+          + v.cognome + ' ' + v.nome + '</label>';
+      }).join('')
+    : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessun volontario presente in questo turno.</div>';
+
+  var mezziDisp = esercMezzi.filter(function(m) {
+    return (esercMezziCache[m.id] || 'disponibile') === 'disponibile';
+  });
+  var mezziHtml = mezziDisp.length
+    ? mezziDisp.map(function(m) {
+        return '<label style="display:flex;align-items:center;gap:0.5rem;padding:4px 0;font-size:0.78rem;cursor:pointer">'
+          + '<input type="checkbox" class="eserc-mezzo-scenario-cb" value="'+m.id+'" style="accent-color:var(--green)"> '
+          + m.automezzo + ' · ' + m.targa + '</label>';
+      }).join('')
+    : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessun mezzo disponibile.</div>';
+
+  body.innerHTML = '<div class="form-err" id="esercFormErr"></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Scenario</div><div class="vol-form-grid">'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Nome *</label><input class="vol-form-inp" id="esfNome" value="'+(s.nome||'')+'"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Turno</label><select class="vol-form-inp" id="esfTurno">'+turnoOpts+'</select></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Orario</label><input class="vol-form-inp" id="esfOrario" value="'+(s.orario||'')+'" placeholder="es. 09:00"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Stato</label><select class="vol-form-inp" id="esfStato">'+statoOpts+'</select></div>'
+    + '</div></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Localizzazione</div><div class="vol-form-grid">'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Latitudine</label><input class="vol-form-inp" id="esfLat" value="'+(s.lat||'')+'" placeholder="es. 45.1234"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Longitudine</label><input class="vol-form-inp" id="esfLng" value="'+(s.lng||'')+'" placeholder="es. 8.5678"></div>'
+    + '</div></div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Descrizione e attività</div>'
+    + '<textarea class="vol-form-inp" id="esfDesc" rows="3" style="resize:vertical;margin-bottom:0.5rem" placeholder="Descrizione scenario...">'+(s.descrizione||'')+'</textarea>'
+    + '<textarea class="vol-form-inp" id="esfAttivita" rows="3" style="resize:vertical" placeholder="Attività da svolgere...">'+(s.attivita||'')+'</textarea>'
+    + '</div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Volontari assegnati</div>'+volHtml+'</div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Mezzi assegnati</div>'+mezziHtml+'</div>'
+    + '<div class="vol-form-section"><div class="vol-form-section-title">Note</div>'
+    + '<textarea class="vol-form-inp" id="esfNote" rows="2" style="resize:vertical">'+(s.note||'')+'</textarea>'
+    + '</div>'
+    + (id ? '<button class="vol-delete-btn" onclick="eliminaScenario('+id+')">elimina scenario</button>' : '');
+
+  panel.classList.add('open');
+  panel.scrollTop = 0;
+
+  // Se modifica, precarica volontari e mezzi selezionati
+  if (id) precaricaScenarioSel(id);
+}
+
+async function precaricaScenarioSel(id) {
+  var [rV, rM] = await Promise.all([
+    fetch(SUPA_URL + '/rest/v1/esercitazione_scenari_vol?scenario_id=eq.'+id+'&select=volontario_id', { headers: H }),
+    fetch(SUPA_URL + '/rest/v1/esercitazione_scenari_mezzi?scenario_id=eq.'+id+'&select=mezzo_id', { headers: H })
+  ]);
+  var vols  = await rV.json();
+  var mezzi = await rM.json();
+  var volIds  = vols.map(function(v){ return String(v.volontario_id); });
+  var mezIds  = mezzi.map(function(m){ return String(m.mezzo_id); });
+  document.querySelectorAll('.eserc-vol-scenario-cb').forEach(function(cb) {
+    cb.checked = volIds.includes(cb.value);
+  });
+  document.querySelectorAll('.eserc-mezzo-scenario-cb').forEach(function(cb) {
+    cb.checked = mezIds.includes(cb.value);
+  });
+}
+
+function chiudiFormScenario() {
+  document.getElementById('esercScenarioForm').classList.remove('open');
+}
+
+async function salvaScenario() {
+  var nome = document.getElementById('esfNome').value.trim();
+  var errEl = document.getElementById('esercFormErr');
+  if (!nome) { errEl.textContent = 'Il nome è obbligatorio.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  var payload = {
+    nome, giorno: esercGiorno,
+    turno:       document.getElementById('esfTurno').value,
+    orario:      document.getElementById('esfOrario').value.trim() || null,
+    stato:       document.getElementById('esfStato').value,
+    lat:         document.getElementById('esfLat').value.trim() || null,
+    lng:         document.getElementById('esfLng').value.trim() || null,
+    descrizione: document.getElementById('esfDesc').value.trim() || null,
+    attivita:    document.getElementById('esfAttivita').value.trim() || null,
+    note:        document.getElementById('esfNote').value.trim() || null,
+  };
+
+  var volIds  = [...document.querySelectorAll('.eserc-vol-scenario-cb:checked')].map(function(cb){ return parseInt(cb.value); });
+  var mezIds  = [...document.querySelectorAll('.eserc-mezzo-scenario-cb:checked')].map(function(cb){ return parseInt(cb.value); });
+
+  try {
+    var sid;
+    if (esercScenarioEditId) {
+      await fetch(SUPA_URL + '/rest/v1/esercitazione_scenari?id=eq.'+esercScenarioEditId, {
+        method:'PATCH', headers:Object.assign({},HJ,{'Prefer':'return=minimal'}), body:JSON.stringify(payload)
+      });
+      sid = esercScenarioEditId;
+      // Cancella e reinserisce assegnazioni
+      await Promise.all([
+        fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_vol?scenario_id=eq.'+sid, { method:'DELETE', headers:H }),
+        fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_mezzi?scenario_id=eq.'+sid, { method:'DELETE', headers:H })
+      ]);
+    } else {
+      var res = await fetch(SUPA_URL + '/rest/v1/esercitazione_scenari', {
+        method:'POST', headers:Object.assign({},HJ,{'Prefer':'return=representation'}), body:JSON.stringify(payload)
+      });
+      var data = await res.json();
+      sid = data[0].id;
+    }
+    // Inserisce volontari e mezzi
+    if (volIds.length) await fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_vol', {
+      method:'POST', headers:HJ, body:JSON.stringify(volIds.map(function(v){ return {scenario_id:sid, volontario_id:v}; }))
+    });
+    if (mezIds.length) await fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_mezzi', {
+      method:'POST', headers:HJ, body:JSON.stringify(mezIds.map(function(m){ return {scenario_id:sid, mezzo_id:m}; }))
+    });
+    await logAttivita('ha salvato scenario: ' + nome);
+    chiudiFormScenario();
+    await caricaEsercDati();
+  } catch(e) { errEl.textContent = 'Errore: '+e.message; errEl.style.display='block'; }
+}
+
+async function eliminaScenario(id) {
+  if (!confirm('Eliminare questo scenario?')) return;
+  await fetch(SUPA_URL+'/rest/v1/esercitazione_scenari?id=eq.'+id, { method:'DELETE', headers:H });
+  chiudiFormScenario();
+  chiudiDettaglioScenario();
+  await caricaEsercDati();
+}
+
+// -- DETTAGLIO SCENARIO --
+async function apriDettaglioScenario(id) {
+  esercScenarioCorrenteId = id;
+  var s = esercScenariData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  var detail = document.getElementById('esercScenarioDetail');
+  document.getElementById('esercDetailTitle').textContent = s.nome;
+  detail.classList.add('open');
+  detail.scrollTop = 0;
+
+  var [rV, rM] = await Promise.all([
+    fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_vol?scenario_id=eq.'+id+'&select=volontario_id', { headers:H }),
+    fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_mezzi?scenario_id=eq.'+id+'&select=mezzo_id', { headers:H })
+  ]);
+  var volIds  = (await rV.json()).map(function(v){ return v.volontario_id; });
+  var mezIds  = (await rM.json()).map(function(m){ return m.mezzo_id; });
+  var volNomi = esercVolontari.filter(function(v){ return volIds.includes(v.id); });
+  var mezNomi = esercMezzi.filter(function(m){ return mezIds.includes(m.id); });
+  var badgeCls = 'esb-' + s.stato;
+
+  var body = document.getElementById('esercDetailBody');
+  var mapsUrl = (s.lat && s.lng) ? 'https://maps.google.com/?q='+s.lat+','+s.lng : null;
+
+  body.innerHTML = '<div class="vol-section"><div class="vol-section-body">'
+    + '<div class="vol-field"><span class="vol-field-label">Stato</span><span class="eserc-stato-badge '+badgeCls+'">'+s.stato+'</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Giorno</span><span class="vol-field-value">'+s.giorno.charAt(0).toUpperCase()+s.giorno.slice(1)+'</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Turno</span><span class="vol-field-value">'+(s.turno||'—')+'</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Orario</span><span class="vol-field-value">'+(s.orario||'—')+'</span></div>'
+    + (mapsUrl ? '<div class="vol-field"><span class="vol-field-label">Coordinate</span><a href="'+mapsUrl+'" target="_blank" style="color:var(--green);font-size:0.78rem">📍 Apri su Maps</a></div>' : '')
+    + (s.descrizione ? '<div class="vol-field" style="flex-direction:column;align-items:flex-start"><span class="vol-field-label">Descrizione</span><span class="vol-field-value" style="margin-top:4px">'+s.descrizione+'</span></div>' : '')
+    + (s.attivita ? '<div class="vol-field" style="flex-direction:column;align-items:flex-start"><span class="vol-field-label">Attività</span><span class="vol-field-value" style="margin-top:4px">'+s.attivita+'</span></div>' : '')
+    + '</div></div>'
+    + '<div class="vol-section"><div class="vol-section-head">Volontari ('+volNomi.length+')</div><div class="vol-section-body">'
+    + (volNomi.length ? volNomi.map(function(v){ return '<div class="vol-field"><span class="vol-field-value">'+v.cognome+' '+v.nome+'</span></div>'; }).join('') : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessuno assegnato.</div>')
+    + '</div></div>'
+    + '<div class="vol-section"><div class="vol-section-head">Mezzi ('+mezNomi.length+')</div><div class="vol-section-body">'
+    + (mezNomi.length ? mezNomi.map(function(m){ return '<div class="vol-field"><span class="vol-field-value">'+m.automezzo+' · '+m.targa+'</span></div>'; }).join('') : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessuno assegnato.</div>')
+    + '</div></div>'
+    + (s.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value">'+s.note+'</span></div></div></div>' : '')
+    + '<button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="stampaSchedaIntervento('+id+')">📄 Stampa scheda</button>'
+    + '<button class="vol-delete-btn" onclick="eliminaScenario('+id+')">elimina scenario</button>';
+}
+
+function chiudiDettaglioScenario() {
+  document.getElementById('esercScenarioDetail').classList.remove('open');
+  esercScenarioCorrenteId = null;
+}
+
+async function stampaSchedaIntervento(id) {
+  var s = esercScenariData.find(function(x){ return x.id === id; });
+  if (!s) return;
+  var [rV, rM] = await Promise.all([
+    fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_vol?scenario_id=eq.'+id+'&select=volontario_id', { headers:H }),
+    fetch(SUPA_URL+'/rest/v1/esercitazione_scenari_mezzi?scenario_id=eq.'+id+'&select=mezzo_id', { headers:H })
+  ]);
+  var volIds = (await rV.json()).map(function(v){ return v.volontario_id; });
+  var mezIds = (await rM.json()).map(function(m){ return m.mezzo_id; });
+  var volNomi = esercVolontari.filter(function(v){ return volIds.includes(v.id); });
+  var mezNomi = esercMezzi.filter(function(m){ return mezIds.includes(m.id); });
+  var ora    = new Date().toLocaleString('it-IT');
+  var giorno = s.giorno.charAt(0).toUpperCase()+s.giorno.slice(1);
+  var mapsUrl = (s.lat && s.lng) ? 'https://maps.google.com/?q='+s.lat+','+s.lng : null;
+
+  var win = window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Scheda Intervento — '+s.nome+'</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10pt;color:#111;margin:1.5cm;max-width:18cm}'
+    + '.header{display:flex;align-items:center;gap:1rem;border-bottom:3px solid #1a7a4a;padding-bottom:0.8rem;margin-bottom:1rem}'
+    + '.header-title{flex:1}'
+    + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.2rem}'
+    + '.meta{font-size:8pt;color:#666}'
+    + '.badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:8pt;font-weight:700;background:#eaf3de;color:#3b6d11}'
+    + 'h2{font-size:10pt;font-weight:700;color:#1a7a4a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:1rem 0 0.5rem}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt}'
+    + 'td{padding:4px 8px;border:0.5px solid #e5e7eb}'
+    + 'td:first-child{font-weight:600;color:#555;width:35%}'
+    + '.vol-list{list-style:none;padding:0;margin:0}'
+    + '.vol-list li{padding:4px 0;border-bottom:0.5px solid #f3f4f6;font-size:9pt}'
+    + '.firma-box{margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem}'
+    + '.firma-line{border-top:0.5px solid #111;padding-top:4px;font-size:8pt;color:#666;text-align:center;margin-top:2rem}'
+    + '@media print{body{margin:1cm}}'
+    + '</style></head><body>'
+    + '<div class="header">'
+    + '<div class="header-title">'
+    + '<h1>Scheda Intervento — Esercitazione 2025</h1>'
+    + '<div class="meta">PC ANA Casale Monferrato &nbsp;·&nbsp; Stampata il '+ora+'</div>'
+    + '</div>'
+    + '<span class="badge">'+s.stato.toUpperCase()+'</span>'
+    + '</div>'
+    + '<h2>Dati scenario</h2>'
+    + '<table><tbody>'
+    + '<tr><td>Nome</td><td>'+s.nome+'</td></tr>'
+    + '<tr><td>Giorno</td><td>'+giorno+' 6-7 Giugno 2025</td></tr>'
+    + '<tr><td>Turno</td><td>'+(s.turno||'—')+'</td></tr>'
+    + '<tr><td>Orario</td><td>'+(s.orario||'—')+'</td></tr>'
+    + (mapsUrl ? '<tr><td>Coordinate</td><td>Lat: '+s.lat+' · Lng: '+s.lng+'<br><small>'+mapsUrl+'</small></td></tr>' : '')
+    + '</tbody></table>'
+    + (s.descrizione ? '<h2>Descrizione</h2><p style="font-size:9pt">'+s.descrizione+'</p>' : '')
+    + (s.attivita ? '<h2>Attività da svolgere</h2><p style="font-size:9pt">'+s.attivita+'</p>' : '')
+    + '<h2>Volontari assegnati ('+volNomi.length+')</h2>'
+    + '<ul class="vol-list">'+(volNomi.length ? volNomi.map(function(v,i){ return '<li>'+(i+1)+'. '+v.cognome+' '+v.nome+'</li>'; }).join('') : '<li>Nessuno</li>')+'</ul>'
+    + '<h2>Mezzi assegnati ('+mezNomi.length+')</h2>'
+    + '<ul class="vol-list">'+(mezNomi.length ? mezNomi.map(function(m,i){ return '<li>'+(i+1)+'. '+m.automezzo+' · '+m.targa+'</li>'; }).join('') : '<li>Nessuno</li>')+'</ul>'
+    + (s.note ? '<h2>Note</h2><p style="font-size:9pt">'+s.note+'</p>' : '')
+    + '<div class="firma-box">'
+    + '<div><div class="firma-line">Responsabile scenario</div></div>'
+    + '<div><div class="firma-line">Coordinatore esercitazione</div></div>'
+    + '</div>'
     + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
     + '</body></html>');
   win.document.close();

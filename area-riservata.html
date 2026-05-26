@@ -658,6 +658,34 @@ div:hover > .vista-edit-btn { display:flex; }
 .inv-extra-list { padding:0.4rem 0.8rem 0.5rem; border-top:0.5px solid var(--border); background:var(--bg-2); border-radius:0 0 var(--r) var(--r); }
 .inv-extra-row { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem; }
 
+
+/* -- ESERCITAZIONE -- */
+.eserc-tabs { display:flex; gap:0.5rem; margin-bottom:0.8rem; }
+.eserc-tab { flex:1; padding:0.6rem; border:0.5px solid var(--border); border-radius:var(--r); background:var(--bg-2); color:var(--testo-3); font-size:0.82rem; font-weight:600; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
+.eserc-tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+.eserc-dashboard { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:0.8rem; }
+.eserc-dash-card { background:var(--bg-2); border-radius:var(--r); padding:0.7rem; text-align:center; }
+.eserc-dash-num { font-size:1.4rem; font-weight:700; color:var(--green); }
+.eserc-dash-lbl { font-size:0.62rem; color:var(--testo-3); text-transform:uppercase; margin-top:2px; }
+.eserc-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); padding:0.7rem 0; border-bottom:0.5px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; }
+.eserc-section-body { padding:0.5rem 0; }
+.eserc-section-body.hidden { display:none; }
+.eserc-turni { display:flex; gap:0.4rem; margin-bottom:0.6rem; flex-wrap:wrap; }
+.eserc-turno-btn { padding:4px 12px; border-radius:20px; border:0.5px solid var(--border); background:var(--bg-2); color:var(--testo-3); font-size:0.72rem; font-weight:600; cursor:pointer; font-family:var(--font); }
+.eserc-turno-btn.active { background:var(--green); color:#fff; border-color:var(--green); }
+.eserc-vol-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
+.eserc-vol-avatar { width:32px; height:32px; border-radius:50%; background:var(--bg-2); display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:var(--testo-3); flex-shrink:0; }
+.eserc-vol-nome { flex:1; font-size:0.82rem; font-weight:500; color:var(--testo); }
+.eserc-vol-check { width:20px; height:20px; accent-color:var(--green); cursor:pointer; }
+.eserc-mezzo-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
+.eserc-scenario-card { background:var(--bg-card); border-radius:var(--r); border:0.5px solid var(--border); padding:0.8rem; margin-bottom:0.5rem; cursor:pointer; }
+.eserc-scenario-nome { font-size:0.9rem; font-weight:700; color:var(--testo); }
+.eserc-scenario-meta { font-size:0.68rem; color:var(--testo-3); margin-top:0.2rem; }
+.eserc-stato-badge { font-size:0.62rem; font-weight:700; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:0.3rem; }
+.esb-preparazione { background:#e8f0fb; color:#185fa5; }
+.esb-attivo { background:#eaf3de; color:#3b6d11; }
+.esb-concluso { background:var(--bg-2); color:var(--testo-3); }
+
 </style>
 </head>
 <body>
@@ -753,6 +781,10 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Documenti</span>
       </button>
 
+      <button class="sidebar-item" id="siEsercitazione" onclick="navTo('esercitazione','Esercitazione',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+        <span class="si-label">Esercitazione</span>
+      </button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Strumenti</div>
 
@@ -1036,6 +1068,69 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="statsOreTable"></div>
     </div>
 
+    <!-- ESERCITAZIONE -->
+    <div class="panel" id="panelEsercitazione">
+      <div class="panel-hdr">
+        <h2>Esercitazione 2025</h2>
+        <p>6–7 Giugno · Campo PC ANA Casale</p>
+      </div>
+
+      <!-- Tab giorni -->
+      <div class="eserc-tabs">
+        <button class="eserc-tab active" id="tabSab" onclick="setGiornoEserc('sabato')">Sabato 6</button>
+        <button class="eserc-tab" id="tabDom" onclick="setGiornoEserc('domenica')">Domenica 7</button>
+      </div>
+
+      <!-- Dashboard presenze -->
+      <div class="eserc-dashboard" id="esercDashboard"></div>
+
+      <!-- Sezione presenze volontari -->
+      <div class="eserc-section-title" onclick="toggleEsercSection('esercPresenzeBody')">
+        👤 Presenze volontari <span class="eserc-toggle-arrow" id="arrowPresenzeBody">▶</span>
+      </div>
+      <div class="eserc-section-body hidden" id="esercPresenzeBody">
+        <div class="eserc-turni" id="esercTurni"></div>
+        <div id="esercPresenzeList"></div>
+      </div>
+
+      <!-- Sezione mezzi -->
+      <div class="eserc-section-title" onclick="toggleEsercSection('esercMezziBody')">
+        🚛 Mezzi al campo <span class="eserc-toggle-arrow" id="arrowMezziBody">▶</span>
+      </div>
+      <div class="eserc-section-body hidden" id="esercMezziBody">
+        <div id="esercMezziList"></div>
+      </div>
+
+      <!-- Sezione scenari -->
+      <div class="eserc-section-title" onclick="toggleEsercSection('esercScenariBody')">
+        📋 Scenari intervento <span class="eserc-toggle-arrow" id="arrowScenariBody">▶</span>
+      </div>
+      <div class="eserc-section-body hidden" id="esercScenariBody">
+        <div id="esercScenariList"></div>
+        <button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="apriFormScenario()">+ Nuovo scenario</button>
+      </div>
+    </div>
+
+    <!-- Form nuovo scenario -->
+    <div class="vol-form" id="esercScenarioForm">
+      <div class="vol-form-top">
+        <button class="vol-detail-back" onclick="chiudiFormScenario()">← indietro</button>
+        <span class="vol-form-title" id="esercFormTitle">Nuovo scenario</span>
+        <button class="vol-form-save" onclick="salvaScenario()">salva</button>
+      </div>
+      <div class="vol-form-body" id="esercFormBody"></div>
+    </div>
+
+    <!-- Dettaglio scenario -->
+    <div class="vol-detail" id="esercScenarioDetail">
+      <div class="vol-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioScenario()">← indietro</button>
+        <span class="vol-detail-title" id="esercDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="apriFormScenario(esercScenarioCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="esercDetailBody"></div>
+    </div>
+
     <!-- PRANZO -->
     <div class="panel" id="panelPranzo">
       <div class="panel-hdr"><h2>Pranzo 25°</h2><p>Tendone Alpini Mirabello — €25 ospiti / €10 volontari</p></div>
@@ -1214,6 +1309,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEsercitazione"> ⭐ Esercitazione</label>
         </div>
       </div>
       <div style="display:flex;gap:0.5rem">
@@ -1271,6 +1367,6 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=32"></script>
+<script src="area-riservata.js?v=33"></script>
 </body>
 </html>
