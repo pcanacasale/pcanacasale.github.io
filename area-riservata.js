@@ -1347,7 +1347,7 @@ function apriModificaUtente(u) {
   var permMap = {
     'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
     'Documenti':'documenti','Pranzo':'pranzo','Richieste':'richieste',
-    'Impostazioni':'impostazioni','Statistiche':'statistiche'
+    'Impostazioni':'impostazioni','Statistiche':'statistiche','Esercitazione':'esercitazione'
   };
   Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
