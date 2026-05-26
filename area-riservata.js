@@ -3718,10 +3718,12 @@ function renderOreTable() {
   // Raccogli ore per volontario dagli ID
   var volMap = {};
   statsInterventi.forEach(function(i){
-    var ore = parseFloat(i.n_ore||0);
+    var oreT = parseFloat(i.n_ore||0);
+    var nVol = (i.volontari_ids||[]).length || i.n_volontari || 1;
+    var oreInd = nVol > 0 ? oreT / nVol : oreT;
     (i.volontari_ids||[]).forEach(function(vid){
       if (!volMap[vid]) volMap[vid] = { ore:0, count:0 };
-      volMap[vid].ore   += ore;
+      volMap[vid].ore   += oreInd;
       volMap[vid].count += 1;
     });
   });
@@ -3764,10 +3766,12 @@ async function stampaPDFStatistiche() {
   // Ore per volontario
   var volMap = {};
   statsInterventi.forEach(function(i){
-    var ore = parseFloat(i.n_ore||0);
+    var oreT = parseFloat(i.n_ore||0);
+    var nVol = (i.volontari_ids||[]).length || i.n_volontari || 1;
+    var oreInd = nVol > 0 ? oreT / nVol : oreT;
     (i.volontari_ids||[]).forEach(function(vid){
       if (!volMap[vid]) volMap[vid] = { ore:0, count:0 };
-      volMap[vid].ore += ore; volMap[vid].count++;
+      volMap[vid].ore += oreInd; volMap[vid].count++;
     });
   });
   var ids = Object.keys(volMap);
