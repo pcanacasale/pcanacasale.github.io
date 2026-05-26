@@ -148,6 +148,7 @@ function avviaDashboard() {
   if (isMaster || p.documenti)  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
   if (isMaster || p.pranzo)     showSi('siPranzo');
   if (isMaster || p.richieste)  showSi('siRichieste');
+  if (isMaster || p.statistiche) showSi('siStatistiche');
   if (isMaster)                 showSi('siImpostazioni');
   if (isMaster || p.db)          showSi('siDb');
   // Nome utente in sidebar
