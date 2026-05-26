@@ -3981,15 +3981,22 @@ function renderEsercPresenze() {
 async function setPresenzaEserc(key, presente, volId, esternoId) {
   if (!esercPresenzeCache[key]) esercPresenzeCache[key] = {};
   esercPresenzeCache[key][esercTurno] = presente;
-  var payload = { giorno: esercGiorno, turno: esercTurno, presente: presente };
-  if (volId) { payload.volontario_id = volId; payload.tipo_partecipante = 'volontario_pcana'; }
-  if (esternoId) { payload.id = esternoId; }
   try {
-    await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
-      method: 'POST',
-      headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }),
-      body: JSON.stringify(payload)
-    });
+    if (volId) {
+      // Upsert tramite merge-duplicates per volontari PC ANA
+      await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
+        method: 'POST',
+        headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates', 'on-conflict': 'volontario_id,giorno,turno' }),
+        body: JSON.stringify({ volontario_id: volId, giorno: esercGiorno, turno: esercTurno, presente: presente, tipo_partecipante: 'volontario_pcana' })
+      });
+    } else if (esternoId) {
+      // PATCH per aggiornare presente su riga esistente
+      await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?id=eq.' + esternoId, {
+        method: 'PATCH',
+        headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify({ presente: presente })
+      });
+    }
   } catch(e) {}
   renderEsercDashboard();
   renderEsercPresenze();
