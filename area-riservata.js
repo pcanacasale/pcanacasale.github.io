@@ -1737,6 +1737,7 @@ function apriFormVolontario(id) {
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp" id="fCF" placeholder="RSSMRA80A01F205X" style="text-transform:uppercase"></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -1798,7 +1799,7 @@ async function caricaDatiForm(id) {
     setVal('fSquadra', v.squadra); setVal('fTipo', v.tipo_volontario);
     setVal('fMansione', v.mansione); setVal('fSpecializzazione', v.specializzazione);
     setVal('fGruppo', v.gruppo_alpini); setVal('fPatenti', v.patenti);
-    setVal('fTelefono', v.telefono); setVal('fEmail', v.email);
+    setVal('fTelefono', v.telefono); setVal('fEmail', v.email); setVal('fCF', v.codice_fiscale);
     setChk('fCommUnita', v.comm_unita); setChk('fRadioAna', v.radio_ana);
     setChk('fEmercom', v.emercom); setChk('fDae', v.dae);
     setChk('f4Ore', v.quattro_ore); setChk('f12Ore', v.dodici_ore);
@@ -1846,7 +1847,7 @@ async function salvaVolontario() {
     squadra: g('fSquadra'), tipo_volontario: g('fTipo'),
     mansione: g('fMansione'), specializzazione: g('fSpecializzazione'),
     gruppo_alpini: g('fGruppo'), patenti: g('fPatenti'),
-    telefono: g('fTelefono'), email: g('fEmail'),
+    telefono: g('fTelefono'), email: g('fEmail'), codice_fiscale: (document.getElementById('fCF')?document.getElementById('fCF').value.trim().toUpperCase()||null:null),
     comm_unita: b('fCommUnita'), radio_ana: b('fRadioAna'),
     emercom: b('fEmercom'), dae: b('fDae'),
     quattro_ore: b('f4Ore'), dodici_ore: b('f12Ore'),
@@ -2534,7 +2535,8 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Note</div>
         <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
       </div>` : ''}
-      <button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>`;
+      <button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>
+      <button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="stampaIntervento(${i.id})">📄 Esporta con CF</button>`;
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
 }
 
@@ -3733,7 +3735,7 @@ function renderOreTable() {
   // Carica nomi volontari
   var ids = Object.keys(volMap);
   if (!ids.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--testo-3)">Nessun dato.</div>'; return; }
-  fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome', { headers: H })
+  fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome,codice_fiscale', { headers: H })
     .then(function(r){ return r.json(); })
     .then(function(vols){
       var rows = vols.map(function(v){
@@ -4549,4 +4551,72 @@ async function riconosciCF(imgData) {
   } catch(e) {
     document.getElementById('cfScanResult').textContent = 'Errore riconoscimento. Inserisci il CF manualmente.';
   }
+}
+
+// -- EXPORT INTERVENTO CON CF --
+async function stampaIntervento(id) {
+  // Carica i dati dell'intervento
+  var res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id + '&select=*', { headers: H });
+  var dati = await res.json();
+  if (!dati.length) return;
+  var i = dati[0];
+
+  // Carica volontari con CF
+  var volIds = i.volontari_ids || [];
+  var vols = [];
+  if (volIds.length) {
+    var rv = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + volIds.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
+    vols = await rv.json();
+  }
+
+  var ora    = new Date().toLocaleString('it-IT');
+  var data   = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' }) : '—';
+  var dataF  = i.data_fine ? new Date(i.data_fine).toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' }) : null;
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Intervento — ' + (i.evento||'—') + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10pt;color:#111;margin:1.5cm;max-width:18cm}'
+    + '.header{border-bottom:3px solid #1a7a4a;padding-bottom:0.8rem;margin-bottom:1rem}'
+    + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.2rem}'
+    + '.meta{font-size:8pt;color:#666}'
+    + 'h2{font-size:10pt;font-weight:700;color:#1a7a4a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:1rem 0 0.5rem}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt}'
+    + 'td,th{padding:5px 8px;border:0.5px solid #e5e7eb;text-align:left}'
+    + 'th{background:#1a7a4a;color:white;font-weight:700}'
+    + 'tr:nth-child(even) td{background:#f9fafb}'
+    + '.info-table td:first-child{font-weight:600;color:#555;width:35%;background:#f9fafb}'
+    + '.no-cf{color:#999;font-style:italic}'
+    + '@media print{body{margin:1cm}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<div class="header">'
+    + '<h1>Intervento — ' + (i.evento||'—') + '</h1>'
+    + '<div class="meta">PC ANA Casale Monferrato &nbsp;·&nbsp; Generato il ' + ora + '</div>'
+    + '</div>'
+    + '<h2>Dati intervento</h2>'
+    + '<table class="info-table"><tbody>'
+    + '<tr><td>Evento</td><td>' + (i.evento||'—') + '</td></tr>'
+    + '<tr><td>Tipo attività</td><td>' + (i.tipo_attivita||'—') + '</td></tr>'
+    + '<tr><td>Data inizio</td><td>' + data + '</td></tr>'
+    + (dataF ? '<tr><td>Data fine</td><td>' + dataF + '</td></tr>' : '')
+    + '<tr><td>Ore</td><td>' + (i.n_ore||'—') + '</td></tr>'
+    + '<tr><td>N° volontari</td><td>' + (i.n_volontari||vols.length) + '</td></tr>'
+    + '<tr><td>Registrato da</td><td>' + (i.utente||'—') + '</td></tr>'
+    + (i.note ? '<tr><td>Note</td><td>' + i.note + '</td></tr>' : '')
+    + '</tbody></table>'
+    + '<h2>Volontari partecipanti (' + vols.length + ')</h2>'
+    + '<table><thead><tr><th>#</th><th>Cognome e Nome</th><th>Codice Fiscale</th></tr></thead><tbody>'
+    + vols.map(function(v, idx) {
+        var cf = v.codice_fiscale ? v.codice_fiscale : '<span class="no-cf">non inserito</span>';
+        return '<tr><td>' + (idx+1) + '</td><td>' + v.cognome + ' ' + v.nome + '</td><td>' + cf + '</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + '<div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem">'
+    + '<div style="border-top:0.5px solid #111;padding-top:4px;font-size:8pt;color:#666;text-align:center;margin-top:2rem">Responsabile intervento</div>'
+    + '<div style="border-top:0.5px solid #111;padding-top:4px;font-size:8pt;color:#666;text-align:center;margin-top:2rem">Coordinatore PC ANA Casale</div>'
+    + '</div>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
+    + '</body></html>');
+  win.document.close();
 }
