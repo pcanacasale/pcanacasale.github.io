@@ -1,4 +1,3 @@
-
 // -- SPLASH SCREEN --
 function avviaSplash() {
   var logo   = document.getElementById('splashLogo');
