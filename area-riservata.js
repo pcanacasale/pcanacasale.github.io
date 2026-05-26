@@ -3953,7 +3953,7 @@ function renderEsercPresenze() {
     html += '<div class="eserc-vol-row">'
       + '<div class="eserc-vol-avatar" style="background:'+(presente?'var(--green)':'var(--bg-2)')+';color:'+(presente?'#fff':'var(--testo-3)')+'">'+ini+'</div>'
       + '<div style="flex:1;min-width:0"><div class="eserc-vol-nome">'+v.cognome+' '+v.nome+'</div><div style="font-size:0.62rem;color:var(--green)">PC ANA</div></div>'
-      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('v'+v.id+'',this.checked,'+v.id+',null)">'
+      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc(&quot;v'+v.id+'&quot;,this.checked,'+v.id+',null)">'
       + '</div>';
   });
 
@@ -3967,7 +3967,7 @@ function renderEsercPresenze() {
       + '<div class="eserc-vol-avatar" style="background:'+(presente?tipoColor:'var(--bg-2)')+';color:'+(presente?'#fff':'var(--testo-3)')+'">'+ini+'</div>'
       + '<div style="flex:1;min-width:0"><div class="eserc-vol-nome">'+(e.cognome_esterno||'')+' '+(e.nome_esterno||'')+'</div><div style="font-size:0.62rem;color:'+tipoColor+'">'+tipoLabel+'</div></div>'
       + '<button class="btn-sm btn-danger" onclick="eliminaEsterno('+e.id+')" style="padding:2px 7px;font-size:0.65rem">✕</button>'
-      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('e'+e.id+'',this.checked,null,'+e.id+')">'
+      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc(&quot;e'+e.id+'&quot;,this.checked,null,'+e.id+')">'
       + '</div>';
   });
 
