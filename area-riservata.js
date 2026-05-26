@@ -1,3 +1,4 @@
+
 // -- SPLASH SCREEN --
 function avviaSplash() {
   var logo   = document.getElementById('splashLogo');
@@ -4003,6 +4004,8 @@ function renderEsercScenari() {
 }
 
 function toggleEsercSection(id) {
+  // Carica pasti al primo apertura
+  if (id === 'esercPastiBody' && !esercPastiData.length) caricaPasti();
   var body  = document.getElementById(id);
   var arrow = document.getElementById('arrow' + id.charAt(0).toUpperCase() + id.slice(1));
   if (!body) return;
@@ -4274,4 +4277,204 @@ async function stampaSchedaIntervento(id) {
     + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
     + '</body></html>');
   win.document.close();
+}
+
+// -- PASTI ESERCITAZIONE --
+var esercPastiData = [];
+var esercPastiFiltro = 'tutti';
+
+async function caricaPasti() {
+  var res = await fetch(SUPA_URL + '/rest/v1/esercitazione_pasti?select=*&order=cognome', { headers: H });
+  esercPastiData = await res.json();
+  renderPastiStats();
+  renderPastiList();
+}
+
+function renderPastiStats() {
+  var el = document.getElementById('esercPastiStats');
+  if (!el) return;
+  var pranzo = esercPastiData.filter(function(p){ return p.sabato_pranzo; }).length;
+  var cena   = esercPastiData.filter(function(p){ return p.sabato_cena; }).length;
+  var tot    = esercPastiData.length;
+  el.innerHTML = [
+    [tot,    'Totale',  '#1a7a4a'],
+    [pranzo, 'Pranzo',  '#185fa5'],
+    [cena,   'Cena',    '#854f0b']
+  ].map(function(c) {
+    return '<div class="eserc-dash-card"><div class="eserc-dash-num" style="color:'+c[2]+'">'+c[0]+'</div><div class="eserc-dash-lbl">'+c[1]+'</div></div>';
+  }).join('');
+}
+
+function filtraPasti(filtro) {
+  esercPastiFiltro = filtro;
+  ['Tutti','Esterni','Ospiti'].forEach(function(f) {
+    var btn = document.getElementById('pastiFiltro'+f);
+    if (btn) btn.classList.toggle('active', filtro === f.toLowerCase());
+  });
+  renderPastiList();
+}
+
+function renderPastiList() {
+  var el = document.getElementById('esercPastiList');
+  if (!el) return;
+  var dati = esercPastiData;
+  if (esercPastiFiltro === 'esterni') dati = dati.filter(function(p){ return p.tipo === 'volontario_esterno'; });
+  if (esercPastiFiltro === 'ospiti')  dati = dati.filter(function(p){ return p.tipo === 'ospite'; });
+
+  if (!dati.length) { el.innerHTML = '<div class="loading-msg">Nessun partecipante.</div>'; return; }
+
+  var TIPO_LABEL = { volontario_pcana:'PC ANA', volontario_esterno:'Esterno', ospite:'Ospite' };
+  var TIPO_COLOR = { volontario_pcana:'var(--green)', volontario_esterno:'#185fa5', ospite:'#854f0b' };
+
+  el.innerHTML = dati.map(function(p) {
+    return '<div class="eserc-pasto-row">'
+      + '<div class="eserc-pasto-info">'
+      + '<div class="eserc-pasto-nome">'+p.cognome+' '+p.nome+'</div>'
+      + '<div class="eserc-pasto-tipo" style="color:'+TIPO_COLOR[p.tipo]+'">'+TIPO_LABEL[p.tipo]+'</div>'
+      + '</div>'
+      + '<div class="eserc-pasto-checks">'
+      + '<div class="eserc-pasto-check"><span style="font-size:1rem">'+(p.sabato_pranzo?'🍽️':'○')+'</span><span>Pranzo</span></div>'
+      + '<div class="eserc-pasto-check"><span style="font-size:1rem">'+(p.sabato_cena?'🌙':'○')+'</span><span>Cena</span></div>'
+      + '</div>'
+      + '<button class="btn-sm btn-ok" onclick="apriFormPasto('+p.id+')" style="padding:3px 8px">✏</button>'
+      + '<button class="btn-sm btn-danger" onclick="eliminaPartecipante('+p.id+')" style="padding:3px 8px">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function apriFormPasto(id) {
+  var p = id ? esercPastiData.find(function(x){ return x.id === id; }) : {};
+  document.getElementById('esercPastoTitle').textContent = id ? 'Modifica partecipante' : 'Aggiungi partecipante';
+  document.getElementById('esercPastoId').value = id || '';
+  document.getElementById('ppCognome').value = p.cognome || '';
+  document.getElementById('ppNome').value    = p.nome    || '';
+  document.getElementById('ppTipo').value    = p.tipo    || 'volontario_pcana';
+  document.getElementById('ppCF').value      = p.codice_fiscale || '';
+  document.getElementById('ppPranzo').checked = p.sabato_pranzo || false;
+  document.getElementById('ppCena').checked   = p.sabato_cena   || false;
+  document.getElementById('ppNote').value    = p.note    || '';
+  document.getElementById('esercPastoErr').style.display = 'none';
+  document.getElementById('esercPastoOverlay').classList.add('open');
+}
+
+function chiudiFormPasto() {
+  document.getElementById('esercPastoOverlay').classList.remove('open');
+}
+
+async function salvaPartecipantePasto() {
+  var cognome = document.getElementById('ppCognome').value.trim();
+  var nome    = document.getElementById('ppNome').value.trim();
+  var errEl   = document.getElementById('esercPastoErr');
+  if (!cognome || !nome) { errEl.textContent = 'Cognome e nome obbligatori.'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  var payload = {
+    cognome, nome,
+    tipo:           document.getElementById('ppTipo').value,
+    codice_fiscale: document.getElementById('ppCF').value.trim().toUpperCase() || null,
+    sabato_pranzo:  document.getElementById('ppPranzo').checked,
+    sabato_cena:    document.getElementById('ppCena').checked,
+    note:           document.getElementById('ppNote').value.trim() || null,
+  };
+  var id = document.getElementById('esercPastoId').value;
+  try {
+    if (id) {
+      await fetch(SUPA_URL+'/rest/v1/esercitazione_pasti?id=eq.'+id, { method:'PATCH', headers:HJ, body:JSON.stringify(payload) });
+    } else {
+      await fetch(SUPA_URL+'/rest/v1/esercitazione_pasti', { method:'POST', headers:HJ, body:JSON.stringify(payload) });
+    }
+    chiudiFormPasto();
+    await caricaPasti();
+  } catch(e) { errEl.textContent='Errore: '+e.message; errEl.style.display='block'; }
+}
+
+async function eliminaPartecipante(id) {
+  if (!confirm('Eliminare questo partecipante?')) return;
+  await fetch(SUPA_URL+'/rest/v1/esercitazione_pasti?id=eq.'+id, { method:'DELETE', headers:H });
+  await caricaPasti();
+}
+
+// Parser codice fiscale italiano
+function parseCF(cf) {
+  cf = (cf||'').toUpperCase().trim();
+  if (cf.length !== 16) return null;
+  var cognomeChars = cf.slice(0,3).replace(/[^A-Z]/g,'');
+  var nomeChars    = cf.slice(3,6).replace(/[^A-Z]/g,'');
+  return { cognomeRaw: cognomeChars, nomeRaw: nomeChars, cf: cf };
+}
+
+function parseCFLive(val) {
+  if (val.length === 16) {
+    var parsed = parseCF(val);
+    if (parsed) {
+      // Suggerisce solo se i campi sono vuoti
+      if (!document.getElementById('ppCognome').value)
+        document.getElementById('ppCognome').value = parsed.cognomeRaw;
+      if (!document.getElementById('ppNome').value)
+        document.getElementById('ppNome').value = parsed.nomeRaw;
+    }
+  }
+}
+
+// -- SCANNER CF --
+var cfStream = null;
+
+async function apriScannerCF() {
+  document.getElementById('esercScannerOverlay').classList.add('open');
+  document.getElementById('cfScanResult').textContent = '';
+  try {
+    cfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+    document.getElementById('cfVideo').srcObject = cfStream;
+  } catch(e) {
+    document.getElementById('cfScanResult').textContent = 'Fotocamera non disponibile.';
+  }
+}
+
+function chiudiScanner() {
+  if (cfStream) { cfStream.getTracks().forEach(function(t){ t.stop(); }); cfStream = null; }
+  document.getElementById('esercScannerOverlay').classList.remove('open');
+}
+
+function scattaFoto() {
+  var video  = document.getElementById('cfVideo');
+  var canvas = document.getElementById('cfCanvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  // Usa Tesseract.js se disponibile, altrimenti chiede CF manuale
+  var imgData = canvas.toDataURL('image/png');
+  document.getElementById('cfScanResult').textContent = 'Elaborazione...';
+
+  // Carica Tesseract se non presente
+  if (typeof Tesseract === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+    s.onload = function(){ riconosciCF(imgData); };
+    document.head.appendChild(s);
+  } else {
+    riconosciCF(imgData);
+  }
+}
+
+async function riconosciCF(imgData) {
+  try {
+    var result = await Tesseract.recognize(imgData, 'eng', { logger: function(){} });
+    var testo  = result.data.text.toUpperCase().replace(/\s/g,'');
+    // Cerca pattern CF: 6 lettere, 2 cifre, 1 lettera, 2 cifre, 1 lettera, 3 cifre/lettere, 1 lettera
+    var match  = testo.match(/[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9A-Z]{3}[A-Z]/);
+    if (match) {
+      var cf     = match[0];
+      var parsed = parseCF(cf);
+      document.getElementById('cfScanResult').textContent = '✓ Trovato: ' + cf;
+      chiudiScanner();
+      apriFormPasto(null);
+      document.getElementById('ppCF').value      = cf;
+      document.getElementById('ppCognome').value = parsed ? parsed.cognomeRaw : '';
+      document.getElementById('ppNome').value    = parsed ? parsed.nomeRaw    : '';
+    } else {
+      document.getElementById('cfScanResult').textContent = 'CF non trovato. Riprova o inserisci manualmente.';
+    }
+  } catch(e) {
+    document.getElementById('cfScanResult').textContent = 'Errore riconoscimento. Inserisci il CF manualmente.';
+  }
 }

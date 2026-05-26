@@ -686,6 +686,15 @@ div:hover > .vista-edit-btn { display:flex; }
 .esb-attivo { background:#eaf3de; color:#3b6d11; }
 .esb-concluso { background:var(--bg-2); color:var(--testo-3); }
 
+
+.eserc-pasti-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:0.6rem; }
+.eserc-pasto-row { display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
+.eserc-pasto-info { flex:1; min-width:0; }
+.eserc-pasto-nome { font-size:0.85rem; font-weight:600; color:var(--testo); }
+.eserc-pasto-tipo { font-size:0.65rem; color:var(--testo-3); text-transform:uppercase; }
+.eserc-pasto-checks { display:flex; gap:0.4rem; flex-shrink:0; }
+.eserc-pasto-check { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.58rem; color:var(--testo-3); }
+
 </style>
 </head>
 <body>
@@ -1101,6 +1110,24 @@ div:hover > .vista-edit-btn { display:flex; }
         <div id="esercMezziList"></div>
       </div>
 
+      <!-- Sezione pasti -->
+      <div class="eserc-section-title" onclick="toggleEsercSection('esercPastiBody')">
+        🍽️ Pasti Sabato <span class="eserc-toggle-arrow" id="arrowEsercPastiBody">▶</span>
+      </div>
+      <div class="eserc-section-body hidden" id="esercPastiBody">
+        <div class="eserc-pasti-stats" id="esercPastiStats"></div>
+        <div style="display:flex;gap:0.4rem;margin-bottom:0.6rem;flex-wrap:wrap">
+          <button class="eserc-turno-btn active" id="pastiFiltroTutti" onclick="filtraPasti('tutti')">Tutti</button>
+          <button class="eserc-turno-btn" id="pastiFiltroEsterni" onclick="filtraPasti('esterni')">Esterni</button>
+          <button class="eserc-turno-btn" id="pastiFiltroOspiti" onclick="filtraPasti('ospiti')">Ospiti</button>
+        </div>
+        <div id="esercPastiList"></div>
+        <div style="display:flex;gap:0.4rem;margin-top:0.6rem">
+          <button class="btn-primary" style="flex:1" onclick="apriFormPasto(null)">+ Aggiungi</button>
+          <button class="btn-primary" style="flex:1;background:var(--bg-2);color:var(--testo)" onclick="apriScannerCF()">📷 Scansiona CF</button>
+        </div>
+      </div>
+
       <!-- Sezione scenari -->
       <div class="eserc-section-title" onclick="toggleEsercSection('esercScenariBody')">
         📋 Scenari intervento <span class="eserc-toggle-arrow" id="arrowScenariBody">▶</span>
@@ -1367,6 +1394,64 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=35"></script>
+  <!-- Form pasto esercitazione -->
+  <div class="vista-form-overlay" id="esercPastoOverlay">
+    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto">
+      <h4 id="esercPastoTitle">Aggiungi partecipante</h4>
+      <input type="hidden" id="esercPastoId">
+      <div class="form-err" id="esercPastoErr"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
+        <div><label class="form-lbl">Cognome *</label><input class="form-inp" id="ppCognome" placeholder="Rossi"></div>
+        <div><label class="form-lbl">Nome *</label><input class="form-inp" id="ppNome" placeholder="Mario"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:0.5rem">
+        <label class="form-lbl">Tipo</label>
+        <select class="form-inp" id="ppTipo">
+          <option value="volontario_pcana">Volontario PC ANA</option>
+          <option value="volontario_esterno">Volontario esterno</option>
+          <option value="ospite">Ospite</option>
+        </select>
+      </div>
+      <div class="form-field" style="margin-bottom:0.5rem">
+        <label class="form-lbl">Codice fiscale</label>
+        <input class="form-inp" id="ppCF" placeholder="RSSMRA80A01F205X" style="text-transform:uppercase" oninput="parseCFLive(this.value)">
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl" style="margin-bottom:0.4rem">Pasti</label>
+        <div style="display:flex;flex-direction:column;gap:0.4rem">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+            <input type="checkbox" id="ppPranzo" style="accent-color:var(--green);width:16px;height:16px"> 🍽️ Sabato pranzo
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
+            <input type="checkbox" id="ppCena" style="accent-color:var(--green);width:16px;height:16px"> 🌙 Sabato cena
+          </label>
+        </div>
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Note</label>
+        <input class="form-inp" id="ppNote" placeholder="es. allergie, preferenze...">
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-sm btn-warn" onclick="chiudiFormPasto()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="salvaPartecipantePasto()" style="padding:0.7rem">salva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scanner codice fiscale -->
+  <div class="vista-form-overlay" id="esercScannerOverlay">
+    <div class="vista-form-card">
+      <h4>Scansiona codice fiscale</h4>
+      <p style="font-size:0.75rem;color:var(--testo-3);margin-bottom:0.8rem">Inquadra il codice fiscale con la fotocamera</p>
+      <video id="cfVideo" style="width:100%;border-radius:var(--r);background:#000;max-height:240px;object-fit:cover" autoplay playsinline></video>
+      <canvas id="cfCanvas" style="display:none"></canvas>
+      <div id="cfScanResult" style="font-size:0.8rem;color:var(--green);margin-top:0.5rem;text-align:center"></div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
+        <button class="btn-sm btn-warn" onclick="chiudiScanner()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="scattaFoto()" style="padding:0.7rem">📸 Scatta</button>
+      </div>
+    </div>
+  </div>
+<script src="area-riservata.js?v=36"></script>
 </body>
 </html>
