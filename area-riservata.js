@@ -3912,7 +3912,7 @@ function renderEsercDashboard() {
   if (!el) return;
   // Conta presenti nel turno corrente
   var presenti = esercVolontari.filter(function(v) {
-    return esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno];
+    return esercPresenzeCache['v'+v.id] && esercPresenzeCache['v'+v.id][esercTurno];
   }).length;
   var mezziOp = esercMezzi.filter(function(m) {
     return (esercMezziCache[m.id] || 'disponibile') === 'disponibile';
@@ -4105,9 +4105,10 @@ function apriFormScenario(id) {
     return '<option value="'+st+'"'+((s.stato||'preparazione')===st?' selected':'')+'>'+st.charAt(0).toUpperCase()+st.slice(1)+'</option>';
   }).join('');
 
-  // Lista presenti nel turno selezionato
+  // Lista presenti in qualsiasi turno del giorno
   var presenti = esercVolontari.filter(function(v) {
-    return esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno];
+    var cache = esercPresenzeCache['v'+v.id] || {};
+    return Object.values(cache).some(function(p){ return p; });
   });
   var volHtml = presenti.length
     ? presenti.map(function(v) {
