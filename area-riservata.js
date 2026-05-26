@@ -3837,6 +3837,7 @@ var esercScenariData = [];
 var esercVolontari = [];
 var esercMezzi = [];
 var esercPresenzeCache = {};
+var esercEsterni = [];
 var esercMezziCache = {};
 
 var ESERC_TURNI = {
@@ -3864,13 +3865,27 @@ async function setGiornoEserc(giorno) {
 }
 
 async function caricaEsercDati() {
-  // Presenze
-  var rP = await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?giorno=eq.' + esercGiorno + '&select=*', { headers: H });
+  // Presenze + esterni
+  var [rP, rE] = await Promise.all([
+    fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?giorno=eq.' + esercGiorno + '&select=*', { headers: H }),
+    fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?giorno=eq.' + esercGiorno + '&tipo_partecipante=neq.volontario_pcana&select=*&order=cognome_esterno', { headers: H })
+  ]);
   var presenze = await rP.json();
+  var esterni  = await rE.json();
   esercPresenzeCache = {};
   presenze.forEach(function(p) {
-    if (!esercPresenzeCache[p.volontario_id]) esercPresenzeCache[p.volontario_id] = {};
-    esercPresenzeCache[p.volontario_id][p.turno] = p.presente;
+    var key = p.volontario_id ? 'v'+p.volontario_id : 'e'+p.id;
+    if (!esercPresenzeCache[key]) esercPresenzeCache[key] = {};
+    esercPresenzeCache[key][p.turno] = p.presente;
+  });
+  // Deduplica esterni (solo le righe senza volontario_id)
+  var visti = {};
+  esercEsterni = [];
+  esterni.forEach(function(p) {
+    if (!p.volontario_id && !visti[p.id]) {
+      visti[p.id] = true;
+      esercEsterni.push(p);
+    }
   });
 
   // Mezzi
@@ -3930,30 +3945,87 @@ function renderEsercPresenze() {
   var el = document.getElementById('esercPresenzeList');
   if (!el) return;
   var html = '';
+
+  // Volontari PC ANA
   esercVolontari.forEach(function(v) {
-    var presente = !!(esercPresenzeCache[v.id] && esercPresenzeCache[v.id][esercTurno]);
-    var ini = ((v.cognome||'')[0]||(v.nome||'')[0]||'?').toUpperCase();
+    var presente = !!(esercPresenzeCache['v'+v.id] && esercPresenzeCache['v'+v.id][esercTurno]);
+    var ini = ((v.cognome||'')[0]||'?').toUpperCase();
     html += '<div class="eserc-vol-row">'
       + '<div class="eserc-vol-avatar" style="background:'+(presente?'var(--green)':'var(--bg-2)')+';color:'+(presente?'#fff':'var(--testo-3)')+'">'+ini+'</div>'
-      + '<div class="eserc-vol-nome">'+v.cognome+' '+v.nome+'</div>'
-      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('+v.id+',this.checked)">'
+      + '<div style="flex:1;min-width:0"><div class="eserc-vol-nome">'+v.cognome+' '+v.nome+'</div><div style="font-size:0.62rem;color:var(--green)">PC ANA</div></div>'
+      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('v'+v.id+'',this.checked,'+v.id+',null)">'
       + '</div>';
   });
+
+  // Esterni e ospiti
+  esercEsterni.forEach(function(e) {
+    var presente = !!(esercPresenzeCache['e'+e.id] && esercPresenzeCache['e'+e.id][esercTurno]);
+    var ini = ((e.cognome_esterno||'')[0]||'?').toUpperCase();
+    var tipoLabel = e.tipo_partecipante === 'ospite' ? 'Ospite' : 'Esterno';
+    var tipoColor = e.tipo_partecipante === 'ospite' ? '#854f0b' : '#185fa5';
+    html += '<div class="eserc-vol-row">'
+      + '<div class="eserc-vol-avatar" style="background:'+(presente?tipoColor:'var(--bg-2)')+';color:'+(presente?'#fff':'var(--testo-3)')+'">'+ini+'</div>'
+      + '<div style="flex:1;min-width:0"><div class="eserc-vol-nome">'+(e.cognome_esterno||'')+' '+(e.nome_esterno||'')+'</div><div style="font-size:0.62rem;color:'+tipoColor+'">'+tipoLabel+'</div></div>'
+      + '<button class="btn-sm btn-danger" onclick="eliminaEsterno('+e.id+')" style="padding:2px 7px;font-size:0.65rem">✕</button>'
+      + '<input type="checkbox" class="eserc-vol-check" '+(presente?'checked':'')+' onchange="setPresenzaEserc('e'+e.id+'',this.checked,null,'+e.id+')">'
+      + '</div>';
+  });
+
+  html += '<button onclick="apriFormEsterno()" style="width:100%;margin-top:0.6rem;padding:0.6rem;background:var(--bg-2);border:0.5px dashed var(--border);border-radius:var(--r);color:var(--testo-3);font-size:0.78rem;cursor:pointer;font-family:var(--font)">+ Aggiungi esterno / ospite</button>';
+
   el.innerHTML = html || '<div class="loading-msg">Nessun volontario.</div>';
 }
 
-async function setPresenzaEserc(volId, presente) {
-  if (!esercPresenzeCache[volId]) esercPresenzeCache[volId] = {};
-  esercPresenzeCache[volId][esercTurno] = presente;
+async function setPresenzaEserc(key, presente, volId, esternoId) {
+  if (!esercPresenzeCache[key]) esercPresenzeCache[key] = {};
+  esercPresenzeCache[key][esercTurno] = presente;
+  var payload = { giorno: esercGiorno, turno: esercTurno, presente: presente };
+  if (volId) { payload.volontario_id = volId; payload.tipo_partecipante = 'volontario_pcana'; }
+  if (esternoId) { payload.id = esternoId; }
   try {
     await fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates' }),
-      body: JSON.stringify({ volontario_id: volId, giorno: esercGiorno, turno: esercTurno, presente: presente })
+      body: JSON.stringify(payload)
     });
   } catch(e) {}
   renderEsercDashboard();
   renderEsercPresenze();
+}
+
+async function eliminaEsterno(id) {
+  if (!confirm('Rimuovere questo partecipante?')) return;
+  await fetch(SUPA_URL+'/rest/v1/esercitazione_presenze?id=eq.'+id, { method:'DELETE', headers:H });
+  await caricaEsercDati();
+}
+
+function apriFormEsterno() {
+  document.getElementById('esercEsternoOverlay').classList.add('open');
+  document.getElementById('eeNome').value = '';
+  document.getElementById('eeCognome').value = '';
+  document.getElementById('eeTipo').value = 'volontario_esterno';
+  document.getElementById('eeErr').style.display = 'none';
+}
+
+function chiudiFormEsterno() {
+  document.getElementById('esercEsternoOverlay').classList.remove('open');
+}
+
+async function salvaEsterno() {
+  var nome    = document.getElementById('eeNome').value.trim();
+  var cognome = document.getElementById('eeCognome').value.trim();
+  var tipo    = document.getElementById('eeTipo').value;
+  var errEl   = document.getElementById('eeErr');
+  if (!nome || !cognome) { errEl.textContent='Nome e cognome obbligatori.'; errEl.style.display='block'; return; }
+  errEl.style.display = 'none';
+  try {
+    await fetch(SUPA_URL+'/rest/v1/esercitazione_presenze', {
+      method:'POST', headers:Object.assign({},HJ,{'Prefer':'return=minimal'}),
+      body: JSON.stringify({ nome_esterno:nome, cognome_esterno:cognome, tipo_partecipante:tipo, giorno:esercGiorno, turno:esercTurno, presente:true })
+    });
+    chiudiFormEsterno();
+    await caricaEsercDati();
+  } catch(e) { errEl.textContent='Errore: '+e.message; errEl.style.display='block'; }
 }
 
 function renderEsercMezzi() {

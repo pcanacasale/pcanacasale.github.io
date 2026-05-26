@@ -1452,6 +1452,28 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
+  <!-- Form esterno/ospite esercitazione -->
+  <div class="vista-form-overlay" id="esercEsternoOverlay">
+    <div class="vista-form-card">
+      <h4>Aggiungi esterno / ospite</h4>
+      <div class="form-err" id="eeErr"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
+        <div><label class="form-lbl">Cognome *</label><input class="form-inp" id="eeCognome" placeholder="Rossi"></div>
+        <div><label class="form-lbl">Nome *</label><input class="form-inp" id="eeNome" placeholder="Mario"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Tipo</label>
+        <select class="form-inp" id="eeTipo">
+          <option value="volontario_esterno">Volontario esterno</option>
+          <option value="ospite">Ospite</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-sm btn-warn" onclick="chiudiFormEsterno()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="salvaEsterno()" style="padding:0.7rem">aggiungi</button>
+      </div>
+    </div>
+  </div>
 <script src="area-riservata.js?v=36"></script>
 </body>
 </html>
