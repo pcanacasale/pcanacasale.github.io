@@ -1308,6 +1308,7 @@ async function salvaUtente() {
     documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
+    statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -1342,7 +1343,8 @@ function apriModificaUtente(u) {
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
-    'Documenti':'documenti','Pranzo':'pranzo','Richieste':'richieste','Impostazioni':'impostazioni'
+    'Documenti':'documenti','Pranzo':'pranzo','Richieste':'richieste',
+    'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
   Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
@@ -1374,6 +1376,7 @@ async function salvaModificaUtente() {
     pranzo:       document.getElementById('modPermPranzo') ? document.getElementById('modPermPranzo').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
+    statistiche:  document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;

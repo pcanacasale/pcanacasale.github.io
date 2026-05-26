@@ -209,8 +209,8 @@ div:hover > .vista-edit-btn { display:flex; }
 /* SCHEDA DETTAGLIO */
 .vol-detail { display:none; position:fixed; inset:0; background:var(--bg); z-index:400; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
 .vol-detail.open { display:block; animation:fadeIn 0.18s ease; }
-.vol-detail-top { position:sticky; top:0; background:var(--bg-card); border-bottom:0.5px solid var(--border); padding:0.75rem 1rem; padding-top:calc(0.75rem + var(--safe-t)); display:flex; align-items:center; gap:0.8rem; z-index:10; padding-top:calc(0.75rem + var(--safe-t)); }
-.vol-detail-back { background:none; border:none; color:var(--green); cursor:pointer; font-family:var(--font); font-size:0.9rem; font-weight:500; padding:0; display:flex; align-items:center; gap:3px; }
+.vol-detail-top { position:sticky; top:0; background:var(--bg-card); border-bottom:0.5px solid var(--border); padding:0.75rem 1rem; padding-top:calc(0.75rem + var(--safe-t)); display:flex; align-items:center; gap:0.8rem; z-index:10; }
+.vol-detail-back { background:none; border:none; color:var(--green); cursor:pointer; font-family:var(--font); font-size:0.9rem; font-weight:500; padding:8px 12px 8px 0; display:flex; align-items:center; gap:3px; min-width:60px; -webkit-tap-highlight-color:transparent; }
 .vol-detail-title { flex:1; font-size:0.9rem; font-weight:600; color:var(--testo); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .vol-detail-edit { background:var(--green-pale); color:var(--green); border:none; border-radius:20px; padding:0.3rem 0.85rem; font-family:var(--font); font-size:0.78rem; font-weight:600; cursor:pointer; }
 .vol-detail-body { padding:1rem; }
@@ -1214,6 +1214,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermPranzo"> 🍽️ Pranzo 25°</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
         </div>
       </div>
       <div style="display:flex;gap:0.5rem">
@@ -1271,6 +1272,6 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=28"></script>
+<script src="area-riservata.js?v=29"></script>
 </body>
 </html>
