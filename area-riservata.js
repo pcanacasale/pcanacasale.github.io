@@ -809,7 +809,11 @@ function aggiornaRigaInvitato(invId) {
   var presenzaCls = presenza==='presente' ? 'presente' : presenza==='assente' ? 'assente' : 'attesa';
   var nomeHtml   = inv.nome ? '<div class="inv-nome">' + inv.nome + '</div>' : '';
   var isMaster   = currentUser && currentUser.tipo_accesso === 'master';
-  var editBtnHtml = '';
+  var _ente = (inv.ente||'').replace(/'/g,'');
+  var _nome = (inv.nome||'').replace(/'/g,'');
+  var editBtnHtml = (isMaster && inv.dbId)
+    ? '<button class="inv-edit-btn" onclick="apriModificaInvitato('+inv.dbId+',\''+_ente+'\',\''+_nome+'\',event)">✏</button>'
+    : '';
   var delBtnHtml  = (isMaster && inv.dbId) ? '<button class="inv-del-btn" onclick="eliminaInvitato('+inv.dbId+',event)">×</button>' : '';
 
   function mkCS(val, onch) {

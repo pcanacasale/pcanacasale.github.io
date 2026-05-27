@@ -1474,6 +1474,26 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=38"></script>
+  <!-- Modifica invitato pranzo -->
+  <div class="vista-form-overlay" id="pranzoEditOverlay">
+    <div class="vista-form-card">
+      <h4>Modifica invitato</h4>
+      <input type="hidden" id="peiId">
+      <div class="form-err" id="peiErr"></div>
+      <div class="form-field" style="margin-bottom:0.5rem">
+        <label class="form-lbl">Ente / Ruolo</label>
+        <input class="form-inp" id="peiEnte" placeholder="es. Comune di Casale">
+      </div>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Nome</label>
+        <input class="form-inp" id="peiNome" placeholder="es. Mario Rossi">
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn-sm btn-warn" onclick="chiudiModificaInvitato()" style="flex:1;padding:0.7rem">annulla</button>
+        <button class="btn-primary" onclick="salvaModificaInvitato()" style="padding:0.7rem">salva</button>
+      </div>
+    </div>
+  </div>
+<script src="area-riservata.js?v=39"></script>
 </body>
 </html>
