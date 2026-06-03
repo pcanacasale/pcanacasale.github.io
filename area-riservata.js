@@ -4644,3 +4644,80 @@ async function stampaIntervento(id) {
     + '</body></html>');
   win.document.close();
 }
+
+// -- EXPORT PRESENTI PDF --
+async function esportaPresentiPDF() {
+  var ora    = new Date().toLocaleString('it-IT');
+  var giorno = esercGiorno.charAt(0).toUpperCase() + esercGiorno.slice(1);
+  var turni  = ESERC_TURNI[esercGiorno];
+
+  // Raggruppa per turno
+  var perTurno = {};
+  turni.forEach(function(t) { perTurno[t] = []; });
+
+  // Volontari PC ANA
+  esercVolontari.forEach(function(v) {
+    var cache = esercPresenzeCache['v'+v.id] || {};
+    turni.forEach(function(t) {
+      if (cache[t]) perTurno[t].push({ cognome: v.cognome, nome: v.nome, tipo: 'PC ANA' });
+    });
+  });
+
+  // Esterni e ospiti
+  esercEsterni.forEach(function(e) {
+    var cache = esercPresenzeCache['e'+e.id] || {};
+    var tipoLabel = e.tipo_partecipante === 'ospite' ? 'Ospite' : 'Esterno';
+    turni.forEach(function(t) {
+      if (cache[t]) perTurno[t].push({ cognome: e.cognome_esterno||'', nome: e.nome_esterno||'', tipo: tipoLabel });
+    });
+  });
+
+  var totale = new Set();
+  Object.values(perTurno).forEach(function(lista) {
+    lista.forEach(function(p) { totale.add(p.cognome + ' ' + p.nome); });
+  });
+
+  var html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Presenti ' + giorno + ' — Esercitazione 2025</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10pt;color:#111;margin:1.5cm;max-width:18cm}'
+    + '.header{border-bottom:3px solid #1a7a4a;padding-bottom:0.8rem;margin-bottom:1rem}'
+    + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.2rem}'
+    + '.meta{font-size:8pt;color:#666}'
+    + 'h2{font-size:10pt;font-weight:700;color:#1a7a4a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:1rem 0 0.5rem}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:1rem}'
+    + 'th{background:#1a7a4a;color:white;font-weight:700;padding:5px 8px;text-align:left}'
+    + 'td{padding:5px 8px;border-bottom:0.5px solid #e5e7eb}'
+    + 'tr:nth-child(even) td{background:#f9fafb}'
+    + '.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:8pt;font-weight:700}'
+    + '.b-pcana{background:#eaf3de;color:#3b6d11}'
+    + '.b-esterno{background:#e8f0fb;color:#185fa5}'
+    + '.b-ospite{background:#faeeda;color:#854f0b}'
+    + '@media print{body{margin:1cm}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<div class="header">'
+    + '<h1>Presenti — ' + giorno + ' · Esercitazione 2025</h1>'
+    + '<div class="meta">PC ANA Casale Monferrato &nbsp;·&nbsp; Generato il ' + ora + ' &nbsp;·&nbsp; Totale presenti: ' + totale.size + '</div>'
+    + '</div>';
+
+  turni.forEach(function(turno) {
+    var lista = perTurno[turno].sort(function(a,b){ return a.cognome.localeCompare(b.cognome); });
+    html += '<h2>' + turno.charAt(0).toUpperCase() + turno.slice(1) + ' (' + lista.length + ' presenti)</h2>';
+    if (!lista.length) {
+      html += '<p style="font-size:9pt;color:#999">Nessun presente.</p>';
+      return;
+    }
+    html += '<table><thead><tr><th>#</th><th>Cognome e Nome</th><th>Tipo</th></tr></thead><tbody>';
+    lista.forEach(function(p, i) {
+      var cls = p.tipo === 'PC ANA' ? 'b-pcana' : p.tipo === 'Ospite' ? 'b-ospite' : 'b-esterno';
+      html += '<tr><td>' + (i+1) + '</td><td>' + p.cognome + ' ' + p.nome + '</td><td><span class="badge ' + cls + '">' + p.tipo + '</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  });
+
+  html += '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>';
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
