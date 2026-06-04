@@ -3935,9 +3935,71 @@ function renderEsercDashboard() {
 function renderEsercTurni() {
   var el = document.getElementById('esercTurni');
   if (!el) return;
-  el.innerHTML = ESERC_TURNI[esercGiorno].map(function(t) {
+  var turni = ESERC_TURNI[esercGiorno];
+  var tidx  = turni.indexOf(esercTurno);
+  var html  = turni.map(function(t) {
     return '<button class="eserc-turno-btn'+(t===esercTurno?' active':'')+'" onclick="setTurnoEserc(\''+t+'\')">'+t.charAt(0).toUpperCase()+t.slice(1)+'</button>';
   }).join('');
+  if (tidx > 0) {
+    var prev = turni[tidx-1];
+    html += '<button class="eserc-turno-btn" style="background:var(--bg-2);color:var(--testo-3);border-style:dashed;font-size:0.68rem" onclick="copiaTurnoPrecedente(\''+prev+'\')">↩ Da '+prev+'</button>';
+  }
+  el.innerHTML = html;
+}
+
+async function copiaTurnoPrecedente(turnoSrc) {
+  var count = 0;
+  var promises = [];
+
+  // Copia volontari PC ANA
+  esercVolontari.forEach(function(v) {
+    var cacheKey = 'v'+v.id;
+    var eraPresente = esercPresenzeCache[cacheKey] && esercPresenzeCache[cacheKey][turnoSrc];
+    if (eraPresente) {
+      if (!esercPresenzeCache[cacheKey]) esercPresenzeCache[cacheKey] = {};
+      esercPresenzeCache[cacheKey][esercTurno] = true;
+      count++;
+      promises.push(
+        fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?volontario_id=eq.'+v.id+'&giorno=eq.'+esercGiorno+'&turno=eq.'+esercTurno+'&select=id', { headers: H })
+          .then(function(r){ return r.json(); })
+          .then(function(existing) {
+            if (existing.length) {
+              return fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?id=eq.'+existing[0].id, {
+                method: 'PATCH', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}),
+                body: JSON.stringify({ presente: true })
+              });
+            } else {
+              return fetch(SUPA_URL + '/rest/v1/esercitazione_presenze', {
+                method: 'POST', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}),
+                body: JSON.stringify({ volontario_id: v.id, giorno: esercGiorno, turno: esercTurno, presente: true, tipo_partecipante: 'volontario_pcana' })
+              });
+            }
+          })
+      );
+    }
+  });
+
+  // Copia esterni
+  esercEsterni.forEach(function(e) {
+    var cacheKey = 'e'+e.id;
+    var eraPresente = esercPresenzeCache[cacheKey] && esercPresenzeCache[cacheKey][turnoSrc];
+    if (eraPresente) {
+      if (!esercPresenzeCache[cacheKey]) esercPresenzeCache[cacheKey] = {};
+      esercPresenzeCache[cacheKey][esercTurno] = true;
+      count++;
+      promises.push(
+        fetch(SUPA_URL + '/rest/v1/esercitazione_presenze?id=eq.'+e.id, {
+          method: 'PATCH', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}),
+          body: JSON.stringify({ presente: true })
+        })
+      );
+    }
+  });
+
+  await Promise.all(promises);
+  renderEsercDashboard();
+  renderEsercPresenze();
+  if (count) alert(count + ' presenti copiati da ' + turnoSrc + ' a ' + esercTurno + '.');
 }
 
 function setTurnoEserc(turno) {
