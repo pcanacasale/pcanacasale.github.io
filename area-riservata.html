@@ -1101,6 +1101,7 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="eserc-turni" id="esercTurni"></div>
         <div id="esercPresenzeList"></div>
         <button class="btn-export" style="width:100%;margin-top:0.6rem" onclick="esportaPresentiPDF()">📄 Esporta presenti</button>
+        <button class="btn-primary" style="width:100%;margin-top:0.4rem;background:#25d366" onclick="apriAlertWhatsApp()">📲 Alert WhatsApp</button>
       </div>
 
       <!-- Sezione mezzi -->
@@ -1495,6 +1496,19 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-<script src="area-riservata.js?v=41"></script>
+  <!-- Alert WhatsApp -->
+  <div class="vista-form-overlay" id="waAlertOverlay">
+    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto">
+      <h4>📲 Alert WhatsApp</h4>
+      <p style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.6rem">Modifica il messaggio e clicca sui link per inviare</p>
+      <div class="form-field" style="margin-bottom:0.7rem">
+        <label class="form-lbl">Messaggio</label>
+        <textarea class="form-inp" id="waMessaggio" rows="4" style="resize:vertical">Esercitazione PC ANA Casale - sei registrato come presente al turno di [TURNO]. Confermi la tua presenza?</textarea>
+      </div>
+      <div id="waLinkList"></div>
+      <button class="btn-sm btn-warn" onclick="chiudiAlertWA()" style="width:100%;margin-top:0.7rem;padding:0.7rem">chiudi</button>
+    </div>
+  </div>
+<script src="area-riservata.js?v=42"></script>
 </body>
 </html>

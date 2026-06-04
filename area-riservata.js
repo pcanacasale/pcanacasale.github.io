@@ -4783,3 +4783,63 @@ async function esportaPresentiPDF() {
   win.document.write(html);
   win.document.close();
 }
+
+// -- ALERT WHATSAPP --
+async function apriAlertWhatsApp() {
+  // Recupera volontari presenti nel turno corrente con telefono
+  var presentiIds = esercVolontari
+    .filter(function(v) { return esercPresenzeCache['v'+v.id] && esercPresenzeCache['v'+v.id][esercTurno]; })
+    .map(function(v) { return v.id; });
+
+  var giorno = esercGiorno.charAt(0).toUpperCase() + esercGiorno.slice(1);
+  document.getElementById('waMessaggio').value =
+    'Esercitazione PC ANA Casale Monferrato\n' +
+    giorno + ' 6-7 Giugno 2025 — turno: ' + esercTurno + '\n\n' +
+    'Sei registrato come presente. Confermi la tua partecipazione?';
+
+  var listEl = document.getElementById('waLinkList');
+  listEl.innerHTML = '<div class="loading-msg">Caricamento numeri...</div>';
+  document.getElementById('waAlertOverlay').classList.add('open');
+
+  if (!presentiIds.length) {
+    listEl.innerHTML = '<div class="loading-msg">Nessun volontario presente in questo turno.</div>';
+    return;
+  }
+
+  var res  = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + presentiIds.join(',') + ')&select=id,cognome,nome,telefono&order=cognome', { headers: H });
+  var vols = await res.json();
+
+  var html = '<div style="font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.5rem">'
+    + presentiIds.length + ' presenti · ' + vols.filter(function(v){ return v.telefono; }).length + ' con numero</div>';
+
+  vols.forEach(function(v) {
+    var tel = (v.telefono||'').replace(/\s|-|\./g,'').replace(/^0/, '+39');
+    if (!tel.startsWith('+')) tel = '+39' + tel.replace(/^0039/,'');
+    var nome = v.cognome + ' ' + v.nome;
+
+    if (v.telefono) {
+      html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:0.5px solid var(--border)">'
+        + '<div style="flex:1;font-size:0.82rem;font-weight:500;color:var(--testo)">' + nome + '</div>'
+        + '<div style="font-size:0.65rem;color:var(--testo-3)">' + v.telefono + '</div>'
+        + '<a id="walink-'+v.id+'" href="#" onclick="apriWA(\''+tel+'\',event)" style="background:#25d366;color:white;padding:4px 10px;border-radius:8px;font-size:0.72rem;text-decoration:none;flex-shrink:0">Invia</a>'
+        + '</div>';
+    } else {
+      html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:0.5px solid var(--border)">'
+        + '<div style="flex:1;font-size:0.82rem;color:var(--testo-3)">' + nome + '</div>'
+        + '<div style="font-size:0.65rem;color:var(--red)">nessun numero</div>'
+        + '</div>';
+    }
+  });
+
+  listEl.innerHTML = html;
+}
+
+function apriWA(tel, event) {
+  event.preventDefault();
+  var msg = encodeURIComponent(document.getElementById('waMessaggio').value);
+  window.open('https://wa.me/' + tel.replace('+','') + '?text=' + msg, '_blank');
+}
+
+function chiudiAlertWA() {
+  document.getElementById('waAlertOverlay').classList.remove('open');
+}
