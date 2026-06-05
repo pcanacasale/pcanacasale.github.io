@@ -1123,81 +1123,141 @@ async function stampaPDFPranzo() {
 
   try {
     const [listaRes, risposteRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine&attivo=eq.true', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=inv_id,risposta,coperti', { headers: H })
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=*', { headers: H })
     ]);
     const lista    = await listaRes.json();
     const risposte = await risposteRes.json();
-    const rispMap  = {};
-    risposte.forEach(r => { rispMap[r.inv_id] = r; });
 
-    // Dividi per stato
-    const confermati = [], declinati = [], attesa = [];
+    const rMap = {};
+    risposte.forEach(r => { rMap[r.inv_id] = r; });
+
+    const ora   = new Date().toLocaleString('it-IT');
+    const today = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+
+    // Raggruppa per settore
+    const settoriMap = {};
     lista.forEach(inv => {
-      const saved = rispMap['i' + inv.id] || {};
-      const obj   = { ente: inv.ente, nome: inv.nome || '', settore: inv.settore_label, coperti: saved.coperti || 1 };
-      if (saved.risposta === 'si')  confermati.push(obj);
-      else if (saved.risposta === 'si') declinati.push(obj);
-      else if (saved.risposta === 'no') declinati.push(obj);
-      else attesa.push(obj);
+      if (!settoriMap[inv.settore_id]) settoriMap[inv.settore_id] = { label: inv.settore_label, color: inv.settore_color, invitati: [] };
+      settoriMap[inv.settore_id].invitati.push(inv);
     });
 
-    const totCoperti = confermati.reduce((s, i) => s + i.coperti, 0);
-    const oggi       = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+    // Dati confermati
+    let totCoperti = 0, totIncasso = 0, totCosto = 0;
+    let righeConfermate = []; // {settore, ente, nome, pranzo, coperti, costo, extra}
+    let righeSoloCerimonia = [];
 
-    const makeTable = (items, title, color) => {
-      if (!items.length) return '<p style="color:#888;font-style:italic;margin:0.3rem 0 1rem">Nessuno</p>';
-      return '<table style="width:100%;border-collapse:collapse;margin-bottom:1.2rem;font-size:9pt">'
-        + '<thead><tr style="background:' + color + ';color:white">'
-        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Ente / Ruolo</th>'
-        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Nome</th>'
-        + '<th style="padding:6px 10px;text-align:left;font-weight:700">Settore</th>'
-        + '<th style="padding:6px 10px;text-align:center;font-weight:700">Cop.</th>'
-        + '</tr></thead><tbody>'
-        + items.map((i, idx) => '<tr style="background:' + (idx%2===0?'#f9fafb':'white') + '">'
-          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb">' + i.ente + '</td>'
-          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb">' + (i.nome || '--') + '</td>'
-          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb;font-size:8pt;color:#666">' + i.settore + '</td>'
-          + '<td style="padding:5px 10px;border-bottom:0.5px solid #e5e7eb;text-align:center">' + (title==='Confermati' ? i.coperti : '--') + '</td>'
-          + '</tr>').join('')
-        + '</tbody></table>';
-    };
+    Object.values(settoriMap).forEach(settore => {
+      settore.invitati.forEach(inv => {
+        const r = rMap['i' + inv.id] || rMap[String(inv.id)] || {};
+        const presenza  = r.presenza || r.risposta || 'attesa';
+        const confermato = presenza === 'presente' || presenza === 'si';
+        if (!confermato) return;
+
+        const alPranzo  = r.pranzo || false;
+        const coperti   = r.coperti || 1;
+        const costo     = r.costo || '25';
+        const extra     = Array.isArray(r.extra) ? r.extra : [];
+        const nomeDisplay = inv.nome && inv.nome.trim() ? inv.nome : '';
+
+        if (alPranzo) {
+          // Calcola incasso/costo
+          if (costo==='25')           { totIncasso += 25*coperti; }
+          else if (costo==='10')      { totIncasso += 10*coperti; totCosto += 15*coperti; }
+          else if (costo==='offerto') { totCosto += 25*coperti; }
+          totCoperti += coperti;
+          extra.forEach(ex => {
+            totCoperti++;
+            if (ex.costo==='25')           { totIncasso += 25; }
+            else if (ex.costo==='10')      { totIncasso += 10; totCosto += 15; }
+            else if (ex.costo==='offerto') { totCosto += 25; }
+          });
+          righeConfermate.push({ settore: settore.label, color: settore.color, ente: inv.ente, nome: nomeDisplay, coperti, costo, extra });
+        } else {
+          righeSoloCerimonia.push({ settore: settore.label, color: settore.color, ente: inv.ente, nome: nomeDisplay });
+        }
+      });
+    });
+
+    const costoLabel = c => c==='25' ? '€25' : c==='10' ? '€10' : '🎁 Offerto';
+
+    let htmlConfermate = '';
+    let setCorr = '';
+    righeConfermate.forEach((r, i) => {
+      if (r.settore !== setCorr) {
+        setCorr = r.settore;
+        htmlConfermate += '<tr><td colspan="5" style="background:#1a7a4a;color:white;font-weight:700;padding:5px 8px">'+r.settore+'</td></tr>';
+      }
+      const extraStr = r.extra.length ? r.extra.map(e => (e.nota||'—')+' '+costoLabel(e.costo||'25')).join(', ') : '—';
+      htmlConfermate += '<tr>'
+        + '<td>'+(i+1)+'</td>'
+        + '<td>'+(r.ente||'')+'</td>'
+        + '<td>'+(r.nome||'')+'</td>'
+        + '<td style="text-align:center">'+r.coperti+'</td>'
+        + '<td>'+costoLabel(r.costo)+(r.extra.length ? '<br><small style="color:#666">+'+r.extra.length+' acc: '+extraStr+'</small>' : '')+'</td>'
+        + '</tr>';
+    });
+
+    let htmlCerimonia = '';
+    let setCorrC = '';
+    righeSoloCerimonia.forEach((r, i) => {
+      if (r.settore !== setCorrC) {
+        setCorrC = r.settore;
+        htmlCerimonia += '<tr><td colspan="3" style="background:#555;color:white;font-weight:700;padding:5px 8px">'+r.settore+'</td></tr>';
+      }
+      htmlCerimonia += '<tr><td>'+(i+1)+'</td><td>'+(r.ente||'')+'</td><td>'+(r.nome||'')+'</td></tr>';
+    });
 
     const win = window.open('', '_blank');
     win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
-      + '<title>Riepilogo Pranzo 25° Anniversario PC ANA Casale</title>'
+      + '<title>Riepilogo Pranzo 25°</title>'
       + '<style>'
-      + 'body{font-family:Georgia,serif;font-size:10pt;color:#111;margin:2cm}'
-      + 'h1{font-size:16pt;font-weight:700;color:#1a7a4a;margin:0 0 0.2rem}'
-      + 'h2{font-size:11pt;font-weight:700;margin:1.2rem 0 0.5rem;padding-bottom:0.3rem;border-bottom:2px solid currentColor}'
-      + '.meta{font-size:9pt;color:#666;margin-bottom:1.5rem}'
-      + '.stats{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}'
-      + '.stat{background:#f3f4f6;border-radius:8px;padding:0.6rem 1rem;text-align:center;min-width:80px}'
-      + '.stat-num{font-size:1.4rem;font-weight:700;line-height:1}'
-      + '.stat-label{font-size:8pt;color:#666;text-transform:uppercase;letter-spacing:0.4px}'
-      + '@media print{body{margin:1.5cm}.stat{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+      + 'body{font-family:Arial,sans-serif;font-size:9.5pt;color:#111;margin:1.5cm;max-width:19cm}'
+      + '.header{border-bottom:3px solid #1a7a4a;padding-bottom:0.7rem;margin-bottom:0.8rem}'
+      + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.15rem}'
+      + '.meta{font-size:8pt;color:#666}'
+      + 'h2{font-size:10pt;font-weight:700;color:#1a7a4a;border-bottom:1.5px solid #1a7a4a;padding-bottom:3px;margin:0.8rem 0 0.4rem}'
+      + 'h3{font-size:9pt;font-weight:700;color:#555;margin:0.7rem 0 0.3rem}'
+      + 'table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:0.5rem}'
+      + 'th{background:#1a7a4a;color:white;font-weight:700;padding:4px 7px;text-align:left}'
+      + 'td{padding:4px 7px;border-bottom:0.5px solid #e5e7eb}'
+      + 'tr:nth-child(even) td{background:#f9fafb}'
+      + '.totali{display:flex;gap:1rem;margin:0.8rem 0}'
+      + '.tot-card{flex:1;background:#f3f4f6;border-radius:6px;padding:0.5rem 0.8rem;text-align:center}'
+      + '.tot-num{font-size:1.3rem;font-weight:700}'
+      + '.tot-lbl{font-size:7.5pt;color:#666;text-transform:uppercase}'
+      + '@media print{body{margin:1cm}th,.tot-card{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
       + '</style></head><body>'
-      + '<h1>Pranzo 25° Anniversario PC ANA Casale</h1>'
-      + '<div class="meta">Tendone Alpini Mirabello &nbsp;|&nbsp; €25 ospiti / €10 volontari &nbsp;|&nbsp; Generato il ' + oggi + '</div>'
-      + '<div class="stats">'
-      + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">' + confermati.length + '</div><div class="stat-label">Confermati</div></div>'
-      + '<div class="stat"><div class="stat-num" style="color:#ef4444">' + declinati.length + '</div><div class="stat-label">Declinati</div></div>'
-      + '<div class="stat"><div class="stat-num" style="color:#f59e0b">' + attesa.length + '</div><div class="stat-label">In attesa</div></div>'
-      + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">' + totCoperti + '</div><div class="stat-label">Coperti tot.</div></div>'
+      + '<div class="header"><h1>Riepilogo Pranzo — 25° Anniversario PC ANA</h1>'
+      + '<div class="meta">Generato il '+ora+'</div></div>'
+
+      + '<div class="totali">'
+      + '<div class="tot-card"><div class="tot-num" style="color:#1a7a4a">'+totCoperti+'</div><div class="tot-lbl">Coperti</div></div>'
+      + '<div class="tot-card"><div class="tot-num" style="color:#185fa5">€'+totIncasso+'</div><div class="tot-lbl">Incasso</div></div>'
+      + '<div class="tot-card"><div class="tot-num" style="color:#c0392b">€'+totCosto+'</div><div class="tot-lbl">Costo unità</div></div>'
+      + '<div class="tot-card"><div class="tot-num" style="color:#854f0b">'+righeConfermate.length+'</div><div class="tot-lbl">A pranzo</div></div>'
+      + '<div class="tot-card"><div class="tot-num" style="color:#555">'+righeSoloCerimonia.length+'</div><div class="tot-lbl">Solo cerimonia</div></div>'
       + '</div>'
-      + '<h2 style="color:#1a7a4a">Confermati (' + confermati.length + ' persone, ' + totCoperti + ' coperti)</h2>'
-      + makeTable(confermati, 'Confermati', '#1a7a4a')
-      + '<h2 style="color:#ef4444">Declinati (' + declinati.length + ')</h2>'
-      + makeTable(declinati, 'Declinati', '#ef4444')
-      + '<h2 style="color:#f59e0b">In attesa di risposta (' + attesa.length + ')</h2>'
-      + makeTable(attesa, 'Attesa', '#f59e0b')
+
+      + '<h2>🍽️ Presenti al pranzo ('+righeConfermate.length+')</h2>'
+      + '<table><thead><tr><th>#</th><th>Ente / Ruolo</th><th>Nome</th><th style="text-align:center">Coperti</th><th>Costo</th></tr></thead><tbody>'
+      + htmlConfermate
+      + '</tbody></table>'
+
+      + '<h2>🎖️ Solo cerimonia ('+righeSoloCerimonia.length+')</h2>'
+      + '<table><thead><tr><th>#</th><th>Ente / Ruolo</th><th>Nome</th></tr></thead><tbody>'
+      + htmlCerimonia
+      + '</tbody></table>'
+
       + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
       + '</body></html>');
     win.document.close();
+
   } catch(e) { alert('Errore generazione PDF: ' + e.message); }
 
   if (btn) { btn.textContent = 'scarica PDF'; btn.disabled = false; }
 }
+
 
 
 // -- RICHIESTE --
