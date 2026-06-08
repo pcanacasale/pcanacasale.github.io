@@ -4903,3 +4903,122 @@ function apriWA(tel, event) {
 function chiudiAlertWA() {
   document.getElementById('waAlertOverlay').classList.remove('open');
 }
+
+// -- ELENCO INTERVENUTI --
+var intervenutiData = [];
+
+async function apriElencoIntervenuti() {
+  document.getElementById('intervenutiOverlay').classList.add('open');
+  document.getElementById('intervenutiList').innerHTML = '<div class="loading-msg">caricamento...</div>';
+
+  try {
+    const [listaRes, risposteRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati_lista?select=*&order=settore_id,ordine', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/pranzo_invitati?select=*', { headers: H })
+    ]);
+    const lista    = await listaRes.json();
+    const risposte = await risposteRes.json();
+    const rMap     = {};
+    risposte.forEach(r => { rMap['i'+r.inv_id] = r; rMap[String(r.inv_id)] = r; });
+
+    // Filtra solo presenti
+    intervenutiData = [];
+    lista.forEach(inv => {
+      const r        = rMap['i'+inv.id] || rMap[String(inv.id)] || {};
+      const presenza = r.presenza || r.risposta || 'attesa';
+      if (presenza === 'presente' || presenza === 'si') {
+        intervenutiData.push({ id: inv.id, ente: inv.ente || '', nome: inv.nome || '', settore: inv.settore_label, manuale: false });
+      }
+    });
+
+    renderIntervenutiList();
+  } catch(e) {
+    document.getElementById('intervenutiList').innerHTML = '<div style="color:var(--red);font-size:0.8rem">Errore: '+e.message+'</div>';
+  }
+}
+
+function renderIntervenutiList() {
+  const el = document.getElementById('intervenutiList');
+  if (!el) return;
+
+  let settoreCorr = '';
+  let html = '';
+  intervenutiData.forEach((p, i) => {
+    if (p.settore !== settoreCorr) {
+      settoreCorr = p.settore;
+      html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;padding:0.5rem 0 0.2rem;border-bottom:0.5px solid var(--border);margin-bottom:0.3rem">'+p.settore+'</div>';
+    }
+    html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0;border-bottom:0.5px solid var(--border)">'
+      + '<input class="form-inp" value="'+htmlEsc(p.ente)+'" placeholder="Ente/Ruolo" oninput="aggiornaIntervenuto('+i+',\'ente\',this.value)" style="flex:1;font-size:0.78rem;padding:4px 8px">'
+      + '<input class="form-inp" value="'+htmlEsc(p.nome)+'" placeholder="Nome" oninput="aggiornaIntervenuto('+i+',\'nome\',this.value)" style="flex:1;font-size:0.78rem;padding:4px 8px">'
+      + '<button class="btn-sm btn-danger" onclick="rimuoviIntervenuto('+i+')" style="padding:3px 8px;flex-shrink:0">✕</button>'
+      + '</div>';
+  });
+  el.innerHTML = html || '<div class="loading-msg">Nessun intervenuto.</div>';
+}
+
+function htmlEsc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function aggiornaIntervenuto(idx, campo, val) {
+  if (intervenutiData[idx]) intervenutiData[idx][campo] = val;
+}
+
+function rimuoviIntervenuto(idx) {
+  intervenutiData.splice(idx, 1);
+  renderIntervenutiList();
+}
+
+function aggiungiIntervenuto() {
+  intervenutiData.push({ id: null, ente: '', nome: '', settore: 'Aggiunti', manuale: true });
+  renderIntervenutiList();
+  // Scrolla in fondo
+  const el = document.getElementById('intervenutiList');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+function chiudiElencoIntervenuti() {
+  document.getElementById('intervenutiOverlay').classList.remove('open');
+}
+
+function stampaElencoIntervenuti() {
+  const ora   = new Date().toLocaleString('it-IT');
+  let html = '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Elenco Intervenuti — 25° PC ANA</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10pt;color:#111;margin:1.5cm;max-width:18cm}'
+    + '.header{border-bottom:3px solid #1a7a4a;padding-bottom:0.7rem;margin-bottom:0.8rem}'
+    + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.15rem}'
+    + '.meta{font-size:8pt;color:#666}'
+    + 'h2{font-size:9pt;font-weight:700;color:#1a7a4a;border-bottom:1px solid #e5e7eb;padding-bottom:3px;margin:0.8rem 0 0.3rem;text-transform:uppercase;letter-spacing:0.5px}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt}'
+    + 'th{background:#1a7a4a;color:white;font-weight:700;padding:4px 8px;text-align:left}'
+    + 'td{padding:5px 8px;border-bottom:0.5px solid #e5e7eb}'
+    + 'tr:nth-child(even) td{background:#f9fafb}'
+    + '@media print{body{margin:1cm}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<div class="header"><h1>Elenco Intervenuti — 25° Anniversario PC ANA Casale</h1>'
+    + '<div class="meta">Generato il '+ora+' &nbsp;·&nbsp; Totale: '+intervenutiData.length+' intervenuti</div></div>';
+
+  // Raggruppa per settore
+  const settoriMap = {};
+  intervenutiData.forEach(p => {
+    const s = p.settore || 'Altro';
+    if (!settoriMap[s]) settoriMap[s] = [];
+    settoriMap[s].push(p);
+  });
+
+  Object.entries(settoriMap).forEach(([settore, persone]) => {
+    html += '<h2>'+settore+'</h2>'
+      + '<table><thead><tr><th>#</th><th>Ente / Ruolo</th><th>Nome</th></tr></thead><tbody>'
+      + persone.map((p, i) => '<tr><td>'+(i+1)+'</td><td>'+(p.ente||'—')+'</td><td>'+(p.nome||'—')+'</td></tr>').join('')
+      + '</tbody></table>';
+  });
+
+  html += '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\\/script></body></html>';
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
