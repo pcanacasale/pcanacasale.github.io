@@ -2550,7 +2550,7 @@ function _renderMacroCard(m, figliMacro) {
   const dataFine   = m.data_fine ? new Date(m.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
   const nVol = figliMacro.reduce((s, i) => s + (i.n_volontari || 0), 0);
-  const nOre = figliMacro.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0);
+  const nOre = figliMacro.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0) + parseFloat(m.n_ore || 0);
 
   const header = document.createElement('div');
   header.className = 'int-card int-macro-header';
@@ -2645,7 +2645,7 @@ async function apriDettaglioIntervento(id) {
     if (i.is_macro) {
       const figliMacro = interventiData.filter(f => f.macro_id === i.id);
       const nVol = figliMacro.reduce((s, f) => s + (f.n_volontari || 0), 0);
-      const nOre = figliMacro.reduce((s, f) => s + parseFloat(f.n_ore || 0), 0);
+      const nOre = figliMacro.reduce((s, f) => s + parseFloat(f.n_ore || 0), 0) + parseFloat(i.n_ore || 0);
       let figliHtml = figliMacro.map(f => {
         const fd = f.data ? new Date(f.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
         return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
