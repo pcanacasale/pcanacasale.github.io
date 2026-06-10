@@ -2441,6 +2441,8 @@ async function eliminaVista(id, nome) {
 // -- INTERVENTI --
 let interventiData = [];
 let intCorrenteId = null;
+let macroData = [];
+let macroCorrenteId = null;
 
 const TIPO_ATTIVITA = [
   'EMERGENZA', 'ESERCITAZIONE', 'CORSI', 'PREVENZIONE INFORTUNI',
@@ -2461,7 +2463,6 @@ async function caricaInterventi() {
     if (stats)   stats.style.display = 'none';
     if (toolbar) toolbar.style.display = 'none';
     list.innerHTML = '';
-    // Mostra direttamente il form nuovo intervento inline
     const btn = document.createElement('button');
     btn.className = 'int-add-btn';
     btn.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
@@ -2471,11 +2472,15 @@ async function caricaInterventi() {
     return;
   }
 
-  // Master — mostra tutto
+  // Master — carica interventi + macro in parallelo
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=*&order=data.desc', { headers: H });
-    interventiData = await res.json();
+    const [intRes, macroRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/interventi?select=*&order=data.desc', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/macro_attivita?select=*&order=data_inizio.desc', { headers: H })
+    ]);
+    interventiData = await intRes.json();
+    macroData      = await macroRes.json();
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
   } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
@@ -2493,32 +2498,104 @@ function aggiornaStatsInterventi() {
 function renderInterventi(data) {
   const list = document.getElementById('intList');
   if (!list) return;
-  if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>'; return; }
+
+  const figli  = data.filter(i => i.macro_id);
+  const orfani = data.filter(i => !i.macro_id);
+  const macroConFigli = macroData.filter(m => figli.some(i => i.macro_id === m.id));
+  const macroVuote    = macroData.filter(m => !figli.some(i => i.macro_id === m.id));
+
+  if (!data.length && !macroData.length) {
+    list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>';
+    return;
+  }
   list.innerHTML = '';
-  data.forEach(i => {
-    const card = document.createElement('div');
-    card.className = 'int-card';
-    card.onclick = () => apriDettaglioIntervento(i.id);
-    const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
-    const pills = [];
-    if (i.tipo_attivita) pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
-    if (i.luogo)         pills.push('<span class="int-pill">' + i.luogo + '</span>');
-    if (i.n_volontari)   pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
-    if (i.n_ore)         pills.push('<span class="int-pill blue">' + i.n_ore + 'h</span>');
-    if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
-    if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
-    if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
-    card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.7rem">'
-      + getTipoAttivitaAvatar(i.tipo_attivita, 38)
-      + '<div style="flex:1;min-width:0">'
-      + '<div class="int-card-top">'
-      + '<div class="int-card-evento">' + (i.evento || '—') + '</div>'
-      + '<div class="int-card-data">' + dataFmt + '</div>'
-      + '</div>'
-      + '<div class="int-card-meta">' + pills.join('') + '</div>'
-      + '</div></div>';
-    list.appendChild(card);
-  });
+
+  macroConFigli.forEach(m => list.appendChild(_renderMacroCard(m, figli.filter(i => i.macro_id === m.id))));
+  macroVuote.forEach(m => list.appendChild(_renderMacroCard(m, [])));
+  orfani.forEach(i => list.appendChild(_renderIntCard(i, false)));
+}
+
+function _renderIntCard(i, isChild) {
+  const card = document.createElement('div');
+  card.className = 'int-card' + (isChild ? ' int-card-child' : '');
+  card.onclick = () => apriDettaglioIntervento(i.id);
+  const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
+  const pills = [];
+  if (i.tipo_attivita) pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
+  if (i.luogo)         pills.push('<span class="int-pill">' + i.luogo + '</span>');
+  if (i.n_volontari)   pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
+  if (i.n_ore)         pills.push('<span class="int-pill blue">' + i.n_ore + 'h</span>');
+  if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
+  if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
+  if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
+  const childArrow = isChild ? '<span style="color:var(--testo-3);margin-right:0.2rem;flex-shrink:0;font-size:0.8rem">↳</span>' : '';
+  card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.5rem">'
+    + childArrow
+    + getTipoAttivitaAvatar(i.tipo_attivita, isChild ? 30 : 38)
+    + '<div style="flex:1;min-width:0">'
+    + '<div class="int-card-top">'
+    + '<div class="int-card-evento" style="' + (isChild ? 'font-size:0.82rem' : '') + '">' + (i.evento || '—') + '</div>'
+    + '<div class="int-card-data" style="' + (isChild ? 'font-size:0.72rem' : '') + '">' + dataFmt + '</div>'
+    + '</div>'
+    + '<div class="int-card-meta">' + pills.join('') + '</div>'
+    + '</div></div>';
+  return card;
+}
+
+function _renderMacroCard(m, figliMacro) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-bottom:0.5rem';
+  const dataInizio = m.data_inizio ? new Date(m.data_inizio).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
+  const dataFine   = m.data_fine   ? new Date(m.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
+  const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
+  const nVol = figliMacro.reduce((s, i) => s + (i.n_volontari || 0), 0);
+  const nOre = figliMacro.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0);
+
+  const header = document.createElement('div');
+  header.className = 'int-card int-macro-header';
+  header.style.cssText = 'cursor:pointer;border-left:3px solid var(--green);background:var(--bg-2)';
+  header.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.7rem">'
+    + '<div style="font-size:1.2rem;flex-shrink:0;line-height:1">📦</div>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div class="int-card-top">'
+    + '<div class="int-card-evento" style="font-size:0.9rem;font-weight:700">' + (m.titolo || '—') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:0.4rem">'
+    + (figliMacro.length ? '<span class="int-pill green" style="font-size:0.65rem">' + figliMacro.length + ' int.</span>' : '<span class="int-pill" style="font-size:0.65rem">vuota</span>')
+    + '<span id="macro-arrow-' + m.id + '" style="font-size:0.7rem;color:var(--testo-3);transition:transform 0.2s">▶</span>'
+    + '</div></div>'
+    + '<div class="int-card-meta">'
+    + (m.tipo  ? '<span class="int-pill green">' + m.tipo + '</span>' : '')
+    + (m.luogo ? '<span class="int-pill">' + m.luogo + '</span>' : '')
+    + '<span class="int-pill">' + dateRange + '</span>'
+    + (nVol ? '<span class="int-pill blue">' + nVol + ' vol.</span>' : '')
+    + (nOre ? '<span class="int-pill blue">' + Math.round(nOre*10)/10 + 'h tot.</span>' : '')
+    + '</div></div>'
+    + '<button class="btn-sm" style="flex-shrink:0;font-size:0.7rem;padding:3px 8px;margin-left:0.3rem;align-self:flex-start" onclick="event.stopPropagation();apriDettaglioMacro(\'' + m.id + '\')">✏️</button>'
+    + '</div>';
+
+  const childrenWrap = document.createElement('div');
+  childrenWrap.id = 'macro-children-' + m.id;
+  childrenWrap.style.cssText = 'display:none;padding:0 0 0 0.5rem;border-left:2px solid var(--green);margin-left:0.5rem';
+  figliMacro.forEach(i => childrenWrap.appendChild(_renderIntCard(i, true)));
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'int-add-btn';
+  addBtn.style.cssText = 'width:100%;padding:0.5rem;font-size:0.78rem;margin:0.3rem 0';
+  addBtn.textContent = '+ Aggiungi intervento a questa macro';
+  addBtn.onclick = () => apriFormIntervento(null, m.id);
+  childrenWrap.appendChild(addBtn);
+
+  header.onclick = (e) => {
+    if (e.target.closest('button')) return;
+    const isOpen = childrenWrap.style.display !== 'none';
+    childrenWrap.style.display = isOpen ? 'none' : 'block';
+    const arrow = document.getElementById('macro-arrow-' + m.id);
+    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+  };
+
+  wrap.appendChild(header);
+  wrap.appendChild(childrenWrap);
+  return wrap;
 }
 
 function filtraInterventi() {
@@ -2609,13 +2686,14 @@ function chiudiDettaglioIntervento() {
   intCorrenteId = null;
 }
 
-function apriFormIntervento(id) {
+function apriFormIntervento(id, macroIdPreset) {
   intCorrenteId = id;
   const panel = document.getElementById('intFormPanel');
   const body  = document.getElementById('intFormBody');
   document.getElementById('intFormTitle').textContent = id ? 'Modifica intervento' : 'Nuovo intervento';
 
-  const tipoOpts = TIPO_ATTIVITA.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  const tipoOpts  = TIPO_ATTIVITA.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  const macroOpts = macroData.map(m => '<option value="' + m.id + '">' + m.titolo + (m.data_inizio ? ' (' + new Date(m.data_inizio).getFullYear() + ')' : '') + '</option>').join('');
 
   body.innerHTML = `
     <div class="vol-form-err" id="intFormErr"></div>
@@ -2652,15 +2730,95 @@ function apriFormIntervento(id) {
       <div class="vol-form-section-title">Note</div>
       <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..." style="resize:vertical"></textarea>
     </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        Macro-attività
+        <button type="button" class="btn-sm" style="font-size:0.72rem;padding:3px 10px" onclick="apriMiniModalMacro()">+ Nuova macro</button>
+      </div>
+      <select class="vol-form-inp" id="ifMacroId">
+        <option value="">— Nessuna (intervento singolo) —</option>
+        ${macroOpts}
+      </select>
+      <div id="miniModalMacro" style="display:none;margin-top:0.7rem;background:var(--bg-2);border-radius:10px;padding:0.8rem;border:1px solid var(--border)">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);margin-bottom:0.5rem">NUOVA MACRO-ATTIVITÀ</div>
+        <input class="vol-form-inp" id="mmTitolo" placeholder="Titolo *" style="margin-bottom:0.4rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.4rem">
+          <input class="vol-form-inp" type="date" id="mmDataInizio">
+          <input class="vol-form-inp" type="date" id="mmDataFine">
+        </div>
+        <select class="vol-form-inp" id="mmTipo" style="margin-bottom:0.4rem">
+          <option value="">— Tipo —</option>
+          ${tipoOpts}
+        </select>
+        <input class="vol-form-inp" id="mmLuogo" placeholder="Luogo" style="margin-bottom:0.6rem">
+        <div style="display:flex;gap:0.4rem">
+          <button type="button" class="btn-primary" style="flex:1;padding:0.5rem;font-size:0.8rem" onclick="salvaNuovaMacroESeleziona()">Crea e seleziona</button>
+          <button type="button" class="btn-sm" style="padding:0.5rem 0.8rem" onclick="chiudiMiniModalMacro()">✕</button>
+        </div>
+        <div class="vol-form-err" id="mmErr" style="margin-top:0.4rem"></div>
+      </div>
+    </div>
     ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>' : ''}`;
 
   panel.classList.add('open');
   panel.scrollTop = 0;
-  // Precompila utente con nome utente corrente
   var ifUtente = document.getElementById('ifUtente');
   if (ifUtente && !id && currentUser) ifUtente.value = currentUser.nome || '';
+  if (macroIdPreset) {
+    var selMacro = document.getElementById('ifMacroId');
+    if (selMacro) selMacro.value = macroIdPreset;
+  }
   caricaVolPicker();
   if (id) caricaDatiFormIntervento(id);
+}
+
+function apriMiniModalMacro() {
+  var mm = document.getElementById('miniModalMacro');
+  if (mm) mm.style.display = 'block';
+}
+
+function chiudiMiniModalMacro() {
+  var mm = document.getElementById('miniModalMacro');
+  if (mm) mm.style.display = 'none';
+}
+
+async function salvaNuovaMacroESeleziona() {
+  var titolo = (document.getElementById('mmTitolo').value || '').trim();
+  var errEl  = document.getElementById('mmErr');
+  if (!titolo) { errEl.textContent = 'Il titolo è obbligatorio.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var payload = {
+    titolo,
+    tipo:        document.getElementById('mmTipo').value || null,
+    luogo:       (document.getElementById('mmLuogo').value || '').trim() || null,
+    data_inizio: document.getElementById('mmDataInizio').value || null,
+    data_fine:   document.getElementById('mmDataFine').value || null,
+    created_by:  currentUser ? currentUser.id : null,
+  };
+  try {
+    var res = await fetch(SUPA_URL + '/rest/v1/macro_attivita', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
+      body: JSON.stringify(payload)
+    });
+    var data = await res.json();
+    if (res.ok && data && data[0]) {
+      var nuova = data[0];
+      macroData.unshift(nuova);
+      var sel = document.getElementById('ifMacroId');
+      var opt = document.createElement('option');
+      opt.value = nuova.id;
+      opt.textContent = nuova.titolo + (nuova.data_inizio ? ' (' + new Date(nuova.data_inizio).getFullYear() + ')' : '');
+      sel.insertBefore(opt, sel.options[1]);
+      sel.value = nuova.id;
+      chiudiMiniModalMacro();
+      await logAttivita('ha creato macro-attività: ' + titolo);
+    } else {
+      errEl.textContent = 'Errore creazione macro.'; errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block';
+  }
 }
 
 async function caricaVolPicker() {
@@ -2720,6 +2878,9 @@ async function caricaDatiFormIntervento(id) {
     if (volaNum) volaNum.value = i.vola_numero || '';
     const volter = document.getElementById('ifVolter');
     if (volter) volter.checked = !!i.volter;
+    // Preseleziona macro
+    var selMacro = document.getElementById('ifMacroId');
+    if (selMacro && i.macro_id) selMacro.value = i.macro_id;
     // Spunta volontari
     if (i.volontari_ids && i.volontari_ids.length) {
       i.volontari_ids.forEach(vid => {
@@ -2756,6 +2917,7 @@ async function salvaIntervento() {
     vola:          document.getElementById('ifVola') ? document.getElementById('ifVola').checked : false,
     vola_numero:   document.getElementById('ifVolaNum') ? document.getElementById('ifVolaNum').value.trim() || null : null,
     volter:        document.getElementById('ifVolter') ? document.getElementById('ifVolter').checked : false,
+    macro_id:      document.getElementById('ifMacroId') ? (document.getElementById('ifMacroId').value || null) : null,
   };
 
   try {
@@ -2786,6 +2948,125 @@ async function eliminaIntervento() {
 
 function chiudiFormIntervento() {
   document.getElementById('intFormPanel').classList.remove('open');
+}
+
+
+// -- MACRO-ATTIVITÀ: DETTAGLIO / MODIFICA --
+
+async function apriDettaglioMacro(id) {
+  macroCorrenteId = id;
+  var m = macroData.find(function(x){ return x.id === id; });
+  if (!m) return;
+
+  var overlay = document.getElementById('macroDetailOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'macroDetailOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay);z-index:200;display:flex;align-items:flex-end;justify-content:center';
+    overlay.innerHTML = '<div id="macroDetailPanel" style="background:var(--bg);width:100%;max-width:480px;max-height:85vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:1.2rem 1rem 2rem">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">'
+      + '<div style="font-size:1rem;font-weight:700;color:var(--testo)" id="macroDetailTitleBar">Macro-attività</div>'
+      + '<button class="btn-sm" onclick="chiudiDettaglioMacro()">✕</button>'
+      + '</div>'
+      + '<div id="macroDetailBody"></div>'
+      + '</div>';
+    document.body.appendChild(overlay);
+  }
+
+  document.getElementById('macroDetailTitleBar').textContent = m.titolo || 'Macro-attività';
+  overlay.style.display = 'flex';
+
+  const tipoOpts   = TIPO_ATTIVITA.map(t => '<option value="' + t + '"' + (m.tipo === t ? ' selected' : '') + '>' + t + '</option>').join('');
+  const figliMacro = interventiData.filter(function(i){ return i.macro_id === id; });
+
+  var html = '<div class="vol-form-err" id="macroEditErr"></div>'
+    + '<div class="vol-form-grid" style="margin-bottom:0.8rem">'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Titolo *</label><input class="vol-form-inp" id="meditTitolo" value="' + htmlEsc(m.titolo) + '"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Data inizio</label><input class="vol-form-inp" type="date" id="meditDataInizio" value="' + (m.data_inizio||'') + '"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Data fine</label><input class="vol-form-inp" type="date" id="meditDataFine" value="' + (m.data_fine||'') + '"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Tipo</label><select class="vol-form-inp" id="meditTipo"><option value="">—</option>' + tipoOpts + '</select></div>'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Luogo</label><input class="vol-form-inp" id="meditLuogo" value="' + htmlEsc(m.luogo||'') + '"></div>'
+    + '<div class="vol-form-field full"><label class="vol-form-lbl">Note</label><textarea class="vol-form-inp" id="meditNote" rows="2" style="resize:vertical">' + htmlEsc(m.note||'') + '</textarea></div>'
+    + '</div>'
+    + '<button class="btn-primary" style="width:100%;padding:0.6rem;font-size:0.85rem;margin-bottom:0.5rem" onclick="aggiornaMacro()">💾 Salva modifiche</button>'
+    + '<button class="btn-sm" style="width:100%;padding:0.5rem;font-size:0.78rem;margin-bottom:1rem" onclick="apriFormIntervento(null,\'' + id + '\');chiudiDettaglioMacro()">+ Aggiungi intervento</button>';
+
+  if (figliMacro.length) {
+    const nVol = figliMacro.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
+    const nOre = figliMacro.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
+    html += '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.4rem">'
+      + figliMacro.length + ' interventi · ' + nVol + ' vol. · ' + Math.round(nOre*10)/10 + 'h totali</div>';
+    figliMacro.forEach(function(i) {
+      var d = i.data ? new Date(i.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : '—';
+      html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="chiudiDettaglioMacro();apriDettaglioIntervento(' + i.id + ')">'
+        + getTipoAttivitaAvatar(i.tipo_attivita, 26)
+        + '<div style="flex:1;font-size:0.8rem;color:var(--testo)">' + (i.evento||'—') + '</div>'
+        + '<div style="font-size:0.7rem;color:var(--testo-3)">' + d + '</div>'
+        + '</div>';
+    });
+  } else {
+    html += '<div style="font-size:0.78rem;color:var(--testo-3);padding:0.5rem 0">Nessun intervento associato.</div>';
+  }
+
+  html += '<button class="vol-delete-btn" style="margin-top:1.2rem" onclick="eliminaMacro()">elimina macro-attività</button>';
+  document.getElementById('macroDetailBody').innerHTML = html;
+}
+
+function chiudiDettaglioMacro() {
+  var overlay = document.getElementById('macroDetailOverlay');
+  if (overlay) overlay.style.display = 'none';
+  macroCorrenteId = null;
+}
+
+async function aggiornaMacro() {
+  if (!macroCorrenteId) return;
+  var titolo = (document.getElementById('meditTitolo').value || '').trim();
+  var errEl  = document.getElementById('macroEditErr');
+  if (!titolo) { errEl.textContent = 'Il titolo è obbligatorio.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var payload = {
+    titolo,
+    tipo:        document.getElementById('meditTipo').value || null,
+    luogo:       (document.getElementById('meditLuogo').value || '').trim() || null,
+    data_inizio: document.getElementById('meditDataInizio').value || null,
+    data_fine:   document.getElementById('meditDataFine').value || null,
+    note:        (document.getElementById('meditNote').value || '').trim() || null,
+  };
+  try {
+    var res = await fetch(SUPA_URL + '/rest/v1/macro_attivita?id=eq.' + macroCorrenteId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      var idx = macroData.findIndex(function(m){ return m.id === macroCorrenteId; });
+      if (idx >= 0) macroData[idx] = Object.assign(macroData[idx], payload);
+      await logAttivita('ha modificato macro-attività: ' + titolo);
+      chiudiDettaglioMacro();
+      caricaInterventi();
+    } else {
+      errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block';
+  }
+}
+
+async function eliminaMacro() {
+  if (!macroCorrenteId) return;
+  var m = macroData.find(function(x){ return x.id === macroCorrenteId; });
+  var nFigli = interventiData.filter(function(i){ return i.macro_id === macroCorrenteId; }).length;
+  var msg = 'Eliminare la macro-attività "' + (m ? m.titolo : '') + '"?';
+  if (nFigli > 0) msg += '\n\nAttenzione: ' + nFigli + ' interventi verranno scollegati dalla macro (non eliminati).';
+  if (!confirm(msg)) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/macro_attivita?id=eq.' + macroCorrenteId, { method: 'DELETE', headers: H });
+    await logAttivita('ha eliminato macro-attività: ' + (m ? m.titolo : ''));
+    chiudiDettaglioMacro();
+    caricaInterventi();
+  } catch(e) {
+    alert('Errore eliminazione macro.');
+  }
 }
 
 
