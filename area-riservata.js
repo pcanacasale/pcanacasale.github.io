@@ -141,23 +141,30 @@ function avviaDashboard() {
   document.getElementById('homeUnit').textContent    = currentUser.ruolo;
 
   // Sidebar voci visibilita
-  var showSi = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
-  if (isMaster || p.volontari)  { showSi('siVolontari'); showSi('siLabelOperativo'); }
-  if (isMaster || p.interventi) { showSi('siInterventi'); showSi('siLabelOperativo'); }
-  if (isMaster || p.mezzi)      { showSi('siMezzi'); showSi('siLabelOperativo'); }
-  if (isMaster || p.documenti)  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
-  if (isMaster || p.pranzo)     showSi('siPranzo');
-  if (isMaster || p.richieste)  showSi('siRichieste');
-  if (isMaster || p.statistiche)  showSi('siStatistiche');
-  if (isMaster || p.esercitazione) showSi('siEsercitazione');
+  // Regola: master vede tutto di default, MA un permesso esplicitamente
+  // disattivato (false) nasconde la voce anche per i master.
+  // Impostazioni resta sempre visibile per i master.
+  var showSi  = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
+  var hasPerm = function(key) {
+    if (p[key] === false) return false;       // disattivato esplicitamente
+    return isMaster || !!p[key];               // master di default, standard se concesso
+  };
+  if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
+  if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
+  if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
+  if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
+  if (hasPerm('pranzo'))     showSi('siPranzo');
+  if (hasPerm('richieste'))  showSi('siRichieste');
+  if (hasPerm('statistiche'))  showSi('siStatistiche');
+  if (hasPerm('esercitazione')) showSi('siEsercitazione');
   if (isMaster)                 showSi('siImpostazioni');
-  if (isMaster || p.db)          showSi('siDb');
+  if (hasPerm('db'))            showSi('siDb');
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
   if (su) su.textContent = currentUser.nome + ' · ' + currentUser.ruolo;
 
   // Badge richieste
-  if (isMaster || p.richieste) caricaBadgeRichieste();
+  if (hasPerm('richieste')) caricaBadgeRichieste();
 
   // Compleanno
   verificaCompleanni();
@@ -166,7 +173,7 @@ function avviaDashboard() {
   buildHomeCards(isMaster, p);
 
   // Pranzo se autorizzato
-  if (isMaster || p.pranzo) initPranzo();
+  if (hasPerm('pranzo')) initPranzo();
 }
 
 
@@ -1884,11 +1891,57 @@ async function caricaDatiForm(id) {
   } catch(e) {}
 }
 
+// Valida un codice fiscale italiano: formato + carattere di controllo
+function validaCodiceFiscale(cf) {
+  if (!cf) return { ok: false, msg: 'Il Codice Fiscale è obbligatorio.' };
+  cf = cf.trim().toUpperCase();
+  if (cf.length !== 16) return { ok: false, msg: 'Il Codice Fiscale deve avere 16 caratteri (inseriti: ' + cf.length + ').' };
+  if (!/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(cf)) {
+    return { ok: false, msg: 'Formato Codice Fiscale non valido.' };
+  }
+  // Carattere di controllo
+  var dispari = { '0':1,'1':0,'2':5,'3':7,'4':9,'5':13,'6':15,'7':17,'8':19,'9':21,
+    'A':1,'B':0,'C':5,'D':7,'E':9,'F':13,'G':15,'H':17,'I':19,'J':21,'K':2,'L':4,'M':18,
+    'N':20,'O':11,'P':3,'Q':6,'R':8,'S':12,'T':14,'U':16,'V':10,'W':22,'X':25,'Y':24,'Z':23 };
+  var pari = { '0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,
+    'A':0,'B':1,'C':2,'D':3,'E':4,'F':5,'G':6,'H':7,'I':8,'J':9,'K':10,'L':11,'M':12,
+    'N':13,'O':14,'P':15,'Q':16,'R':17,'S':18,'T':19,'U':20,'V':21,'W':22,'X':23,'Y':24,'Z':25 };
+  var somma = 0;
+  for (var i = 0; i < 15; i++) {
+    somma += (i % 2 === 0) ? dispari[cf[i]] : pari[cf[i]];
+  }
+  var atteso = String.fromCharCode(65 + (somma % 26));
+  if (cf[15] !== atteso) {
+    return { ok: false, msg: 'Codice Fiscale errato: il carattere di controllo non corrisponde (verifica eventuali errori di battitura).' };
+  }
+  return { ok: true, cf: cf };
+}
+
 async function salvaVolontario() {
   const cognome = document.getElementById('fCognome').value.trim();
   const nome    = document.getElementById('fNome').value.trim();
   const errEl   = document.getElementById('volFormErr');
   if (!cognome || !nome) { errEl.textContent = 'Cognome e Nome sono obbligatori.'; errEl.style.display = 'block'; return; }
+
+  // Validazione Codice Fiscale (obbligatorio + checksum)
+  const cfInput = document.getElementById('fCF') ? document.getElementById('fCF').value : '';
+  const cfCheck = validaCodiceFiscale(cfInput);
+  if (!cfCheck.ok) { errEl.textContent = cfCheck.msg; errEl.style.display = 'block'; return; }
+  const codiceFiscale = cfCheck.cf;
+
+  // Controllo unicità: nessun altro volontario con lo stesso CF
+  try {
+    let urlCheck = SUPA_URL + '/rest/v1/volontari?codice_fiscale=eq.' + codiceFiscale + '&select=id,cognome,nome';
+    const resCheck = await fetch(urlCheck, { headers: H });
+    const dupes = await resCheck.json();
+    const altro = dupes.find(x => x.id !== volCorrenteId);
+    if (altro) {
+      errEl.textContent = 'Codice Fiscale già presente per ' + altro.cognome + ' ' + altro.nome + '.';
+      errEl.style.display = 'block';
+      return;
+    }
+  } catch(e) {}
+
   errEl.style.display = 'none';
 
   const g = (id) => { const el = document.getElementById(id); return el ? el.value || null : null; };
@@ -1905,13 +1958,13 @@ async function salvaVolontario() {
 
   const payload = {
     cognome, nome,
-    codice_fiscale: g('fCF'), data_nascita: d('fDataNascita'),
+    codice_fiscale: codiceFiscale, data_nascita: d('fDataNascita'),
     luogo_nascita: g('fLuogoNascita'), professione: g('fProfessione'),
     indirizzo: g('fIndirizzo'), cap: g('fCap'), citta: g('fCitta'),
     squadra: g('fSquadra'), tipo_volontario: g('fTipo'),
     mansione: g('fMansione'), specializzazione: g('fSpecializzazione'),
     gruppo_alpini: g('fGruppo'), patenti: g('fPatenti'),
-    telefono: g('fTelefono'), email: g('fEmail'), codice_fiscale: (document.getElementById('fCF')?document.getElementById('fCF').value.trim().toUpperCase()||null:null),
+    telefono: g('fTelefono'), email: g('fEmail'),
     comm_unita: b('fCommUnita'), radio_ana: b('fRadioAna'),
     emercom: b('fEmercom'), dae: b('fDae'),
     quattro_ore: b('f4Ore'), dodici_ore: b('f12Ore'),
@@ -1933,7 +1986,15 @@ async function salvaVolontario() {
       await logAttivita('ha aggiunto volontario: ' + cognome + ' ' + nome);
     }
     if (res.ok) { chiudiForm(); chiudiDettaglio(); caricaVolontari(); }
-    else { errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block'; }
+    else {
+      const errBody = await res.text();
+      if (errBody.includes('unique') || errBody.includes('duplicate')) {
+        errEl.textContent = 'Codice Fiscale già presente per un altro volontario.';
+      } else {
+        errEl.textContent = 'Errore salvataggio.';
+      }
+      errEl.style.display = 'block';
+    }
   } catch(e) { errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block'; }
 }
 
