@@ -3154,118 +3154,125 @@ async function archiviaAttestato(idx, interventoId) {
 async function _generaPDFBlob(intv, v) {
   var LOGO_SEZ  = 'data:image/png;base64,' + _getLogoSez();
   var LOGO_VOL  = 'data:image/png;base64,' + _getLogoVol();
-  var FIRMA_B64 = 'data:image/png;base64,' + _getFirma();
+  var FIRMA_RAW = 'data:image/png;base64,' + _getFirma();
 
   var dataInizio = intv.data      ? new Date(intv.data).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'}) : '\u2014';
   var dataFine   = intv.data_fine ? new Date(intv.data_fine).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'}) : dataInizio;
   var oggi       = new Date().toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'});
 
+  // Processa firma PRIMA di creare il PDF (rimuove sfondo bianco via canvas)
+  var FIRMA_PNG;
+  try { FIRMA_PNG = await _processaImmagineTransparente(FIRMA_RAW, 'bianco'); }
+  catch(e) { FIRMA_PNG = FIRMA_RAW; }
+
   var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  var W = 297, H = 210, cx = W/2, mg = 14;
+  var W = 297, H = 210, cx = W/2, mg = 12;
   var GREEN       = [26,122,74];
   var LIGHT_GREEN = [184,223,201];
   var BLACK       = [17,17,17];
-  var GRAY        = [100,100,100];
+  var GRAY        = [90,90,90];
 
   // Sfondo + bordure
   doc.setFillColor(255,255,255); doc.rect(0,0,W,H,'F');
-  doc.setDrawColor(...GREEN); doc.setLineWidth(0.9); doc.rect(5,5,W-10,H-10);
-  doc.setLineWidth(0.3);     doc.rect(8,8,W-16,H-16);
+  doc.setDrawColor(...GREEN); doc.setLineWidth(1.0); doc.rect(4,4,W-8,H-8);
+  doc.setLineWidth(0.35); doc.rect(7,7,W-14,H-14);
 
-  // --- Calcola altezze fisse degli elementi ---
-  var hHeader  = 26; // loghi + testo intestazione
-  var hLine    = 1;
-  var hTitolo  = 8;
-  var hNome    = 10;
-  var hRuolo   = 5;
-  var hEvento  = 10;
-  var hDate    = 6;
-  var hFirma   = 20;
+  // ---- HEADER ----
+  var logoH = 30, logoW = 30;
+  var y0 = mg;
+  try { doc.addImage(LOGO_SEZ,'PNG', mg+1, y0, logoW, logoH); } catch(e){}
+  try { doc.addImage(LOGO_VOL,'PNG', W-mg-logoW-1, y0, logoW, logoH); } catch(e){}
 
-  // Altezza totale contenuto fisso
-  var hFisso = hHeader + hLine*4 + hTitolo + 5 + 5 + hNome + hRuolo + hEvento + hDate + hFirma;
-  // Spazio disponibile tra margini
-  var hDisp  = H - mg*2;
-  // Gap da distribuire tra le sezioni (7 gap)
-  var gap    = Math.max(4, (hDisp - hFisso) / 7);
-
-  var y = mg + 2;
-
-  // --- HEADER ---
-  try { doc.addImage(LOGO_SEZ,'PNG',mg+1,y,22,22); } catch(e){}
-  try { doc.addImage(LOGO_VOL,'PNG',W-mg-23,y,22,22); } catch(e){}
+  var textX = cx;
   doc.setTextColor(...GREEN);
+  doc.setFont('times','bold');    doc.setFontSize(13);
+  doc.text('ASSOCIAZIONE NAZIONALE ALPINI', textX, y0+7,  {align:'center'});
+  doc.setFontSize(11.5);
+  doc.text('SEZIONE DI CASALE MONFERRATO',  textX, y0+14, {align:'center'});
+  doc.setFont('times','italic');  doc.setFontSize(9);
+  doc.text("Medaglia d'Oro al M.C. della Citt\u00e0 di Casale Monferrato", textX, y0+20, {align:'center'});
   doc.setFont('times','bold');    doc.setFontSize(11.5);
-  doc.text('ASSOCIAZIONE NAZIONALE ALPINI',cx,y+6,{align:'center'});
-  doc.setFontSize(10);
-  doc.text('SEZIONE DI CASALE MONFERRATO',cx,y+12,{align:'center'});
-  doc.setFont('times','italic');  doc.setFontSize(8);
-  doc.text("Medaglia d'Oro al M.C. della Citt\u00e0 di Casale Monferrato",cx,y+17,{align:'center'});
-  doc.setFont('times','bold');    doc.setFontSize(10);
-  doc.text('UNIT\u00c0 DI PROTEZIONE CIVILE ANA',cx,y+23,{align:'center'});
-  y += hHeader + gap;
+  doc.text('UNIT\u00c0 DI PROTEZIONE CIVILE ANA', textX, y0+27, {align:'center'});
 
-  // --- LINEA FORTE ---
-  doc.setDrawColor(...GREEN); doc.setLineWidth(0.5);
-  doc.line(mg+3,y,W-mg-3,y); y += gap*0.7;
+  // Calcola posizioni con distribuzione uniforme
+  // Sezioni: header(30) | lineaF | titolo | lineaF | siAttesta+nome+ruolo | lineaL | haPartecipato+evento | lineaL | date | firma
+  var yAfterHeader = y0 + logoH + 3;
+  var yFirma = H - mg - 22;
+  var spazio = yFirma - yAfterHeader - 4; // spazio tra header e firma
 
-  // --- TITOLO ---
-  doc.setFont('times','bold'); doc.setFontSize(22); doc.setTextColor(...BLACK);
-  doc.text('ATTESTATO DI PARTECIPAZIONE',cx,y,{align:'center'});
+  // Altezze fisse approssimative
+  var aLineaF    = 1;
+  var aTitolo    = 9;
+  var aSiAttesta = 6;
+  var aNome      = 12;
+  var aRuolo     = 6;
+  var aLineaL    = 1;
+  var aHaP       = 6;
+  var aEvento    = 9;
+  var aDate      = 6;
+  var totAlt = aLineaF*2 + aTitolo + aSiAttesta + aNome + aRuolo + aLineaL*2 + aHaP + aEvento + aDate;
+  var nGap = 8; // numero di gap tra i blocchi
+  var gap = Math.max(3, (spazio - totAlt) / nGap);
+
+  var y = yAfterHeader;
+
+  // LINEA FORTE
+  doc.setDrawColor(...GREEN); doc.setLineWidth(0.6);
+  doc.line(mg+3,y,W-mg-3,y); y += gap*0.5;
+
+  // TITOLO
+  doc.setFont('times','bold'); doc.setFontSize(26); doc.setTextColor(...BLACK);
+  doc.text('ATTESTATO DI PARTECIPAZIONE', cx, y, {align:'center'});
   var tw = doc.getTextWidth('ATTESTATO DI PARTECIPAZIONE');
-  doc.setDrawColor(...BLACK); doc.setLineWidth(0.4);
-  doc.line(cx-tw/2,y+1,cx+tw/2,y+1);
-  y += hTitolo*0.7;
+  doc.setDrawColor(...BLACK); doc.setLineWidth(0.5);
+  doc.line(cx-tw/2, y+1.2, cx+tw/2, y+1.2);
+  y += aTitolo + gap*0.5;
 
-  // --- LINEA FORTE ---
-  doc.setDrawColor(...GREEN); doc.setLineWidth(0.5);
+  // LINEA FORTE
+  doc.setDrawColor(...GREEN); doc.setLineWidth(0.6);
   doc.line(mg+3,y,W-mg-3,y); y += gap;
 
-  // --- si attesta ---
-  doc.setFont('times','normal'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-  doc.text('si attesta che il Volontario',cx,y,{align:'center'}); y += gap*0.8;
+  // si attesta
+  doc.setFont('times','normal'); doc.setFontSize(12); doc.setTextColor(...GRAY);
+  doc.text('si attesta che il Volontario', cx, y, {align:'center'}); y += aSiAttesta + gap*0.3;
 
-  // --- NOME ---
-  doc.setFont('times','bold'); doc.setFontSize(28); doc.setTextColor(...BLACK);
-  doc.text(v.cognome.toUpperCase()+' '+v.nome.toUpperCase(),cx,y,{align:'center'}); y += hNome+2;
+  // NOME
+  doc.setFont('times','bold'); doc.setFontSize(32); doc.setTextColor(...BLACK);
+  doc.text(v.cognome.toUpperCase()+' '+v.nome.toUpperCase(), cx, y, {align:'center'}); y += aNome + 2;
 
-  // --- RUOLO ---
-  doc.setFont('times','italic'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-  doc.text("Volontario dell'Unit\u00e0 PC ANA Casale Monferrato",cx,y,{align:'center'}); y += gap;
+  // ruolo
+  doc.setFont('times','italic'); doc.setFontSize(11); doc.setTextColor(...GRAY);
+  doc.text("Volontario dell'Unit\u00e0 PC ANA Casale Monferrato", cx, y, {align:'center'}); y += aRuolo + gap;
 
-  // --- LINEA LEGGERA ---
-  doc.setDrawColor(...LIGHT_GREEN); doc.setLineWidth(0.3);
+  // LINEA LEGGERA
+  doc.setDrawColor(...LIGHT_GREEN); doc.setLineWidth(0.35);
   doc.line(mg+3,y,W-mg-3,y); y += gap*0.8;
 
-  // --- ha partecipato ---
-  doc.setFont('times','italic'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-  doc.text('ha partecipato alle attivit\u00e0 connesse a:',cx,y,{align:'center'}); y += gap*0.8;
+  // ha partecipato
+  doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(...GRAY);
+  doc.text('ha partecipato alle attivit\u00e0 connesse a:', cx, y, {align:'center'}); y += aHaP + gap*0.3;
 
-  // --- EVENTO ---
-  doc.setFont('times','bold'); doc.setFontSize(18); doc.setTextColor(...BLACK);
-  var ev = doc.splitTextToSize((intv.evento||'').toUpperCase(),W-mg*2-40);
-  doc.text(ev,cx,y,{align:'center'}); y += ev.length*7+gap;
+  // EVENTO
+  doc.setFont('times','bold'); doc.setFontSize(20); doc.setTextColor(...BLACK);
+  var ev = doc.splitTextToSize((intv.evento||'').toUpperCase(), W-mg*2-30);
+  doc.text(ev, cx, y, {align:'center'}); y += ev.length*8 + gap;
 
-  // --- LINEA LEGGERA ---
-  doc.setDrawColor(...LIGHT_GREEN); doc.setLineWidth(0.3);
+  // LINEA LEGGERA
+  doc.setDrawColor(...LIGHT_GREEN); doc.setLineWidth(0.35);
   doc.line(mg+3,y,W-mg-3,y); y += gap*0.8;
 
-  // --- DATE ---
-  doc.setFont('times','normal'); doc.setFontSize(11); doc.setTextColor(...BLACK);
-  doc.text('dal '+dataInizio,cx-8,y,{align:'right'});
-  doc.text('al '+dataFine,cx+8,y,{align:'left'});
+  // DATE
+  doc.setFont('times','normal'); doc.setFontSize(12); doc.setTextColor(...BLACK);
+  doc.text('dal '+dataInizio, cx-10, y, {align:'right'});
+  doc.text('al '+dataFine,    cx+10, y, {align:'left'});
 
-  // --- FIRMA fissa in basso ---
-  var yF = H - mg - 16;
-  doc.setFont('times','italic'); doc.setFontSize(10.5); doc.setTextColor(...BLACK);
-  doc.text(oggi,mg+5,yF+10);
-  doc.text('Il Presidente',W-mg-34,yF,{align:'center'});
-  try {
-    var fc = await _processaImmagineTransparente(FIRMA_B64,'bianco');
-    doc.addImage(fc,'PNG',W-mg-56,yF+1,44,13);
-  } catch(e){}
+  // FIRMA
+  doc.setFont('times','italic'); doc.setFontSize(11); doc.setTextColor(...BLACK);
+  doc.text(oggi, mg+5, yFirma+14);
+  doc.text('Il Presidente', W-mg-35, yFirma, {align:'center'});
+  try { doc.addImage(FIRMA_PNG,'PNG', W-mg-60, yFirma+2, 50, 16); } catch(e){}
   doc.setDrawColor(...BLACK); doc.setLineWidth(0.3);
-  doc.line(W-mg-56,yF+15,W-mg-12,yF+15);
+  doc.line(W-mg-60, yFirma+19, W-mg-10, yFirma+19);
 
   return doc.output('blob');
 }
