@@ -3153,12 +3153,31 @@ async function archiviaAttestato(idx, interventoId) {
 
 async function _generaPDFBlob(intv, v) {
   var container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1';
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:9999;visibility:hidden';
   container.innerHTML = _buildAttestatiHTML(intv, [v], false);
   document.body.appendChild(container);
   try {
-    var canvas = await html2canvas(container.querySelector('.page'), {
-      scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794
+    // Aspetta che tutte le immagini siano caricate prima di renderizzare
+    var imgs = Array.from(container.querySelectorAll('img'));
+    await Promise.all(imgs.map(function(img) {
+      return new Promise(function(resolve) {
+        if (img.complete && img.naturalWidth > 0) { resolve(); return; }
+        img.onload  = resolve;
+        img.onerror = resolve; // continua anche se fallisce
+      });
+    }));
+    // Piccola pausa extra per il rendering CSS
+    await new Promise(function(r){ setTimeout(r, 200); });
+
+    var page = container.querySelector('.page');
+    var canvas = await html2canvas(page, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: page.offsetWidth,
+      height: page.offsetHeight,
+      windowWidth: 794
     });
     var imgData = canvas.toDataURL('image/jpeg', 0.92);
     var pdf     = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
