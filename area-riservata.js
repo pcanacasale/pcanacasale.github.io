@@ -3189,7 +3189,7 @@ async function _generaPDFBlob(intv, v) {
 
   // ---- DISTRIBUZIONE ----
   var yTop = y0 + 36;
-  var yFir = H - mg - 24;
+  var yFir = H - mg - 28;
   var spazio = yFir - yTop;
   var fisso = 1 + 10 + 1 + 5 + 13 + 5 + 5 + 1 + 5 + 9 + 1 + 5; // altezze blocchi (incl. CF)
   var sumGap = 0.6+0.4+1+0.4+0.3+0.3+1+0.8+0.4+1+0.8; // 7.0
@@ -3263,13 +3263,12 @@ async function _generaPDFBlob(intv, v) {
   doc.text('dal '+dataInizio, cx-10, y, {align:'right'});
   doc.text('al '+dataFine,    cx+10, y, {align:'left'});
 
-  // FIRMA
+  // FIRMA — proporzioni reali 665x347 (ratio ~1.917), senza riga
+  var fW = 46, fH = 24; // 46/24 = 1.917
   doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(...BLACK);
   doc.text(oggi, mg+6, yFir+16);
-  doc.text('Il Presidente', W-mg-37, yFir+2, {align:'center'});
-  try { doc.addImage(FIRMA_JPG,'JPEG', W-mg-62, yFir+4, 50, 16); } catch(e){}
-  doc.setDrawColor(...BLACK); doc.setLineWidth(0.3);
-  doc.line(W-mg-62, yFir+21, W-mg-12, yFir+21);
+  doc.text('Il Presidente', W-mg-12-fW/2, yFir+2, {align:'center'});
+  try { doc.addImage(FIRMA_JPG,'JPEG', W-mg-12-fW, yFir+4, fW, fH); } catch(e){}
 
   return doc.output('blob');
 }
