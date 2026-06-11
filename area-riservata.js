@@ -3198,67 +3198,88 @@ function _buildAttestatiHTML(intv, vols, perStampa) {
 
   var css = '* { margin:0;padding:0;box-sizing:border-box; }'
     + 'body { background:white;font-family:\'Times New Roman\',serif;color:#111; }'
-    + '.page { width:210mm;min-height:297mm;padding:15mm 18mm 14mm;box-sizing:border-box;display:flex;flex-direction:column; }'
-    + '.header { display:flex;align-items:center;justify-content:space-between;margin-bottom:10mm; }'
-    + '.logo { width:28mm;height:auto;object-fit:contain;mix-blend-mode:multiply; }'
-    + '.header-center { flex:1;text-align:center;border:2px solid #1a7a4a;margin:0 10mm;padding:5mm 4mm; }'
-    + '.l1 { font-size:12pt;font-weight:700;color:#1a7a4a;letter-spacing:0.3px; }'
-    + '.l2 { font-size:10pt;font-weight:700;color:#1a7a4a;margin-top:2px; }'
-    + '.l3 { font-size:8.5pt;color:#1a7a4a;font-style:italic;margin-top:3px; }'
-    + '.l4 { font-size:10pt;font-weight:700;color:#1a7a4a;margin-top:2px; }'
-    + '.titolo { text-align:center;margin:8mm 0 6mm;font-size:26pt;font-weight:700;text-decoration:underline;letter-spacing:0.5px; }'
-    + '.si-attesta { text-align:center;font-size:13pt;margin-bottom:5mm; }'
-    + '.nome { text-align:center;font-size:26pt;font-weight:700;letter-spacing:1.5px;margin:6mm 0 3mm; }'
-    + '.ruolo { text-align:center;font-size:12pt;font-style:italic;color:#222;margin-bottom:8mm; }'
-    + '.ha-part { font-size:13pt;margin-bottom:4mm; }'
-    + '.evento { text-align:center;font-size:18pt;font-weight:700;margin:5mm 0; }'
-    + '.date { display:flex;gap:50mm;margin:10mm 0 0;font-size:13pt; }'
-    + '.firma-row { display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:14mm; }'
-    + '.data-gen { font-size:12pt;font-style:italic; }'
-    + '.firma-label { font-size:12pt;font-style:italic;margin-bottom:2mm;text-align:center; }'
-    + '.firma-img { width:55mm;height:auto;display:block;margin:0 auto;mix-blend-mode:multiply; }'
-    + '.firma-line { border-top:1px solid #333;width:65mm;margin:2mm auto 0; }'
+    + '.page { width:210mm;min-height:297mm;padding:18mm 20mm 16mm;box-sizing:border-box;display:flex;flex-direction:column;border:3px solid #1a7a4a;position:relative;background:white; }'
+    + '.page::before { content:\'\';position:absolute;inset:7px;border:0.8px solid #1a7a4a;pointer-events:none; }'
+    + '.header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12mm; }'
+    + '.logo { width:26mm;height:auto;object-fit:contain; }'
+    + '.hcenter { flex:1;text-align:center;padding:4mm 8mm; }'
+    + '.hc1 { font-size:11pt;font-weight:700;color:#1a7a4a;letter-spacing:0.3px; }'
+    + '.hc2 { font-size:9.5pt;font-weight:700;color:#1a7a4a;margin-top:2px; }'
+    + '.hc3 { font-size:8pt;color:#1a7a4a;font-style:italic;margin-top:3px; }'
+    + '.div-strong { border:none;border-top:1.5px solid #1a7a4a;margin:5mm 0; }'
+    + '.div-light  { border:none;border-top:0.8px solid #b8dfc9;margin:5mm 0; }'
+    + '.titolo { text-align:center;font-size:22pt;font-weight:700;text-decoration:underline;letter-spacing:0.5px;margin:2mm 0; }'
+    + '.si-attesta { text-align:center;font-size:11pt;margin-bottom:4mm; }'
+    + '.nome { text-align:center;font-size:24pt;font-weight:700;letter-spacing:1.5px;margin:5mm 0 2mm; }'
+    + '.ruolo { text-align:center;font-size:10pt;font-style:italic;color:#444;margin-bottom:5mm; }'
+    + '.ha-part { text-align:center;font-size:11pt;font-style:italic;color:#555;margin-bottom:4mm; }'
+    + '.evento { text-align:center;font-size:16pt;font-weight:700;margin:5mm 0;letter-spacing:0.3px; }'
+    + '.date { display:flex;justify-content:center;gap:30mm;margin:5mm 0 0;font-size:11pt; }'
+    + '.firma-row { display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:12mm;font-size:11pt; }'
+    + '.firma-label { font-style:italic;text-align:center;margin-bottom:2mm; }'
+    + '.firma-img { width:50mm;height:auto;display:block;margin:0 auto; }'
+    + '.firma-line { border-top:1px solid #333;width:60mm;margin:2mm auto 0; }'
     + (perStampa ? '@media print { .page { page-break-after:always; } .page:last-child { page-break-after:avoid; } } @page { size:A4;margin:0; }' : '');
 
   var pagine = vols.map(function(v) {
     return '<div class="page">'
       + '<div class="header">'
-      + '<img class="logo" src="' + LOGO_SEZ + '">'
-      + '<div class="header-center">'
-      + '<div class="l1">ASSOCIAZIONE NAZIONALE ALPINI</div>'
-      + '<div class="l2">SEZIONE DI CASALE MONFERRATO</div>'
-      + '<div class="l3">Medaglia d\'Oro al M.C. della Città di Casale Monferrato</div>'
-      + '<div class="l4">UNITÀ DI PROTEZIONE CIVILE ANA</div>'
+      + '<canvas class="logo" id="cvs-sez-' + v.id + '" width="200" height="200" style="width:26mm;height:26mm"></canvas>'
+      + '<div class="hcenter">'
+      + '<div class="hc1">ASSOCIAZIONE NAZIONALE ALPINI</div>'
+      + '<div class="hc2">SEZIONE DI CASALE MONFERRATO</div>'
+      + '<div class="hc3">Medaglia d\'Oro al M.C. della Città di Casale Monferrato</div>'
+      + '<div class="hc2">UNITÀ DI PROTEZIONE CIVILE ANA</div>'
       + '</div>'
-      + '<img class="logo" src="' + LOGO_VOL + '">'
+      + '<canvas class="logo" id="cvs-vol-' + v.id + '" width="200" height="200" style="width:26mm;height:26mm"></canvas>'
       + '</div>'
+      + '<hr class="div-strong">'
       + '<div class="titolo">ATTESTATO DI PARTECIPAZIONE</div>'
+      + '<hr class="div-strong">'
       + '<div class="si-attesta">si attesta che il Volontario</div>'
       + '<div class="nome">' + v.cognome.toUpperCase() + ' ' + v.nome.toUpperCase() + '</div>'
       + '<div class="ruolo">Volontario dell\'Unità PC ANA Casale Monferrato</div>'
+      + '<hr class="div-light">'
       + '<div class="ha-part">ha partecipato alle attività connesse a:</div>'
       + '<div class="evento">' + (intv.evento || '').toUpperCase() + '</div>'
+      + '<hr class="div-light">'
       + '<div class="date"><div>dal ' + dataInizio + '</div><div>al ' + dataFine + '</div></div>'
       + '<div class="firma-row">'
-      + '<div class="data-gen">' + oggi + '</div>'
+      + '<div><em>' + oggi + '</em></div>'
       + '<div><div class="firma-label">Il Presidente</div>'
-      + '<img class="firma-img" src="' + FIRMA_B64 + '">'
+      + '<canvas id="cvs-firma-' + v.id + '" width="400" height="160" style="width:50mm;height:auto;display:block;margin:0 auto"></canvas>'
       + '<div class="firma-line"></div></div>'
       + '</div>'
       + '</div>';
   }).join('');
 
+  var script = vols.map(function(v) {
+    return '_rimuoviSfondoNero("' + LOGO_SEZ + '","cvs-sez-' + v.id + '");'
+      + '_rimuoviSfondoNero("' + LOGO_VOL + '","cvs-vol-' + v.id + '");'
+      + '_rimuoviSfondoNero("' + FIRMA_B64 + '","cvs-firma-' + v.id + '");';
+  }).join('');
+
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' + css + '</style></head><body>'
     + pagine
-    + (perStampa ? '<script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>' : '')
+    + '<script>'
+    + 'function _rimuoviSfondoNero(src,id){'
+    + '  var img=new Image();img.onload=function(){'
+    + '    var c=document.getElementById(id);if(!c)return;'
+    + '    c.width=img.naturalWidth;c.height=img.naturalHeight;'
+    + '    var ctx=c.getContext("2d");ctx.drawImage(img,0,0);'
+    + '    var d=ctx.getImageData(0,0,c.width,c.height);'
+    + '    for(var i=0;i<d.data.length;i+=4){'
+    + '      var r=d.data[i],g=d.data[i+1],b=d.data[i+2];'
+    + '      var brightness=(r+g+b)/3;'
+    + '      if(brightness>200){d.data[i+3]=0;}'
+    + '    }'
+    + '    ctx.putImageData(d,0,0);'
+    + '  };img.src=src;'
+    + '}'
+    + script
+    + '<\/script>'
+    + (perStampa ? '<script>window.onload=function(){setTimeout(function(){window.print();},800);}<\/script>' : '')
     + '</body></html>';
-}
-
-function _stampaPDFUnico(intv, vols) {
-  var html = _buildAttestatiHTML(intv, vols, true);
-  var win  = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
 }
 
 function chiudiGeneratoreAttestati() {
