@@ -3140,7 +3140,7 @@ async function archiviaAttestato(idx, interventoId) {
     await fetch(SUPA_URL + '/rest/v1/documenti', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url })
+      body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url, data_carico: new Date().toISOString() })
     });
     await logAttivita('ha archiviato attestato per ' + r.v.cognome + ' ' + r.v.nome);
     if (btn) { btn.textContent = '✓ Archiviato'; btn.style.color = 'var(--green)'; }
@@ -3475,21 +3475,52 @@ async function caricaDocVolontario(volId) {
     const docs = await res.json();
     const count = document.getElementById('volDocCount');
     if (count) count.textContent = '(' + docs.length + ')';
+
     if (!docs.length) {
       body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun documento.</div>'
         + '<button class="doc-add-btn" style="margin-top:0.3rem" onclick="apriDocDaScheda(' + volId + ')">+ carica documento</button>';
       return;
     }
-    body.innerHTML = docs.map(d => {
-      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
-      const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-      return '<div class="vol-field">'
-        + '<span class="vol-field-label">' + label.replace(/^[^ ]+ /,'') + '</span>'
-        + '<a href="' + d.url + '" target="_blank" style="color:var(--blue);font-size:0.72rem;text-decoration:none">'
-        + (d.nome_file || label) + ' ↗</a>'
-        + '</div>';
-    }).join('')
-    + '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi</button>';
+
+    const attestati = docs.filter(d => d.tipo === 'ATTESTATO');
+    const altri     = docs.filter(d => d.tipo !== 'ATTESTATO');
+
+    let html = '';
+
+    // Sezione attestati
+    if (attestati.length) {
+      html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.3rem 0 0.4rem">📜 Attestati (' + attestati.length + ')</div>';
+      html += attestati.map(d => {
+        const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        const nome = d.nome_file ? d.nome_file.replace(/^ATTESTATO_/,'').replace(/_/g,' ').replace(/\.pdf$/i,'') : 'Attestato';
+        return '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
+          + '</div>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // Sezione altri documenti
+    if (altri.length) {
+      if (attestati.length) html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.6rem 0 0.4rem">📄 Documenti</div>';
+      html += altri.map(d => {
+        const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
+        const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        return '<div class="vol-field">'
+          + '<span class="vol-field-label">' + label.replace(/^[^ ]+ /,'') + '</span>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--blue);font-size:0.72rem;text-decoration:none">'
+          + (d.nome_file || label) + ' ↗</a>'
+          + '</div>';
+      }).join('');
+    }
+
+    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
+    body.innerHTML = html;
   } catch(e) {}
 }
 
