@@ -2496,9 +2496,7 @@ function renderInterventi(data) {
   // Macro = interventi con is_macro=true
   // Figli = interventi con macro_id valorizzato
   // Orfani = interventi normali senza macro_id e senza is_macro
-  const macro  = data.filter(i => i.is_macro);
-  const figli  = data.filter(i => i.macro_id);
-  const orfani = data.filter(i => !i.is_macro && !i.macro_id);
+  const figli = data.filter(i => i.macro_id);
 
   if (!data.length) {
     list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>';
@@ -2506,14 +2504,16 @@ function renderInterventi(data) {
   }
   list.innerHTML = '';
 
-  // Prima le macro (con i figli annidati)
-  macro.forEach(m => {
-    const figliMacro = figli.filter(i => i.macro_id === m.id);
-    list.appendChild(_renderMacroCard(m, figliMacro));
+  // Macro e orfani insieme, in ordine cronologico (data desc, come arriva dal server)
+  data.forEach(i => {
+    if (i.macro_id) return; // i figli appaiono solo dentro la loro macro
+    if (i.is_macro) {
+      const figliMacro = figli.filter(f => f.macro_id === i.id);
+      list.appendChild(_renderMacroCard(i, figliMacro));
+    } else {
+      list.appendChild(_renderIntCard(i, false));
+    }
   });
-
-  // Poi gli interventi singoli
-  orfani.forEach(i => list.appendChild(_renderIntCard(i, false)));
 }
 
 function _renderIntCard(i, isChild) {
