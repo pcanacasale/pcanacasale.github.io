@@ -2972,7 +2972,7 @@ async function apriGeneratoreAttestati(interventoId) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'attestatiOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay);z-index:300;display:flex;align-items:flex-end;justify-content:center';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay);z-index:500;display:flex;align-items:flex-end;justify-content:center';
     overlay.innerHTML =
       '<div style="background:var(--bg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:1.2rem 1rem 2rem">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">'
@@ -3038,9 +3038,10 @@ function renderGeneratoreAttestati(intv) {
     + volHtml
     + (attestatiVolontari.length ? '<div id="attestatiStatus" style="font-size:0.75rem;color:var(--testo-3);margin:0.8rem 0 0;min-height:1.2rem"></div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.8rem">'
-      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem" onclick="generaAttestatiSelezionati(' + intv.id + ',false)">📜 PDF singoli + archivia</button>'
+      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem" onclick="generaAttestatiSelezionati(' + intv.id + ')">📜 Genera attestati</button>'
       + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem;background:var(--bg-3);color:var(--testo)" onclick="generaAttestatiSelezionati(' + intv.id + ',true)">📄 PDF unico (stampa)</button>'
-      + '</div>' : '');
+      + '</div>'
+      + '<div id="attestatiRisultati" style="margin-top:0.8rem"></div>' : '');
 }
 
 function toggleSelAll(cb) {
@@ -3051,37 +3052,120 @@ async function generaAttestatiSelezionati(interventoId, unico) {
   var selezionati = Array.from(document.querySelectorAll('.attestato-cb:checked')).map(function(el){ return parseInt(el.dataset.id); });
   if (!selezionati.length) { alert('Seleziona almeno un volontario.'); return; }
 
-  var status = document.getElementById('attestatiStatus');
+  var status     = document.getElementById('attestatiStatus');
+  var risultati  = document.getElementById('attestatiRisultati');
   status.textContent = 'Caricamento librerie...';
+  if (risultati) risultati.innerHTML = '';
 
-  // Carica jsPDF e html2canvas se non presenti
   await _caricaLibreriaAttestati();
 
-  // Carica dati intervento
   var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + interventoId + '&select=*', { headers: H });
   var intData = await intRes.json();
   var intv    = intData[0];
-
-  var vols = attestatiVolontari.filter(function(v){ return selezionati.includes(v.id); });
+  var vols    = attestatiVolontari.filter(function(v){ return selezionati.includes(v.id); });
 
   if (unico) {
-    // PDF multipagina per stampa (window.print)
-    status.textContent = 'Generazione PDF unico...';
+    status.textContent = 'Apertura finestra di stampa...';
     _stampaPDFUnico(intv, vols);
-    status.textContent = '✓ Apertura finestra di stampa.';
-  } else {
-    // PDF singoli + archiviazione
-    for (var idx = 0; idx < vols.length; idx++) {
-      var v = vols[idx];
-      status.textContent = 'Generazione ' + (idx+1) + '/' + vols.length + ': ' + v.cognome + ' ' + v.nome + '...';
-      try {
-        await _generaEArchiviaPDF(intv, v);
-      } catch(e) {
-        status.textContent = '⚠️ Errore per ' + v.cognome + ' ' + v.nome + ': ' + e.message;
-        await new Promise(function(r){ setTimeout(r, 1500); });
-      }
+    status.textContent = '✓ Finestra di stampa aperta.';
+    return;
+  }
+
+  // Genera PDF per ciascun volontario e mostra i pulsanti risultato
+  status.textContent = 'Generazione in corso...';
+  var righe = [];
+
+  for (var idx = 0; idx < vols.length; idx++) {
+    var v = vols[idx];
+    status.textContent = 'Generazione ' + (idx+1) + '/' + vols.length + ': ' + v.cognome + ' ' + v.nome + '...';
+    try {
+      var pdfBlob  = await _generaPDFBlob(intv, v);
+      var nomeFile = 'ATTESTATO_' + (intv.evento || 'intervento').replace(/[^a-zA-Z0-9]/g,'_').toUpperCase()
+        + '_' + v.cognome.toUpperCase() + '_' + v.nome.toUpperCase() + '.pdf';
+      righe.push({ v: v, blob: pdfBlob, nome: nomeFile, archiviato: false });
+    } catch(e) {
+      righe.push({ v: v, blob: null, errore: e.message });
     }
-    status.textContent = '✓ Completato! ' + vols.length + ' attestat' + (vols.length === 1 ? 'o generato' : 'i generati') + ' e archiviati.';
+  }
+
+  status.textContent = '✓ ' + righe.filter(function(r){ return r.blob; }).length + '/' + vols.length + ' attestati generati.';
+
+  // Mostra risultati con azioni per ognuno
+  if (risultati) {
+    risultati.innerHTML = '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Risultati</div>';
+    righe.forEach(function(r, i) {
+      var riga = document.createElement('div');
+      riga.id  = 'att-riga-' + i;
+      riga.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0;border-bottom:0.5px solid var(--border)';
+      if (r.blob) {
+        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;font-weight:500;color:var(--testo)">' + r.v.cognome + ' ' + r.v.nome + '</div>'
+          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" onclick="scaricaAttestato(' + i + ')">⬇️ Scarica</button>'
+          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" id="att-archivia-' + i + '" onclick="archiviaAttestato(' + i + ',' + intv.id + ')">📁 Archivia</button>';
+      } else {
+        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;color:var(--red)">' + r.v.cognome + ' ' + r.v.nome + ' — errore: ' + r.errore + '</div>';
+      }
+      risultati.appendChild(riga);
+    });
+    // Salva righe in variabile globale per accesso dai pulsanti
+    window._attestatiRighe = righe;
+  }
+}
+
+function scaricaAttestato(idx) {
+  var r = window._attestatiRighe && window._attestatiRighe[idx];
+  if (!r || !r.blob) return;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(r.blob);
+  a.download = r.nome;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function archiviaAttestato(idx, interventoId) {
+  var r = window._attestatiRighe && window._attestatiRighe[idx];
+  if (!r || !r.blob) return;
+  var btn = document.getElementById('att-archivia-' + idx);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    var path = r.v.id + '/ATTESTATO_' + interventoId + '_' + Date.now() + '.pdf';
+    var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/attestati/' + path, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/pdf' },
+      body: r.blob
+    });
+    if (!uploadRes.ok) throw new Error('Errore upload');
+
+    var url = SUPA_URL + '/storage/v1/object/public/attestati/' + path;
+    await fetch(SUPA_URL + '/rest/v1/documenti', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url })
+    });
+    await logAttivita('ha archiviato attestato per ' + r.v.cognome + ' ' + r.v.nome);
+    if (btn) { btn.textContent = '✓ Archiviato'; btn.style.color = 'var(--green)'; }
+    r.archiviato = true;
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '📁 Archivia'; }
+    alert('Errore archiviazione: ' + e.message);
+  }
+}
+
+async function _generaPDFBlob(intv, v) {
+  var container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1';
+  container.innerHTML = _buildAttestatiHTML(intv, [v], false);
+  document.body.appendChild(container);
+  try {
+    var canvas = await html2canvas(container.querySelector('.page'), {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794
+    });
+    var imgData = canvas.toDataURL('image/jpeg', 0.92);
+    var pdf     = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    return pdf.output('blob');
+  } finally {
+    document.body.removeChild(container);
   }
 }
 
@@ -3175,57 +3259,6 @@ function _stampaPDFUnico(intv, vols) {
   var win  = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
-}
-
-async function _generaEArchiviaPDF(intv, v) {
-  // Crea un div temporaneo fuori schermo con il template
-  var container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:-1';
-  container.innerHTML = _buildAttestatiHTML(intv, [v], false);
-  document.body.appendChild(container);
-
-  try {
-    var canvas = await html2canvas(container.querySelector('.attestato-page'), {
-      scale: 2, useCORS: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794
-    });
-
-    var imgData = canvas.toDataURL('image/jpeg', 0.92);
-    var pdf     = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-
-    var pdfBlob = pdf.output('blob');
-    var nomeFile = 'ATTESTATO_' + (intv.evento || 'intervento').replace(/[^a-zA-Z0-9]/g,'_').toUpperCase()
-      + '_' + v.cognome.toUpperCase() + '_' + v.nome.toUpperCase() + '.pdf';
-    var path    = v.id + '/ATTESTATO_' + intv.id + '_' + Date.now() + '.pdf';
-
-    // Upload su Supabase Storage bucket attestati
-    var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/attestati/' + path, {
-      method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/pdf' },
-      body: pdfBlob
-    });
-    if (!uploadRes.ok) throw new Error('Errore upload storage');
-
-    var url = SUPA_URL + '/storage/v1/object/public/attestati/' + path;
-
-    // Salva record in documenti
-    await fetch(SUPA_URL + '/rest/v1/documenti', {
-      method: 'POST',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ volontario_id: v.id, tipo: 'ATTESTATO', nome_file: nomeFile, url })
-    });
-
-    // Scarica anche localmente
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(pdfBlob);
-    a.download = nomeFile;
-    a.click();
-    URL.revokeObjectURL(a.href);
-
-    await logAttivita('ha generato attestato per ' + v.cognome + ' ' + v.nome + ' — ' + (intv.evento || ''));
-  } finally {
-    document.body.removeChild(container);
-  }
 }
 
 function chiudiGeneratoreAttestati() {
