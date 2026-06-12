@@ -1547,7 +1547,7 @@ function renderVolontari(data) {
         ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
         : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span> | ' + v.mansione + '</span>' : '') + '</div></div>'
+      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
       + '<div class="vol-card-badges">' + badges.join('') + '</div>';
     list.appendChild(card);
   });
@@ -2400,8 +2400,7 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
       card.innerHTML = avatarEl
         + '<div class="vol-card-info">'
         + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
-        + (v.mansione ? '<span> | ' + v.mansione + '</span>' : '') + '</div>'
+        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div>'
         + '</div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
       body.appendChild(card);
