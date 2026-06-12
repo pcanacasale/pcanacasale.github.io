@@ -161,7 +161,7 @@ function avviaDashboard() {
   if (hasPerm('db'))            showSi('siDb');
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
-  if (su) su.textContent = currentUser.nome + ' · ' + currentUser.ruolo;
+  if (su) su.textContent = currentUser.nome + ' | ' + currentUser.ruolo;
 
   // Badge richieste
   if (hasPerm('richieste')) caricaBadgeRichieste();
@@ -279,7 +279,7 @@ async function caricaHomeDashboard() {
               : '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
           + '<div class="home-list-info">'
           + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
-          + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</div>'
+          + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' | ' + eta + ' anni</div>'
           + '</div>'
   
           + '</div>';
@@ -344,7 +344,7 @@ async function caricaHomeDashboard() {
           + getTipoAttivitaAvatar(i.tipo_attivita, 36)
           + '<div class="home-list-info">'
           + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
-          + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + (i.n_ore ? ' · ' + i.n_ore + 'h' : '') + '</div>'
+          + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
           + '</div>'
           + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
           + '</div>';
@@ -1299,7 +1299,7 @@ async function caricaRichieste() {
       const tag   = r.letta ? '' : '<span class="badge-nuova">NUOVA</span>';
       const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
       const msg   = r.messaggio ? '<div class="richiesta-msg">"' + r.messaggio + '"</div>' : '';
-      const tel   = r.telefono  ? ' · ' + r.telefono : '';
+      const tel   = r.telefono  ? ' | ' + r.telefono : '';
       const btnL  = r.letta ? '<span style="font-size:0.65rem;color:var(--text-4)">✓ letta</span>' : '<button class="btn-sm btn-ok" onclick="segnaLetta(\'' + r.id + '\')">segna letta</button>';
       div.innerHTML = '<div class="richiesta-top"><div><span class="richiesta-nome">' + r.nome + '</span>' + tag + '</div><span class="richiesta-data">' + data + '</span></div>'
         + '<div class="richiesta-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
@@ -1355,7 +1355,7 @@ async function caricaUtenti() {
         + (p.pranzo?'<span class="badge badge-std" style="font-size:0.5rem">Pra</span>':'')
         + '</div>';
       row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
-        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' · ' + u.ruolo + '</div>' + perms + '</div>'
+        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' | ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
         + '<button class="btn-sm btn-ok" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏</button>'
@@ -1547,7 +1547,7 @@ function renderVolontari(data) {
         ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
         : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span> · ' + v.mansione + '</span>' : '') + '</div></div>'
+      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span> | ' + v.mansione + '</span>' : '') + '</div></div>'
       + '<div class="vol-card-badges">' + badges.join('') + '</div>';
     list.appendChild(card);
   });
@@ -1611,7 +1611,7 @@ async function apriDettaglio(id) {
           : '<div class="vol-detail-avatar" style="background:'+bg+';color:'+fg+'">'+initials+'</div>'}
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
+          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} | ${v.squadra||'—'}</div>
         </div>
       </div>
 
@@ -2401,7 +2401,7 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
         + '<div class="vol-card-info">'
         + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
         + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
-        + (v.mansione ? '<span> · ' + v.mansione + '</span>' : '') + '</div>'
+        + (v.mansione ? '<span> | ' + v.mansione + '</span>' : '') + '</div>'
         + '</div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
       body.appendChild(card);
@@ -2727,7 +2727,7 @@ async function apriDettaglioIntervento(id) {
           <button class="btn-sm" style="font-size:0.7rem;padding:2px 8px" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button>
         </div>
         <div class="vol-section-body">
-          <div style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.5rem">${figliMacro.length} interventi · ${nVol} vol. tot. · ${Math.round(nOre*10)/10}h tot.</div>
+          <div style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.5rem">${figliMacro.length} interventi | ${nVol} vol. tot. | ${Math.round(nOre*10)/10}h tot.</div>
           ${figliHtml || '<div style="font-size:0.78rem;color:var(--testo-3)">Nessun intervento associato.</div>'}
         </div>
       </div>`;
@@ -2754,7 +2754,7 @@ async function apriDettaglioIntervento(id) {
         ${_heroAvatar}
         <div>
           <div class="vol-detail-name">${(i.is_macro ? '📦 ' : '') + (i.evento || '—')}</div>
-          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} · ${dataFmt}</div>
+          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} | ${dataFmt}</div>
         </div>
       </div>
       ${macroParentSection}
@@ -3099,7 +3099,7 @@ function renderGeneratoreAttestati(intv) {
   document.getElementById('attestatiBody').innerHTML =
     '<div style="background:var(--bg-2);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:1rem;font-size:0.82rem">'
     + '<div style="font-weight:700;color:var(--testo);margin-bottom:0.2rem">' + (intv.evento || '—') + '</div>'
-    + '<div style="color:var(--testo-3)">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' · ' + intv.luogo : '') + '</div>'
+    + '<div style="color:var(--testo-3)">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' | ' + intv.luogo : '') + '</div>'
     + '</div>'
     + '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Volontari (' + attestatiVolontari.length + ')</div>'
     + volHtml
@@ -3546,7 +3546,7 @@ function renderDocListHTML(volId, docs) {
         + '<span class="doc-item-icon">' + (label.split(' ')[0]) + '</span>'
         + '<div class="doc-item-info">'
         + '<div class="doc-item-name">' + nome + '</div>'
-        + '<div class="doc-item-meta">' + label + ' · ' + data + '</div>'
+        + '<div class="doc-item-meta">' + label + ' | ' + data + '</div>'
         + '</div>'
         + '<div class="doc-item-actions">'
         + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
@@ -4297,7 +4297,7 @@ async function caricaDocMezzo(mezzoId) {
           + '<span class="doc-item-icon">' + label.split(' ')[0] + '</span>'
           + '<div class="doc-item-info">'
           + '<div class="doc-item-name">' + d.nome_file + '</div>'
-          + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' · ' + data + '</div>'
+          + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' | ' + data + '</div>'
           + '</div>'
           + '<div class="doc-item-actions">'
           + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
@@ -4932,7 +4932,7 @@ function renderEsercScenari() {
     var badgeCls = 'esb-' + s.stato;
     return '<div class="eserc-scenario-card" onclick="apriDettaglioScenario('+s.id+')">'
       + '<div class="eserc-scenario-nome">'+s.nome+'</div>'
-      + '<div class="eserc-scenario-meta">'+(s.turno||'—')+' · '+(s.orario||'—')+'</div>'
+      + '<div class="eserc-scenario-meta">'+(s.turno||'—')+' | '+(s.orario||'—')+'</div>'
       + '<span class="eserc-stato-badge '+badgeCls+'">'+s.stato.charAt(0).toUpperCase()+s.stato.slice(1)+'</span>'
       + '</div>';
   }).join('');
@@ -4986,7 +4986,7 @@ function apriFormScenario(id) {
     ? mezziDisp.map(function(m) {
         return '<label style="display:flex;align-items:center;gap:0.5rem;padding:4px 0;font-size:0.78rem;cursor:pointer">'
           + '<input type="checkbox" class="eserc-mezzo-scenario-cb" value="'+m.id+'" style="accent-color:var(--green)"> '
-          + m.automezzo + ' · ' + m.targa + '</label>';
+          + m.automezzo + ' | ' + m.targa + '</label>';
       }).join('')
     : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessun mezzo disponibile.</div>';
 
@@ -5137,7 +5137,7 @@ async function apriDettaglioScenario(id) {
     + (volNomi.length ? volNomi.map(function(v){ return '<div class="vol-field"><span class="vol-field-value">'+v.cognome+' '+v.nome+'</span></div>'; }).join('') : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessuno assegnato.</div>')
     + '</div></div>'
     + '<div class="vol-section"><div class="vol-section-head">Mezzi ('+mezNomi.length+')</div><div class="vol-section-body">'
-    + (mezNomi.length ? mezNomi.map(function(m){ return '<div class="vol-field"><span class="vol-field-value">'+m.automezzo+' · '+m.targa+'</span></div>'; }).join('') : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessuno assegnato.</div>')
+    + (mezNomi.length ? mezNomi.map(function(m){ return '<div class="vol-field"><span class="vol-field-value">'+m.automezzo+' | '+m.targa+'</span></div>'; }).join('') : '<div style="font-size:0.72rem;color:var(--testo-3)">Nessuno assegnato.</div>')
     + '</div></div>'
     + (s.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value">'+s.note+'</span></div></div></div>' : '')
     + '<button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="stampaSchedaIntervento('+id+')">📄 Stampa scheda</button>'
@@ -5197,14 +5197,14 @@ async function stampaSchedaIntervento(id) {
     + '<tr><td>Giorno</td><td>'+giorno+' 6-7 Giugno 2025</td></tr>'
     + '<tr><td>Turno</td><td>'+(s.turno||'—')+'</td></tr>'
     + '<tr><td>Orario</td><td>'+(s.orario||'—')+'</td></tr>'
-    + (mapsUrl ? '<tr><td>Coordinate</td><td>Lat: '+s.lat+' · Lng: '+s.lng+'<br><small>'+mapsUrl+'</small></td></tr>' : '')
+    + (mapsUrl ? '<tr><td>Coordinate</td><td>Lat: '+s.lat+' | Lng: '+s.lng+'<br><small>'+mapsUrl+'</small></td></tr>' : '')
     + '</tbody></table>'
     + (s.descrizione ? '<h2>Descrizione</h2><p style="font-size:9pt">'+s.descrizione+'</p>' : '')
     + (s.attivita ? '<h2>Attività da svolgere</h2><p style="font-size:9pt">'+s.attivita+'</p>' : '')
     + '<h2>Volontari assegnati ('+volNomi.length+')</h2>'
     + '<ul class="vol-list">'+(volNomi.length ? volNomi.map(function(v,i){ return '<li>'+(i+1)+'. '+v.cognome+' '+v.nome+'</li>'; }).join('') : '<li>Nessuno</li>')+'</ul>'
     + '<h2>Mezzi assegnati ('+mezNomi.length+')</h2>'
-    + '<ul class="vol-list">'+(mezNomi.length ? mezNomi.map(function(m,i){ return '<li>'+(i+1)+'. '+m.automezzo+' · '+m.targa+'</li>'; }).join('') : '<li>Nessuno</li>')+'</ul>'
+    + '<ul class="vol-list">'+(mezNomi.length ? mezNomi.map(function(m,i){ return '<li>'+(i+1)+'. '+m.automezzo+' | '+m.targa+'</li>'; }).join('') : '<li>Nessuno</li>')+'</ul>'
     + (s.note ? '<h2>Note</h2><p style="font-size:9pt">'+s.note+'</p>' : '')
     + '<div class="firma-box">'
     + '<div><div class="firma-line">Responsabile scenario</div></div>'
@@ -5534,7 +5534,7 @@ async function esportaPresentiPDF() {
     + '@media print{body{margin:1cm}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
     + '</style></head><body>'
     + '<div class="header">'
-    + '<h1>Presenti — ' + giorno + ' · Esercitazione 2025</h1>'
+    + '<h1>Presenti — ' + giorno + ' | Esercitazione 2025</h1>'
     + '<div class="meta">PC ANA Casale Monferrato &nbsp;·&nbsp; Generato il ' + ora + ' &nbsp;·&nbsp; Totale presenti: ' + totale.size + '</div>'
     + '</div>';
 
@@ -5586,7 +5586,7 @@ async function apriAlertWhatsApp() {
   var vols = await res.json();
 
   var html = '<div style="font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.5rem">'
-    + presentiIds.length + ' presenti · ' + vols.filter(function(v){ return v.telefono; }).length + ' con numero</div>';
+    + presentiIds.length + ' presenti | ' + vols.filter(function(v){ return v.telefono; }).length + ' con numero</div>';
 
   vols.forEach(function(v) {
     var tel = (v.telefono||'').replace(/\s|-|\./g,'').replace(/^0/, '+39');
