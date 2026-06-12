@@ -242,7 +242,7 @@ async function caricaHomeDashboard() {
 
     // Carica compleanni del mese e ultimi interventi in parallelo
     const [volRes, intRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,data_nascita,squadra&attivo=eq.true&order=data_nascita', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,data_nascita,squadra,foto_url&attivo=eq.true&order=data_nascita', { headers: H }),
       fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,tipo_attivita,n_volontari,n_ore&order=data.desc&limit=5', { headers: H })
     ]);
     const volontari  = await volRes.json();
@@ -274,7 +274,9 @@ async function caricaHomeDashboard() {
         const [bg, fg] = avatarColor(v.cognome);
         const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
         html += '<div class="home-list-row' + (isOggi ? ' home-list-row-today' : '') + '">'
-          + '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+          + (v.foto_url
+              ? '<img src="' + v.foto_url + '" class="home-list-avatar" style="object-fit:cover">'
+              : '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
           + '<div class="home-list-info">'
           + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
           + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</div>'
@@ -1541,7 +1543,9 @@ function renderVolontari(data) {
     if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
     if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
     if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
-    card.innerHTML = '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+    card.innerHTML = (v.foto_url
+        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
+        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
       + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>. ' + v.mansione + '</span>' : '') + '</div></div>'
       + '<div class="vol-card-badges">' + badges.join('') + '</div>';
@@ -1602,7 +1606,9 @@ async function apriDettaglio(id) {
 
     body.innerHTML = `
       <div class="vol-detail-hero">
-        <div class="vol-detail-avatar" style="background:${bg};color:${fg}">${initials}</div>
+        ${v.foto_url
+          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" style="object-fit:cover">'
+          : '<div class="vol-detail-avatar" style="background:'+bg+';color:'+fg+'">'+initials+'</div>'}
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
           <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} . ${v.squadra||'—'}</div>
@@ -3484,7 +3490,7 @@ async function caricaDocumenti() {
   try {
     // Carica volontari con count documenti
     const [vRes, dRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome&order=cognome&attivo=eq.true', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,foto_url&order=cognome&attivo=eq.true', { headers: H }),
       fetch(SUPA_URL + '/rest/v1/documenti?select=id,volontario_id,tipo,nome_file,url,data_carico', { headers: H })
     ]);
     const vols = await vRes.json();
@@ -3515,7 +3521,9 @@ function renderDocVolontari(vols, docsPerVol) {
     card.className = 'doc-vol-card';
     card.id = 'docCard_' + v.id;
     card.innerHTML = '<div class="doc-vol-head" onclick="toggleDocVol(' + v.id + ')">'
-      + '<div class="doc-vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
+      + (v.foto_url
+          ? '<img src="' + v.foto_url + '" class="doc-vol-avatar" style="object-fit:cover">'
+          : '<div class="doc-vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
       + '<span class="doc-vol-name">' + v.cognome + ' ' + v.nome + '</span>'
       + '<span class="doc-vol-count">' + (docs.length ? docs.length + ' doc.' : 'nessun doc.') + '</span>'
       + '<span class="doc-vol-arrow">▼</span>'
