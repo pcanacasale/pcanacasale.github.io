@@ -1299,7 +1299,7 @@ async function caricaRichieste() {
       const tag   = r.letta ? '' : '<span class="badge-nuova">NUOVA</span>';
       const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
       const msg   = r.messaggio ? '<div class="richiesta-msg">"' + r.messaggio + '"</div>' : '';
-      const tel   = r.telefono  ? ' . ' + r.telefono : '';
+      const tel   = r.telefono  ? ' · ' + r.telefono : '';
       const btnL  = r.letta ? '<span style="font-size:0.65rem;color:var(--text-4)">✓ letta</span>' : '<button class="btn-sm btn-ok" onclick="segnaLetta(\'' + r.id + '\')">segna letta</button>';
       div.innerHTML = '<div class="richiesta-top"><div><span class="richiesta-nome">' + r.nome + '</span>' + tag + '</div><span class="richiesta-data">' + data + '</span></div>'
         + '<div class="richiesta-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
@@ -1355,7 +1355,7 @@ async function caricaUtenti() {
         + (p.pranzo?'<span class="badge badge-std" style="font-size:0.5rem">Pra</span>':'')
         + '</div>';
       row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
-        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' . ' + u.ruolo + '</div>' + perms + '</div>'
+        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' · ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
         + '<button class="btn-sm btn-ok" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏</button>'
@@ -1547,7 +1547,7 @@ function renderVolontari(data) {
         ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
         : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
       + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span>. ' + v.mansione + '</span>' : '') + '</div></div>'
+      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>' + (v.mansione ? '<span> · ' + v.mansione + '</span>' : '') + '</div></div>'
       + '<div class="vol-card-badges">' + badges.join('') + '</div>';
     list.appendChild(card);
   });
@@ -1611,7 +1611,7 @@ async function apriDettaglio(id) {
           : '<div class="vol-detail-avatar" style="background:'+bg+';color:'+fg+'">'+initials+'</div>'}
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} . ${v.squadra||'—'}</div>
+          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
         </div>
       </div>
 
@@ -2401,7 +2401,7 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
         + '<div class="vol-card-info">'
         + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
         + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + '</span>'
-        + (v.mansione ? '<span>. ' + v.mansione + '</span>' : '') + '</div>'
+        + (v.mansione ? '<span> · ' + v.mansione + '</span>' : '') + '</div>'
         + '</div>'
         + '<div class="vol-card-badges">' + badges.join('') + '</div>';
       body.appendChild(card);
@@ -3546,7 +3546,7 @@ function renderDocListHTML(volId, docs) {
         + '<span class="doc-item-icon">' + (label.split(' ')[0]) + '</span>'
         + '<div class="doc-item-info">'
         + '<div class="doc-item-name">' + nome + '</div>'
-        + '<div class="doc-item-meta">' + label + ' . ' + data + '</div>'
+        + '<div class="doc-item-meta">' + label + ' · ' + data + '</div>'
         + '</div>'
         + '<div class="doc-item-actions">'
         + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
