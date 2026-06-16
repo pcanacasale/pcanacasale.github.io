@@ -837,7 +837,11 @@ function toggleVolDoc(volId) {
   if (!body) return;
   if (body.style.display !== 'none') { body.style.display = 'none'; return; }
   body.style.display = 'block';
-  if (volDocLoadedFor !== volId) { volDocLoadedFor = volId; caricaDocVolontario(volId); }
+  // Ricarica se cambio volontario O se il body è vuoto (scheda riaperta)
+  if (volDocLoadedFor !== volId || !body.innerHTML.trim()) {
+    volDocLoadedFor = volId;
+    caricaDocVolontario(volId);
+  }
 }
 
 let volInterventiLoadedFor = null;
@@ -853,7 +857,7 @@ async function toggleVolInterventi(volId) {
   }
   body.style.display = 'block';
 
-  if (volInterventiLoadedFor === volId) return;
+  if (volInterventiLoadedFor === volId && body.innerHTML.trim()) return;
   volInterventiLoadedFor = volId;
 
   try {
