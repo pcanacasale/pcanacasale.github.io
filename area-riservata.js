@@ -826,19 +826,21 @@ function chiudiDettaglio() {
   document.getElementById('volDetail').classList.remove('open');
   document.body.style.overflow = '';
   volCorrenteId = null;
+  volDocLoadedFor = null;
+  volInterventiLoadedFor = null;
 }
 
-let volDocLoaded = false;
+let volDocLoadedFor = null;
 
 function toggleVolDoc(volId) {
   const body = document.getElementById('volDocBody');
   if (!body) return;
   if (body.style.display !== 'none') { body.style.display = 'none'; return; }
   body.style.display = 'block';
-  if (!volDocLoaded) { volDocLoaded = true; caricaDocVolontario(volId); }
+  if (volDocLoadedFor !== volId) { volDocLoadedFor = volId; caricaDocVolontario(volId); }
 }
 
-let volInterventiLoaded = false;
+let volInterventiLoadedFor = null;
 async function toggleVolInterventi(volId) {
   const body  = document.getElementById('volInterventiBody');
   const count = document.getElementById('volInterventiCount');
@@ -851,8 +853,8 @@ async function toggleVolInterventi(volId) {
   }
   body.style.display = 'block';
 
-  if (volInterventiLoaded) return;
-  volInterventiLoaded = true;
+  if (volInterventiLoadedFor === volId) return;
+  volInterventiLoadedFor = volId;
 
   try {
     // Cerca interventi dove volontari_ids contiene questo id
@@ -2597,11 +2599,23 @@ let docUploadVolId = null;
 let docUploadFile  = null;
 
 const DOC_TIPO_LABEL = {
-  'FOTO':'📷 Foto profilo', '4_ORE':'📋 Attestato 4 Ore', '12_ORE':'📋 Attestato 12 Ore',
-  'CAPOSQ':'📋 Caposquadra', 'DAE':'🏥 DAE', 'CDC_1':'🏥 CDC 1° Step',
-  'CDC_2':'🏥 CDC 2° Step', 'VISITA':'🩺 Visita medica', 'EMERCOM':'📡 EMERCOM',
-  'ATTESTATO':'📜 Attestato intervento', 'ALTRO':'📄 Altro'
+  'FOTO':'📷 Foto profilo',
+  'IDENTITA':"🪪 Documento d'identità",
+  '4_ORE':'📜 Attestato 4 Ore', '12_ORE':'📜 Attestato 12 Ore',
+  'CAPOSQ':'📜 Caposquadra', 'DAE':'📜 DAE',
+  'CDC_1':'📜 CDC 1° Step', 'CDC_2':'📜 CDC 2° Step',
+  'EMERCOM':'📜 EMERCOM', 'ATTESTATO':'📜 Attestato intervento',
+  'VISITA':'🩺 Visita medica', 'ALTRO':'📄 Altro'
 };
+
+// Tipi che sono attestati (bucket 'attestati')
+const DOC_TIPI_ATTESTATO = ['4_ORE','12_ORE','CAPOSQ','DAE','CDC_1','CDC_2','EMERCOM','ATTESTATO'];
+
+function bucketPerDocTipo(tipo) {
+  if (tipo === 'FOTO') return 'foto-volontari';
+  if (DOC_TIPI_ATTESTATO.indexOf(tipo) >= 0) return 'attestati';
+  return 'documenti';
+}
 
 async function caricaDocumenti() {
   const list = document.getElementById('docVolList');
@@ -2734,7 +2748,7 @@ async function eseguiUploadDoc() {
   }
   const tipo    = document.getElementById('docTipo').value;
   const nomeDoc = document.getElementById('docNome').value.trim() || docUploadFile.name;
-  const bucket  = tipo === 'FOTO' ? 'foto-volontari' : 'attestati';
+  const bucket  = bucketPerDocTipo(tipo);
   const path    = docUploadVolId + '/' + tipo + '_' + Date.now() + '_' + docUploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
   const errEl   = document.getElementById('docUploadErr');
   const btn     = document.getElementById('docUploadBtn');
@@ -2808,44 +2822,53 @@ async function caricaDocVolontario(volId) {
       return;
     }
 
-    const attestati = docs.filter(d => d.tipo === 'ATTESTATO');
-    const altri     = docs.filter(d => d.tipo !== 'ATTESTATO');
+    const attestati = docs.filter(d => DOC_TIPI_ATTESTATO.indexOf(d.tipo) >= 0);
+    const foto      = docs.filter(d => d.tipo === 'FOTO');
+    const documenti = docs.filter(d => d.tipo !== 'FOTO' && DOC_TIPI_ATTESTATO.indexOf(d.tipo) < 0);
+
+    const renderItem = (d, evidenziato) => {
+      const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
+      const tipoTxt = label.replace(/^[^ ]+ /, '');
+      const nome  = d.nome_file
+        ? d.nome_file.replace(/^[A-Z_]+_/, '').replace(/_/g, ' ').replace(/\.[a-z]{2,4}$/i, '')
+        : tipoTxt;
+      const bg = evidenziato ? 'background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem' : '';
+      return '<div class="vol-field" style="' + bg + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+        + '<div style="font-size:0.65rem;color:var(--testo-3)">' + tipoTxt + ' · ' + data + '</div>'
+        + '</div>'
+        + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+        + '</div>'
+        + '</div>';
+    };
+
+    const sectionLabel = (txt) =>
+      '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.7rem 0 0.4rem">' + txt + '</div>';
 
     let html = '';
 
-    // Sezione attestati
+    // 📷 FOTO
+    if (foto.length) {
+      html += sectionLabel('📷 Foto (' + foto.length + ')');
+      html += foto.map(d => renderItem(d, true)).join('');
+    }
+
+    // 🪪 DOCUMENTI
+    if (documenti.length) {
+      html += sectionLabel('🪪 Documenti (' + documenti.length + ')');
+      html += documenti.map(d => renderItem(d, true)).join('');
+    }
+
+    // 📜 ATTESTATI
     if (attestati.length) {
-      html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.3rem 0 0.4rem">📜 Attestati (' + attestati.length + ')</div>';
-      html += attestati.map(d => {
-        const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-        const nome = d.nome_file ? d.nome_file.replace(/^ATTESTATO_/,'').replace(/_/g,' ').replace(/\.pdf$/i,'') : 'Attestato';
-        return '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '</div>'
-          + '</div>';
-      }).join('');
+      html += sectionLabel('📜 Attestati (' + attestati.length + ')');
+      html += attestati.map(d => renderItem(d, true)).join('');
     }
 
-    // Sezione altri documenti
-    if (altri.length) {
-      if (attestati.length) html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.6rem 0 0.4rem">📄 Documenti</div>';
-      html += altri.map(d => {
-        const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
-        const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-        return '<div class="vol-field">'
-          + '<span class="vol-field-label">' + label.replace(/^[^ ]+ /,'') + '</span>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--blue);font-size:0.72rem;text-decoration:none">'
-          + (d.nome_file || label) + ' ↗</a>'
-          + '</div>';
-      }).join('');
-    }
-
-    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn" style="margin-top:0.6rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {}
 }

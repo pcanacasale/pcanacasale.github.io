@@ -868,16 +868,24 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="form-field" style="margin-bottom:0.6rem">
           <label class="form-lbl">Categoria</label>
           <select class="form-inp" id="docTipo">
-            <option value="FOTO">📷 Foto profilo</option>
-            <option value="4_ORE">📋 Attestato 4 Ore</option>
-            <option value="12_ORE">📋 Attestato 12 Ore</option>
-            <option value="CAPOSQ">📋 Attestato Caposquadra</option>
-            <option value="DAE">🏥 Attestato DAE</option>
-            <option value="CDC_1">🏥 CDC 1° Step</option>
-            <option value="CDC_2">🏥 CDC 2° Step</option>
-            <option value="VISITA">🩺 Visita medica</option>
-            <option value="EMERCOM">📡 EMERCOM</option>
-            <option value="ALTRO">📄 Altro</option>
+            <optgroup label="Foto">
+              <option value="FOTO">📷 Foto profilo</option>
+            </optgroup>
+            <optgroup label="Documenti">
+              <option value="IDENTITA">🪪 Documento d'identità</option>
+              <option value="VISITA">🩺 Visita medica</option>
+              <option value="ALTRO">📄 Altro</option>
+            </optgroup>
+            <optgroup label="Attestati">
+              <option value="4_ORE">📜 Attestato 4 Ore</option>
+              <option value="12_ORE">📜 Attestato 12 Ore</option>
+              <option value="CAPOSQ">📜 Attestato Caposquadra</option>
+              <option value="DAE">📜 Attestato DAE</option>
+              <option value="CDC_1">📜 CDC 1° Step</option>
+              <option value="CDC_2">📜 CDC 2° Step</option>
+              <option value="EMERCOM">📜 EMERCOM</option>
+              <option value="ATTESTATO">📜 Attestato intervento</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-field" style="margin-bottom:0.6rem">
@@ -1148,6 +1156,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=64"></script>
+<script src="area-riservata.js?v=66"></script>
 </body>
 </html>
