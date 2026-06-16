@@ -166,6 +166,36 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-stat-pill { background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; padding:0.3rem 0.9rem; font-size:0.7rem; color:var(--testo-3); box-shadow:var(--shadow); }
 .vol-stat-pill span { color:var(--green); font-weight:600; }
 .vol-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
+
+/* Visite Mediche */
+.visite-dashboard { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem; margin-bottom:0.9rem; }
+.vd-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.7rem 0.9rem; cursor:pointer; transition:all 0.15s; box-shadow:var(--shadow); }
+.vd-card:hover { transform:translateY(-1px); border-color:var(--green); }
+.vd-card.vd-active { border-color:var(--green); background:rgba(34,139,82,0.06); }
+.vd-card-num { font-size:1.55rem; font-weight:700; line-height:1; color:var(--testo); }
+.vd-card-lbl { font-size:0.62rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.3rem; }
+.vd-card-bar { height:3px; border-radius:2px; margin-top:0.45rem; background:var(--bg-2); overflow:hidden; }
+.vd-card-bar-fill { height:100%; border-radius:2px; }
+.form-row { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+.visite-table-wrap { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow-x:auto; }
+.visite-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; min-width:720px; }
+.visite-tbl th { text-align:left; font-weight:600; font-size:0.65rem; color:var(--testo-3); padding:0.6rem 0.8rem; border-bottom:0.5px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; background:var(--bg-2); position:sticky; top:0; }
+.visite-tbl td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); vertical-align:middle; }
+.visite-tbl tr:hover td { background:var(--bg-2); }
+.visite-tbl .vt-nome { font-weight:500; color:var(--testo); }
+.visite-tbl .vt-cf { font-family:monospace; font-size:0.72rem; color:var(--testo-3); }
+.visite-tbl .vt-sel { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 8px; font-size:0.7rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; }
+.visite-tbl .vt-sel:hover { border-color:var(--green); }
+.visite-tbl .vt-date { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 6px; font-size:0.72rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; min-width:110px; }
+.visite-tbl .vt-chk { width:18px; height:18px; cursor:pointer; accent-color:var(--green); margin:0 auto; display:block; }
+.visite-stato { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; }
+.vs-completata { background:rgba(34,139,82,0.15); color:var(--green); }
+.vs-da_fare    { background:rgba(217,164,0,0.15); color:#d9a400; }
+.vs-verifica   { background:rgba(255,140,0,0.15); color:#ff8c00; }
+.vs-solo_esami { background:rgba(76,141,255,0.15); color:#4c8dff; }
+.vs-esonero    { background:rgba(120,120,120,0.15); color:var(--testo-3); }
+.vs-vuoto      { background:rgba(220,53,69,0.12); color:#dc3545; }
+.visite-saving { opacity:0.5; pointer-events:none; }
 .vol-card { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
 .vol-card:last-child { border-bottom:none; }
 .vol-card:active { background:var(--bg-2); }
@@ -720,6 +750,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Documenti</span>
       </button>
 
+      <button class="sidebar-item" id="siVisite" onclick="navTo('visite','Visite Mediche',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
+        <span class="si-label">Visite Mediche</span>
+      </button>
+
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Strumenti</div>
 
@@ -964,6 +999,25 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
 
+    <!-- VISITE MEDICHE -->
+    <div class="panel" id="panelVisite">
+      <div class="panel-hdr"><h2>Visite Mediche</h2><p>Stato visite e CDC dei volontari attivi</p></div>
+      <div id="visiteDashboard" class="visite-dashboard"></div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="visiteSearch" class="form-inp" placeholder="cerca cognome, nome, CF..." oninput="filtraVisite()" style="flex:1">
+        <select id="visiteFiltroStato" class="form-inp" onchange="filtraVisite()" style="max-width:180px">
+          <option value="">tutti gli stati</option>
+          <option value="ESONERO">Esonero</option>
+          <option value="DA_FARE">Da Fare</option>
+          <option value="VERIFICA">Verifica</option>
+          <option value="SOLO_ESAMI">Solo Esami</option>
+          <option value="COMPLETATA">Completata</option>
+          <option value="VUOTO">Non impostato</option>
+        </select>
+      </div>
+      <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
     <!-- MEZZI -->
     <div class="panel" id="panelMezzi">
       <div class="panel-hdr"><h2>Mezzi</h2><p>Parco veicoli PC ANA Casale</p></div>
@@ -1035,6 +1089,7 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
+            <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
           </div>
           <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
           </div>
@@ -1152,6 +1207,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
+          <label class="perm-check"><input type="checkbox" id="modPermVisite"> 🩺 Visite Mediche</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
@@ -1164,6 +1220,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=71"></script>
+<script src="area-riservata.js?v=73"></script>
 </body>
 </html>
