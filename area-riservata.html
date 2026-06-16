@@ -169,6 +169,14 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-card { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
 .vol-card:last-child { border-bottom:none; }
 .vol-card:active { background:var(--bg-2); }
+
+/* Desktop ≥800px: lista volontari a griglia 2 colonne */
+@media (min-width:800px) {
+  #volList.vol-list { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:transparent; box-shadow:none; border-radius:0; overflow:visible; }
+  #volList.vol-list .vol-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow); }
+  #volList.vol-list .vol-card:hover { background:var(--bg-2); }
+  #volList.vol-list > .loading-msg { grid-column:1 / -1; }
+}
 .vol-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
 .vol-card-info { flex:1; min-width:0; }
 .vol-card-name { font-size:0.9rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1156,6 +1164,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=70"></script>
+<script src="area-riservata.js?v=71"></script>
 </body>
 </html>

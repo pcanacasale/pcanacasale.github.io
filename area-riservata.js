@@ -662,7 +662,7 @@ function renderVolontari(data) {
 
   if (dimessi.length) {
     const sep = document.createElement('div');
-    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border)';
+    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border);grid-column:1 / -1';
     sep.textContent = 'Dimessi (' + dimessi.length + ')';
     list.appendChild(sep);
     dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
