@@ -2811,11 +2811,15 @@ async function eliminaDoc(docId, volId) {
 
 // Mostra documenti nella scheda volontario
 async function caricaDocVolontario(volId) {
-  const section = document.getElementById('volDocSection');
-  const body    = document.getElementById('volDocBody');
-  if (!section || !body) return;
+  const body = document.getElementById('volDocBody');
+  if (!body) return;
+  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
+    if (!res.ok) {
+      body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore caricamento (' + res.status + ')</div>';
+      return;
+    }
     const docs = await res.json();
     const count = document.getElementById('volDocCount');
     if (count) count.textContent = '(' + docs.length + ')';
@@ -2874,7 +2878,9 @@ async function caricaDocVolontario(volId) {
 
     html += '<button class="doc-add-btn" style="margin-top:0.6rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
     body.innerHTML = html;
-  } catch(e) {}
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore: ' + (e.message || e) + '</div>';
+  }
 }
 
 function apriDocDaScheda(volId) {
