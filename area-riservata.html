@@ -402,51 +402,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-/* ── PRANZO ── */
-.pranzo-stats { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.8rem; }
-.ps-card { background:var(--bg-card); border-radius:var(--r); padding:0.8rem; text-align:center; box-shadow:var(--shadow); border:0.5px solid var(--border); }
-.ps-num { font-size:1.6rem; font-weight:700; color:var(--testo); line-height:1; }
-.ps-num.g { color:var(--green); }
-.ps-num.r { color:var(--red); }
-.ps-num.a { color:var(--amber); }
-.ps-label { font-size:0.62rem; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; margin-top:0.2rem; font-weight:500; }
-.pranzo-search { margin-bottom:0.7rem; }
-.pranzo-search input { width:100%; padding:0.65rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; box-shadow:var(--shadow); }
-.pranzo-search input:focus { border-color:var(--green); }
-
-/* Settori pranzo */
-.settore-block { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); margin-bottom:0.7rem; overflow:hidden; border:0.5px solid var(--border); }
-.settore-head { display:flex; align-items:center; gap:0.7rem; padding:0.8rem 1rem; cursor:pointer; user-select:none; }
-.settore-head:active { background:var(--bg-2); }
-.sh-color { width:4px; border-radius:2px; align-self:stretch; flex-shrink:0; }
-.sh-info { flex:1; }
-.sh-title { font-size:0.88rem; font-weight:600; color:var(--testo); }
-.sh-sub { font-size:0.72rem; color:var(--testo-3); margin-top:0.1rem; }
-.sh-arrow { font-size:0.65rem; color:var(--testo-4); transition:transform 0.2s; }
-.settore-head.collapsed .sh-arrow { transform:rotate(-90deg); }
-.settore-body { border-top:0.5px solid var(--border); }
-.settore-body.hidden { display:none; }
-
-/* Righe invitati */
-.inv-row { display:grid; grid-template-columns:1fr auto; gap:0.5rem; align-items:center; padding:0.6rem 1rem; border-bottom:0.5px solid var(--border); transition:background 0.1s; }
-.inv-row:last-child { border-bottom:none; }
-.inv-row:active { background:var(--bg-2); }
-.inv-row.si { border-left:3px solid var(--green); }
-.inv-row.no { border-left:3px solid var(--red); }
-.inv-row.attesa { border-left:3px solid var(--amber); }
-.inv-row.nascosta { display:none; }
-.inv-info { min-width:0; }
-.inv-ente { font-size:0.7rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; }
-.inv-nome { font-size:1.1rem; font-weight:700; color:var(--testo); margin-top:0.1rem; letter-spacing:0.2px; }
-.inv-controls { display:flex; align-items:center; gap:0.5rem; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; max-width:220px; }
-.risposta-sel { padding:6px 8px; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.82rem; color:var(--testo); outline:none; cursor:pointer; }
-.risposta-sel.si { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
-.risposta-sel.no { background:var(--red-pale); color:var(--red); border-color:var(--red); }
-.risposta-sel.attesa { background:var(--amber-pale); color:var(--amber); border-color:var(--amber); }
-.coperti-ctrl { display:flex; align-items:center; gap:3px; }
-.coperti-ctrl button { width:28px; height:28px; border-radius:6px; border:0.5px solid var(--border); background:var(--bg-2); font-size:0.9rem; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--testo-3); padding:0; font-family:var(--font); }
-.coperti-ctrl button:active { background:var(--bg-3); }
-.coperti-num { font-size:0.82rem; font-weight:600; color:var(--testo); min-width:16px; text-align:center; }
 .btn-export { width:100%; padding:0.8rem; margin-top:0.5rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo-2); cursor:pointer; font-weight:500; box-shadow:var(--shadow); }
 .btn-export:active { opacity:0.7; }
 
@@ -661,42 +616,6 @@ div:hover > .vista-edit-btn { display:flex; }
 .inv-extra-row { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem; }
 
 
-/* -- ESERCITAZIONE -- */
-.eserc-tabs { display:flex; gap:0.5rem; margin-bottom:0.8rem; }
-.eserc-tab { flex:1; padding:0.6rem; border:0.5px solid var(--border); border-radius:var(--r); background:var(--bg-2); color:var(--testo-3); font-size:0.82rem; font-weight:600; cursor:pointer; font-family:var(--font); transition:all 0.15s; }
-.eserc-tab.active { background:var(--green); color:#fff; border-color:var(--green); }
-.eserc-dashboard { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:0.8rem; }
-.eserc-dash-card { background:var(--bg-2); border-radius:var(--r); padding:0.7rem; text-align:center; }
-.eserc-dash-num { font-size:1.4rem; font-weight:700; color:var(--green); }
-.eserc-dash-lbl { font-size:0.62rem; color:var(--testo-3); text-transform:uppercase; margin-top:2px; }
-.eserc-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); padding:0.7rem 0; border-bottom:0.5px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none; }
-.eserc-section-body { padding:0.5rem 0; }
-.eserc-section-body.hidden { display:none; }
-.eserc-turni { display:flex; gap:0.4rem; margin-bottom:0.6rem; flex-wrap:wrap; }
-.eserc-turno-btn { padding:4px 12px; border-radius:20px; border:0.5px solid var(--border); background:var(--bg-2); color:var(--testo-3); font-size:0.72rem; font-weight:600; cursor:pointer; font-family:var(--font); }
-.eserc-turno-btn.active { background:var(--green); color:#fff; border-color:var(--green); }
-.eserc-vol-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
-.eserc-vol-avatar { width:32px; height:32px; border-radius:50%; background:var(--bg-2); display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:700; color:var(--testo-3); flex-shrink:0; }
-.eserc-vol-nome { flex:1; font-size:0.82rem; font-weight:500; color:var(--testo); }
-.eserc-vol-check { width:20px; height:20px; accent-color:var(--green); cursor:pointer; }
-.eserc-mezzo-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
-.eserc-scenario-card { background:var(--bg-card); border-radius:var(--r); border:0.5px solid var(--border); padding:0.8rem; margin-bottom:0.5rem; cursor:pointer; }
-.eserc-scenario-nome { font-size:0.9rem; font-weight:700; color:var(--testo); }
-.eserc-scenario-meta { font-size:0.68rem; color:var(--testo-3); margin-top:0.2rem; }
-.eserc-stato-badge { font-size:0.62rem; font-weight:700; padding:2px 8px; border-radius:10px; display:inline-block; margin-top:0.3rem; }
-.esb-preparazione { background:#e8f0fb; color:#185fa5; }
-.esb-attivo { background:#eaf3de; color:#3b6d11; }
-.esb-concluso { background:var(--bg-2); color:var(--testo-3); }
-
-
-.eserc-pasti-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; margin-bottom:0.6rem; }
-.eserc-pasto-row { display:flex; align-items:center; gap:0.5rem; padding:0.55rem 0; border-bottom:0.5px solid var(--border); }
-.eserc-pasto-info { flex:1; min-width:0; }
-.eserc-pasto-nome { font-size:0.85rem; font-weight:600; color:var(--testo); }
-.eserc-pasto-tipo { font-size:0.65rem; color:var(--testo-3); text-transform:uppercase; }
-.eserc-pasto-checks { display:flex; gap:0.4rem; flex-shrink:0; }
-.eserc-pasto-check { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.58rem; color:var(--testo-3); }
-
 </style>
 </head>
 <body>
@@ -793,17 +712,9 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Documenti</span>
       </button>
 
-      <button class="sidebar-item" id="siEsercitazione" onclick="navTo('esercitazione','Esercitazione',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-        <span class="si-label">Esercitazione</span>
-      </button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-section-label">Strumenti</div>
 
-      <button class="sidebar-item" id="siPranzo" onclick="navTo('pranzo','Pranzo 25°',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
-        <span class="si-label">Pranzo 25°</span>
-      </button>
 
       <button class="sidebar-item" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></div>
@@ -1080,118 +991,6 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="statsOreTable"></div>
     </div>
 
-    <!-- ESERCITAZIONE -->
-    <div class="panel" id="panelEsercitazione">
-      <div class="panel-hdr">
-        <h2>Esercitazione 2025</h2>
-        <p>6–7 Giugno · Campo PC ANA Casale</p>
-      </div>
-
-      <!-- Tab giorni -->
-      <div class="eserc-tabs">
-        <button class="eserc-tab active" id="tabSab" onclick="setGiornoEserc('sabato')">Sabato 6</button>
-        <button class="eserc-tab" id="tabDom" onclick="setGiornoEserc('domenica')">Domenica 7</button>
-      </div>
-
-      <!-- Dashboard presenze -->
-      <div class="eserc-dashboard" id="esercDashboard"></div>
-
-      <!-- Sezione presenze volontari -->
-      <div class="eserc-section-title" onclick="toggleEsercSection('esercPresenzeBody')">
-        👤 Presenze volontari <span class="eserc-toggle-arrow" id="arrowPresenzeBody">▶</span>
-      </div>
-      <div class="eserc-section-body hidden" id="esercPresenzeBody">
-        <div class="eserc-turni" id="esercTurni"></div>
-        <div id="esercPresenzeList"></div>
-        <button class="btn-export" style="width:100%;margin-top:0.6rem" onclick="esportaPresentiPDF()">📄 Esporta presenti</button>
-        <button class="btn-primary" style="width:100%;margin-top:0.4rem;background:#25d366" onclick="apriAlertWhatsApp()">📲 Alert WhatsApp</button>
-      </div>
-
-      <!-- Sezione mezzi -->
-      <div class="eserc-section-title" onclick="toggleEsercSection('esercMezziBody')">
-        🚛 Mezzi al campo <span class="eserc-toggle-arrow" id="arrowMezziBody">▶</span>
-      </div>
-      <div class="eserc-section-body hidden" id="esercMezziBody">
-        <div id="esercMezziList"></div>
-      </div>
-
-      <!-- Sezione pasti -->
-      <div class="eserc-section-title" onclick="toggleEsercSection('esercPastiBody')">
-        🍽️ Pasti Sabato <span class="eserc-toggle-arrow" id="arrowEsercPastiBody">▶</span>
-      </div>
-      <div class="eserc-section-body hidden" id="esercPastiBody">
-        <div class="eserc-pasti-stats" id="esercPastiStats"></div>
-        <div style="display:flex;gap:0.4rem;margin-bottom:0.6rem;flex-wrap:wrap">
-          <button class="eserc-turno-btn active" id="pastiFiltroTutti" onclick="filtraPasti('tutti')">Tutti</button>
-          <button class="eserc-turno-btn" id="pastiFiltroEsterni" onclick="filtraPasti('esterni')">Esterni</button>
-          <button class="eserc-turno-btn" id="pastiFiltroOspiti" onclick="filtraPasti('ospiti')">Ospiti</button>
-        </div>
-        <div id="esercPastiList"></div>
-        <div style="display:flex;gap:0.4rem;margin-top:0.6rem">
-          <button class="btn-primary" style="flex:1" onclick="apriFormPasto(null)">+ Aggiungi</button>
-          <button class="btn-primary" style="flex:1;background:var(--bg-2);color:var(--testo)" onclick="apriScannerCF()">📷 Scansiona CF</button>
-        </div>
-      </div>
-
-      <!-- Sezione scenari -->
-      <div class="eserc-section-title" onclick="toggleEsercSection('esercScenariBody')">
-        📋 Scenari intervento <span class="eserc-toggle-arrow" id="arrowScenariBody">▶</span>
-      </div>
-      <div class="eserc-section-body hidden" id="esercScenariBody">
-        <div id="esercScenariList"></div>
-        <button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="apriFormScenario()">+ Nuovo scenario</button>
-      </div>
-    </div>
-
-    <!-- Form nuovo scenario -->
-    <div class="vol-form" id="esercScenarioForm">
-      <div class="vol-form-top">
-        <button class="vol-detail-back" onclick="chiudiFormScenario()">← indietro</button>
-        <span class="vol-form-title" id="esercFormTitle">Nuovo scenario</span>
-        <button class="vol-form-save" onclick="salvaScenario()">salva</button>
-      </div>
-      <div class="vol-form-body" id="esercFormBody"></div>
-    </div>
-
-    <!-- Dettaglio scenario -->
-    <div class="vol-detail" id="esercScenarioDetail">
-      <div class="vol-detail-top">
-        <button class="vol-detail-back" onclick="chiudiDettaglioScenario()">← indietro</button>
-        <span class="vol-detail-title" id="esercDetailTitle">—</span>
-        <button class="vol-detail-edit" onclick="apriFormScenario(esercScenarioCorrenteId)">modifica</button>
-      </div>
-      <div class="vol-detail-body" id="esercDetailBody"></div>
-    </div>
-
-    <!-- PRANZO -->
-    <div class="panel" id="panelPranzo">
-      <div class="panel-hdr"><h2>Pranzo 25°</h2><p>Tendone Alpini Mirabello — €25 ospiti / €10 volontari</p></div>
-      <div class="pranzo-stats" style="grid-template-columns:repeat(3,1fr)">
-        <div class="ps-card"><div class="ps-num" id="psInvitati">0</div><div class="ps-label">Invitati</div></div>
-        <div class="ps-card"><div class="ps-num g" id="psConferme">0</div><div class="ps-label">Confermati</div></div>
-        <div class="ps-card"><div class="ps-num a" id="psCoperti">0</div><div class="ps-label">Coperti</div></div>
-      </div>
-      <div class="pranzo-stats" style="grid-template-columns:1fr 1fr;margin-top:0.5rem">
-        <div class="ps-card" style="border:1px solid var(--green-bdr)"><div class="ps-num g" id="pranzoIncasso">€0</div><div class="ps-label">Incasso</div></div>
-        <div class="ps-card" style="border:1px solid var(--red)"><div class="ps-num r" id="pranzoCostoUnita">€0</div><div class="ps-label">Costo unità</div></div>
-      </div>
-      <div class="pranzo-search">
-        <input type="search" id="pranzoSearch" placeholder="cerca invitato..." oninput="filtraPranzo(this.value)">
-      </div>
-      <div id="pranzoSettori"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem">
-        <button class="btn-export" onclick="exportPranzoCSV()">&#8595; scarica CSV</button>
-        <button class="btn-export" id="pdfPranzoBtn" onclick="stampaPDFPranzo()">&#128196; PDF riepilogo</button>
-        <button class="btn-export" onclick="apriElencoIntervenuti()">📋 Elenco intervenuti</button>
-      </div>
-      <div style="margin-top:0.5rem">
-        <label class="btn-export" style="display:block;text-align:center;cursor:pointer">
-          &#8593; importa CSV
-          <input type="file" accept=".csv" style="display:none" onchange="importPranzoCSV(this)">
-        </label>
-      </div>
-    </div>
-
     <!-- RICHIESTE -->
     <div class="panel" id="panelRichieste">
       <div class="panel-hdr"><h2>Richieste adesione</h2><p>Dal modulo sul sito</p></div>
@@ -1220,7 +1019,6 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
-            <label class="perm-check"><input type="checkbox" id="permPranzo"> Pranzo 25°</label>
           </div>
           <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
           </div>
@@ -1338,11 +1136,9 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPranzo"> 🍽️ Pranzo 25°</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEsercitazione"> ⭐ Esercitazione</label>
         </div>
       </div>
       <div style="display:flex;gap:0.5rem">
@@ -1351,181 +1147,7 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
-  <!-- Form aggiungi invitato pranzo -->
-  <div class="vista-form-overlay" id="pranzoAddOverlay">
-    <div class="vista-form-card">
-      <h4>Aggiungi invitato — <span id="paiSettoreLabel">—</span></h4>
-      <input type="hidden" id="paiSettoreId">
-      <input type="hidden" id="paiSettoreLabel2">
-      <input type="hidden" id="paiSettoreColor">
-      <div class="form-err" id="paiErr"></div>
-      <div class="form-field" style="margin-bottom:0.5rem">
-        <label class="form-lbl">Ente / Ruolo</label>
-        <input class="form-inp" id="paiEnte" placeholder="es. Comune di Casale">
-      </div>
-      <div class="form-field" style="margin-bottom:0.5rem">
-        <label class="form-lbl">Nome</label>
-        <input class="form-inp" id="paiNome" placeholder="es. Mario Rossi">
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl">Risposta</label>
-        <select class="form-inp" id="paiPresenza">
-          <option value="attesa">⏳ In attesa</option>
-          <option value="presente">✅ Presente</option>
-          <option value="assente">❌ Assente</option>
-        </select>
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem" id="paiPranzoBox">
-        <label class="form-lbl" style="display:flex;align-items:center;gap:0.5rem">
-          <input type="checkbox" id="paiPranzo" style="accent-color:var(--green)"> Si ferma a pranzo
-        </label>
-      </div>
-      <div id="paiCostoBox" style="display:none">
-        <div class="form-field" style="margin-bottom:0.5rem">
-          <label class="form-lbl">Costo pranzo</label>
-          <select class="form-inp" id="paiCosto">
-            <option value="25">€25</option>
-            <option value="10">€10</option>
-            <option value="offerto">🎁 Offerto</option>
-          </select>
-        </div>
-        <div class="form-field" style="margin-bottom:0.7rem">
-          <label class="form-lbl">Coperti</label>
-          <input type="number" class="form-inp" id="paiCoperti" value="1" min="1">
-        </div>
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiFormInvitato()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="salvaInvitato()" style="padding:0.7rem">aggiungi</button>
-      </div>
-    </div>
-  </div>
-  <!-- Form pasto esercitazione -->
-  <div class="vista-form-overlay" id="esercPastoOverlay">
-    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto">
-      <h4 id="esercPastoTitle">Aggiungi partecipante</h4>
-      <input type="hidden" id="esercPastoId">
-      <div class="form-err" id="esercPastoErr"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
-        <div><label class="form-lbl">Cognome *</label><input class="form-inp" id="ppCognome" placeholder="Rossi"></div>
-        <div><label class="form-lbl">Nome *</label><input class="form-inp" id="ppNome" placeholder="Mario"></div>
-      </div>
-      <div class="form-field" style="margin-bottom:0.5rem">
-        <label class="form-lbl">Tipo</label>
-        <select class="form-inp" id="ppTipo">
-          <option value="volontario_pcana">Volontario PC ANA</option>
-          <option value="volontario_esterno">Volontario esterno</option>
-          <option value="ospite">Ospite</option>
-        </select>
-      </div>
-      <div class="form-field" style="margin-bottom:0.5rem">
-        <label class="form-lbl">Codice fiscale</label>
-        <input class="form-inp" id="ppCF" placeholder="RSSMRA80A01F205X" style="text-transform:uppercase" oninput="parseCFLive(this.value)">
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl" style="margin-bottom:0.4rem">Pasti</label>
-        <div style="display:flex;flex-direction:column;gap:0.4rem">
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-            <input type="checkbox" id="ppPranzo" style="accent-color:var(--green);width:16px;height:16px"> 🍽️ Sabato pranzo
-          </label>
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;cursor:pointer">
-            <input type="checkbox" id="ppCena" style="accent-color:var(--green);width:16px;height:16px"> 🌙 Sabato cena
-          </label>
-        </div>
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl">Note</label>
-        <input class="form-inp" id="ppNote" placeholder="es. allergie, preferenze...">
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiFormPasto()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="salvaPartecipantePasto()" style="padding:0.7rem">salva</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- Scanner codice fiscale -->
-  <div class="vista-form-overlay" id="esercScannerOverlay">
-    <div class="vista-form-card">
-      <h4>Scansiona codice fiscale</h4>
-      <p style="font-size:0.75rem;color:var(--testo-3);margin-bottom:0.8rem">Inquadra il codice fiscale con la fotocamera</p>
-      <video id="cfVideo" style="width:100%;border-radius:var(--r);background:#000;max-height:240px;object-fit:cover" autoplay playsinline></video>
-      <canvas id="cfCanvas" style="display:none"></canvas>
-      <div id="cfScanResult" style="font-size:0.8rem;color:var(--green);margin-top:0.5rem;text-align:center"></div>
-      <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
-        <button class="btn-sm btn-warn" onclick="chiudiScanner()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="scattaFoto()" style="padding:0.7rem">📸 Scatta</button>
-      </div>
-    </div>
-  </div>
-  <!-- Form esterno/ospite esercitazione -->
-  <div class="vista-form-overlay" id="esercEsternoOverlay">
-    <div class="vista-form-card">
-      <h4>Aggiungi esterno / ospite</h4>
-      <div class="form-err" id="eeErr"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem">
-        <div><label class="form-lbl">Cognome *</label><input class="form-inp" id="eeCognome" placeholder="Rossi"></div>
-        <div><label class="form-lbl">Nome *</label><input class="form-inp" id="eeNome" placeholder="Mario"></div>
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl">Tipo</label>
-        <select class="form-inp" id="eeTipo">
-          <option value="volontario_esterno">Volontario esterno</option>
-          <option value="ospite">Ospite</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiFormEsterno()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="salvaEsterno()" style="padding:0.7rem">aggiungi</button>
-      </div>
-    </div>
-  </div>
-  <!-- Modifica invitato pranzo -->
-  <div class="vista-form-overlay" id="pranzoEditOverlay">
-    <div class="vista-form-card">
-      <h4>Modifica invitato</h4>
-      <input type="hidden" id="peiId">
-      <div class="form-err" id="peiErr"></div>
-      <div class="form-field" style="margin-bottom:0.5rem">
-        <label class="form-lbl">Ente / Ruolo</label>
-        <input class="form-inp" id="peiEnte" placeholder="es. Comune di Casale">
-      </div>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl">Nome</label>
-        <input class="form-inp" id="peiNome" placeholder="es. Mario Rossi">
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiModificaInvitato()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="salvaModificaInvitato()" style="padding:0.7rem">salva</button>
-      </div>
-    </div>
-  </div>
-  <!-- Alert WhatsApp -->
-  <div class="vista-form-overlay" id="waAlertOverlay">
-    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto">
-      <h4>📲 Alert WhatsApp</h4>
-      <p style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.6rem">Modifica il messaggio e clicca sui link per inviare</p>
-      <div class="form-field" style="margin-bottom:0.7rem">
-        <label class="form-lbl">Messaggio</label>
-        <textarea class="form-inp" id="waMessaggio" rows="4" style="resize:vertical">Esercitazione PC ANA Casale - sei registrato come presente al turno di [TURNO]. Confermi la tua presenza?</textarea>
-      </div>
-      <div id="waLinkList"></div>
-      <button class="btn-sm btn-warn" onclick="chiudiAlertWA()" style="width:100%;margin-top:0.7rem;padding:0.7rem">chiudi</button>
-    </div>
-  </div>
-  <!-- Elenco intervenuti cerimonia -->
-  <div class="vista-form-overlay" id="intervenutiOverlay" style="z-index:600">
-    <div class="vista-form-card" style="max-height:90vh;overflow-y:auto;width:100%">
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem">
-        <h4 style="flex:1;margin:0">📋 Elenco intervenuti</h4>
-        <button class="btn-sm btn-ok" onclick="stampaElencoIntervenuti()">📄 PDF</button>
-        <button class="btn-sm btn-warn" onclick="chiudiElencoIntervenuti()">✕</button>
-      </div>
-      <p style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.6rem">Tutti i confermati presenti. Modifica ente e nome se necessario.</p>
-      <div id="intervenutiList"></div>
-      <button class="btn-primary" style="width:100%;margin-top:0.6rem" onclick="aggiungiIntervenuto()">+ Aggiungi manualmente</button>
-    </div>
-  </div>
-<script src="area-riservata.js?v=63"></script>
+<script src="area-riservata.js?v=64"></script>
 </body>
 </html>
