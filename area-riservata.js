@@ -2804,7 +2804,39 @@ async function eseguiUploadDoc() {
 
 async function eliminaDoc(docId, volId) {
   if (!confirm('Eliminare questo documento?')) return;
+
+  // Recupera info del documento per sapere tipo e path
+  let doc = null;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId + '&select=tipo,url', { headers: H });
+    const arr = await r.json();
+    doc = arr[0];
+  } catch(e) {}
+
+  // Elimina file dal bucket Storage
+  if (doc && doc.url) {
+    try {
+      // Estrai bucket + path dall'URL pubblico: .../storage/v1/object/public/{bucket}/{path}
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) {
+        const bucket = m[1], path = m[2];
+        await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, { method: 'DELETE', headers: H });
+      }
+    } catch(e) {}
+  }
+
+  // Elimina record dalla tabella documenti
   await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId, { method: 'DELETE', headers: H });
+
+  // Se era una FOTO, azzera foto_url sul volontario
+  if (doc && doc.tipo === 'FOTO' && volId) {
+    await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ foto_url: null })
+    });
+  }
+
   await logAttivita('ha eliminato un documento');
   caricaDocumenti();
 }
