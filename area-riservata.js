@@ -640,7 +640,7 @@ async function caricaVolontari() {
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,foto_url&order=cognome', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
@@ -652,26 +652,87 @@ function renderVolontari(data) {
   if (!list) return;
   document.getElementById('volMostrati').textContent = data.length;
   if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun risultato.</div>'; return; }
+
+  // Separa attivi+sospesi da dimessi
+  const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
+  const dimessi       = data.filter(v => v.stato === 'DIMESSO');
+
   list.innerHTML = '';
-  data.forEach(v => {
-    const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-    const [bg, fg] = avatarColor(v.cognome);
-    const card = document.createElement('div');
-    card.className = 'vol-card';
-    card.onclick = () => apriDettaglio(v.id);
-    const badges = [];
-    if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
-    if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-    if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
-    if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
-    card.innerHTML = (v.foto_url
-        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-      + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
-      + '<div class="vol-card-badges">' + badges.join('') + '</div>';
-    list.appendChild(card);
-  });
+  attiviSospesi.forEach(v => list.appendChild(_renderVolCard(v)));
+
+  if (dimessi.length) {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border)';
+    sep.textContent = 'Dimessi (' + dimessi.length + ')';
+    list.appendChild(sep);
+    dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
+  }
+}
+
+function _renderVolCard(v) {
+  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+  const [bg, fg] = avatarColor(v.cognome);
+  const stato = v.stato || 'ATTIVO';
+  const card = document.createElement('div');
+  card.className = 'vol-card';
+  if (stato === 'DIMESSO') card.style.opacity = '0.55';
+  card.onclick = (e) => { if (!e.target.closest('.vol-stato-sel')) apriDettaglio(v.id); };
+
+  const badges = [];
+  if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
+  if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
+  if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+
+  // Dropdown stato inline
+  const statoColor = stato === 'ATTIVO' ? 'var(--green)' : (stato === 'SOSPESO' ? '#d9a400' : '#999');
+  const statoSel = '<select class="vol-stato-sel" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" '
+    + 'style="background:transparent;border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:10px;font-family:var(--font);cursor:pointer;outline:none">'
+    + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
+    + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
+    + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
+    + '</select>';
+
+  card.innerHTML = (v.foto_url
+      ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
+      : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
+    + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
+    + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
+    + '<div class="vol-card-badges" style="align-items:center;gap:4px">' + statoSel + badges.join('') + '</div>';
+  return card;
+}
+
+async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
+  // Trova volontario in cache
+  const v = volontariData.find(x => x.id === volId);
+  if (!v) return;
+  const vecchio = v.stato || 'ATTIVO';
+  if (vecchio === nuovoStato) return;
+
+  // Conferma per DIMESSO
+  if (nuovoStato === 'DIMESSO') {
+    if (!confirm('Spostare ' + v.cognome + ' ' + v.nome + ' tra i DIMESSI?')) {
+      selEl.value = vecchio;
+      return;
+    }
+  }
+
+  selEl.disabled = true;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ stato: nuovoStato, attivo: nuovoStato !== 'DIMESSO' })
+    });
+    if (!res.ok) throw new Error('errore');
+    v.stato = nuovoStato;
+    v.attivo = nuovoStato !== 'DIMESSO';
+    await logAttivita('ha cambiato stato di ' + v.cognome + ' ' + v.nome + ' a ' + nuovoStato);
+    renderVolontari(volontariData);
+  } catch(e) {
+    selEl.value = vecchio;
+    alert('Errore salvataggio.');
+  }
+  selEl.disabled = false;
 }
 
 function filtraVolontari() {
