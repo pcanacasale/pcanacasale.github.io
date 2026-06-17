@@ -75,6 +75,9 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* ── LOGIN ── */
 #loginScreen { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:1.5rem; }
 .login-card { background:var(--bg-card); border-radius:var(--r-lg); padding:2rem 1.5rem; width:100%; max-width:360px; box-shadow:var(--shadow); }
+.login-tabs { display:flex; gap:0.3rem; margin:1rem 0 1.2rem; background:var(--bg-2); padding:3px; border-radius:8px; }
+.login-tab { flex:1; padding:0.55rem; background:transparent; border:none; font-family:var(--font); font-size:0.82rem; font-weight:600; color:var(--testo-3); cursor:pointer; border-radius:6px; transition:all 0.15s; }
+.login-tab.active { background:var(--bg-card); color:var(--green); box-shadow:var(--shadow); }
 .login-logo { text-align:center; margin-bottom:1.8rem; }
 .login-logo img { height:56px; margin-bottom:0.8rem; }
 .login-logo h1 { font-size:1.1rem; font-weight:700; color:var(--testo); }
@@ -166,6 +169,25 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-stat-pill { background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; padding:0.3rem 0.9rem; font-size:0.7rem; color:var(--testo-3); box-shadow:var(--shadow); }
 .vol-stat-pill span { color:var(--green); font-weight:600; }
 .vol-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
+
+/* Scheda personale (volontario) */
+.schedapers-hero { display:flex; align-items:center; gap:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); margin-bottom:1rem; }
+.schedapers-avatar { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.3rem; flex-shrink:0; }
+.schedapers-name { font-size:1.1rem; font-weight:600; color:var(--testo); }
+.schedapers-role { font-size:0.78rem; color:var(--testo-3); margin-top:0.2rem; }
+.schedapers-sec { background:var(--bg-card); border-radius:var(--r-md); box-shadow:var(--shadow); margin-bottom:0.8rem; overflow:hidden; }
+.schedapers-sec-title { font-size:0.7rem; font-weight:700; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; padding:0.6rem 1rem; background:var(--bg-2); }
+.schedapers-field { display:flex; justify-content:space-between; padding:0.55rem 1rem; border-top:0.5px solid var(--border); font-size:0.82rem; gap:0.6rem; }
+.schedapers-field:first-of-type { border-top:none; }
+.schedapers-lbl { color:var(--testo-3); flex-shrink:0; }
+.schedapers-val { color:var(--testo); text-align:right; word-break:break-word; }
+
+/* Segnalazioni */
+.seg-form { background:var(--bg-card); border-radius:var(--r-md); padding:1rem; box-shadow:var(--shadow); margin-bottom:0.8rem; }
+.seg-card { background:var(--bg-card); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:var(--shadow); margin-bottom:0.6rem; }
+.seg-card-head { display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--testo-3); margin-bottom:0.5rem; }
+.seg-card-text { font-size:0.85rem; color:var(--testo); white-space:pre-wrap; }
+.seg-card-resp { margin-top:0.5rem; padding:0.5rem 0.8rem; background:var(--bg-2); border-radius:6px; font-size:0.78rem; color:var(--testo-2); border-left:3px solid var(--green); }
 
 /* Galleria */
 .gall-albums { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.8rem; }
@@ -697,13 +719,31 @@ div:hover > .vista-edit-btn { display:flex; }
       <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
       <h1>PC ANA Casale Monferrato</h1>
     </div>
-    <label class="login-label">Username</label>
-    <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
-    <label class="login-label">Password</label>
-    <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-    <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
+
+    <div class="login-tabs">
+      <button class="login-tab active" id="ltabAdmin" onclick="switchLoginTab('admin')">Amministratori</button>
+      <button class="login-tab" id="ltabVol" onclick="switchLoginTab('vol')">Volontari</button>
+    </div>
+
+    <!-- Tab Admin -->
+    <div id="loginFormAdmin">
+      <label class="login-label">Username</label>
+      <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
+      <label class="login-label">Password</label>
+      <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
+    </div>
+
+    <!-- Tab Volontario -->
+    <div id="loginFormVol" style="display:none">
+      <label class="login-label">Codice Fiscale</label>
+      <input class="login-input" type="text" id="loginVolCF" placeholder="RSSMRA80A01H501U" maxlength="16" style="text-transform:uppercase">
+      <label class="login-label">Data di nascita</label>
+      <input class="login-input" type="date" id="loginVolData">
+      <button class="btn-login" onclick="doLoginVolontario()">Accedi come volontario</button>
+    </div>
+
     <div class="login-error" id="loginError"></div>
-    
   </div>
 </div>
 
@@ -781,6 +821,17 @@ div:hover > .vista-edit-btn { display:flex; }
       <button class="sidebar-item" id="siGalleria" onclick="navTo('galleria','Galleria',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
         <span class="si-label">Galleria</span>
+      </button>
+
+      <button class="sidebar-item" id="siSchedaPersonale" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <span class="si-label">La mia scheda</span>
+      </button>
+
+      <button class="sidebar-item" id="siSegnalazioni" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="si-label">Segnalazioni</span>
+        <span class="si-badge" id="siBadgeSegnalazioni"></span>
       </button>
 
       <div class="sidebar-divider"></div>
@@ -1046,6 +1097,18 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
     </div>
 
+    <!-- SCHEDA PERSONALE (per volontari) -->
+    <div class="panel" id="panelSchedapers">
+      <div class="panel-hdr"><h2>La mia scheda</h2><p>I tuoi dati personali (sola lettura)</p></div>
+      <div id="schedaPersContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SEGNALAZIONI (per volontari: invia; per admin: gestisci) -->
+    <div class="panel" id="panelSegnalazioni">
+      <div class="panel-hdr"><h2>Segnalazioni</h2><p id="segnalazioniSub">Segnala errori nella tua scheda</p></div>
+      <div id="segnalazioniContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
     <!-- GALLERIA -->
     <div class="panel" id="panelGalleria">
       <div class="panel-hdr">
@@ -1269,6 +1332,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=75"></script>
+<script src="area-riservata.js?v=76"></script>
 </body>
 </html>

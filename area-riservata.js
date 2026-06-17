@@ -111,6 +111,67 @@ async function doLogin() {
   btn.disabled = false; btn.textContent = 'Accedi';
 }
 
+function switchLoginTab(which) {
+  const adminTab = document.getElementById('ltabAdmin');
+  const volTab   = document.getElementById('ltabVol');
+  const fAdmin   = document.getElementById('loginFormAdmin');
+  const fVol     = document.getElementById('loginFormVol');
+  const err      = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (which === 'vol') {
+    adminTab.classList.remove('active');
+    volTab.classList.add('active');
+    fAdmin.style.display = 'none';
+    fVol.style.display = 'block';
+  } else {
+    volTab.classList.remove('active');
+    adminTab.classList.add('active');
+    fVol.style.display = 'none';
+    fAdmin.style.display = 'block';
+  }
+}
+
+async function doLoginVolontario() {
+  const cf   = (document.getElementById('loginVolCF').value || '').trim().toUpperCase();
+  const data = document.getElementById('loginVolData').value;
+  const err  = document.getElementById('loginError');
+  if (!cf || cf.length !== 16) { err.textContent = 'Codice fiscale non valido.'; err.style.display = 'block'; return; }
+  if (!data) { err.textContent = 'Inserisci la tua data di nascita.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/login_volontario', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
+      body: JSON.stringify({ p_cf: cf, p_data_nascita: data })
+    });
+    const arr = await res.json();
+    if (Array.isArray(arr) && arr.length > 0) {
+      const v = arr[0];
+      // Costruisco un currentUser "finto" per il volontario
+      currentUser = {
+        id: 'vol_' + v.id,
+        volontario_id: v.id,
+        nome: v.cognome + ' ' + v.nome,
+        ruolo: 'Volontario',
+        tipo_accesso: 'volontario',
+        permessi: { galleria: true, scheda_personale: true, segnalazioni: true }
+      };
+      sessionStorage.setItem('ar_vol_cf', cf);
+      sessionStorage.setItem('ar_vol_data', data);
+      sessionStorage.removeItem('ar_user');
+      sessionStorage.removeItem('ar_pass');
+      avviaDashboard();
+    } else {
+      err.textContent = 'Codice fiscale o data di nascita non corretti.';
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    err.textContent = 'Errore di connessione.';
+    err.style.display = 'block';
+  }
+}
+
 let isMasterUser = false;
 
 function toggleSidebar() {
@@ -134,7 +195,9 @@ function avviaDashboard() {
 
   const p        = currentUser.permessi || {};
   const isMaster = currentUser.tipo_accesso === 'master';
+  const isVol    = currentUser.tipo_accesso === 'volontario';
   isMasterUser   = isMaster;
+  window.isVolUser = isVol;
 
   // Topbar
   document.getElementById('homeWelcome').textContent = currentUser.nome;
@@ -146,25 +209,37 @@ function avviaDashboard() {
   // Impostazioni resta sempre visibile per i master.
   var showSi  = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
   var hasPerm = function(key) {
-    if (p[key] === false) return false;       // disattivato esplicitamente
+    if (isVol) return !!p[key];                // volontario: solo permessi espliciti
+    if (p[key] === false) return false;        // disattivato esplicitamente
     return isMaster || !!p[key];               // master di default, standard se concesso
   };
-  if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
-  if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
-  if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
-  if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
-  if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
-  if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
-  if (hasPerm('richieste'))  showSi('siRichieste');
-  if (hasPerm('statistiche'))  showSi('siStatistiche');
-  if (isMaster)                 showSi('siImpostazioni');
-  if (hasPerm('db'))            showSi('siDb');
+
+  if (isVol) {
+    // Sidebar ridotta per i volontari
+    showSi('siGalleria');
+    showSi('siSchedaPersonale');
+    showSi('siSegnalazioni');
+    showSi('siLabelOperativo');
+  } else {
+    if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
+    if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
+    if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
+    if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
+    if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
+    if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
+    if (hasPerm('richieste'))  showSi('siRichieste');
+    if (hasPerm('statistiche'))  showSi('siStatistiche');
+    if (isMaster)                 showSi('siImpostazioni');
+    if (isMaster)                 showSi('siSegnalazioni');
+    if (hasPerm('db'))            showSi('siDb');
+  }
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
   if (su) su.textContent = currentUser.nome + ' | ' + currentUser.ruolo;
 
-  // Badge richieste
-  if (hasPerm('richieste')) caricaBadgeRichieste();
+  // Badge richieste (solo per non-volontari)
+  if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
+  if (!isVol) caricaBadgeSegnalazioni();
 
   // Compleanno
   verificaCompleanni();
@@ -210,6 +285,8 @@ function showPanel(name, btn) {
   if (name === 'mezzi') caricaMezzi();
   if (name === 'visite') caricaVisite();
   if (name === 'galleria') caricaGalleria();
+  if (name === 'schedapers') caricaSchedaPersonale();
+  if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -286,8 +363,8 @@ async function caricaHomeDashboard() {
     }
     html += '</div>';
 
-    // -- REVISIONI DEL MESE --
-    try {
+    // -- REVISIONI DEL MESE -- (skip per volontari)
+    if (!window.isVolUser) try {
       var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
       var mezziAll  = await mezziRes.json();
       var oggi2     = new Date();
@@ -328,28 +405,30 @@ async function caricaHomeDashboard() {
       }
     } catch(e) {}
 
-    // -- ULTIMI INTERVENTI --
-    html += '<div class="home-section">';
-    html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
-    if (!interventi || !interventi.length) {
-      html += '<div class="home-empty">Nessun intervento registrato</div>';
-    } else {
-      html += '<div class="home-list">';
-      interventi.forEach(i => {
-        const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
-        var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
-        html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
-          + getTipoAttivitaAvatar(i.tipo_attivita, 36)
-          + '<div class="home-list-info">'
-          + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
-          + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
-          + '</div>'
-          + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
-          + '</div>';
-      });
+    // -- ULTIMI INTERVENTI -- (skip per volontari)
+    if (!window.isVolUser) {
+      html += '<div class="home-section">';
+      html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
+      if (!interventi || !interventi.length) {
+        html += '<div class="home-empty">Nessun intervento registrato</div>';
+      } else {
+        html += '<div class="home-list">';
+        interventi.forEach(i => {
+          const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
+          html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
+            + getTipoAttivitaAvatar(i.tipo_attivita, 36)
+            + '<div class="home-list-info">'
+            + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
+            + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
+            + '</div>'
+            + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
+            + '</div>';
+        });
+        html += '</div>';
+      }
       html += '</div>';
     }
-    html += '</div>';
 
     grid.innerHTML = html;
 
@@ -3516,7 +3595,248 @@ async function eliminaMezzo() {
   caricaMezzi();
 }
 
-// -- GALLERIA GOOGLE DRIVE --
+// -- SCHEDA PERSONALE (volontario) --
+async function caricaSchedaPersonale() {
+  const content = document.getElementById('schedaPersContent');
+  if (!content) return;
+  if (!currentUser || !currentUser.volontario_id) {
+    content.innerHTML = '<div class="loading-msg">Accesso non valido.</div>';
+    return;
+  }
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + currentUser.volontario_id + '&select=*', { headers: H });
+    const arr = await res.json();
+    if (!arr.length) {
+      content.innerHTML = '<div class="loading-msg">Scheda non trovata.</div>';
+      return;
+    }
+    const v = arr[0];
+    renderSchedaPersonale(v);
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderSchedaPersonale(v) {
+  const content = document.getElementById('schedaPersContent');
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : '—';
+  const yes = (b) => b ? '<span style="color:var(--green);font-weight:600">✓ Sì</span>' : '<span style="color:var(--testo-3)">—</span>';
+  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+  const [bg, fg] = avatarColor(v.cognome);
+
+  // Sezioni e campi (sola lettura)
+  const sections = [
+    { titolo: 'Anagrafica', fields: [
+      ['Cognome', v.cognome], ['Nome', v.nome],
+      ['Codice Fiscale', v.codice_fiscale || '—'],
+      ['Data di nascita', formatDate(v.data_nascita)],
+      ['Luogo di nascita', v.luogo_nascita || '—'],
+      ['Professione', v.professione || '—'],
+    ]},
+    { titolo: 'Contatti', fields: [
+      ['Telefono', v.telefono || '—'],
+      ['Email', v.email || '—'],
+      ['Indirizzo', v.indirizzo || '—'],
+      ['CAP', v.cap || '—'],
+      ['Città', v.citta || '—'],
+    ]},
+    { titolo: 'Inquadramento', fields: [
+      ['Squadra', v.squadra || '—'],
+      ['Tipo Volontario', v.tipo_volontario || '—'],
+      ['Mansione', v.mansione || '—'],
+      ['Specializzazione', v.specializzazione || '—'],
+      ['Gruppo Alpini', v.gruppo_alpini || '—'],
+      ['Patenti', v.patenti || '—'],
+      ['Stato', v.stato || 'ATTIVO'],
+    ]},
+    { titolo: 'Formazione', fields: [
+      ['4 Ore', yes(v.quattro_ore)],
+      ['12 Ore', yes(v.dodici_ore)],
+      ['Corso Caposquadra', yes(v.corso_caposq)],
+      ['CDC 1° Step', yes(v.cdc_1_step)],
+      ['CDC 2° Step', yes(v.cdc_2_step)],
+      ['DAE', yes(v.dae)],
+      ['Scadenza DAE', formatDate(v.scad_dae)],
+      ['EMERCOM', yes(v.emercom)],
+    ]},
+    { titolo: 'Visita medica', fields: [
+      ['Data visita', formatDate(v.data_visita)],
+      ['Stato visita', v.stato_visita || '—'],
+    ]},
+    { titolo: 'Amministrativo', fields: [
+      ['Iscrizione', yes(v.iscrizione)],
+      ['Tutela legale CAP', yes(v.tutela_legale_cap)],
+    ]},
+  ];
+
+  let html = '<div class="schedapers-hero">'
+    + (v.foto_url
+        ? '<img src="' + v.foto_url + '" class="schedapers-avatar" style="object-fit:cover">'
+        : '<div class="schedapers-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
+    + '<div><div class="schedapers-name">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div>'
+    + '<div class="schedapers-role">' + (v.tipo_volontario||'Volontario') + ' | ' + (v.squadra||'—') + '</div></div>'
+    + '</div>'
+    + '<button class="btn-primary" style="margin-bottom:1rem" onclick="navTo(\'segnalazioni\',\'Segnalazioni\',null)">⚠️ Segnala un errore nei tuoi dati</button>';
+
+  sections.forEach(s => {
+    html += '<div class="schedapers-sec"><div class="schedapers-sec-title">' + s.titolo + '</div>';
+    s.fields.forEach(f => {
+      html += '<div class="schedapers-field"><span class="schedapers-lbl">' + f[0] + '</span><span class="schedapers-val">' + (f[1] || '—') + '</span></div>';
+    });
+    html += '</div>';
+  });
+
+  content.innerHTML = html;
+}
+
+// -- SEGNALAZIONI --
+async function caricaSegnalazioni() {
+  const content = document.getElementById('segnalazioniContent');
+  const sub = document.getElementById('segnalazioniSub');
+  if (!content) return;
+  const isVol = currentUser.tipo_accesso === 'volontario';
+
+  if (isVol) {
+    // Volontario: form per inviare + storico proprie segnalazioni
+    sub.textContent = 'Segnala errori nella tua scheda. Verranno presi in carico dagli amministratori.';
+    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
+      const arr = await res.json();
+      renderSegnalazioniVolontario(arr || []);
+    } catch(e) {
+      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    }
+  } else {
+    // Admin: lista tutte le segnalazioni
+    sub.textContent = 'Segnalazioni ricevute dai volontari';
+    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
+      const arr = await res.json();
+      renderSegnalazioniAdmin(arr || []);
+    } catch(e) {
+      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    }
+  }
+}
+
+function renderSegnalazioniVolontario(list) {
+  const content = document.getElementById('segnalazioniContent');
+  let html = '<div class="seg-form">'
+    + '<label class="form-lbl">Descrivi l\'errore o l\'aggiornamento necessario</label>'
+    + '<textarea class="form-inp" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea>'
+    + '<button class="btn-primary" style="margin-top:0.6rem" onclick="inviaSegnalazione()">📤 Invia segnalazione</button>'
+    + '</div>';
+
+  if (list.length) {
+    html += '<div class="schedapers-sec-title" style="margin-top:1.4rem">Tue segnalazioni precedenti</div>';
+    list.forEach(s => {
+      const data = new Date(s.data_creazione).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'});
+      const statoLbl = s.gestita ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>' : '<span style="color:#d9a400;font-weight:600">⏳ In attesa</span>';
+      html += '<div class="seg-card">'
+        + '<div class="seg-card-head"><span>' + data + '</span>' + statoLbl + '</div>'
+        + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
+        + (s.note_admin ? '<div class="seg-card-resp"><strong>Risposta:</strong> ' + s.note_admin + '</div>' : '')
+        + '</div>';
+    });
+  }
+  content.innerHTML = html;
+}
+
+function renderSegnalazioniAdmin(list) {
+  const content = document.getElementById('segnalazioniContent');
+  if (!list.length) {
+    content.innerHTML = '<div class="loading-msg">nessuna segnalazione.</div>';
+    return;
+  }
+  let html = '';
+  list.forEach(s => {
+    const v    = s.volontario || {};
+    const data = new Date(s.data_creazione).toLocaleString('it-IT');
+    const statoLbl = s.gestita
+      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
+      : '<span style="color:#d9a400;font-weight:600">⏳ Da gestire</span>';
+    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : '#d9a400') + '">'
+      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
+      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</div>'
+      + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
+      + '<div style="margin-top:0.6rem">'
+      + '<textarea class="form-inp" id="segNote_' + s.id + '" rows="2" placeholder="Risposta opzionale al volontario..." style="font-size:0.8rem">' + (s.note_admin || '') + '</textarea>'
+      + '<div style="display:flex;gap:0.4rem;margin-top:0.4rem">'
+      + (s.gestita
+          ? '<button class="btn-sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">↻ Riapri</button>'
+          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">✓ Segna come gestita</button>')
+      + '<button class="btn-sm" onclick="salvaNoteSegnalazione(' + s.id + ')">💾 Salva nota</button>'
+      + '</div></div>'
+      + '</div>';
+  });
+  content.innerHTML = html;
+}
+
+async function inviaSegnalazione() {
+  const txt = (document.getElementById('segText').value || '').trim();
+  if (!txt) { alert('Inserisci una descrizione.'); return; }
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ volontario_id: currentUser.volontario_id, testo: txt })
+    });
+    if (!res.ok) throw new Error('errore');
+    document.getElementById('segText').value = '';
+    alert('Segnalazione inviata. Grazie!');
+    caricaSegnalazioni();
+  } catch(e) {
+    alert('Errore invio. Riprova.');
+  }
+}
+
+async function cambiaStatoSegnalazione(id, gestita) {
+  try {
+    const body = { gestita: gestita };
+    if (gestita) body.data_gestione = new Date().toISOString();
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('errore');
+    caricaSegnalazioni();
+    caricaBadgeSegnalazioni();
+  } catch(e) { alert('Errore.'); }
+}
+
+async function salvaNoteSegnalazione(id) {
+  const note = document.getElementById('segNote_' + id).value;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ note_admin: note })
+    });
+    if (!res.ok) throw new Error('errore');
+    alert('Nota salvata.');
+  } catch(e) { alert('Errore.'); }
+}
+
+async function caricaBadgeSegnalazioni() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?gestita=eq.false&select=id', {
+      headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
+    });
+    const cr = res.headers.get('Content-Range') || '';
+    const tot = parseInt(cr.split('/')[1] || '0');
+    const b = document.getElementById('siBadgeSegnalazioni');
+    if (b) {
+      if (tot > 0) { b.textContent = tot; b.classList.add('show'); }
+      else { b.classList.remove('show'); b.textContent = ''; }
+    }
+  } catch(e) {}
+}
+
+
 const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
 
