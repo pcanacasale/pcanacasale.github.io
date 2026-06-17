@@ -154,6 +154,7 @@ function avviaDashboard() {
   if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
   if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
   if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
+  if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
   if (hasPerm('richieste'))  showSi('siRichieste');
   if (hasPerm('statistiche'))  showSi('siStatistiche');
   if (isMaster)                 showSi('siImpostazioni');
@@ -208,6 +209,7 @@ function showPanel(name, btn) {
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
   if (name === 'visite') caricaVisite();
+  if (name === 'galleria') caricaGalleria();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -509,6 +511,7 @@ async function salvaUtente() {
     richieste:  document.getElementById('permRichieste').checked,
     documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
     visite:       document.getElementById('permVisite') ? document.getElementById('permVisite').checked : false,
+    galleria:     document.getElementById('permGalleria') ? document.getElementById('permGalleria').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
@@ -546,7 +549,7 @@ function apriModificaUtente(u) {
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste','Visite':'visite',
+    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
   Object.keys(permMap).forEach(function(n) {
@@ -577,6 +580,7 @@ async function salvaModificaUtente() {
     db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
     documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
     visite:       document.getElementById('modPermVisite') ? document.getElementById('modPermVisite').checked : false,
+    galleria:     document.getElementById('modPermGalleria') ? document.getElementById('modPermGalleria').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
@@ -3511,6 +3515,186 @@ async function eliminaMezzo() {
   chiudiDettaglioMezzo();
   caricaMezzi();
 }
+
+// -- GALLERIA GOOGLE DRIVE --
+const GOOGLE_API_KEY    = 'INCOLLA_QUI_LA_TUA_CHIAVE_API';
+const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
+
+let galleriaAlbumsCache = null;   // cache album
+let galleriaCurrentAlbum = null;  // album aperto al momento
+let galleriaCurrentPhotos = [];   // foto dell'album corrente
+let galleriaLightboxIdx = 0;
+
+async function caricaGalleria() {
+  const content = document.getElementById('gallContent');
+  const back    = document.getElementById('gallBackBtn');
+  if (!content) return;
+  back.style.display = 'none';
+  galleriaCurrentAlbum = null;
+  document.getElementById('gallTitle').textContent = 'Galleria';
+  document.getElementById('gallSub').textContent = 'Album fotografici degli eventi';
+
+  if (GOOGLE_API_KEY === 'INCOLLA_QUI_LA_TUA_CHIAVE_API' || !GOOGLE_API_KEY) {
+    content.innerHTML = '<div class="loading-msg">⚠️ Chiave API Google non configurata. Inserisci la chiave in area-riservata.js.</div>';
+    return;
+  }
+
+  if (galleriaAlbumsCache) {
+    renderAlbums(galleriaAlbumsCache);
+    return;
+  }
+
+  content.innerHTML = '<div class="loading-msg">caricamento album...</div>';
+  try {
+    // Lista sottocartelle (album) nella cartella principale
+    const q = "'" + GALLERIA_FOLDER_ID + "' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+    const url = 'https://www.googleapis.com/drive/v3/files'
+      + '?q=' + encodeURIComponent(q)
+      + '&fields=' + encodeURIComponent('files(id,name,modifiedTime)')
+      + '&orderBy=name desc'
+      + '&pageSize=100'
+      + '&key=' + GOOGLE_API_KEY;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err.error && err.error.message) || 'errore API');
+    }
+    const data = await res.json();
+    const albums = data.files || [];
+
+    // Per ogni album cerco una copertina (prima foto)
+    const albumsConCover = await Promise.all(albums.map(async (alb) => {
+      try {
+        const cq = "'" + alb.id + "' in parents and (mimeType contains 'image/') and trashed = false";
+        const cu = 'https://www.googleapis.com/drive/v3/files'
+          + '?q=' + encodeURIComponent(cq)
+          + '&fields=files(id,thumbnailLink)'
+          + '&pageSize=1'
+          + '&key=' + GOOGLE_API_KEY;
+        const cr = await fetch(cu);
+        const cd = await cr.json();
+        const cover = cd.files && cd.files[0];
+        return Object.assign({}, alb, { coverId: cover ? cover.id : null });
+      } catch(e) {
+        return alb;
+      }
+    }));
+
+    galleriaAlbumsCache = albumsConCover;
+    renderAlbums(albumsConCover);
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+  }
+}
+
+function renderAlbums(albums) {
+  const content = document.getElementById('gallContent');
+  if (!albums.length) {
+    content.innerHTML = '<div class="loading-msg">nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
+    return;
+  }
+  let html = '<div class="gall-albums">';
+  albums.forEach(alb => {
+    const dateStr = alb.modifiedTime ? new Date(alb.modifiedTime).toLocaleDateString('it-IT', {month:'short', year:'numeric'}) : '';
+    const cover = alb.coverId
+      ? '<img src="https://lh3.googleusercontent.com/d/' + alb.coverId + '=w600" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=&quot;gall-folder-icon&quot;>📁</span>\'">'
+      : '<span class="gall-folder-icon">📁</span>';
+    html += '<div class="gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
+      + '<div class="gall-album-cover">' + cover + '</div>'
+      + '<div class="gall-album-info">'
+      + '<div class="gall-album-name">' + alb.name + '</div>'
+      + (dateStr ? '<div class="gall-album-meta">' + dateStr + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+async function apriAlbum(folderId, nome) {
+  const content = document.getElementById('gallContent');
+  document.getElementById('gallBackBtn').style.display = 'inline-block';
+  document.getElementById('gallTitle').textContent = nome;
+  document.getElementById('gallSub').textContent = 'caricamento foto...';
+  galleriaCurrentAlbum = folderId;
+  content.innerHTML = '<div class="loading-msg">caricamento foto...</div>';
+
+  try {
+    const q = "'" + folderId + "' in parents and (mimeType contains 'image/') and trashed = false";
+    const url = 'https://www.googleapis.com/drive/v3/files'
+      + '?q=' + encodeURIComponent(q)
+      + '&fields=' + encodeURIComponent('files(id,name,thumbnailLink,imageMediaMetadata)')
+      + '&orderBy=name'
+      + '&pageSize=1000'
+      + '&key=' + GOOGLE_API_KEY;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err.error && err.error.message) || 'errore API');
+    }
+    const data = await res.json();
+    galleriaCurrentPhotos = data.files || [];
+    document.getElementById('gallSub').textContent = galleriaCurrentPhotos.length + ' foto';
+
+    if (!galleriaCurrentPhotos.length) {
+      content.innerHTML = '<div class="loading-msg">album vuoto.</div>';
+      return;
+    }
+
+    let html = '<div class="gall-photos">';
+    galleriaCurrentPhotos.forEach((f, i) => {
+      const thumb = 'https://lh3.googleusercontent.com/d/' + f.id + '=w400';
+      html += '<div class="gall-photo" onclick="apriLightbox(' + i + ')">'
+        + '<img src="' + thumb + '" loading="lazy" alt="' + (f.name || '') + '">'
+        + '</div>';
+    });
+    html += '</div>';
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+  }
+}
+
+function galleriaBack() {
+  caricaGalleria();
+}
+
+function apriLightbox(idx) {
+  if (!galleriaCurrentPhotos.length) return;
+  galleriaLightboxIdx = idx;
+  mostraFotoLightbox();
+  document.getElementById('gallLightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function mostraFotoLightbox() {
+  const f = galleriaCurrentPhotos[galleriaLightboxIdx];
+  if (!f) return;
+  document.getElementById('gallLightboxImg').src = 'https://lh3.googleusercontent.com/d/' + f.id + '=w1920';
+  document.getElementById('gallLightboxCap').textContent = (galleriaLightboxIdx + 1) + ' / ' + galleriaCurrentPhotos.length;
+}
+
+function lightboxNav(delta, evt) {
+  if (evt) evt.stopPropagation();
+  const n = galleriaCurrentPhotos.length;
+  galleriaLightboxIdx = (galleriaLightboxIdx + delta + n) % n;
+  mostraFotoLightbox();
+}
+
+function chiudiLightbox(evt, forza) {
+  if (!forza && evt && evt.target.id !== 'gallLightbox') return;
+  document.getElementById('gallLightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Frecce tastiera per il lightbox
+document.addEventListener('keydown', function(e) {
+  const lb = document.getElementById('gallLightbox');
+  if (!lb || !lb.classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+  if (e.key === 'Escape')     chiudiLightbox(null, true);
+});
 
 // -- VISITE MEDICHE --
 let visiteData = [];
