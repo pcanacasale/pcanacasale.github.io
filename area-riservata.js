@@ -215,16 +215,22 @@ function avviaDashboard() {
   };
 
   if (isVol) {
-    // Sidebar ridotta per i volontari: solo Galleria + Scheda personale + Segnalazioni
-    showSi('siGalleria');
+    // Reset esplicito di TUTTE le voci sidebar (per evitare residui)
+    var allSidebarIds = [
+      'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
+      'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
+      'siConvocazioni','siDividerStrumenti','siLabelStrumenti'
+    ];
+    allSidebarIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Mostra solo le voci per volontari
     showSi('siSchedaPersonale');
+    showSi('siGalleria');
     showSi('siSegnalazioni');
     showSi('siLabelOperativo');
-    // Nascondi divider e label Strumenti per i volontari
-    var divStr = document.getElementById('siDividerStrumenti');
-    var lblStr = document.getElementById('siLabelStrumenti');
-    if (divStr) divStr.style.display = 'none';
-    if (lblStr) lblStr.style.display = 'none';
   } else {
     // Reset esplicito: "La mia scheda" non esiste per gli admin
     var spers = document.getElementById('siSchedaPersonale');
