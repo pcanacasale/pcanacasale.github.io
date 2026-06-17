@@ -226,6 +226,10 @@ function avviaDashboard() {
     if (divStr) divStr.style.display = 'none';
     if (lblStr) lblStr.style.display = 'none';
   } else {
+    // Reset esplicito: "La mia scheda" non esiste per gli admin
+    var spers = document.getElementById('siSchedaPersonale');
+    if (spers) spers.style.display = 'none';
+
     if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
     if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
     if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
@@ -3758,24 +3762,6 @@ function renderSchedaPersonale(v) {
       ['Patenti', v.patenti || '—'],
       ['Stato', v.stato || 'ATTIVO'],
     ]},
-    { titolo: 'Formazione', fields: [
-      ['4 Ore', yes(v.quattro_ore)],
-      ['12 Ore', yes(v.dodici_ore)],
-      ['Corso Caposquadra', yes(v.corso_caposq)],
-      ['CDC 1° Step', yes(v.cdc_1_step)],
-      ['CDC 2° Step', yes(v.cdc_2_step)],
-      ['DAE', yes(v.dae)],
-      ['Scadenza DAE', formatDate(v.scad_dae)],
-      ['EMERCOM', yes(v.emercom)],
-    ]},
-    { titolo: 'Visita medica', fields: [
-      ['Data visita', formatDate(v.data_visita)],
-      ['Stato visita', v.stato_visita || '—'],
-    ]},
-    { titolo: 'Amministrativo', fields: [
-      ['Iscrizione', yes(v.iscrizione)],
-      ['Tutela legale CAP', yes(v.tutela_legale_cap)],
-    ]},
   ];
 
   let html = '<div class="schedapers-hero">'
@@ -3945,7 +3931,7 @@ async function caricaBadgeSegnalazioni() {
 }
 
 
-const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
+const GOOGLE_API_KEY    = 'INCOLLA_QUI_LA_TUA_CHIAVE_API';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
 
 let galleriaAlbumsCache = null;   // cache album
@@ -3962,7 +3948,7 @@ async function caricaGalleria() {
   document.getElementById('gallTitle').textContent = 'Galleria';
   document.getElementById('gallSub').textContent = 'Album fotografici degli eventi';
 
-  if (GOOGLE_API_KEY === 'INCOLLA_QUI_LA_TUA_CHIAVE_API' || !GOOGLE_API_KEY) {
+  if (GOOGLE_API_KEY === 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg' || !GOOGLE_API_KEY) {
     content.innerHTML = '<div class="loading-msg">⚠️ Chiave API Google non configurata. Inserisci la chiave in area-riservata.js.</div>';
     return;
   }
