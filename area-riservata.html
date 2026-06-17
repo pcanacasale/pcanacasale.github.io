@@ -818,6 +818,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Mezzi</span>
       </button>
 
+      <button class="sidebar-item" id="siTlc" onclick="navTo('tlc','TLC',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/><path d="M14 4l3 3-3 3"/><path d="M21 4l-3 3 3 3"/></svg></div>
+        <span class="si-label">TLC</span>
+      </button>
+
       <button class="sidebar-item" id="siDb" onclick="navTo('db','DB Avanzato',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v5c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 10v5c0 1.66 4 3 9 3s9-1.34 9-3v-5"/><path d="M3 15v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg></div>
         <span class="si-label">DB Avanzato</span>
@@ -1187,6 +1192,71 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-form-body" id="mezzoFormBody"></div>
     </div>
 
+    <!-- TLC (Telecomunicazioni) -->
+    <div class="panel" id="panelTlc">
+      <div class="panel-hdr">
+        <h2>TLC</h2>
+        <p>Apparati di telecomunicazione</p>
+      </div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="tlcSearch" class="form-inp" placeholder="cerca marca, modello, seriale..." oninput="filtraTlc()" style="flex:1">
+        <select id="tlcFiltroTipo" class="form-inp" onchange="filtraTlc()" style="max-width:180px">
+          <option value="">tutti i tipi</option>
+          <option value="PORTATILE">Portatile</option>
+          <option value="VEICOLARE">Veicolare</option>
+          <option value="STAZIONE_FISSA">Stazione fissa</option>
+          <option value="PONTE_RADIO">Ponte radio</option>
+        </select>
+        <button class="btn-primary" style="padding:0.5rem 1rem" onclick="apriFormTlc(null)">+ nuovo</button>
+      </div>
+      <div id="tlcList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA TLC -->
+    <div class="vol-detail" id="tlcDetail">
+      <div class="vol-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioTlc()">← indietro</button>
+        <span class="vol-detail-title" id="tlcDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="apriFormTlc(tlcCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="tlcDetailBody"></div>
+    </div>
+
+    <!-- FORM TLC -->
+    <div class="vol-form" id="tlcFormPanel">
+      <div class="vol-form-top">
+        <button class="vol-detail-back" onclick="chiudiFormTlc()">← annulla</button>
+        <span class="vol-form-title" id="tlcFormTitle">Nuovo apparato TLC</span>
+        <button class="vol-form-save" onclick="salvaTlc()">salva</button>
+      </div>
+      <div class="vol-form-body" id="tlcFormBody"></div>
+    </div>
+
+    <!-- UPLOAD DOC TLC -->
+    <div class="vista-form-overlay" id="tlcDocUploadOverlay">
+      <div class="vista-form-card">
+        <h4>Carica documento</h4>
+        <div class="form-err" id="tlcDocUploadErr"></div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">Tipo</label>
+          <select class="form-inp" id="tlcDocTipo">
+            <option value="SCHEDA">📄 Scheda tecnica</option>
+            <option value="FOTO">📷 Foto</option>
+            <option value="LICENZA">📜 Licenza</option>
+            <option value="ALTRO">📁 Altro</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">File</label>
+          <input type="file" id="tlcDocFile" accept="image/*,application/pdf">
+        </div>
+        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
+          <button class="btn-sm" onclick="chiudiTlcDocUpload()">annulla</button>
+          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlc()">carica</button>
+        </div>
+      </div>
+    </div>
+
     <!-- STATISTICHE -->
     <div class="panel" id="panelStatistiche">
       <div class="panel-hdr"><h2>Statistiche</h2><p>Analisi interventi</p></div>
@@ -1231,6 +1301,7 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
+            <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
             <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
@@ -1349,6 +1420,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermTlc"> 📻 TLC</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
           <label class="perm-check"><input type="checkbox" id="modPermVisite"> 🩺 Visite Mediche</label>
@@ -1365,6 +1437,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=80"></script>
+<script src="area-riservata.js?v=81"></script>
 </body>
 </html>

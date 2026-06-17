@@ -233,6 +233,7 @@ function avviaDashboard() {
     if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
     if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
     if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
+    if (hasPerm('tlc'))        { showSi('siTlc'); showSi('siLabelOperativo'); }
     if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
     if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
     if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
@@ -294,6 +295,7 @@ function showPanel(name, btn) {
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
+  if (name === 'tlc') caricaTlc();
   if (name === 'visite') caricaVisite();
   if (name === 'galleria') caricaGalleria();
   if (name === 'schedapers') caricaSchedaPersonale();
@@ -599,6 +601,7 @@ async function salvaUtente() {
     volontari:  document.getElementById('permVolontari').checked,
     interventi: document.getElementById('permInterventi').checked,
     mezzi:      document.getElementById('permMezzi').checked,
+    tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
     richieste:  document.getElementById('permRichieste').checked,
     documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
     visite:       document.getElementById('permVisite') ? document.getElementById('permVisite').checked : false,
@@ -639,7 +642,7 @@ function apriModificaUtente(u) {
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
   var permMap = {
-    'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
+    'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
@@ -668,6 +671,7 @@ async function salvaModificaUtente() {
     volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
     interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
     mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
+    tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
     db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
     documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
     visite:       document.getElementById('modPermVisite') ? document.getElementById('modPermVisite').checked : false,
@@ -3403,6 +3407,358 @@ async function dbEliminaRecord() {
   document.getElementById('dbRecordOverlay').classList.remove('open');
   caricaDb();
   caricaVolontari();
+}
+
+// -- TLC (Telecomunicazioni) --
+let tlcData = [];
+let tlcCorrenteId = null;
+let tlcDocCorrenteId = null;
+let tlcDocLoadedFor = null;
+
+const TLC_TIPOLOGIE = {
+  'PORTATILE':       { label: 'Portatile',      icon: '📻' },
+  'VEICOLARE':       { label: 'Veicolare',      icon: '🚗' },
+  'STAZIONE_FISSA':  { label: 'Stazione fissa', icon: '🏢' },
+  'PONTE_RADIO':     { label: 'Ponte radio',    icon: '🗼' }
+};
+
+const TLC_DOC_TIPI = {
+  'SCHEDA':  '📄 Scheda tecnica',
+  'FOTO':    '📷 Foto',
+  'LICENZA': '📜 Licenza',
+  'ALTRO':   '📁 Altro'
+};
+
+async function caricaTlc() {
+  const list = document.getElementById('tlcList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H });
+    tlcData = await res.json();
+    renderTlc(tlcData);
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderTlc(data) {
+  const list = document.getElementById('tlcList');
+  if (!data.length) {
+    list.innerHTML = '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    return;
+  }
+  // Raggruppa per tipologia
+  const gruppi = {};
+  data.forEach(t => {
+    const k = t.tipologia || 'ALTRO';
+    if (!gruppi[k]) gruppi[k] = [];
+    gruppi[k].push(t);
+  });
+
+  let html = '<div class="vol-list">';
+  Object.keys(gruppi).forEach(k => {
+    const info = TLC_TIPOLOGIE[k] || { label: k, icon: '📡' };
+    html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.7rem 1rem 0.4rem;border-top:0.5px solid var(--border)">'
+      + info.icon + ' ' + info.label + ' (' + gruppi[k].length + ')</div>';
+    gruppi[k].forEach(t => {
+      const titolo  = [t.marca, t.modello].filter(Boolean).join(' ') || '—';
+      const sub     = [];
+      if (t.seriale)      sub.push('S/N ' + t.seriale);
+      if (t.selettiva)    sub.push('SEL ' + t.selettiva);
+      if (t.frequenza)    sub.push(t.frequenza === 'DIGITALE' ? 'Digitale' : 'Analogica');
+      const badge = t.assegnazione
+        ? '<span class="vol-badge vb-squadra">' + t.assegnazione + '</span>'
+        : '<span class="vol-badge vb-off">non assegnato</span>';
+      html += '<div class="vol-card" onclick="apriDettaglioTlc(' + t.id + ')">'
+        + '<div class="vol-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.1rem">' + info.icon + '</div>'
+        + '<div class="vol-card-info">'
+        + '<div class="vol-card-name">' + titolo + '</div>'
+        + '<div class="vol-card-sub"><span>' + (sub.join(' | ') || '—') + '</span></div>'
+        + '</div>'
+        + '<div class="vol-card-badges">' + badge + '</div>'
+        + '</div>';
+    });
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+function filtraTlc() {
+  const q    = (document.getElementById('tlcSearch').value || '').toLowerCase().trim();
+  const tipo = document.getElementById('tlcFiltroTipo').value;
+  const filtered = tlcData.filter(t => {
+    if (tipo && t.tipologia !== tipo) return false;
+    if (q) {
+      const hay = ((t.marca||'') + ' ' + (t.modello||'') + ' ' + (t.seriale||'') + ' ' + (t.selettiva||'') + ' ' + (t.assegnazione||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderTlc(filtered);
+}
+
+function apriDettaglioTlc(id) {
+  const t = tlcData.find(x => x.id === id);
+  if (!t) return;
+  tlcCorrenteId = id;
+  const info = TLC_TIPOLOGIE[t.tipologia] || { label: t.tipologia, icon: '📡' };
+  document.getElementById('tlcDetailTitle').textContent = [t.marca, t.modello].filter(Boolean).join(' ') || 'Apparato';
+
+  const body = document.getElementById('tlcDetailBody');
+  let html = '<div class="vol-detail-hero">'
+    + '<div class="vol-detail-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.6rem">' + info.icon + '</div>'
+    + '<div><div class="vol-detail-name">' + ([t.marca, t.modello].filter(Boolean).join(' ') || '—') + '</div>'
+    + '<div class="vol-detail-role">' + info.label + (t.assegnazione ? ' | ' + t.assegnazione : '') + '</div></div>'
+    + '</div>';
+
+  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body" style="display:block">'
+    + _tlcField('Tipologia', info.label)
+    + _tlcField('Marca', t.marca)
+    + _tlcField('Modello', t.modello)
+    + _tlcField('Seriale', t.seriale)
+    + _tlcField('Selettiva', t.selettiva)
+    + _tlcField('Frequenza', t.frequenza === 'DIGITALE' ? 'Digitale' : (t.frequenza === 'ANALOGICA' ? 'Analogica' : null))
+    + _tlcField('Assegnazione', t.assegnazione)
+    + (t.note ? _tlcField('Note', t.note) : '')
+    + '</div></div>';
+
+  // Sezione documenti
+  html += '<div class="vol-section">'
+    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleTlcDoc(' + id + ')">'
+    + 'Documenti <span id="tlcDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '</div>'
+    + '<div class="vol-section-body" id="tlcDocBody" style="display:none"></div>'
+    + '</div>';
+
+  // Azioni
+  html += '<div style="padding:1rem 0">'
+    + '<button class="btn-sm btn-danger" style="width:100%" onclick="eliminaTlc(' + id + ')">🗑️ Elimina apparato</button>'
+    + '</div>';
+
+  body.innerHTML = html;
+  tlcDocLoadedFor = null;
+  document.getElementById('tlcDetail').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _tlcField(lbl, val) {
+  return '<div class="vol-field"><span class="vol-field-label">' + lbl + '</span><span>' + (val || '—') + '</span></div>';
+}
+
+function chiudiDettaglioTlc() {
+  document.getElementById('tlcDetail').classList.remove('open');
+  document.body.style.overflow = '';
+  tlcCorrenteId = null;
+  tlcDocLoadedFor = null;
+}
+
+function apriFormTlc(id) {
+  tlcCorrenteId = id;
+  const t = id ? tlcData.find(x => x.id === id) : {};
+  if (!t) return;
+  document.getElementById('tlcFormTitle').textContent = id ? 'Modifica apparato' : 'Nuovo apparato TLC';
+
+  let optTipo = '';
+  Object.keys(TLC_TIPOLOGIE).forEach(k => {
+    optTipo += '<option value="' + k + '"' + (t.tipologia === k ? ' selected' : '') + '>' + TLC_TIPOLOGIE[k].icon + ' ' + TLC_TIPOLOGIE[k].label + '</option>';
+  });
+
+  const body = document.getElementById('tlcFormBody');
+  body.innerHTML = '<div class="form-err" id="tlcFormErr"></div>'
+    + '<div class="form-field"><label class="form-lbl">Tipologia *</label><select class="form-inp" id="tlcfTipologia">' + optTipo + '</select></div>'
+    + '<div class="form-field"><label class="form-lbl">Marca</label><input class="form-inp" id="tlcfMarca" value="' + (t.marca || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Modello</label><input class="form-inp" id="tlcfModello" value="' + (t.modello || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Seriale</label><input class="form-inp" id="tlcfSeriale" value="' + (t.seriale || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Selettiva</label><input class="form-inp" id="tlcfSelettiva" value="' + (t.selettiva || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Frequenza</label><select class="form-inp" id="tlcfFrequenza">'
+    + '<option value=""' + (!t.frequenza ? ' selected' : '') + '>— non specificata</option>'
+    + '<option value="ANALOGICA"' + (t.frequenza === 'ANALOGICA' ? ' selected' : '') + '>Analogica</option>'
+    + '<option value="DIGITALE"' + (t.frequenza === 'DIGITALE' ? ' selected' : '') + '>Digitale</option>'
+    + '</select></div>'
+    + '<div class="form-field"><label class="form-lbl">Assegnazione</label><input class="form-inp" id="tlcfAssegnazione" placeholder="es. Aceto Mauro, Auto 1, Sede" value="' + (t.assegnazione || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Note</label><textarea class="form-inp" id="tlcfNote" rows="3">' + (t.note || '') + '</textarea></div>';
+
+  document.getElementById('tlcFormPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function chiudiFormTlc() {
+  document.getElementById('tlcFormPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function salvaTlc() {
+  const errEl = document.getElementById('tlcFormErr');
+  const payload = {
+    tipologia: document.getElementById('tlcfTipologia').value,
+    marca:     document.getElementById('tlcfMarca').value.trim() || null,
+    modello:   document.getElementById('tlcfModello').value.trim() || null,
+    seriale:   document.getElementById('tlcfSeriale').value.trim() || null,
+    selettiva: document.getElementById('tlcfSelettiva').value.trim() || null,
+    frequenza: document.getElementById('tlcfFrequenza').value || null,
+    assegnazione: document.getElementById('tlcfAssegnazione').value.trim() || null,
+    note:      document.getElementById('tlcfNote').value.trim() || null,
+    data_modifica: new Date().toISOString()
+  };
+  if (!payload.tipologia) { errEl.textContent = 'Tipologia obbligatoria.'; errEl.style.display = 'block'; return; }
+
+  try {
+    let res;
+    if (tlcCorrenteId) {
+      res = await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + tlcCorrenteId, {
+        method: 'PATCH',
+        headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
+      });
+      await logAttivita('ha modificato apparato TLC: ' + (payload.marca || '') + ' ' + (payload.modello || ''));
+    } else {
+      res = await fetch(SUPA_URL + '/rest/v1/tlc', {
+        method: 'POST',
+        headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
+      });
+      await logAttivita('ha aggiunto apparato TLC: ' + (payload.marca || '') + ' ' + (payload.modello || ''));
+    }
+    if (!res.ok) throw new Error('errore');
+    chiudiFormTlc();
+    chiudiDettaglioTlc();
+    caricaTlc();
+  } catch(e) {
+    errEl.textContent = 'Errore salvataggio.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaTlc(id) {
+  if (!confirm('Eliminare questo apparato? Verranno cancellati anche i documenti collegati.')) return;
+  try {
+    // Cancella prima i file dal bucket
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + id + '&select=url', { headers: H });
+    const docs = await r.json();
+    for (const d of (docs || [])) {
+      if (d.url) {
+        const m = d.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+        if (m) {
+          await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+        }
+      }
+    }
+    // Cancella apparato (cascade su documenti_tlc)
+    await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + id, { method: 'DELETE', headers: H });
+    await logAttivita('ha eliminato apparato TLC');
+    chiudiDettaglioTlc();
+    caricaTlc();
+  } catch(e) { alert('Errore eliminazione.'); }
+}
+
+// -- TLC: documenti --
+function toggleTlcDoc(tlcId) {
+  const body = document.getElementById('tlcDocBody');
+  if (!body) return;
+  if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+  body.style.display = 'block';
+  if (tlcDocLoadedFor !== tlcId || !body.innerHTML.trim()) {
+    tlcDocLoadedFor = tlcId;
+    caricaDocTlc(tlcId);
+  }
+}
+
+async function caricaDocTlc(tlcId) {
+  const body = document.getElementById('tlcDocBody');
+  if (!body) return;
+  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  try {
+    const res  = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
+    const docs = await res.json();
+    const count = document.getElementById('tlcDocCount');
+    if (count) count.textContent = '(' + docs.length + ')';
+
+    let html = '';
+    if (!docs.length) {
+      html += '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.3rem 0">Nessun documento.</div>';
+    } else {
+      docs.forEach(d => {
+        const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        const label = TLC_DOC_TIPI[d.tipo] || d.tipo;
+        const nome  = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : label;
+        html += '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + label + ' · ' + data + '</div>'
+          + '</div>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button>'
+          + '</div>'
+          + '</div>';
+      });
+    }
+    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUpload(' + tlcId + ')">+ aggiungi documento</button>';
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore.</div>';
+  }
+}
+
+function apriTlcDocUpload(tlcId) {
+  tlcDocCorrenteId = tlcId;
+  document.getElementById('tlcDocFile').value = '';
+  document.getElementById('tlcDocUploadErr').style.display = 'none';
+  document.getElementById('tlcDocUploadOverlay').classList.add('open');
+}
+
+function chiudiTlcDocUpload() {
+  document.getElementById('tlcDocUploadOverlay').classList.remove('open');
+}
+
+async function eseguiUploadDocTlc() {
+  const errEl = document.getElementById('tlcDocUploadErr');
+  const file  = document.getElementById('tlcDocFile').files[0];
+  const tipo  = document.getElementById('tlcDocTipo').value;
+  if (!file) { errEl.textContent = 'Seleziona un file.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = 'tlc_' + tlcDocCorrenteId + '/' + tipo + '_' + Date.now() + '.' + ext;
+  const bucket = 'documenti-tlc';
+
+  try {
+    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+      method: 'POST',
+      headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error('upload fallito');
+    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ tlc_id: tlcDocCorrenteId, tipo: tipo, nome_file: file.name, url: url })
+    });
+    await logAttivita('ha caricato documento TLC');
+    chiudiTlcDocUpload();
+    caricaDocTlc(tlcDocCorrenteId);
+  } catch(e) {
+    errEl.textContent = 'Errore upload: ' + (e.message || '');
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaDocTlc(docId, tlcId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const arr = await r.json();
+    const doc = arr[0];
+    if (doc && doc.url) {
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+    }
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    caricaDocTlc(tlcId);
+  } catch(e) { alert('Errore.'); }
 }
 
 // -- MEZZI --
