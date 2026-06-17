@@ -170,6 +170,21 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-stat-pill span { color:var(--green); font-weight:600; }
 .vol-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
 
+/* Accessi */
+.accessi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:0.7rem; }
+.acc-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:var(--shadow); }
+.acc-row { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0; border-top:0.5px solid var(--border); font-size:0.78rem; gap:0.5rem; }
+.acc-row:first-of-type { border-top:none; }
+.acc-lbl { color:var(--testo-3); flex-shrink:0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.3px; }
+.acc-val { color:var(--testo); text-align:right; word-break:break-all; }
+.acc-mono { font-family:monospace; font-size:0.76rem; }
+.acc-badge { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; margin-left:0.3rem; }
+.acc-active { background:rgba(34,139,82,0.15); color:var(--green); }
+.acc-sosp   { background:rgba(217,164,0,0.15); color:#d9a400; }
+.acc-inactive { background:rgba(120,120,120,0.15); color:var(--testo-3); }
+.acc-master { background:rgba(155,89,182,0.15); color:#9b59b6; }
+.acc-std    { background:rgba(76,141,255,0.15); color:#4c8dff; }
+
 /* Scheda personale (volontario) */
 .schedapers-hero { display:flex; align-items:center; gap:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); margin-bottom:1rem; }
 .schedapers-avatar { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.3rem; flex-shrink:0; }
@@ -834,11 +849,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-badge" id="siBadgeSegnalazioni"></span>
       </button>
 
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Strumenti</div>
+      <div class="sidebar-divider" id="siDividerStrumenti"></div>
+      <div class="sidebar-section-label" id="siLabelStrumenti">Strumenti</div>
 
 
-      <button class="sidebar-item" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();">
+      <button class="sidebar-item" id="siConvocazioni" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></div>
         <span class="si-label">Convocazioni</span>
       </button>
@@ -852,6 +867,11 @@ div:hover > .vista-edit-btn { display:flex; }
       <button class="sidebar-item" id="siImpostazioni" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
         <span class="si-label">Impostazioni</span>
+      </button>
+
+      <button class="sidebar-item" id="siAccessi" onclick="navTo('accessi','Accessi',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="18" cy="6" r="2"/></svg></div>
+        <span class="si-label">Accessi</span>
       </button>
     </nav>
 
@@ -1097,8 +1117,21 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
     </div>
 
-    <!-- SCHEDA PERSONALE (per volontari) -->
-    <div class="panel" id="panelSchedapers">
+    <!-- ACCESSI (per master) -->
+    <div class="panel" id="panelAccessi">
+      <div class="panel-hdr"><h2>Accessi e credenziali</h2><p>Riepilogo accessi al sistema</p></div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="accessiSearch" class="form-inp" placeholder="cerca per nome, CF, ruolo..." oninput="filtraAccessi()" style="flex:1">
+        <select id="accessiTipo" class="form-inp" onchange="filtraAccessi()" style="max-width:180px">
+          <option value="">tutti</option>
+          <option value="admin">Solo amministratori</option>
+          <option value="vol">Solo volontari</option>
+        </select>
+      </div>
+      <div id="accessiContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA PERSONALE (per volontari) -->    <div class="panel" id="panelSchedapers">
       <div class="panel-hdr"><h2>La mia scheda</h2><p>I tuoi dati personali (sola lettura)</p></div>
       <div id="schedaPersContent"><div class="loading-msg">caricamento...</div></div>
     </div>
@@ -1332,6 +1365,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=76"></script>
+<script src="area-riservata.js?v=77"></script>
 </body>
 </html>

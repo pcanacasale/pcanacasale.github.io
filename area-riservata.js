@@ -215,11 +215,16 @@ function avviaDashboard() {
   };
 
   if (isVol) {
-    // Sidebar ridotta per i volontari
+    // Sidebar ridotta per i volontari: solo Galleria + Scheda personale + Segnalazioni
     showSi('siGalleria');
     showSi('siSchedaPersonale');
     showSi('siSegnalazioni');
     showSi('siLabelOperativo');
+    // Nascondi divider e label Strumenti per i volontari
+    var divStr = document.getElementById('siDividerStrumenti');
+    var lblStr = document.getElementById('siLabelStrumenti');
+    if (divStr) divStr.style.display = 'none';
+    if (lblStr) lblStr.style.display = 'none';
   } else {
     if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
     if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
@@ -229,8 +234,10 @@ function avviaDashboard() {
     if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
     if (hasPerm('richieste'))  showSi('siRichieste');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
+    showSi('siConvocazioni'); // Convocazioni sempre visibile per admin/standard
     if (isMaster)                 showSi('siImpostazioni');
     if (isMaster)                 showSi('siSegnalazioni');
+    if (isMaster)                 showSi('siAccessi');
     if (hasPerm('db'))            showSi('siDb');
   }
   // Nome utente in sidebar
@@ -287,6 +294,7 @@ function showPanel(name, btn) {
   if (name === 'galleria') caricaGalleria();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
+  if (name === 'accessi') caricaAccessi();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -3595,7 +3603,107 @@ async function eliminaMezzo() {
   caricaMezzi();
 }
 
-// -- SCHEDA PERSONALE (volontario) --
+// -- ACCESSI E CREDENZIALI (master) --
+let accessiData = { admin: [], vol: [] };
+
+async function caricaAccessi() {
+  const content = document.getElementById('accessiContent');
+  if (!content) return;
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+
+  try {
+    // Carica utenti admin + tutti i volontari (per i loro accessi)
+    const [uRes, vRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H })
+    ]);
+    accessiData.admin = await uRes.json();
+    accessiData.vol   = await vRes.json();
+    renderAccessi();
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderAccessi() {
+  const content = document.getElementById('accessiContent');
+  const q       = (document.getElementById('accessiSearch').value || '').toLowerCase().trim();
+  const tipo    = document.getElementById('accessiTipo').value;
+
+  let html = '';
+
+  const matchQ = (s) => !q || s.toLowerCase().includes(q);
+
+  // Sezione Amministratori
+  if (tipo !== 'vol') {
+    const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
+    html += '<div class="schedapers-sec-title" style="margin-bottom:0.6rem">🔐 Amministratori (' + admins.length + ')</div>';
+    if (!admins.length) {
+      html += '<div class="loading-msg" style="margin-bottom:1rem">nessun amministratore</div>';
+    } else {
+      html += '<div class="accessi-grid">';
+      admins.forEach(u => {
+        const stato = u.attivo
+          ? '<span class="acc-badge acc-active">ATTIVO</span>'
+          : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
+        const tipoLbl = u.tipo_accesso === 'master'
+          ? '<span class="acc-badge acc-master">MASTER</span>'
+          : '<span class="acc-badge acc-std">STANDARD</span>';
+        html += '<div class="acc-card">'
+          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome || '—') + '</strong></span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  // Sezione Volontari
+  if (tipo !== 'admin') {
+    const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
+    html += '<div class="schedapers-sec-title" style="margin:1.4rem 0 0.6rem">👤 Volontari abilitati all\'accesso (' + vols.length + ')</div>';
+    html += '<div style="font-size:0.78rem;color:var(--testo-3);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--bg-2);border-radius:6px">'
+      + 'I volontari accedono con <strong>Codice Fiscale</strong> + <strong>Data di nascita</strong>. Tutti i volontari ATTIVI e SOSPESI possono accedere.'
+      + '</div>';
+    if (!vols.length) {
+      html += '<div class="loading-msg">nessun volontario</div>';
+    } else {
+      html += '<div class="accessi-grid">';
+      vols.forEach(v => {
+        const dataNasc = v.data_nascita
+          ? new Date(v.data_nascita).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})
+          : '—';
+        const stato = v.stato === 'SOSPESO'
+          ? '<span class="acc-badge acc-sosp">SOSPESO</span>'
+          : '<span class="acc-badge acc-active">ATTIVO</span>';
+        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+        const [bg, fg] = avatarColor(v.cognome);
+        html += '<div class="acc-card">'
+          + '<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.5rem">'
+          + (v.foto_url
+              ? '<img src="' + v.foto_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+              : '<div style="width:36px;height:36px;border-radius:50%;background:' + bg + ';color:' + fg + ';display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.78rem">' + initials + '</div>')
+          + '<div style="flex:1"><div style="font-weight:600;font-size:0.9rem">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div></div>'
+          + stato
+          + '</div>'
+          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Data nascita</span><span class="acc-val">' + dataNasc + '</span></div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  content.innerHTML = html;
+}
+
+function filtraAccessi() {
+  renderAccessi();
+}
+
+
 async function caricaSchedaPersonale() {
   const content = document.getElementById('schedaPersContent');
   if (!content) return;
