@@ -3423,19 +3423,33 @@ const TLC_TIPOLOGIE = {
 };
 
 const TLC_DOC_TIPI = {
+  // Documenti generali (tlc_id null)
+  'MANUALE':         '📚 Manuale / Normativa',
+  'FREQUENZE':       '📡 Piano frequenze / Selettive',
+  'AMMINISTRATIVO':  '📋 Amministrativo / Concessione',
+  // Documenti del singolo apparato (tlc_id valorizzato)
   'SCHEDA':  '📄 Scheda tecnica',
   'FOTO':    '📷 Foto',
   'LICENZA': '📜 Licenza',
   'ALTRO':   '📁 Altro'
 };
 
+// Tipi disponibili nel menu upload per documenti GENERALI
+const TLC_DOC_TIPI_GENERALI = ['MANUALE', 'FREQUENZE', 'AMMINISTRATIVO', 'ALTRO'];
+
+let tlcDocsGenerali = [];
+
 async function caricaTlc() {
   const list = document.getElementById('tlcList');
   if (!list) return;
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H });
-    tlcData = await res.json();
+    const [rApp, rDoc] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=is.null&select=*&order=tipo,data_carico.desc', { headers: H })
+    ]);
+    tlcData = await rApp.json();
+    tlcDocsGenerali = await rDoc.json();
     renderTlc(tlcData);
   } catch(e) {
     list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
@@ -3444,8 +3458,13 @@ async function caricaTlc() {
 
 function renderTlc(data) {
   const list = document.getElementById('tlcList');
+
+  // Sezione documenti generali (sempre visibile)
+  let html = _renderTlcDocsGenerali();
+
   if (!data.length) {
-    list.innerHTML = '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    html += '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    list.innerHTML = html;
     return;
   }
   // Raggruppa per tipologia
@@ -3456,7 +3475,7 @@ function renderTlc(data) {
     gruppi[k].push(t);
   });
 
-  let html = '<div class="vol-list">';
+  html += '<div class="vol-list">';
   Object.keys(gruppi).forEach(k => {
     const info = TLC_TIPOLOGIE[k] || { label: k, icon: '📡' };
     html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.7rem 1rem 0.4rem;border-top:0.5px solid var(--border)">'
@@ -3482,6 +3501,68 @@ function renderTlc(data) {
   });
   html += '</div>';
   list.innerHTML = html;
+}
+
+function _renderTlcDocsGenerali() {
+  const count = tlcDocsGenerali.length;
+  const expanded = window._tlcDocsGenAperto === true;
+
+  let html = '<div class="vol-section" style="margin-bottom:0.8rem;background:var(--bg-card);border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden">'
+    + '<div class="vol-section-head" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="toggleTlcDocsGenerali()">'
+    + '<span>📁 Documenti generali TLC <span style="font-size:0.6rem;color:var(--green);margin-left:4px">(' + count + ')</span></span>'
+    + '<span id="tlcDocsGenChev" style="color:var(--testo-3);font-size:0.85rem">' + (expanded ? '▼' : '▶') + '</span>'
+    + '</div>'
+    + '<div class="vol-section-body" id="tlcDocsGenBody" style="' + (expanded ? '' : 'display:none') + '">';
+
+  // Raggruppa per tipo
+  const gruppi = { MANUALE: [], FREQUENZE: [], AMMINISTRATIVO: [], ALTRO: [] };
+  tlcDocsGenerali.forEach(d => {
+    const k = TLC_DOC_TIPI_GENERALI.indexOf(d.tipo) >= 0 ? d.tipo : 'ALTRO';
+    gruppi[k].push(d);
+  });
+
+  if (!count) {
+    html += '<div style="font-size:0.75rem;color:var(--testo-3);padding:0.5rem 0">Nessun documento generale.</div>';
+  } else {
+    TLC_DOC_TIPI_GENERALI.forEach(k => {
+      const docs = gruppi[k];
+      if (!docs.length) return;
+      const lbl = TLC_DOC_TIPI[k] || k;
+      html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.6rem 0 0.3rem">' + lbl + ' (' + docs.length + ')</div>';
+      docs.forEach(d => {
+        const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        const nome = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : lbl;
+        html += '<div style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
+          + '</div>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button>'
+          + '</div></div>';
+      });
+    });
+  }
+
+  html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUploadGenerale()">+ aggiungi documento generale</button>';
+  html += '</div></div>';
+  return html;
+}
+
+function toggleTlcDocsGenerali() {
+  const body = document.getElementById('tlcDocsGenBody');
+  const chev = document.getElementById('tlcDocsGenChev');
+  if (!body) return;
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    chev.textContent = '▼';
+    window._tlcDocsGenAperto = true;
+  } else {
+    body.style.display = 'none';
+    chev.textContent = '▶';
+    window._tlcDocsGenAperto = false;
+  }
 }
 
 function filtraTlc() {
@@ -3758,6 +3839,68 @@ async function eliminaDocTlc(docId, tlcId) {
     }
     await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
     caricaDocTlc(tlcId);
+  } catch(e) { alert('Errore.'); }
+}
+
+// -- TLC: documenti GENERALI (non legati a un apparato) --
+function apriTlcDocUploadGenerale() {
+  document.getElementById('tlcDocGenFile').value = '';
+  document.getElementById('tlcDocGenUploadErr').style.display = 'none';
+  document.getElementById('tlcDocGenUploadOverlay').classList.add('open');
+}
+
+function chiudiTlcDocUploadGenerale() {
+  document.getElementById('tlcDocGenUploadOverlay').classList.remove('open');
+}
+
+async function eseguiUploadDocTlcGenerale() {
+  const errEl = document.getElementById('tlcDocGenUploadErr');
+  const file  = document.getElementById('tlcDocGenFile').files[0];
+  const tipo  = document.getElementById('tlcDocGenTipo').value;
+  if (!file) { errEl.textContent = 'Seleziona un file.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = 'generali/' + tipo + '_' + Date.now() + '.' + ext;
+  const bucket = 'documenti-tlc';
+
+  try {
+    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+      method: 'POST',
+      headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error('upload fallito');
+    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ tlc_id: null, tipo: tipo, nome_file: file.name, url: url })
+    });
+    await logAttivita('ha caricato documento TLC generale');
+    chiudiTlcDocUploadGenerale();
+    window._tlcDocsGenAperto = true; // mantieni aperto
+    caricaTlc();
+  } catch(e) {
+    errEl.textContent = 'Errore upload: ' + (e.message || '');
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaDocTlcGen(docId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const arr = await r.json();
+    const doc = arr[0];
+    if (doc && doc.url) {
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+    }
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    window._tlcDocsGenAperto = true;
+    caricaTlc();
   } catch(e) { alert('Errore.'); }
 }
 

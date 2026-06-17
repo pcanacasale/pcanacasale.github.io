@@ -1232,6 +1232,31 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-form-body" id="tlcFormBody"></div>
     </div>
 
+    <!-- UPLOAD DOC TLC GENERALE -->
+    <div class="vista-form-overlay" id="tlcDocGenUploadOverlay">
+      <div class="vista-form-card">
+        <h4>Carica documento generale TLC</h4>
+        <div class="form-err" id="tlcDocGenUploadErr"></div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">Tipo</label>
+          <select class="form-inp" id="tlcDocGenTipo">
+            <option value="MANUALE">📚 Manuale / Normativa</option>
+            <option value="FREQUENZE">📡 Piano frequenze / Selettive</option>
+            <option value="AMMINISTRATIVO">📋 Amministrativo / Concessione</option>
+            <option value="ALTRO">📁 Altro</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">File</label>
+          <input type="file" id="tlcDocGenFile" accept="image/*,application/pdf">
+        </div>
+        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
+          <button class="btn-sm" onclick="chiudiTlcDocUploadGenerale()">annulla</button>
+          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlcGenerale()">carica</button>
+        </div>
+      </div>
+    </div>
+
     <!-- UPLOAD DOC TLC -->
     <div class="vista-form-overlay" id="tlcDocUploadOverlay">
       <div class="vista-form-card">
@@ -1437,6 +1462,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=81"></script>
+<script src="area-riservata.js?v=82"></script>
 </body>
 </html>
