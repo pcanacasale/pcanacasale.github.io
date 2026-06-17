@@ -3931,7 +3931,7 @@ async function caricaBadgeSegnalazioni() {
 }
 
 
-const GOOGLE_API_KEY    = 'INCOLLA_QUI_LA_TUA_CHIAVE_API';
+const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
 
 let galleriaAlbumsCache = null;   // cache album
@@ -3948,7 +3948,7 @@ async function caricaGalleria() {
   document.getElementById('gallTitle').textContent = 'Galleria';
   document.getElementById('gallSub').textContent = 'Album fotografici degli eventi';
 
-  if (GOOGLE_API_KEY === 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg' || !GOOGLE_API_KEY) {
+  if (GOOGLE_API_KEY === 'INCOLLA_QUI_LA_TUA_CHIAVE_API' || !GOOGLE_API_KEY) {
     content.innerHTML = '<div class="loading-msg">⚠️ Chiave API Google non configurata. Inserisci la chiave in area-riservata.js.</div>';
     return;
   }
