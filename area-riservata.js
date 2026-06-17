@@ -3517,7 +3517,7 @@ async function eliminaMezzo() {
 }
 
 // -- GALLERIA GOOGLE DRIVE --
-const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
+const GOOGLE_API_KEY    = 'INCOLLA_QUI_LA_TUA_CHIAVE_API';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
 
 let galleriaAlbumsCache = null;   // cache album
@@ -3553,6 +3553,7 @@ async function caricaGalleria() {
       + '&fields=' + encodeURIComponent('files(id,name,modifiedTime)')
       + '&orderBy=name desc'
       + '&pageSize=100'
+      + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
       + '&key=' + GOOGLE_API_KEY;
     const res = await fetch(url);
     if (!res.ok) {
@@ -3570,6 +3571,7 @@ async function caricaGalleria() {
           + '?q=' + encodeURIComponent(cq)
           + '&fields=files(id,thumbnailLink)'
           + '&pageSize=1'
+          + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
           + '&key=' + GOOGLE_API_KEY;
         const cr = await fetch(cu);
         const cd = await cr.json();
@@ -3626,6 +3628,7 @@ async function apriAlbum(folderId, nome) {
       + '&fields=' + encodeURIComponent('files(id,name,thumbnailLink,imageMediaMetadata)')
       + '&orderBy=name'
       + '&pageSize=1000'
+      + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
       + '&key=' + GOOGLE_API_KEY;
     const res = await fetch(url);
     if (!res.ok) {
