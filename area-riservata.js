@@ -3517,7 +3517,7 @@ async function eliminaMezzo() {
 }
 
 // -- GALLERIA GOOGLE DRIVE --
-const GOOGLE_API_KEY    = 'INCOLLA_QUI_LA_TUA_CHIAVE_API';
+const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
 
 let galleriaAlbumsCache = null;   // cache album
