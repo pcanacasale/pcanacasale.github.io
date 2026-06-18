@@ -912,7 +912,7 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-toolbar">
         <input class="vol-search" type="search" id="volSearch" placeholder="cerca nome, squadra..." oninput="filtraVolontari()">
         <button class="vol-filter-btn" id="volFilterBtn" onclick="toggleVolFiltri()">⚙ filtri</button>
-        <button class="vol-add-btn" onclick="apriFormVolontario(null)">+ nuovo</button>
+        <button class="vol-add-btn" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none">+ nuovo</button>
       </div>
       <div class="vol-filters" id="volFiltri">
         <div class="vol-filter-row">
@@ -950,7 +950,7 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-detail-top">
         <button class="vol-detail-back" onclick="chiudiDettaglio()">← indietro</button>
         <span class="vol-detail-title" id="volDetailTitle">—</span>
-        <button class="vol-detail-edit" onclick="apriFormVolontario(volCorrenteId)">modifica</button>
+        <button class="vol-detail-edit" id="btnModificaVolontario" onclick="apriFormVolontario(volCorrenteId)" style="display:none">modifica</button>
       </div>
       <div class="vol-detail-body" id="volDetailBody"></div>
     </div>
@@ -1324,6 +1324,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <div class="form-field"><label class="form-lbl">Ruolo</label><input class="form-inp" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
           <div class="perm-grid">
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
+            <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
             <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
@@ -1443,6 +1444,7 @@ div:hover > .vista-edit-btn { display:flex; }
         <label class="form-lbl">Permessi sezioni</label>
         <div class="perm-grid">
           <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> ✏️ Modifica Volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
           <label class="perm-check"><input type="checkbox" id="modPermTlc"> 📻 TLC</label>
@@ -1462,6 +1464,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=83"></script>
+<script src="area-riservata.js?v=84"></script>
 </body>
 </html>

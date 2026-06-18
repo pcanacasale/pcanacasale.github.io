@@ -174,6 +174,13 @@ async function doLoginVolontario() {
 
 let isMasterUser = false;
 
+function canModificaVolontari() {
+  if (!currentUser) return false;
+  if (currentUser.tipo_accesso === 'master') return true;
+  const p = currentUser.permessi || {};
+  return p.modifica_volontari === true;
+}
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
@@ -237,6 +244,12 @@ function avviaDashboard() {
     if (spers) spers.style.display = 'none';
 
     if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
+
+    // Pulsanti modifica volontari visibili solo a chi ha il permesso
+    if (canModificaVolontari()) {
+      var btnNuovo = document.getElementById('btnNuovoVolontario');
+      if (btnNuovo) btnNuovo.style.display = '';
+    }
     if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
     if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
     if (hasPerm('tlc'))        { showSi('siTlc'); showSi('siLabelOperativo'); }
@@ -605,6 +618,7 @@ async function salvaUtente() {
   errEl.style.display = 'none';
   const permessi = {
     volontari:  document.getElementById('permVolontari').checked,
+    modifica_volontari: document.getElementById('permModificaVolontari') ? document.getElementById('permModificaVolontari').checked : false,
     interventi: document.getElementById('permInterventi').checked,
     mezzi:      document.getElementById('permMezzi').checked,
     tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
@@ -648,7 +662,7 @@ function apriModificaUtente(u) {
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
   var permMap = {
-    'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
+    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
@@ -675,6 +689,7 @@ async function salvaModificaUtente() {
   errEl.style.display = 'none';
   var permessi = {
     volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
+    modifica_volontari: document.getElementById('modPermModificaVolontari') ? document.getElementById('modPermModificaVolontari').checked : false,
     interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
     mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
     tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
@@ -793,14 +808,19 @@ function _renderVolCard(v) {
   if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
   if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
 
-  // Dropdown stato inline
+  // Dropdown stato inline (se può modificare) o badge readonly
   const statoColor = stato === 'ATTIVO' ? 'var(--green)' : (stato === 'SOSPESO' ? '#d9a400' : '#999');
-  const statoSel = '<select class="vol-stato-sel" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" '
-    + 'style="background:transparent;border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:10px;font-family:var(--font);cursor:pointer;outline:none">'
-    + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
-    + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
-    + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
-    + '</select>';
+  let statoSel;
+  if (canModificaVolontari()) {
+    statoSel = '<select class="vol-stato-sel" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" '
+      + 'style="background:transparent;border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:10px;font-family:var(--font);cursor:pointer;outline:none">'
+      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
+      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
+      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
+      + '</select>';
+  } else {
+    statoSel = '<span style="border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 8px;border-radius:10px">' + stato + '</span>';
+  }
 
   card.innerHTML = (v.foto_url
       ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
@@ -812,6 +832,10 @@ function _renderVolCard(v) {
 }
 
 async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
+  if (!canModificaVolontari()) {
+    alert('Permessi insufficienti per modificare lo stato.');
+    return;
+  }
   // Trova volontario in cache
   const v = volontariData.find(x => x.id === volId);
   if (!v) return;
@@ -877,6 +901,9 @@ async function apriDettaglio(id) {
   volDocLoaded = false;
   const detail = document.getElementById('volDetail');
   const body   = document.getElementById('volDetailBody');
+  // Mostra/nascondi pulsante modifica in base al permesso
+  var btnMod = document.getElementById('btnModificaVolontario');
+  if (btnMod) btnMod.style.display = canModificaVolontari() ? '' : 'none';
   detail.classList.add('open');
   detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">caricamento...</div>';
@@ -1057,6 +1084,10 @@ async function toggleVolInterventi(volId) {
 }
 
 function apriFormVolontario(id) {
+  if (!canModificaVolontari()) {
+    alert('Non hai i permessi per modificare i volontari.');
+    return;
+  }
   volCorrenteId = id;
   const panel = document.getElementById('volFormPanel');
   const body  = document.getElementById('volFormBody');
@@ -1222,6 +1253,7 @@ function validaCodiceFiscale(cf) {
 }
 
 async function salvaVolontario() {
+  if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   const cognome = document.getElementById('fCognome').value.trim();
   const nome    = document.getElementById('fNome').value.trim();
   const errEl   = document.getElementById('volFormErr');
@@ -1303,6 +1335,7 @@ async function salvaVolontario() {
 }
 
 async function eliminaVolontario() {
+  if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   if (!volCorrenteId) return;
   if (!confirm('Eliminare definitivamente questo volontario?')) return;
   await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'DELETE', headers: H });
