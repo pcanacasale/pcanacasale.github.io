@@ -5420,13 +5420,13 @@ async function esportaModuloTerritoriale(id) {
   // Carica partecipanti dalla tabella intervento_volontari (con dati anagrafici)
   let partecipanti = [];
   try {
-    const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,data_inizio,data_fine,volontario:volontario_id(cognome,nome,luogo_nascita,provincia_nascita,data_nascita,codice_fiscale,telefono,email)&order=id', { headers: H });
+    const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,data_inizio,data_fine,volontario:volontario_id(cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta)&order=id', { headers: H });
     partecipanti = await rIV.json();
   } catch(e) {}
 
   // Fallback legacy: se vuoto e ci sono volontari_ids
   if ((!partecipanti || !partecipanti.length) && i.volontari_ids && i.volontari_ids.length) {
-    const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome,luogo_nascita,provincia_nascita,data_nascita,codice_fiscale,telefono,email&order=cognome', { headers: H });
+    const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta&order=cognome', { headers: H });
     const vols = await rV.json();
     partecipanti = vols.map(v => ({
       volontario_id: v.id,
@@ -5464,7 +5464,7 @@ async function esportaModuloTerritoriale(id) {
     ws.getCell('A' + r).value = (v.cognome || '').toUpperCase();
     ws.getCell('B' + r).value = (v.nome || '').toUpperCase();
     ws.getCell('C' + r).value = v.luogo_nascita || '';
-    ws.getCell('D' + r).value = v.provincia_nascita || '';
+    ws.getCell('D' + r).value = '';
     ws.getCell('E' + r).value = v.data_nascita ? fmtIT(v.data_nascita) : '';
     ws.getCell('F' + r).value = (v.codice_fiscale || '').toUpperCase();
     ws.getCell('G' + r).value = v.telefono || '';
