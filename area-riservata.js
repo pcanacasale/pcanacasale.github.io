@@ -2143,7 +2143,8 @@ async function apriDettaglioIntervento(id) {
       <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
       <button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>
       <button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="stampaIntervento(${i.id})">📄 Esporta con CF</button>
-      <button class="btn-primary" style="width:100%;margin-top:0.5rem;background:var(--green)" onclick="apriGeneratoreAttestati(${i.id})">📜 Genera attestati</button>`;
+      <button class="btn-primary" style="width:100%;margin-top:0.5rem;background:var(--green)" onclick="apriGeneratoreAttestati(${i.id})">📜 Genera attestati</button>
+      <button class="btn-primary" style="width:100%;margin-top:0.5rem;background:#1a4a9a" onclick="esportaModuloTerritoriale(${i.id})">📋 Esporta modulo Territoriale</button>`;
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
 }
 
@@ -2182,8 +2183,8 @@ function apriFormIntervento(id, macroIdPreset) {
     <div class="vol-form-section">
       <div class="vol-form-section-title">Numeri</div>
       <div class="vol-form-grid">
-        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">N° ore</label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Calcolato automaticamente"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">N° ore <label class="vol-form-check" style="display:inline-flex;margin-left:0.4rem;font-size:0.7rem"><input type="checkbox" id="ifNOreOverride" onchange="toggleNOreOverride()"> manuale</label></label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Somma automatica dalle ore dei volontari"></div>
         <div class="vol-form-field full"><label class="vol-form-check" style="margin-top:0.3rem"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
         <div class="vol-form-field" style="grid-column:span 2;display:flex;align-items:center;gap:0.7rem;margin-top:0.2rem">
           <label class="vol-form-check" style="flex-shrink:0"><input type="checkbox" id="ifVola"> VolA</label>
@@ -2194,8 +2195,13 @@ function apriFormIntervento(id, macroIdPreset) {
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Volontari intervenuti</div>
-      <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario..." oninput="filtraVolPicker(this.value)">
-      <div class="vol-picker" id="volPicker"><div class="loading-msg" style="padding:0.5rem">caricamento volontari...</div></div>
+      <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario per aggiungerlo..." oninput="filtraVolPickerDropdown(this.value)">
+      <div id="volPickerDropdown" class="vol-picker-dropdown" style="display:none"></div>
+      <div id="intVolList" style="margin-top:0.6rem"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;font-size:0.78rem;color:var(--testo-3)">
+        <span>Volontari: <strong id="intVolCount">0</strong></span>
+        <span>Somma ore: <strong id="intVolOreSum">0</strong></span>
+      </div>
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Note</div>
@@ -2245,44 +2251,152 @@ function toggleMacroMode() {
 }
 
 
+// -- VOLONTARI PICKER per intervento (nuovo) --
+// Stato: array di oggetti { volontario_id, cognome, nome, art_39, ore, data_inizio, data_fine }
+let intVolSelezionati = [];
+let intVolAllCache = [];
+
 async function caricaVolPicker() {
-  const picker = document.getElementById('volPicker');
-  if (!picker) return;
-  // Usa i dati già in cache se disponibili
-  const vols = volontariData.length ? volontariData : await (async () => {
+  // Carica volontari ATTIVI+SOSPESI in cache (per dropdown)
+  if (!intVolAllCache.length) {
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome&order=cognome&attivo=eq.true', { headers: H });
-      return await res.json();
-    } catch(e) { return []; }
-  })();
-  renderVolPicker(vols);
+      const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale&stato=neq.DIMESSO&order=cognome', { headers: H });
+      intVolAllCache = await res.json();
+    } catch(e) { intVolAllCache = []; }
+  }
+  // Reset (sarà popolato da caricaDatiFormIntervento se esiste già)
+  if (!intCorrenteId) {
+    intVolSelezionati = [];
+    renderIntVolList();
+  }
 }
 
-function renderVolPicker(vols) {
-  const picker = document.getElementById('volPicker');
-  if (!picker) return;
-  picker.innerHTML = '';
-  vols.forEach(v => {
-    const item = document.createElement('div');
-    item.className = 'vol-picker-item';
-    item.innerHTML = '<input type="checkbox" id="vp_' + v.id + '" value="' + v.id + '" onchange="aggiornaConteggioVolontari()">'
-      + '<label for="vp_' + v.id + '">' + v.cognome + ' ' + v.nome + '</label>';
-    picker.appendChild(item);
+function filtraVolPickerDropdown(q) {
+  const term = (q || '').toLowerCase().trim();
+  const dd = document.getElementById('volPickerDropdown');
+  if (!term || term.length < 1) {
+    dd.style.display = 'none';
+    return;
+  }
+  const selectedIds = new Set(intVolSelezionati.map(x => x.volontario_id));
+  const filtered = intVolAllCache.filter(v =>
+    !selectedIds.has(v.id) &&
+    ((v.cognome || '') + ' ' + (v.nome || '')).toLowerCase().includes(term)
+  ).slice(0, 20);
+  if (!filtered.length) {
+    dd.innerHTML = '<div style="padding:0.5rem;font-size:0.78rem;color:var(--testo-3)">nessun risultato</div>';
+  } else {
+    dd.innerHTML = filtered.map(v =>
+      '<div class="vp-dd-item" onclick="aggiungiVolIntervento(' + v.id + ')">'
+      + '<strong>' + (v.cognome || '') + ' ' + (v.nome || '') + '</strong>'
+      + '</div>'
+    ).join('');
+  }
+  dd.style.display = 'block';
+}
+
+function aggiungiVolIntervento(volId) {
+  const v = intVolAllCache.find(x => x.id === volId);
+  if (!v) return;
+  if (intVolSelezionati.some(x => x.volontario_id === volId)) return;
+  // Default ore = 0 (li metti tu)
+  // Default date = data e data_fine dell'intervento
+  const dInizio = document.getElementById('ifData').value || null;
+  const dFine   = document.getElementById('ifDataFine').value || dInizio;
+  intVolSelezionati.push({
+    volontario_id: volId,
+    cognome: v.cognome,
+    nome: v.nome,
+    art_39: false,
+    ore: '',
+    data_inizio: dInizio,
+    data_fine: dFine
   });
+  // Pulisci ricerca e chiudi dropdown
+  document.getElementById('volPickerSearch').value = '';
+  document.getElementById('volPickerDropdown').style.display = 'none';
+  renderIntVolList();
 }
 
-function filtraVolPicker(q) {
-  const term = q.toLowerCase().trim();
-  document.querySelectorAll('.vol-picker-item').forEach(item => {
-    item.style.display = !term || item.textContent.toLowerCase().includes(term) ? '' : 'none';
-  });
+function rimuoviVolIntervento(volId) {
+  intVolSelezionati = intVolSelezionati.filter(x => x.volontario_id !== volId);
+  renderIntVolList();
 }
 
-function aggiornaConteggioVolontari() {
-  var count = document.querySelectorAll('.vol-picker-item input:checked').length;
-  var el = document.getElementById('ifNVol');
-  if (el) el.value = count;
+function aggiornaCampoVolIntervento(volId, campo, valore) {
+  const v = intVolSelezionati.find(x => x.volontario_id === volId);
+  if (!v) return;
+  if (campo === 'art_39') v.art_39 = !!valore;
+  else if (campo === 'ore') v.ore = valore;
+  else if (campo === 'data_inizio') v.data_inizio = valore;
+  else if (campo === 'data_fine') v.data_fine = valore;
+  aggiornaContatoriVolontari();
 }
+
+function renderIntVolList() {
+  const list = document.getElementById('intVolList');
+  if (!list) return;
+  if (!intVolSelezionati.length) {
+    list.innerHTML = '<div style="padding:0.6rem;font-size:0.78rem;color:var(--testo-3);text-align:center;background:var(--bg-2);border-radius:6px">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
+    aggiornaContatoriVolontari();
+    return;
+  }
+  list.innerHTML = intVolSelezionati.map(v =>
+    '<div class="int-vol-card">'
+    + '<div class="int-vol-card-head">'
+    + '<strong>' + v.cognome + ' ' + v.nome + '</strong>'
+    + '<button type="button" class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="rimuoviVolIntervento(' + v.volontario_id + ')">✕</button>'
+    + '</div>'
+    + '<div class="int-vol-card-grid">'
+    +   '<label class="int-vol-field"><span>Ore</span><input type="number" min="0" step="0.5" value="' + (v.ore || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'ore\', parseFloat(this.value)||0)"></label>'
+    +   '<label class="int-vol-field"><span>Data inizio</span><input type="date" value="' + (v.data_inizio || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'data_inizio\', this.value||null)"></label>'
+    +   '<label class="int-vol-field"><span>Data fine</span><input type="date" value="' + (v.data_fine || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'data_fine\', this.value||null)"></label>'
+    +   '<label class="int-vol-check"><input type="checkbox"' + (v.art_39 ? ' checked' : '') + ' onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'art_39\', this.checked)"> Art. 39</label>'
+    + '</div>'
+    + '</div>'
+  ).join('');
+  aggiornaContatoriVolontari();
+}
+
+function aggiornaContatoriVolontari() {
+  const count = intVolSelezionati.length;
+  const sumOre = intVolSelezionati.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
+  const elCount = document.getElementById('intVolCount');
+  const elSum   = document.getElementById('intVolOreSum');
+  if (elCount) elCount.textContent = count;
+  if (elSum)   elSum.textContent   = Math.round(sumOre * 10) / 10;
+  // Aggiorna anche i campi nascosti del form (se non override)
+  const nvol = document.getElementById('ifNVol');
+  const nore = document.getElementById('ifNOre');
+  const override = document.getElementById('ifNOreOverride');
+  if (nvol) nvol.value = count;
+  if (nore && (!override || !override.checked)) nore.value = Math.round(sumOre * 10) / 10;
+}
+
+function toggleNOreOverride() {
+  const cb = document.getElementById('ifNOreOverride');
+  const nore = document.getElementById('ifNOre');
+  if (!cb || !nore) return;
+  if (cb.checked) {
+    // Manuale
+    nore.readOnly = false;
+    nore.style.background = '';
+    nore.style.color = '';
+    nore.title = 'Valore manuale (override)';
+  } else {
+    // Auto
+    nore.readOnly = true;
+    nore.style.background = 'var(--bg-2)';
+    nore.style.color = 'var(--testo-3)';
+    nore.title = 'Somma automatica dalle ore dei volontari';
+    aggiornaContatoriVolontari();
+  }
+}
+
+// Funzione legacy mantenuta per compatibilità (potrebbe essere chiamata da qualcosa)
+function filtraVolPicker(q) { filtraVolPickerDropdown(q); }
+function renderVolPicker() {}
+function aggiornaConteggioVolontari() { aggiornaContatoriVolontari(); }
 
 async function caricaDatiFormIntervento(id) {
   try {
@@ -2302,19 +2416,50 @@ async function caricaDatiFormIntervento(id) {
     if (volaNum) volaNum.value = i.vola_numero || '';
     const volter = document.getElementById('ifVolter');
     if (volter) volter.checked = !!i.volter;
+    // Override n_ore?
+    const override = document.getElementById('ifNOreOverride');
+    if (override) {
+      override.checked = !!i.n_ore_override;
+      toggleNOreOverride();
+    }
     // Ripristina macro
     var cbMacro = document.getElementById('ifIsMacro');
     if (cbMacro) { cbMacro.checked = !!i.is_macro; toggleMacroMode(); }
     var selMacro = document.getElementById('ifMacroId');
     if (selMacro && i.macro_id) selMacro.value = i.macro_id;
-    // Spunta volontari
-    if (i.volontari_ids && i.volontari_ids.length) {
-      i.volontari_ids.forEach(vid => {
-        const cb = document.getElementById('vp_' + vid);
-        if (cb) cb.checked = true;
-      });
-      aggiornaConteggioVolontari();
-    }
+
+    // Carica partecipanti dalla nuova tabella intervento_volontari
+    intVolSelezionati = [];
+    try {
+      const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,ore,data_inizio,data_fine,volontario:volontario_id(cognome,nome)&order=id', { headers: H });
+      const ivs = await rIV.json();
+      if (Array.isArray(ivs) && ivs.length) {
+        // Dati nuovi
+        intVolSelezionati = ivs.map(r => ({
+          volontario_id: r.volontario_id,
+          cognome: r.volontario ? r.volontario.cognome : '?',
+          nome:    r.volontario ? r.volontario.nome : '',
+          art_39:  !!r.art_39,
+          ore:     r.ore || '',
+          data_inizio: r.data_inizio || null,
+          data_fine:   r.data_fine || null
+        }));
+      } else if (i.volontari_ids && i.volontari_ids.length) {
+        // Legacy: carica da volontari_ids senza ore/date specifiche
+        const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome', { headers: H });
+        const vols = await rV.json();
+        intVolSelezionati = vols.map(v => ({
+          volontario_id: v.id,
+          cognome: v.cognome,
+          nome:    v.nome,
+          art_39:  false,
+          ore:     '',
+          data_inizio: i.data || null,
+          data_fine:   i.data_fine || i.data || null
+        }));
+      }
+    } catch(e) {}
+    renderIntVolList();
   } catch(e) {}
 }
 
@@ -2325,8 +2470,16 @@ async function salvaIntervento() {
   if (!evento || !data) { errEl.textContent = 'Evento e data sono obbligatori.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
-  // Raccogli volontari selezionati
-  const volontari_ids = Array.from(document.querySelectorAll('.vol-picker-item input:checked')).map(cb => parseInt(cb.value));
+  // Calcola N° volontari e N° ore dai partecipanti
+  const overrideEl = document.getElementById('ifNOreOverride');
+  const nOreOverride = overrideEl ? overrideEl.checked : false;
+  const nVol = intVolSelezionati.length;
+  const sumOre = intVolSelezionati.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
+  const nOreInput = parseFloat(document.getElementById('ifNOre').value);
+  const nOreFinal = nOreOverride ? (nOreInput || 0) : Math.round(sumOre * 10) / 10;
+
+  // Mantieni anche volontari_ids per retrocompatibilità (legacy lettura)
+  const volontari_ids = intVolSelezionati.map(v => v.volontario_id);
 
   const payload = {
     evento,
@@ -2335,8 +2488,9 @@ async function salvaIntervento() {
     tipo_attivita: document.getElementById('ifTipo').value || null,
     luogo:         document.getElementById('ifLuogo').value.trim() || null,
     utente:        document.getElementById('ifUtente').value.trim() || currentUser.nome,
-    n_volontari:   parseInt(document.getElementById('ifNVol').value) || 0,
-    n_ore:         parseFloat(document.getElementById('ifNOre').value) || 0,
+    n_volontari:   nVol,
+    n_ore:         nOreFinal,
+    n_ore_override: nOreOverride,
     utilizzo_radio: document.getElementById('ifRadio').checked,
     volontari_ids,
     note:          document.getElementById('ifNote').value.trim() || null,
@@ -2349,18 +2503,43 @@ async function salvaIntervento() {
   };
 
   try {
-    let res;
+    let res, intId;
     if (intCorrenteId) {
       res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      intId = intCorrenteId;
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/interventi', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await fetch(SUPA_URL + '/rest/v1/interventi', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=representation'}), body: JSON.stringify(payload) });
+      const created = await res.json();
+      intId = Array.isArray(created) && created[0] ? created[0].id : null;
     }
-    if (res.ok) {
-      await logAttivita((intCorrenteId ? 'ha modificato' : 'ha registrato') + ' intervento: ' + evento);
-      chiudiFormIntervento();
-      chiudiDettaglioIntervento();
-      caricaInterventi();
-    } else { errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block'; }
+    if (!res.ok) { errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block'; return; }
+
+    // Sincronizza intervento_volontari: cancella tutto e ricrea
+    if (intId) {
+      try {
+        await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + intId, { method:'DELETE', headers: H });
+        if (intVolSelezionati.length) {
+          const rows = intVolSelezionati.map(v => ({
+            intervento_id: intId,
+            volontario_id: v.volontario_id,
+            art_39: !!v.art_39,
+            ore: parseFloat(v.ore) || null,
+            data_inizio: v.data_inizio || null,
+            data_fine: v.data_fine || null
+          }));
+          await fetch(SUPA_URL + '/rest/v1/intervento_volontari', {
+            method: 'POST',
+            headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+            body: JSON.stringify(rows)
+          });
+        }
+      } catch(e) {}
+    }
+
+    await logAttivita((intCorrenteId ? 'ha modificato' : 'ha registrato') + ' intervento: ' + evento);
+    chiudiFormIntervento();
+    chiudiDettaglioIntervento();
+    caricaInterventi();
   } catch(e) { errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block'; }
 }
 
@@ -5204,7 +5383,112 @@ async function stampaPDFStatistiche() {
   win.document.close();
 }
 
-// -- EXPORT INTERVENTO CON CF --
+// -- EXPORT MODULO TERRITORIALE (Excel) --
+// Template embeddato (formato ANA)
+const MODULO_TERRITORIALE_B64 = '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';
+
+function caricaExcelJS() {
+  return new Promise(function(resolve, reject) {
+    if (window.ExcelJS) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload = function() { resolve(); };
+    s.onerror = function() { reject(new Error('exceljs load failed')); };
+    document.head.appendChild(s);
+  });
+}
+
+function _b64ToArrayBuffer(b64) {
+  var bin = atob(b64);
+  var len = bin.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function esportaModuloTerritoriale(id) {
+  try {
+    await caricaExcelJS();
+  } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
+
+  // Carica dati intervento
+  const rI = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+  const dati = await rI.json();
+  if (!dati.length) { alert('Intervento non trovato.'); return; }
+  const i = dati[0];
+
+  // Carica partecipanti dalla tabella intervento_volontari (con dati anagrafici)
+  let partecipanti = [];
+  try {
+    const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,data_inizio,data_fine,volontario:volontario_id(cognome,nome,luogo_nascita,provincia_nascita,data_nascita,codice_fiscale,telefono,email)&order=id', { headers: H });
+    partecipanti = await rIV.json();
+  } catch(e) {}
+
+  // Fallback legacy: se vuoto e ci sono volontari_ids
+  if ((!partecipanti || !partecipanti.length) && i.volontari_ids && i.volontari_ids.length) {
+    const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome,luogo_nascita,provincia_nascita,data_nascita,codice_fiscale,telefono,email&order=cognome', { headers: H });
+    const vols = await rV.json();
+    partecipanti = vols.map(v => ({
+      volontario_id: v.id,
+      art_39: false,
+      data_inizio: i.data || null,
+      data_fine: i.data_fine || i.data || null,
+      volontario: v
+    }));
+  }
+
+  // Carica il template
+  const wb = new ExcelJS.Workbook();
+  const buf = _b64ToArrayBuffer(MODULO_TERRITORIALE_B64);
+  await wb.xlsx.load(buf);
+  const ws = wb.getWorksheet('Foglio1') || wb.worksheets[0];
+
+  // Compila intestazione
+  const fmtIT = (d) => {
+    if (!d) return '';
+    const dd = new Date(d);
+    return ('0' + dd.getDate()).slice(-2) + '/' + ('0' + (dd.getMonth()+1)).slice(-2) + '/' + dd.getFullYear();
+  };
+  ws.getCell('A6').value = 'EVENTO: ' + (i.evento || '');
+  const dataStr = fmtIT(i.data) + (i.data_fine && i.data_fine !== i.data ? ' - ' + fmtIT(i.data_fine) : '');
+  ws.getCell('A7').value = 'DATA: ' + dataStr;
+  ws.getCell('A8').value = 'LOCALITA’: ' + (i.luogo || '');
+  // A9 ASSOCIAZIONE GRUPPO e A10 ORARIO li lascio come sono
+
+  // Compila riga per riga i volontari (parte dalla riga 15)
+  const startRow = 15;
+  partecipanti.forEach((p, idx) => {
+    const r = startRow + idx;
+    if (r > 28) return; // template max 14 righe (15-28)
+    const v = p.volontario || {};
+    ws.getCell('A' + r).value = (v.cognome || '').toUpperCase();
+    ws.getCell('B' + r).value = (v.nome || '').toUpperCase();
+    ws.getCell('C' + r).value = v.luogo_nascita || '';
+    ws.getCell('D' + r).value = v.provincia_nascita || '';
+    ws.getCell('E' + r).value = v.data_nascita ? fmtIT(v.data_nascita) : '';
+    ws.getCell('F' + r).value = (v.codice_fiscale || '').toUpperCase();
+    ws.getCell('G' + r).value = v.telefono || '';
+    ws.getCell('H' + r).value = v.email || '';
+    ws.getCell('I' + r).value = p.art_39 ? 'SI' : 'NO';
+    ws.getCell('J' + r).value = p.data_inizio ? fmtIT(p.data_inizio) : (i.data ? fmtIT(i.data) : '');
+    ws.getCell('K' + r).value = p.data_fine ? fmtIT(p.data_fine) : (i.data_fine ? fmtIT(i.data_fine) : (i.data ? fmtIT(i.data) : ''));
+  });
+
+  // Scarica
+  const out = await wb.xlsx.writeBuffer();
+  const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = (i.evento || 'modulo').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 40);
+  a.href = url;
+  a.download = 'ModuloTerritoriale_' + safeName + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+
 async function stampaIntervento(id) {
   // Carica i dati dell'intervento
   var res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });

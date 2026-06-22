@@ -204,6 +204,21 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .seg-card-text { font-size:0.85rem; color:var(--testo); white-space:pre-wrap; }
 .seg-card-resp { margin-top:0.5rem; padding:0.5rem 0.8rem; background:var(--bg-2); border-radius:6px; font-size:0.78rem; color:var(--testo-2); border-left:3px solid var(--green); }
 
+/* Volontari picker NUOVO per intervento */
+.vol-picker-search { width:100%; padding:0.55rem 0.8rem; border:0.5px solid var(--border); border-radius:8px; background:var(--bg-2); font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
+.vol-picker-dropdown { background:var(--bg-card); border:0.5px solid var(--border); border-radius:8px; margin-top:0.3rem; max-height:200px; overflow-y:auto; box-shadow:var(--shadow); }
+.vp-dd-item { padding:0.5rem 0.8rem; cursor:pointer; font-size:0.82rem; border-bottom:0.5px solid var(--border); transition:background 0.1s; }
+.vp-dd-item:last-child { border-bottom:none; }
+.vp-dd-item:hover { background:var(--bg-2); }
+.int-vol-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.5rem; box-shadow:var(--shadow); }
+.int-vol-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; font-size:0.88rem; color:var(--testo); }
+.int-vol-card-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem; align-items:end; }
+.int-vol-field { display:flex; flex-direction:column; gap:0.2rem; font-size:0.7rem; color:var(--testo-3); }
+.int-vol-field input { padding:0.35rem 0.55rem; border:0.5px solid var(--border); border-radius:6px; background:var(--bg-2); font-family:var(--font); font-size:0.78rem; color:var(--testo); outline:none; }
+.int-vol-field input:focus { border-color:var(--green); }
+.int-vol-check { display:flex; align-items:center; gap:0.3rem; font-size:0.78rem; color:var(--testo); padding-bottom:0.35rem; cursor:pointer; }
+.int-vol-check input { accent-color:var(--green); width:16px; height:16px; cursor:pointer; }
+
 /* Galleria */
 .gall-albums { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.8rem; }
 .gall-album { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); overflow:hidden; cursor:pointer; box-shadow:var(--shadow); transition:transform 0.15s; }
@@ -1466,6 +1481,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="area-riservata.js?v=85"></script>
+<script src="area-riservata.js?v=86"></script>
 </body>
 </html>
