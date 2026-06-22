@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" id="metaAppTitle" content="PC ANA Casale">
+<meta name="apple-mobile-web-app-title" content="PC ANA Casale">
 <meta name="theme-color" content="#0d1117">
 <link rel="manifest" href="manifest.json">
-<title id="pageTitle">PC ANA Casale — Area Riservata</title>
+<title>PC ANA Casale — Area Riservata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -75,6 +75,9 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* ── LOGIN ── */
 #loginScreen { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:1.5rem; }
 .login-card { background:var(--bg-card); border-radius:var(--r-lg); padding:2rem 1.5rem; width:100%; max-width:360px; box-shadow:var(--shadow); }
+.login-tabs { display:flex; gap:0.3rem; margin:1rem 0 1.2rem; background:var(--bg-2); padding:3px; border-radius:8px; }
+.login-tab { flex:1; padding:0.55rem; background:transparent; border:none; font-family:var(--font); font-size:0.82rem; font-weight:600; color:var(--testo-3); cursor:pointer; border-radius:6px; transition:all 0.15s; }
+.login-tab.active { background:var(--bg-card); color:var(--green); box-shadow:var(--shadow); }
 .login-logo { text-align:center; margin-bottom:1.8rem; }
 .login-logo img { height:56px; margin-bottom:0.8rem; }
 .login-logo h1 { font-size:1.1rem; font-weight:700; color:var(--testo); }
@@ -166,9 +169,104 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-stat-pill { background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; padding:0.3rem 0.9rem; font-size:0.7rem; color:var(--testo-3); box-shadow:var(--shadow); }
 .vol-stat-pill span { color:var(--green); font-weight:600; }
 .vol-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
+
+/* Accessi */
+.accessi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:0.7rem; }
+.acc-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:var(--shadow); }
+.acc-row { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0; border-top:0.5px solid var(--border); font-size:0.78rem; gap:0.5rem; }
+.acc-row:first-of-type { border-top:none; }
+.acc-lbl { color:var(--testo-3); flex-shrink:0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.3px; }
+.acc-val { color:var(--testo); text-align:right; word-break:break-all; }
+.acc-mono { font-family:monospace; font-size:0.76rem; }
+.acc-badge { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; margin-left:0.3rem; }
+.acc-active { background:rgba(34,139,82,0.15); color:var(--green); }
+.acc-sosp   { background:rgba(217,164,0,0.15); color:#d9a400; }
+.acc-inactive { background:rgba(120,120,120,0.15); color:var(--testo-3); }
+.acc-master { background:rgba(155,89,182,0.15); color:#9b59b6; }
+.acc-std    { background:rgba(76,141,255,0.15); color:#4c8dff; }
+
+/* Scheda personale (volontario) */
+.schedapers-hero { display:flex; align-items:center; gap:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); margin-bottom:1rem; }
+.schedapers-avatar { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.3rem; flex-shrink:0; }
+.schedapers-name { font-size:1.1rem; font-weight:600; color:var(--testo); }
+.schedapers-role { font-size:0.78rem; color:var(--testo-3); margin-top:0.2rem; }
+.schedapers-sec { background:var(--bg-card); border-radius:var(--r-md); box-shadow:var(--shadow); margin-bottom:0.8rem; overflow:hidden; }
+.schedapers-sec-title { font-size:0.7rem; font-weight:700; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; padding:0.6rem 1rem; background:var(--bg-2); }
+.schedapers-field { display:flex; justify-content:space-between; padding:0.55rem 1rem; border-top:0.5px solid var(--border); font-size:0.82rem; gap:0.6rem; }
+.schedapers-field:first-of-type { border-top:none; }
+.schedapers-lbl { color:var(--testo-3); flex-shrink:0; }
+.schedapers-val { color:var(--testo); text-align:right; word-break:break-word; }
+
+/* Segnalazioni */
+.seg-form { background:var(--bg-card); border-radius:var(--r-md); padding:1rem; box-shadow:var(--shadow); margin-bottom:0.8rem; }
+.seg-card { background:var(--bg-card); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:var(--shadow); margin-bottom:0.6rem; }
+.seg-card-head { display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--testo-3); margin-bottom:0.5rem; }
+.seg-card-text { font-size:0.85rem; color:var(--testo); white-space:pre-wrap; }
+.seg-card-resp { margin-top:0.5rem; padding:0.5rem 0.8rem; background:var(--bg-2); border-radius:6px; font-size:0.78rem; color:var(--testo-2); border-left:3px solid var(--green); }
+
+/* Galleria */
+.gall-albums { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.8rem; }
+.gall-album { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); overflow:hidden; cursor:pointer; box-shadow:var(--shadow); transition:transform 0.15s; }
+.gall-album:hover { transform:translateY(-2px); }
+.gall-album-cover { width:100%; aspect-ratio:4/3; background:var(--bg-2); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.gall-album-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+.gall-album-cover .gall-folder-icon { font-size:3rem; opacity:0.3; }
+.gall-album-info { padding:0.6rem 0.8rem; }
+.gall-album-name { font-size:0.88rem; font-weight:600; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gall-album-meta { font-size:0.7rem; color:var(--testo-3); margin-top:0.2rem; }
+.gall-photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:0.5rem; }
+.gall-photo { aspect-ratio:1; background:var(--bg-2); border-radius:var(--r-sm); overflow:hidden; cursor:pointer; box-shadow:var(--shadow); position:relative; }
+.gall-photo img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.2s; }
+.gall-photo:hover img { transform:scale(1.05); }
+.gall-lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; display:none; align-items:center; justify-content:center; padding:2rem; }
+.gall-lightbox.open { display:flex; }
+.gall-lightbox img { max-width:90vw; max-height:80vh; object-fit:contain; border-radius:4px; }
+.gall-lb-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.1); border:none; color:white; width:42px; height:42px; border-radius:50%; font-size:1.3rem; cursor:pointer; }
+.gall-lb-prev, .gall-lb-next { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); border:none; color:white; width:48px; height:48px; border-radius:50%; font-size:2rem; cursor:pointer; line-height:1; }
+.gall-lb-prev { left:1rem; }
+.gall-lb-next { right:1rem; }
+.gall-lb-caption { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); color:white; font-size:0.85rem; background:rgba(0,0,0,0.6); padding:0.4rem 0.9rem; border-radius:14px; }
+
+/* Visite Mediche */
+.visite-dashboard { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem; margin-bottom:0.9rem; }
+.vd-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.7rem 0.9rem; cursor:pointer; transition:all 0.15s; box-shadow:var(--shadow); }
+.vd-card:hover { transform:translateY(-1px); border-color:var(--green); }
+.vd-card.vd-active { border-color:var(--green); background:rgba(34,139,82,0.06); }
+.vd-card-num { font-size:1.55rem; font-weight:700; line-height:1; color:var(--testo); }
+.vd-card-lbl { font-size:0.62rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.3rem; }
+.vd-card-bar { height:3px; border-radius:2px; margin-top:0.45rem; background:var(--bg-2); overflow:hidden; }
+.vd-card-bar-fill { height:100%; border-radius:2px; }
+.form-row { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
+.visite-table-wrap { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow-x:auto; }
+.visite-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; min-width:720px; }
+.visite-tbl th { text-align:left; font-weight:600; font-size:0.65rem; color:var(--testo-3); padding:0.6rem 0.8rem; border-bottom:0.5px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; background:var(--bg-2); position:sticky; top:0; }
+.visite-tbl td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); vertical-align:middle; }
+.visite-tbl tr:hover td { background:var(--bg-2); }
+.visite-tbl .vt-nome { font-weight:500; color:var(--testo); }
+.visite-tbl .vt-cf { font-family:monospace; font-size:0.72rem; color:var(--testo-3); }
+.visite-tbl .vt-sel { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 8px; font-size:0.7rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; }
+.visite-tbl .vt-sel:hover { border-color:var(--green); }
+.visite-tbl .vt-date { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 6px; font-size:0.72rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; min-width:110px; }
+.visite-tbl .vt-chk { width:18px; height:18px; cursor:pointer; accent-color:var(--green); margin:0 auto; display:block; }
+.visite-stato { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; }
+.vs-completata { background:rgba(34,139,82,0.15); color:var(--green); }
+.vs-da_fare    { background:rgba(217,164,0,0.15); color:#d9a400; }
+.vs-verifica   { background:rgba(255,140,0,0.15); color:#ff8c00; }
+.vs-solo_esami { background:rgba(76,141,255,0.15); color:#4c8dff; }
+.vs-esonero    { background:rgba(120,120,120,0.15); color:var(--testo-3); }
+.vs-vuoto      { background:rgba(220,53,69,0.12); color:#dc3545; }
+.visite-saving { opacity:0.5; pointer-events:none; }
 .vol-card { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
 .vol-card:last-child { border-bottom:none; }
 .vol-card:active { background:var(--bg-2); }
+
+/* Desktop ≥800px: lista volontari a griglia 2 colonne */
+@media (min-width:800px) {
+  #volList.vol-list { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:transparent; box-shadow:none; border-radius:0; overflow:visible; }
+  #volList.vol-list .vol-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow); }
+  #volList.vol-list .vol-card:hover { background:var(--bg-2); }
+  #volList.vol-list > .loading-msg { grid-column:1 / -1; }
+}
 .vol-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
 .vol-card-info { flex:1; min-width:0; }
 .vol-card-name { font-size:0.9rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -274,6 +372,8 @@ div:hover > .vista-edit-btn { display:flex; }
 .int-pill { background:var(--bg-2); color:var(--testo-3); }
 .int-pill.green { background:var(--green-pale); color:var(--green); }
 .int-pill.blue { background:rgba(0,122,255,0.1); color:var(--blue); }
+.int-pill.prog { background:rgba(217,164,0,0.18); color:#a87800; font-weight:700; }
+.int-card-prog { border-left:3px solid #d9a400; opacity:0.92; }
 .int-detail { display:none; position:fixed; inset:0; background:var(--bg); z-index:400; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
 .int-detail.open { display:block; animation:fadeIn 0.18s ease; }
 .int-detail-top { position:sticky; top:0; background:var(--bg-card); border-bottom:0.5px solid var(--border); padding:0.75rem 1rem; padding-top:calc(0.75rem + var(--safe-t)); display:flex; align-items:center; gap:0.8rem; z-index:10; padding-top:calc(0.75rem + var(--safe-t)); }
@@ -402,6 +502,220 @@ div:hover > .vista-edit-btn { display:flex; }
 
 @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
+.btn-export { width:100%; padding:0.8rem; margin-top:0.5rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo-2); cursor:pointer; font-weight:500; box-shadow:var(--shadow); }
+.btn-export:active { opacity:0.7; }
+
+
+.inv-del-btn { background:none; border:none; color:var(--testo-4); font-size:1.1rem; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
+.inv-del-btn:hover { color:var(--red); }
+
+
+.inv-edit-btn { background:none; border:none; color:var(--testo-4); font-size:0.85rem; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
+.inv-edit-btn:hover { color:var(--blue); }
+
+
+/* -- SIDEBAR -- */
+.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:300; }
+.sidebar-overlay.open { display:block; }
+.sidebar { position:fixed; top:0; left:-280px; width:280px; height:100vh; height:100dvh;
+  background:var(--bg-card); border-right:0.5px solid var(--border);
+  z-index:400; transition:left 0.28s cubic-bezier(0.4,0,0.2,1);
+  display:flex; flex-direction:column; overflow:hidden;
+  box-shadow:4px 0 24px rgba(0,0,0,0.12); }
+.sidebar.open { left:0; }
+.sidebar-header { padding:calc(1rem + var(--safe-t)) 1.2rem 1rem;
+  background:var(--green); color:#fff; flex-shrink:0; }
+.sidebar-header-logo { display:flex; align-items:center; gap:0.7rem; margin-bottom:0.5rem; }
+.sidebar-header-logo img { height:36px; border-radius:50%; }
+.sidebar-app-name { font-size:1rem; font-weight:700; }
+.sidebar-user { font-size:0.75rem; opacity:0.85; margin-top:0.1rem; }
+.sidebar-role { font-size:0.68rem; opacity:0.7; }
+.sidebar-nav { flex:1; overflow-y:auto; padding:0.5rem 0; }
+.sidebar-section-label { font-size:0.65rem; font-weight:600; color:var(--testo-3);
+  text-transform:uppercase; letter-spacing:0.6px; padding:0.8rem 1.2rem 0.3rem; }
+.sidebar-item { display:flex; align-items:center; gap:0.9rem; padding:0.75rem 1.2rem;
+  cursor:pointer; border:none; background:none; width:100%; font-family:var(--font);
+  text-align:left; transition:background 0.12s; position:relative; }
+.sidebar-item:active { background:var(--bg-2); }
+.sidebar-item.active { background:var(--green-pale); }
+.sidebar-item.active .si-label { color:var(--green); font-weight:600; }
+.sidebar-item.active .si-icon { background:var(--green); color:#fff; }
+.si-icon { width:34px; height:34px; border-radius:9px; background:var(--bg-2);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.si-icon svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.8;
+  fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--testo-3); }
+.sidebar-item.active .si-icon svg { color:#fff; }
+.si-label { font-size:0.9rem; color:var(--testo-2); flex:1; }
+.si-badge { background:var(--red); color:#fff; font-size:0.6rem; font-weight:700;
+  min-width:18px; height:18px; border-radius:9px; display:none;
+  align-items:center; justify-content:center; padding:0 4px; }
+.si-badge.show { display:flex; }
+.sidebar-divider { height:0.5px; background:var(--border); margin:0.4rem 1.2rem; }
+.sidebar-footer { padding:0.8rem 1.2rem calc(0.8rem + var(--safe-b));
+  border-top:0.5px solid var(--border); flex-shrink:0; }
+.sidebar-logout { display:flex; align-items:center; gap:0.8rem; padding:0.6rem 0;
+  cursor:pointer; border:none; background:none; width:100%; font-family:var(--font); }
+.sidebar-logout svg { width:17px; height:17px; stroke:var(--red); stroke-width:1.8;
+  fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.sidebar-logout span { font-size:0.85rem; color:var(--red); }
+
+/* Topbar semplificata */
+.topbar { position:fixed; top:0; left:0; right:0; background:var(--bg-card);
+  border-bottom:0.5px solid var(--border); display:flex; align-items:center;
+  padding:0 14px; gap:10px; z-index:200;
+  height:calc(50px + var(--safe-t)); padding-top:var(--safe-t); }
+.topbar-hamburger { background:none; border:none; cursor:pointer; padding:4px;
+  display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+.topbar-hamburger span { display:block; width:22px; height:2px;
+  background:var(--testo); border-radius:2px; transition:all 0.2s; }
+.topbar-center { flex:1; text-align:center; }
+.topbar-page-title { font-size:0.92rem; font-weight:700; color:var(--testo); }
+.topbar-time { font-size:0.72rem; color:var(--testo-3); flex-shrink:0; }
+.main-content { margin-top:calc(50px + var(--safe-t)); padding-bottom:calc(1.5rem + var(--safe-b));
+  overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  height:calc(100dvh - 50px - var(--safe-t)); }
+
+
+/* -- DB AVANZATO -- */
+.db-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem; flex-wrap:wrap; }
+.db-search { flex:1; min-width:140px; padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
+.db-search:focus { border-color:var(--green); }
+.db-btn { padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.75rem; color:var(--testo-2); cursor:pointer; white-space:nowrap; }
+.db-btn.green { background:var(--green); color:#fff; border-color:var(--green); }
+.db-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:0.5px solid var(--border); background:var(--bg-card); }
+.db-table { border-collapse:collapse; min-width:100%; font-size:0.8rem; }
+.db-table th { background:var(--bg-2); padding:0.5rem 0.8rem; text-align:left; font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; border-bottom:0.5px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
+.db-table th.sortable { cursor:pointer; user-select:none; }
+.db-table th.sortable:hover { color:var(--green); }
+.db-table td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); color:var(--testo); white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+.db-table tr:last-child td { border-bottom:none; }
+.db-table tr:hover td { background:var(--bg-2); }
+.db-check { color:var(--green); font-size:0.85rem; }
+.db-empty { color:var(--testo-4); font-style:italic; }
+.db-loading { text-align:center; padding:2rem; color:var(--testo-3); }
+.db-add-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.8rem; cursor:pointer; color:var(--green); font-size:0.78rem; border-top:0.5px solid var(--border); background:var(--bg-card); }
+.db-add-row:hover { background:var(--green-pale); }
+.db-pagination { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.8rem; border-top:0.5px solid var(--border); background:var(--bg-card); border-radius:0 0 var(--r) var(--r); }
+.db-pag-info { font-size:0.72rem; color:var(--testo-3); }
+.db-pag-btns { display:flex; gap:0.4rem; }
+.db-pag-btn { padding:0.3rem 0.7rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.72rem; color:var(--testo-2); cursor:pointer; }
+.db-pag-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.db-pag-btn.active { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* Colonne overlay */
+.db-cols-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:600; align-items:flex-end; }
+.db-cols-overlay.open { display:flex; }
+.db-cols-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:70vh; overflow-y:auto; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
+.db-cols-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:0.8rem; }
+.db-cols-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; }
+.db-col-item { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.5rem; border-radius:6px; cursor:pointer; }
+.db-col-item:hover { background:var(--bg-2); }
+.db-col-item input { accent-color:var(--green); width:14px; height:14px; }
+.db-col-item label { font-size:0.78rem; color:var(--testo-2); cursor:pointer; }
+
+/* Form nuovo/modifica record */
+.db-record-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:700; align-items:flex-end; }
+.db-record-overlay.open { display:flex; }
+.db-record-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:85vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
+.db-record-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:1rem; }
+.db-record-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.8rem; }
+.db-record-field { }
+.db-record-field.full { grid-column:span 2; }
+.db-record-lbl { font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:0.2rem; display:block; }
+.db-record-inp { width:100%; padding:0.6rem 0.8rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
+.db-record-inp:focus { border-color:var(--green); }
+.db-record-check { display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0; font-size:0.82rem; color:var(--testo-2); cursor:pointer; }
+.db-record-check input { accent-color:var(--green); width:15px; height:15px; }
+
+
+/* -- HOME DASHBOARD -- */
+.home-section { margin-bottom:0.7rem; }
+.home-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); margin-bottom:0.5rem; padding-bottom:0.4rem; border-bottom:0.5px solid var(--border); }
+.home-empty { font-size:0.78rem; color:var(--testo-3); padding:0.8rem 0; font-style:italic; }
+.home-list { background:var(--bg-card); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+.home-list-row { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 0.9rem; border-bottom:0.5px solid var(--border); transition:background 0.12s; }
+.home-list-row:last-child { border-bottom:none; }
+.home-list-row:active { background:var(--bg-2); }
+.home-list-row-today { background:var(--green-pale) !important; }
+.home-list-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:600; flex-shrink:0; }
+.home-list-info { flex:1; min-width:0; overflow:hidden; }
+.home-list-name { font-size:0.82rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.home-list-sub { font-size:0.68rem; color:var(--testo-3); margin-top:0.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.home-list-badge { font-size:0.65rem; font-weight:600; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 7px; border-radius:10px; white-space:nowrap; }
+
+
+/* -- MEZZI -- */
+.mezzo-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); overflow:hidden; }
+.mezzo-card { display:flex; align-items:center; gap:0.8rem; padding:0.85rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
+.mezzo-card:last-child { border-bottom:none; }
+.mezzo-card:active { background:var(--bg-2); }
+.mezzo-icon { width:42px; height:42px; border-radius:10px; background:var(--bg-2); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.mezzo-icon svg { width:22px; height:22px; stroke:var(--testo-3); stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.mezzo-info { flex:1; min-width:0; }
+.mezzo-nome { font-size:0.88rem; font-weight:600; color:var(--testo); }
+.mezzo-targa { font-size:0.72rem; color:var(--testo-3); margin-top:0.1rem; font-family:monospace; }
+.mezzo-stato { flex-shrink:0; text-align:right; }
+.mezzo-stato-badge { font-size:0.62rem; font-weight:600; padding:3px 9px; border-radius:10px; display:inline-block; }
+.msb-ok  { background:var(--green-pale); color:var(--green); }
+.msb-warn { background:var(--amber-pale); color:var(--amber); }
+.msb-off  { background:var(--red-pale); color:var(--red); }
+.mezzo-rev { font-size:0.65rem; color:var(--testo-4); margin-top:0.2rem; }
+.mezzo-rev.scaduta { color:var(--red); }
+.mezzo-rev.vicina  { color:var(--amber); }
+.mezzi-add-btn { display:flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.8rem; margin-top:0.7rem; background:var(--green); border:none; border-radius:var(--r); font-family:var(--font); font-size:0.85rem; font-weight:600; color:#fff; cursor:pointer; width:100%; }
+
+
+/* -- MEZZI GALLERIA -- */
+.mezzi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.7rem; }
+.mezzo-tile { background:var(--bg-card); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--shadow); border:0.5px solid var(--border); cursor:pointer; transition:transform 0.12s; }
+.mezzo-tile:active { transform:scale(0.97); }
+.mezzo-tile-foto { width:100%; aspect-ratio:4/3; background:var(--bg-2); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+.mezzo-tile-foto img { width:100%; height:100%; object-fit:cover; }
+.mezzo-tile-foto .mezzo-tile-placeholder { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+.mezzo-tile-foto .mezzo-tile-placeholder svg { width:40px; height:40px; stroke:var(--testo-4); stroke-width:1.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.mezzo-tile-stato { position:absolute; top:6px; right:6px; font-size:0.58rem; font-weight:700; padding:2px 7px; border-radius:10px; }
+.mezzo-tile-body { padding:0.65rem 0.75rem; }
+.mezzo-tile-nome { font-size:0.82rem; font-weight:600; color:var(--testo); line-height:1.2; margin-bottom:0.2rem; }
+.mezzo-tile-targa { font-size:0.68rem; color:var(--testo-3); font-family:monospace; letter-spacing:0.5px; }
+.mezzo-tile-rev { font-size:0.62rem; margin-top:0.3rem; padding:2px 7px; border-radius:6px; display:inline-block; }
+.mezzo-tile-rev.ok   { background:var(--green-pale); color:var(--green); }
+.mezzo-tile-rev.warn { background:var(--amber-pale); color:var(--amber); }
+.mezzo-tile-rev.scad { background:var(--red-pale); color:var(--red); }
+
+
+/* -- SPLASH SCREEN -- */
+#splashScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
+#splashScreen.fade-out { opacity:0; pointer-events:none; }
+.splash-logo-wrap { width:120px; height:120px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 24px rgba(0,0,0,0.2); opacity:0; transform:scale(0.82); transition:opacity 0.7s ease,transform 0.7s ease; }
+.splash-logo-wrap.show { opacity:1; transform:scale(1); }
+.splash-logo-wrap img { width:106px; height:106px; border-radius:50%; object-fit:cover; }
+.splash-title { text-align:center; opacity:0; transform:translateY(8px); transition:opacity 0.6s ease 0.2s,transform 0.6s ease 0.2s; }
+.splash-title.show { opacity:1; transform:translateY(0); }
+.splash-title h2 { color:white; font-size:1.1rem; font-weight:700; margin:0; }
+.splash-title p { color:rgba(255,255,255,0.6); font-size:0.75rem; margin:0.2rem 0 0; }
+.splash-dots { display:flex; gap:6px; opacity:0; transition:opacity 0.4s ease 0.4s; position:absolute; bottom:48px; }
+.splash-dots.show { opacity:1; }
+.splash-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.35); transition:background 0.3s; }
+.splash-dot.lit { background:white; }
+
+/* -- WELCOME SCREEN -- */
+#welcomeScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
+#welcomeScreen.visible { display:flex; }
+#welcomeScreen.fade-out { opacity:0; pointer-events:none; }
+.welcome-avatar { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.82); transition:opacity 0.6s ease,transform 0.6s ease; }
+.welcome-avatar.show { opacity:1; transform:scale(1); }
+.welcome-avatar span { font-size:1.8rem; font-weight:700; color:white; }
+.welcome-text { text-align:center; opacity:0; transform:translateY(8px); transition:opacity 0.5s ease 0.15s,transform 0.5s ease 0.15s; }
+.welcome-text.show { opacity:1; transform:translateY(0); }
+.welcome-text .wt-ciao { color:rgba(255,255,255,0.7); font-size:0.9rem; }
+.welcome-text .wt-nome { color:white; font-size:1.4rem; font-weight:700; margin-top:0.2rem; }
+.welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
+
+
+.inv-extra-list { padding:0.4rem 0.8rem 0.5rem; border-top:0.5px solid var(--border); background:var(--bg-2); border-radius:0 0 var(--r) var(--r); }
+.inv-extra-row { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem; }
+
+
 </style>
 </head>
 <body>
@@ -409,7 +723,7 @@ div:hover > .vista-edit-btn { display:flex; }
   <!-- SPLASH SCREEN -->
   <div id="splashScreen">
     <div class="splash-logo-wrap" id="splashLogo"><img src="icons/icon-192x192.png" alt="PC ANA" onerror="this.style.display='none'"></div>
-    <div class="splash-title" id="splashTitle"><h2 id="splashNome">PC ANA Casale</h2><p id="splashDescrizione">Protezione Civile ANA</p></div>
+    <div class="splash-title" id="splashTitle"><h2>PC ANA Casale</h2><p>Protezione Civile ANA</p></div>
     <div class="splash-dots" id="splashDots"><div class="splash-dot" id="dot1"></div><div class="splash-dot" id="dot2"></div><div class="splash-dot" id="dot3"></div></div>
   </div>
   <div id="welcomeScreen"><div class="welcome-avatar" id="welcomeAvatar"><span id="welcomeInitials">—</span></div><div class="welcome-text" id="welcomeText"><div class="wt-ciao">Benvenuto</div><div class="wt-nome" id="welcomeName">—</div><div class="wt-ruolo" id="welcomeRuolo">—</div></div></div>
@@ -419,16 +733,34 @@ div:hover > .vista-edit-btn { display:flex; }
 <div id="loginScreen" style="display:flex">
   <div class="login-card">
     <div class="login-logo">
-      <img id="loginLogo" src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
-      <h1 id="loginTitolo">PC ANA Casale Monferrato</h1>
+      <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
+      <h1>PC ANA Casale Monferrato</h1>
     </div>
-    <label class="login-label">Username</label>
-    <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
-    <label class="login-label">Password</label>
-    <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-    <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
+
+    <div class="login-tabs">
+      <button class="login-tab active" id="ltabAdmin" onclick="switchLoginTab('admin')">Amministratori</button>
+      <button class="login-tab" id="ltabVol" onclick="switchLoginTab('vol')">Volontari</button>
+    </div>
+
+    <!-- Tab Admin -->
+    <div id="loginFormAdmin">
+      <label class="login-label">Username</label>
+      <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
+      <label class="login-label">Password</label>
+      <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
+    </div>
+
+    <!-- Tab Volontario -->
+    <div id="loginFormVol" style="display:none">
+      <label class="login-label">Codice Fiscale</label>
+      <input class="login-input" type="text" id="loginVolCF" placeholder="RSSMRA80A01H501U" maxlength="16" style="text-transform:uppercase">
+      <label class="login-label">Data di nascita</label>
+      <input class="login-input" type="date" id="loginVolData">
+      <button class="btn-login" onclick="doLoginVolontario()">Accedi come volontario</button>
+    </div>
+
     <div class="login-error" id="loginError"></div>
-    
   </div>
 </div>
 
@@ -452,10 +784,10 @@ div:hover > .vista-edit-btn { display:flex; }
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-header-logo">
-        <img id="sidebarLogo" src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
+        <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
         <div>
-          <div class="sidebar-app-name" id="sidebarNome">PC ANA CASALE</div>
-          <div class="sidebar-role" id="sidebarDescrizione">Protezione Civile ANA</div>
+          <div class="sidebar-app-name">PC ANA CASALE</div>
+          <div class="sidebar-role">Protezione Civile ANA</div>
         </div>
       </div>
       <div class="sidebar-user" id="sidebarUser">—</div>
@@ -488,6 +820,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Mezzi</span>
       </button>
 
+      <button class="sidebar-item" id="siTlc" onclick="navTo('tlc','TLC',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/><path d="M14 4l3 3-3 3"/><path d="M21 4l-3 3 3 3"/></svg></div>
+        <span class="si-label">TLC</span>
+      </button>
+
       <button class="sidebar-item" id="siDb" onclick="navTo('db','DB Avanzato',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v5c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 10v5c0 1.66 4 3 9 3s9-1.34 9-3v-5"/><path d="M3 15v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg></div>
         <span class="si-label">DB Avanzato</span>
@@ -497,9 +834,33 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
         <span class="si-label">Documenti</span>
       </button>
-<div class="sidebar-divider"></div>
-      <div class="sidebar-section-label">Strumenti</div>
-<button class="sidebar-item" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();">
+
+      <button class="sidebar-item" id="siVisite" onclick="navTo('visite','Visite Mediche',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
+        <span class="si-label">Visite Mediche</span>
+      </button>
+
+      <button class="sidebar-item" id="siSchedaPersonale" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <span class="si-label">La mia scheda</span>
+      </button>
+
+      <button class="sidebar-item" id="siGalleria" onclick="navTo('galleria','Galleria',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        <span class="si-label">Galleria</span>
+      </button>
+
+      <button class="sidebar-item" id="siSegnalazioni" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="si-label">Segnalazioni</span>
+        <span class="si-badge" id="siBadgeSegnalazioni"></span>
+      </button>
+
+      <div class="sidebar-divider" id="siDividerStrumenti"></div>
+      <div class="sidebar-section-label" id="siLabelStrumenti">Strumenti</div>
+
+
+      <button class="sidebar-item" id="siConvocazioni" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></div>
         <span class="si-label">Convocazioni</span>
       </button>
@@ -513,6 +874,11 @@ div:hover > .vista-edit-btn { display:flex; }
       <button class="sidebar-item" id="siImpostazioni" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
         <span class="si-label">Impostazioni</span>
+      </button>
+
+      <button class="sidebar-item" id="siAccessi" onclick="navTo('accessi','Accessi',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="18" cy="6" r="2"/></svg></div>
+        <span class="si-label">Accessi</span>
       </button>
     </nav>
 
@@ -548,20 +914,24 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-toolbar">
         <input class="vol-search" type="search" id="volSearch" placeholder="cerca nome, squadra..." oninput="filtraVolontari()">
         <button class="vol-filter-btn" id="volFilterBtn" onclick="toggleVolFiltri()">⚙ filtri</button>
-        <button class="vol-add-btn" onclick="apriFormVolontario(null)">+ nuovo</button>
+        <button class="vol-add-btn" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none">+ nuovo</button>
       </div>
       <div class="vol-filters" id="volFiltri">
         <div class="vol-filter-row">
           <select class="vol-filter-sel" id="filtroSquadra" onchange="filtraVolontari()">
             <option value="">Tutte le squadre</option>
+            <option>ALFA</option><option>CASALE</option><option>COLLINA</option>
+            <option>SEZIONE</option><option>TORINO</option>
           </select>
           <select class="vol-filter-sel" id="filtroTipo" onchange="filtraVolontari()">
             <option value="">Tutti i tipi</option>
+            <option>VOLONTARIO</option><option>CAPO SQUADRA</option><option>PRESIDENTE</option>
           </select>
         </div>
         <div class="vol-filter-row">
           <select class="vol-filter-sel" id="filtroMansione" onchange="filtraVolontari()">
             <option value="">Tutte le mansioni</option>
+            <option>GENERICO</option><option>LOGISTICA</option><option>MAGAZZINIERE</option>
           </select>
           <select class="vol-filter-sel" id="filtroAttivo" onchange="filtraVolontari()">
             <option value="">Tutti</option>
@@ -582,7 +952,7 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="vol-detail-top">
         <button class="vol-detail-back" onclick="chiudiDettaglio()">← indietro</button>
         <span class="vol-detail-title" id="volDetailTitle">—</span>
-        <button class="vol-detail-edit" onclick="apriFormVolontario(volCorrenteId)">modifica</button>
+        <button class="vol-detail-edit" id="btnModificaVolontario" onclick="apriFormVolontario(volCorrenteId)" style="display:none">modifica</button>
       </div>
       <div class="vol-detail-body" id="volDetailBody"></div>
     </div>
@@ -647,16 +1017,24 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="form-field" style="margin-bottom:0.6rem">
           <label class="form-lbl">Categoria</label>
           <select class="form-inp" id="docTipo">
-            <option value="FOTO">📷 Foto profilo</option>
-            <option value="4_ORE">📋 Attestato 4 Ore</option>
-            <option value="12_ORE">📋 Attestato 12 Ore</option>
-            <option value="CAPOSQ">📋 Attestato Caposquadra</option>
-            <option value="DAE">🏥 Attestato DAE</option>
-            <option value="CDC_1">🏥 CDC 1° Step</option>
-            <option value="CDC_2">🏥 CDC 2° Step</option>
-            <option value="VISITA">🩺 Visita medica</option>
-            <option value="EMERCOM">📡 EMERCOM</option>
-            <option value="ALTRO">📄 Altro</option>
+            <optgroup label="Foto">
+              <option value="FOTO">📷 Foto profilo</option>
+            </optgroup>
+            <optgroup label="Documenti">
+              <option value="IDENTITA">🪪 Documento d'identità</option>
+              <option value="VISITA">🩺 Visita medica</option>
+              <option value="ALTRO">📄 Altro</option>
+            </optgroup>
+            <optgroup label="Attestati">
+              <option value="4_ORE">📜 Attestato 4 Ore</option>
+              <option value="12_ORE">📜 Attestato 12 Ore</option>
+              <option value="CAPOSQ">📜 Attestato Caposquadra</option>
+              <option value="DAE">📜 Attestato DAE</option>
+              <option value="CDC_1">📜 CDC 1° Step</option>
+              <option value="CDC_2">📜 CDC 2° Step</option>
+              <option value="EMERCOM">📜 EMERCOM</option>
+              <option value="ATTESTATO">📜 Attestato intervento</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-field" style="margin-bottom:0.6rem">
@@ -727,9 +1105,72 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
 
+    <!-- VISITE MEDICHE -->
+    <div class="panel" id="panelVisite">
+      <div class="panel-hdr"><h2>Visite Mediche</h2><p>Stato visite e CDC dei volontari attivi</p></div>
+      <div id="visiteDashboard" class="visite-dashboard"></div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="visiteSearch" class="form-inp" placeholder="cerca cognome, nome, CF..." oninput="filtraVisite()" style="flex:1">
+        <select id="visiteFiltroStato" class="form-inp" onchange="filtraVisite()" style="max-width:180px">
+          <option value="">tutti gli stati</option>
+          <option value="ESONERO">Esonero</option>
+          <option value="DA_FARE">Da Fare</option>
+          <option value="VERIFICA">Verifica</option>
+          <option value="SOLO_ESAMI">Solo Esami</option>
+          <option value="COMPLETATA">Completata</option>
+          <option value="VUOTO">Non impostato</option>
+        </select>
+      </div>
+      <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- ACCESSI (per master) -->
+    <div class="panel" id="panelAccessi">
+      <div class="panel-hdr"><h2>Accessi e credenziali</h2><p>Riepilogo accessi al sistema</p></div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="accessiSearch" class="form-inp" placeholder="cerca per nome, CF, ruolo..." oninput="filtraAccessi()" style="flex:1">
+        <select id="accessiTipo" class="form-inp" onchange="filtraAccessi()" style="max-width:180px">
+          <option value="">tutti</option>
+          <option value="admin">Solo amministratori</option>
+          <option value="vol">Solo volontari</option>
+        </select>
+      </div>
+      <div id="accessiContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA PERSONALE (per volontari) -->    <div class="panel" id="panelSchedapers">
+      <div class="panel-hdr"><h2>La mia scheda</h2><p>I tuoi dati personali (sola lettura)</p></div>
+      <div id="schedaPersContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SEGNALAZIONI (per volontari: invia; per admin: gestisci) -->
+    <div class="panel" id="panelSegnalazioni">
+      <div class="panel-hdr"><h2>Segnalazioni</h2><p id="segnalazioniSub">Segnala errori nella tua scheda</p></div>
+      <div id="segnalazioniContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- GALLERIA -->
+    <div class="panel" id="panelGalleria">
+      <div class="panel-hdr">
+        <h2 id="gallTitle">Galleria</h2>
+        <p id="gallSub">Album fotografici degli eventi</p>
+      </div>
+      <button class="btn-sm" id="gallBackBtn" onclick="galleriaBack()" style="display:none;margin-bottom:0.8rem">← tutti gli album</button>
+      <div id="gallContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="gall-lightbox" id="gallLightbox" onclick="chiudiLightbox(event)">
+      <button class="gall-lb-close" onclick="chiudiLightbox(event, true)">✕</button>
+      <button class="gall-lb-prev" onclick="lightboxNav(-1, event)">‹</button>
+      <button class="gall-lb-next" onclick="lightboxNav(1, event)">›</button>
+      <img id="gallLightboxImg" src="" alt="">
+      <div class="gall-lb-caption" id="gallLightboxCap"></div>
+    </div>
+
     <!-- MEZZI -->
     <div class="panel" id="panelMezzi">
-      <div class="panel-hdr"><h2>Mezzi</h2><p id="mezziSubtitle">Parco veicoli</p></div>
+      <div class="panel-hdr"><h2>Mezzi</h2><p>Parco veicoli PC ANA Casale</p></div>
       <div id="mezziList"><div class="loading-msg">caricamento...</div></div>
     </div>
 
@@ -751,6 +1192,96 @@ div:hover > .vista-edit-btn { display:flex; }
         <button class="vol-form-save" onclick="salvaMezzo()">salva</button>
       </div>
       <div class="vol-form-body" id="mezzoFormBody"></div>
+    </div>
+
+    <!-- TLC (Telecomunicazioni) -->
+    <div class="panel" id="panelTlc">
+      <div class="panel-hdr">
+        <h2>TLC</h2>
+        <p>Apparati di telecomunicazione</p>
+      </div>
+      <div class="form-row" style="margin-bottom:0.8rem">
+        <input type="text" id="tlcSearch" class="form-inp" placeholder="cerca marca, modello, seriale..." oninput="filtraTlc()" style="flex:1">
+        <select id="tlcFiltroTipo" class="form-inp" onchange="filtraTlc()" style="max-width:180px">
+          <option value="">tutti i tipi</option>
+          <option value="PORTATILE">Portatile</option>
+          <option value="VEICOLARE">Veicolare</option>
+          <option value="STAZIONE_FISSA">Stazione fissa</option>
+          <option value="PONTE_RADIO">Ponte radio</option>
+        </select>
+        <button class="btn-primary" style="padding:0.5rem 1rem" onclick="apriFormTlc(null)">+ nuovo</button>
+      </div>
+      <div id="tlcList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA TLC -->
+    <div class="vol-detail" id="tlcDetail">
+      <div class="vol-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioTlc()">← indietro</button>
+        <span class="vol-detail-title" id="tlcDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="apriFormTlc(tlcCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="tlcDetailBody"></div>
+    </div>
+
+    <!-- FORM TLC -->
+    <div class="vol-form" id="tlcFormPanel">
+      <div class="vol-form-top">
+        <button class="vol-detail-back" onclick="chiudiFormTlc()">← annulla</button>
+        <span class="vol-form-title" id="tlcFormTitle">Nuovo apparato TLC</span>
+        <button class="vol-form-save" onclick="salvaTlc()">salva</button>
+      </div>
+      <div class="vol-form-body" id="tlcFormBody"></div>
+    </div>
+
+    <!-- UPLOAD DOC TLC GENERALE -->
+    <div class="vista-form-overlay" id="tlcDocGenUploadOverlay">
+      <div class="vista-form-card">
+        <h4>Carica documento generale TLC</h4>
+        <div class="form-err" id="tlcDocGenUploadErr"></div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">Tipo</label>
+          <select class="form-inp" id="tlcDocGenTipo">
+            <option value="MANUALE">📚 Manuale / Normativa</option>
+            <option value="FREQUENZE">📡 Piano frequenze / Selettive</option>
+            <option value="AMMINISTRATIVO">📋 Amministrativo / Concessione</option>
+            <option value="ALTRO">📁 Altro</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">File</label>
+          <input type="file" id="tlcDocGenFile" accept="image/*,application/pdf">
+        </div>
+        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
+          <button class="btn-sm" onclick="chiudiTlcDocUploadGenerale()">annulla</button>
+          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlcGenerale()">carica</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD DOC TLC -->
+    <div class="vista-form-overlay" id="tlcDocUploadOverlay">
+      <div class="vista-form-card">
+        <h4>Carica documento</h4>
+        <div class="form-err" id="tlcDocUploadErr"></div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">Tipo</label>
+          <select class="form-inp" id="tlcDocTipo">
+            <option value="SCHEDA">📄 Scheda tecnica</option>
+            <option value="FOTO">📷 Foto</option>
+            <option value="LICENZA">📜 Licenza</option>
+            <option value="ALTRO">📁 Altro</option>
+          </select>
+        </div>
+        <div class="form-field" style="margin-bottom:0.5rem">
+          <label class="form-lbl">File</label>
+          <input type="file" id="tlcDocFile" accept="image/*,application/pdf">
+        </div>
+        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
+          <button class="btn-sm" onclick="chiudiTlcDocUpload()">annulla</button>
+          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlc()">carica</button>
+        </div>
+      </div>
     </div>
 
     <!-- STATISTICHE -->
@@ -795,13 +1326,13 @@ div:hover > .vista-edit-btn { display:flex; }
           <div class="form-field"><label class="form-lbl">Ruolo</label><input class="form-inp" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
           <div class="perm-grid">
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
+            <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
-            <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti</label>
-            <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
-            <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
+            <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
-            <label class="perm-check"><input type="checkbox" id="permImpostazioni"> Impostazioni</label>
+            <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
+            <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
           </div>
           <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
           </div>
@@ -915,14 +1446,18 @@ div:hover > .vista-edit-btn { display:flex; }
         <label class="form-lbl">Permessi sezioni</label>
         <div class="perm-grid">
           <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> ✏️ Modifica Volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermTlc"> 📻 TLC</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
-<label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
+          <label class="perm-check"><input type="checkbox" id="modPermVisite"> 🩺 Visite Mediche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermGalleria"> 🖼️ Galleria</label>
+          <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
-</div>
+        </div>
       </div>
       <div style="display:flex;gap:0.5rem">
         <button class="btn-sm btn-warn" onclick="chiudiModificaUtente()" style="flex:1;padding:0.7rem">annulla</button>
@@ -931,7 +1466,6 @@ div:hover > .vista-edit-btn { display:flex; }
     </div>
   </div>
 
-<script src="config.js"></script>
-<script src="area-riservata.js?v=69"></script>
+<script src="area-riservata.js?v=85"></script>
 </body>
 </html>

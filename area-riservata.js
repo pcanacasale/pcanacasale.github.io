@@ -1,64 +1,4 @@
 
-
-// ── Applica APP_CONFIG al DOM ─────────────────────────────
-function applicaConfig() {
-  const u = APP_CONFIG.unita;
-  const c = APP_CONFIG.colori;
-
-  // Testi unità
-  var el;
-  if ((el = document.getElementById('splashNome')))        el.textContent = u.nomeBreve;
-  if ((el = document.getElementById('splashDescrizione'))) el.textContent = u.descrizione;
-  if ((el = document.getElementById('loginTitolo')))       el.textContent = u.nomeLungo;
-  if ((el = document.getElementById('sidebarNome')))       el.textContent = u.nomeSigla;
-  if ((el = document.getElementById('sidebarDescrizione')))el.textContent = u.descrizione;
-  if ((el = document.getElementById('topbarPageTitle')))   el.textContent = u.nomeBreve;
-  if ((el = document.getElementById('pageTitle')))         el.textContent = u.nomeBreve + ' — Area Riservata';
-  document.title = u.nomeBreve + ' — Area Riservata';
-
-  // Meta apple-web-app-title
-  if ((el = document.getElementById('metaAppTitle'))) el.setAttribute('content', u.nomeBreve);
-
-  // Loghi
-  ['loginLogo','sidebarLogo'].forEach(function(id) {
-    if ((el = document.getElementById(id))) el.src = u.logoPath;
-  });
-
-  // Colori CSS — sovrascrive le variabili su :root
-  // Hanno precedenza sulle regole statiche del foglio di stile
-  // (incluso @media prefers-color-scheme: dark, perché lo style inline
-  //  su :root vince sulla cascade quando non c'è !important)
-  var root = document.documentElement;
-  root.style.setProperty('--green',       c.primario);
-  root.style.setProperty('--green-light', c.primarioLight);
-  // In dark mode il browser usa ancora le variabili di :root —
-  // impostiamo primarioDark solo se l'utente è in dark mode
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    root.style.setProperty('--green',       c.primarioDark);
-    root.style.setProperty('--green-light', c.primarioDark);
-  }
-  // Ascolta i cambi di modalità a runtime
-  if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-      root.style.setProperty('--green',       e.matches ? c.primarioDark : c.primario);
-      root.style.setProperty('--green-light', e.matches ? c.primarioDark : c.primarioLight);
-    });
-  }
-
-  // Popola filtri volontari
-  var mkOpts = function(arr, all) {
-    return '<option value="">' + all + '</option>' +
-      arr.map(function(s){ return '<option>' + s + '</option>'; }).join('');
-  };
-  var fs = document.getElementById('filtroSquadra');
-  var ft = document.getElementById('filtroTipo');
-  var fm = document.getElementById('filtroMansione');
-  if (fs) fs.innerHTML = mkOpts(APP_CONFIG.volontari.squadre,  'Tutte le squadre');
-  if (ft) ft.innerHTML = mkOpts(APP_CONFIG.volontari.tipi,     'Tutti i tipi');
-  if (fm) fm.innerHTML = mkOpts(APP_CONFIG.volontari.mansioni, 'Tutte le mansioni');
-}
-document.addEventListener('DOMContentLoaded', applicaConfig);
-
 // -- SPLASH SCREEN --
 function avviaSplash() {
   var logo   = document.getElementById('splashLogo');
@@ -125,45 +65,26 @@ function avviaSplashSafe() {
 }
 document.addEventListener('DOMContentLoaded', avviaSplashSafe);
 
-// ── Merge config.js + default ────────────────────────────
-(function() {
-  if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.supabase) {
-    console.error('config.js mancante o incompleto.');
-    window.APP_CONFIG = { supabase: { url: '', key: '' }, unita: {} };
-  }
-  // Default unita
-  var du = { nome: 'La Mia Unità', sigla: 'LA MIA UNITÀ', logo: 'images/logo.png', colore: '#1a7a4a' };
-  APP_CONFIG.unita = Object.assign({}, du, APP_CONFIG.unita || {});
-  // Valori derivati per retrocompatibilità col codice esistente
-  var u = APP_CONFIG.unita;
-  u.nomeBreve      = u.nome;
-  u.nomeLungo      = u.nome;
-  u.nomeSezione    = u.nome;
-  u.sottotitolo    = '';
-  u.nomeSigla      = u.sigla;
-  u.descrizione    = 'Protezione Civile';
-  u.tipoVolontario = 'Volontario';
-  u.logoPath       = u.logo;
-  // Default colori
-  APP_CONFIG.colori = {
-    primario:      u.colore || '#1a7a4a',
-    primarioLight: u.colore || '#25a863',
-    primarioDark:  '#30d158',
-  };
-  // Default liste (caricate dal DB se disponibili, altrimenti vuote)
-  APP_CONFIG.volontari  = { squadre: [], tipi: ['VOLONTARIO'], mansioni: [] };
-  APP_CONFIG.interventi = { tipiAttivita: ['EMERGENZA','ESERCITAZIONE','CORSI','PREVENZIONE INFORTUNI','RAPPRESENTANZA','ASSEMBLEE E RIUNIONI','CONTROLLO TERRITORIO','SEGRETERIA','MAGAZZINO'] };
-  APP_CONFIG.mezzi      = { stati: ['OPERATIVO','IN MANUTENZIONE','FERMO'] };
-  APP_CONFIG.attestati  = { ruoloFirmatario: 'Il Presidente' };
-})();
-
-// ── Scorciatoie ───────────────────────────────────────────
-const SUPA_URL = APP_CONFIG.supabase.url;
-const SUPA_KEY = APP_CONFIG.supabase.key;
+const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
+let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 
+// PWA
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
+// Orologio
+function updateClock() {
+  const n = new Date();
+  const t = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+  const el = document.getElementById('topbarClock');
+  if (el) el.textContent = t;
+}
+updateClock();
+setInterval(updateClock, 15000);
+
+// -- LOGIN --
 async function doLogin() {
   const u   = document.getElementById('loginUser').value.trim();
   const p   = document.getElementById('loginPass').value.trim();
@@ -173,16 +94,6 @@ async function doLogin() {
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'accesso...';
   try {
-    // Controlla se il DB è configurato e se esiste almeno un master
-    const checkRes  = await fetch(SUPA_URL + '/rest/v1/utenti?tipo_accesso=eq.master&select=id&limit=1', { headers: H });
-    const checkData = await checkRes.json();
-    if (!Array.isArray(checkData)) throw new Error('DB non raggiungibile. Controlla URL e key in config.js');
-    if (checkData.length === 0) {
-      // Primo avvio — nessun master esistente
-      btn.disabled = false; btn.textContent = 'Accedi';
-      mostraSetupPrimoAvvio();
-      return;
-    }
     const res  = await fetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso,permessi', { headers: H });
     const data = await res.json();
     if (data && data.length > 0) {
@@ -195,64 +106,80 @@ async function doLogin() {
       err.textContent = 'Credenziali non corrette.'; err.style.display = 'block';
     }
   } catch(e) {
-    err.textContent = 'Errore: ' + e.message; err.style.display = 'block';
+    err.textContent = 'Errore di connessione.'; err.style.display = 'block';
   }
   btn.disabled = false; btn.textContent = 'Accedi';
 }
 
-// -- PRIMO AVVIO --
-function mostraSetupPrimoAvvio() {
-  var loginCard = document.querySelector('.login-card');
-  if (!loginCard) return;
-  loginCard.innerHTML = `
-    <div class="login-logo">
-      <img id="loginLogo" src="${APP_CONFIG.unita.logo}" alt="" onerror="this.style.display='none'">
-      <h1 id="loginTitolo">${APP_CONFIG.unita.nome}</h1>
-      <p>Primo avvio — crea il tuo account</p>
-    </div>
-    <div class="login-error" id="setupErr"></div>
-    <label class="login-label">Il tuo nome</label>
-    <input class="login-input" type="text" id="setupNome" placeholder="Mario Rossi" autocomplete="name">
-    <label class="login-label">Username</label>
-    <input class="login-input" type="text" id="setupUser" placeholder="mrossi" autocomplete="username">
-    <label class="login-label">Password</label>
-    <input class="login-input" type="password" id="setupPass" placeholder="min. 8 caratteri" autocomplete="new-password">
-    <label class="login-label">Conferma password</label>
-    <input class="login-input" type="password" id="setupPass2" placeholder="ripeti password" autocomplete="new-password">
-    <button class="btn-login" onclick="completaSetup()">Crea account</button>
-  `;
+function switchLoginTab(which) {
+  const adminTab = document.getElementById('ltabAdmin');
+  const volTab   = document.getElementById('ltabVol');
+  const fAdmin   = document.getElementById('loginFormAdmin');
+  const fVol     = document.getElementById('loginFormVol');
+  const err      = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (which === 'vol') {
+    adminTab.classList.remove('active');
+    volTab.classList.add('active');
+    fAdmin.style.display = 'none';
+    fVol.style.display = 'block';
+  } else {
+    volTab.classList.remove('active');
+    adminTab.classList.add('active');
+    fVol.style.display = 'none';
+    fAdmin.style.display = 'block';
+  }
 }
 
-async function completaSetup() {
-  var nome  = document.getElementById('setupNome').value.trim();
-  var user  = document.getElementById('setupUser').value.trim();
-  var pass  = document.getElementById('setupPass').value;
-  var pass2 = document.getElementById('setupPass2').value;
-  var err   = document.getElementById('setupErr');
+async function doLoginVolontario() {
+  const cf   = (document.getElementById('loginVolCF').value || '').trim().toUpperCase();
+  const data = document.getElementById('loginVolData').value;
+  const err  = document.getElementById('loginError');
+  if (!cf || cf.length !== 16) { err.textContent = 'Codice fiscale non valido.'; err.style.display = 'block'; return; }
+  if (!data) { err.textContent = 'Inserisci la tua data di nascita.'; err.style.display = 'block'; return; }
   err.style.display = 'none';
-  if (!nome || !user || !pass) { err.textContent = 'Compila tutti i campi.'; err.style.display = 'block'; return; }
-  if (pass.length < 8) { err.textContent = 'Password troppo corta (min. 8 caratteri).'; err.style.display = 'block'; return; }
-  if (pass !== pass2) { err.textContent = 'Le password non coincidono.'; err.style.display = 'block'; return; }
+
   try {
-    var res = await fetch(SUPA_URL + '/rest/v1/utenti', {
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/login_volontario', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
-      body: JSON.stringify({ nome, username: user, password: pass, ruolo: 'Amministratore', tipo_accesso: 'master', attivo: true, permessi: {} })
+      body: JSON.stringify({ p_cf: cf, p_data_nascita: data })
     });
-    if (!res.ok) {
-      var txt = await res.text();
-      throw new Error(txt.includes('unique') ? 'Username già in uso.' : 'Errore creazione account.');
+    const arr = await res.json();
+    if (Array.isArray(arr) && arr.length > 0) {
+      const v = arr[0];
+      // Costruisco un currentUser "finto" per il volontario
+      currentUser = {
+        id: 'vol_' + v.id,
+        volontario_id: v.id,
+        nome: v.cognome + ' ' + v.nome,
+        ruolo: 'Volontario',
+        tipo_accesso: 'volontario',
+        permessi: { galleria: true, scheda_personale: true, segnalazioni: true }
+      };
+      sessionStorage.setItem('ar_vol_cf', cf);
+      sessionStorage.setItem('ar_vol_data', data);
+      sessionStorage.removeItem('ar_user');
+      sessionStorage.removeItem('ar_pass');
+      avviaDashboard();
+    } else {
+      err.textContent = 'Codice fiscale o data di nascita non corretti.';
+      err.style.display = 'block';
     }
-    var data = await res.json();
-    currentUser = data[0];
-    await logAttivita('primo avvio — account master creato');
-    avviaDashboard();
   } catch(e) {
-    err.textContent = e.message; err.style.display = 'block';
+    err.textContent = 'Errore di connessione.';
+    err.style.display = 'block';
   }
 }
 
 let isMasterUser = false;
+
+function canModificaVolontari() {
+  if (!currentUser) return false;
+  if (currentUser.tipo_accesso === 'master') return true;
+  const p = currentUser.permessi || {};
+  return p.modifica_volontari === true;
+}
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
@@ -275,7 +202,9 @@ function avviaDashboard() {
 
   const p        = currentUser.permessi || {};
   const isMaster = currentUser.tipo_accesso === 'master';
+  const isVol    = currentUser.tipo_accesso === 'volontario';
   isMasterUser   = isMaster;
+  window.isVolUser = isVol;
 
   // Topbar
   document.getElementById('homeWelcome').textContent = currentUser.nome;
@@ -287,30 +216,67 @@ function avviaDashboard() {
   // Impostazioni resta sempre visibile per i master.
   var showSi  = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
   var hasPerm = function(key) {
-    if (p[key] === false) return false;       // disattivato esplicitamente
+    if (isVol) return !!p[key];                // volontario: solo permessi espliciti
+    if (p[key] === false) return false;        // disattivato esplicitamente
     return isMaster || !!p[key];               // master di default, standard se concesso
   };
-  if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
-  if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
-  if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
-  if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
-  if (hasPerm('richieste'))  showSi('siRichieste');
-  if (hasPerm('statistiche'))  showSi('siStatistiche');
-  if (isMaster)                 showSi('siImpostazioni');
-  if (hasPerm('db'))            showSi('siDb');
+
+  if (isVol) {
+    // Reset esplicito di TUTTE le voci sidebar (per evitare residui)
+    var allSidebarIds = [
+      'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
+      'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
+      'siConvocazioni','siDividerStrumenti','siLabelStrumenti'
+    ];
+    allSidebarIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Mostra solo le voci per volontari
+    showSi('siSchedaPersonale');
+    showSi('siGalleria');
+    showSi('siSegnalazioni');
+    showSi('siLabelOperativo');
+  } else {
+    // Reset esplicito: "La mia scheda" non esiste per gli admin
+    var spers = document.getElementById('siSchedaPersonale');
+    if (spers) spers.style.display = 'none';
+
+    if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
+
+    // Pulsanti modifica volontari visibili solo a chi ha il permesso
+    if (canModificaVolontari()) {
+      var btnNuovo = document.getElementById('btnNuovoVolontario');
+      if (btnNuovo) btnNuovo.style.display = '';
+    }
+    if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
+    if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
+    if (hasPerm('tlc'))        { showSi('siTlc'); showSi('siLabelOperativo'); }
+    if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
+    if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
+    if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
+    if (hasPerm('richieste'))  showSi('siRichieste');
+    if (hasPerm('statistiche'))  showSi('siStatistiche');
+    showSi('siConvocazioni'); // Convocazioni sempre visibile per admin/standard
+    if (isMaster)                 showSi('siImpostazioni');
+    if (isMaster)                 showSi('siSegnalazioni');
+    if (isMaster)                 showSi('siAccessi');
+    if (hasPerm('db'))            showSi('siDb');
+  }
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
   if (su) su.textContent = currentUser.nome + ' | ' + currentUser.ruolo;
 
-  // Badge richieste
-  if (hasPerm('richieste')) caricaBadgeRichieste();
+  // Badge richieste (solo per non-volontari)
+  if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
+  if (!isVol) caricaBadgeSegnalazioni();
 
   // Compleanno
   verificaCompleanni();
 
   // Home cards
   buildHomeCards(isMaster, p);
-
 }
 
 
@@ -348,6 +314,12 @@ function showPanel(name, btn) {
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
+  if (name === 'tlc') caricaTlc();
+  if (name === 'visite') caricaVisite();
+  if (name === 'galleria') caricaGalleria();
+  if (name === 'schedapers') caricaSchedaPersonale();
+  if (name === 'segnalazioni') caricaSegnalazioni();
+  if (name === 'accessi') caricaAccessi();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -379,7 +351,7 @@ async function caricaHomeDashboard() {
     // Carica compleanni del mese e ultimi interventi in parallelo
     const [volRes, intRes] = await Promise.all([
       fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,data_nascita,squadra,foto_url&attivo=eq.true&order=data_nascita', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,tipo_attivita,n_volontari,n_ore&order=data.desc&limit=5', { headers: H })
+      fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=id,evento,data,tipo_attivita,n_volontari,n_ore&stato_calcolato=eq.SVOLTO&order=data.desc&limit=5', { headers: H })
     ]);
     const volontari  = await volRes.json();
     const interventi = await intRes.json();
@@ -424,8 +396,8 @@ async function caricaHomeDashboard() {
     }
     html += '</div>';
 
-    // -- REVISIONI DEL MESE --
-    try {
+    // -- REVISIONI DEL MESE -- (skip per volontari)
+    if (!window.isVolUser) try {
       var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
       var mezziAll  = await mezziRes.json();
       var oggi2     = new Date();
@@ -466,28 +438,30 @@ async function caricaHomeDashboard() {
       }
     } catch(e) {}
 
-    // -- ULTIMI INTERVENTI --
-    html += '<div class="home-section">';
-    html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
-    if (!interventi || !interventi.length) {
-      html += '<div class="home-empty">Nessun intervento registrato</div>';
-    } else {
-      html += '<div class="home-list">';
-      interventi.forEach(i => {
-        const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
-        var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
-        html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
-          + getTipoAttivitaAvatar(i.tipo_attivita, 36)
-          + '<div class="home-list-info">'
-          + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
-          + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
-          + '</div>'
-          + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
-          + '</div>';
-      });
+    // -- ULTIMI INTERVENTI -- (skip per volontari)
+    if (!window.isVolUser) {
+      html += '<div class="home-section">';
+      html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
+      if (!interventi || !interventi.length) {
+        html += '<div class="home-empty">Nessun intervento registrato</div>';
+      } else {
+        html += '<div class="home-list">';
+        interventi.forEach(i => {
+          const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
+          html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
+            + getTipoAttivitaAvatar(i.tipo_attivita, 36)
+            + '<div class="home-list-info">'
+            + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
+            + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
+            + '</div>'
+            + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
+            + '</div>';
+        });
+        html += '</div>';
+      }
       html += '</div>';
     }
-    html += '</div>';
 
     grid.innerHTML = html;
 
@@ -619,6 +593,7 @@ async function caricaUtenti() {
         + (p.interventi?'<span class="badge badge-std" style="font-size:0.5rem">Int</span>':'')
         + (p.mezzi?'<span class="badge badge-std" style="font-size:0.5rem">Mez</span>':'')
         + (p.richieste?'<span class="badge badge-std" style="font-size:0.5rem">Ric</span>':'')
+        + (p.visite?'<span class="badge badge-std" style="font-size:0.5rem">Vis</span>':'')
         + '</div>';
       row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
         + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' | ' + u.ruolo + '</div>' + perms + '</div>'
@@ -643,10 +618,14 @@ async function salvaUtente() {
   errEl.style.display = 'none';
   const permessi = {
     volontari:  document.getElementById('permVolontari').checked,
+    modifica_volontari: document.getElementById('permModificaVolontari') ? document.getElementById('permModificaVolontari').checked : false,
     interventi: document.getElementById('permInterventi').checked,
     mezzi:      document.getElementById('permMezzi').checked,
+    tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
     richieste:  document.getElementById('permRichieste').checked,
     documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
+    visite:       document.getElementById('permVisite') ? document.getElementById('permVisite').checked : false,
+    galleria:     document.getElementById('permGalleria') ? document.getElementById('permGalleria').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
@@ -683,8 +662,8 @@ function apriModificaUtente(u) {
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
   var permMap = {
-    'Volontari':'volontari','Interventi':'interventi','Mezzi':'mezzi','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste',
+    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
+    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
   Object.keys(permMap).forEach(function(n) {
@@ -710,10 +689,14 @@ async function salvaModificaUtente() {
   errEl.style.display = 'none';
   var permessi = {
     volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
+    modifica_volontari: document.getElementById('modPermModificaVolontari') ? document.getElementById('modPermModificaVolontari').checked : false,
     interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
     mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
+    tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
     db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
     documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
+    visite:       document.getElementById('modPermVisite') ? document.getElementById('modPermVisite').checked : false,
+    galleria:     document.getElementById('modPermGalleria') ? document.getElementById('modPermGalleria').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
@@ -782,7 +765,7 @@ async function caricaVolontari() {
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,foto_url&order=cognome', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
@@ -794,26 +777,96 @@ function renderVolontari(data) {
   if (!list) return;
   document.getElementById('volMostrati').textContent = data.length;
   if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun risultato.</div>'; return; }
+
+  // Separa attivi+sospesi da dimessi
+  const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
+  const dimessi       = data.filter(v => v.stato === 'DIMESSO');
+
   list.innerHTML = '';
-  data.forEach(v => {
-    const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-    const [bg, fg] = avatarColor(v.cognome);
-    const card = document.createElement('div');
-    card.className = 'vol-card';
-    card.onclick = () => apriDettaglio(v.id);
-    const badges = [];
-    if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
-    if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-    if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
-    if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
-    card.innerHTML = (v.foto_url
-        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-      + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
-      + '<div class="vol-card-badges">' + badges.join('') + '</div>';
-    list.appendChild(card);
-  });
+  attiviSospesi.forEach(v => list.appendChild(_renderVolCard(v)));
+
+  if (dimessi.length) {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border);grid-column:1 / -1';
+    sep.textContent = 'Dimessi (' + dimessi.length + ')';
+    list.appendChild(sep);
+    dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
+  }
+}
+
+function _renderVolCard(v) {
+  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+  const [bg, fg] = avatarColor(v.cognome);
+  const stato = v.stato || 'ATTIVO';
+  const card = document.createElement('div');
+  card.className = 'vol-card';
+  if (stato === 'DIMESSO') card.style.opacity = '0.55';
+  card.onclick = (e) => { if (!e.target.closest('.vol-stato-sel')) apriDettaglio(v.id); };
+
+  const badges = [];
+  if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
+  if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
+  if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+
+  // Dropdown stato inline (se può modificare) o badge readonly
+  const statoColor = stato === 'ATTIVO' ? 'var(--green)' : (stato === 'SOSPESO' ? '#d9a400' : '#999');
+  let statoSel;
+  if (canModificaVolontari()) {
+    statoSel = '<select class="vol-stato-sel" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" '
+      + 'style="background:transparent;border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:10px;font-family:var(--font);cursor:pointer;outline:none">'
+      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
+      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
+      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
+      + '</select>';
+  } else {
+    statoSel = '<span style="border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 8px;border-radius:10px">' + stato + '</span>';
+  }
+
+  card.innerHTML = (v.foto_url
+      ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
+      : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
+    + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
+    + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
+    + '<div class="vol-card-badges" style="align-items:center;gap:4px">' + statoSel + badges.join('') + '</div>';
+  return card;
+}
+
+async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
+  if (!canModificaVolontari()) {
+    alert('Permessi insufficienti per modificare lo stato.');
+    return;
+  }
+  // Trova volontario in cache
+  const v = volontariData.find(x => x.id === volId);
+  if (!v) return;
+  const vecchio = v.stato || 'ATTIVO';
+  if (vecchio === nuovoStato) return;
+
+  // Conferma per DIMESSO
+  if (nuovoStato === 'DIMESSO') {
+    if (!confirm('Spostare ' + v.cognome + ' ' + v.nome + ' tra i DIMESSI?')) {
+      selEl.value = vecchio;
+      return;
+    }
+  }
+
+  selEl.disabled = true;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ stato: nuovoStato, attivo: nuovoStato !== 'DIMESSO' })
+    });
+    if (!res.ok) throw new Error('errore');
+    v.stato = nuovoStato;
+    v.attivo = nuovoStato !== 'DIMESSO';
+    await logAttivita('ha cambiato stato di ' + v.cognome + ' ' + v.nome + ' a ' + nuovoStato);
+    renderVolontari(volontariData);
+  } catch(e) {
+    selEl.value = vecchio;
+    alert('Errore salvataggio.');
+  }
+  selEl.disabled = false;
 }
 
 function filtraVolontari() {
@@ -848,6 +901,9 @@ async function apriDettaglio(id) {
   volDocLoaded = false;
   const detail = document.getElementById('volDetail');
   const body   = document.getElementById('volDetailBody');
+  // Mostra/nascondi pulsante modifica in base al permesso
+  var btnMod = document.getElementById('btnModificaVolontario');
+  if (btnMod) btnMod.style.display = canModificaVolontari() ? '' : 'none';
   detail.classList.add('open');
   detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">caricamento...</div>';
@@ -968,19 +1024,25 @@ function chiudiDettaglio() {
   document.getElementById('volDetail').classList.remove('open');
   document.body.style.overflow = '';
   volCorrenteId = null;
+  volDocLoadedFor = null;
+  volInterventiLoadedFor = null;
 }
 
-let volDocLoaded = false;
+let volDocLoadedFor = null;
 
 function toggleVolDoc(volId) {
   const body = document.getElementById('volDocBody');
   if (!body) return;
   if (body.style.display !== 'none') { body.style.display = 'none'; return; }
   body.style.display = 'block';
-  if (!volDocLoaded) { volDocLoaded = true; caricaDocVolontario(volId); }
+  // Ricarica se cambio volontario O se il body è vuoto (scheda riaperta)
+  if (volDocLoadedFor !== volId || !body.innerHTML.trim()) {
+    volDocLoadedFor = volId;
+    caricaDocVolontario(volId);
+  }
 }
 
-let volInterventiLoaded = false;
+let volInterventiLoadedFor = null;
 async function toggleVolInterventi(volId) {
   const body  = document.getElementById('volInterventiBody');
   const count = document.getElementById('volInterventiCount');
@@ -993,13 +1055,13 @@ async function toggleVolInterventi(volId) {
   }
   body.style.display = 'block';
 
-  if (volInterventiLoaded) return;
-  volInterventiLoaded = true;
+  if (volInterventiLoadedFor === volId && body.innerHTML.trim()) return;
+  volInterventiLoadedFor = volId;
 
   try {
     // Cerca interventi dove volontari_ids contiene questo id
     const res = await fetch(
-      SUPA_URL + '/rest/v1/interventi?volontari_ids=cs.[' + volId + ']&select=id,evento,data,tipo_attivita&order=data.desc',
+      SUPA_URL + '/rest/v1/interventi_con_stato?volontari_ids=cs.[' + volId + ']&select=id,evento,data,tipo_attivita,stato_calcolato&order=data.desc',
       { headers: H }
     );
     const interventi = await res.json();
@@ -1022,6 +1084,10 @@ async function toggleVolInterventi(volId) {
 }
 
 function apriFormVolontario(id) {
+  if (!canModificaVolontari()) {
+    alert('Non hai i permessi per modificare i volontari.');
+    return;
+  }
   volCorrenteId = id;
   const panel = document.getElementById('volFormPanel');
   const body  = document.getElementById('volFormBody');
@@ -1051,17 +1117,20 @@ function apriFormVolontario(id) {
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Squadra</label>
           <select class="vol-form-inp" id="fSquadra">
-            <option value="">—</option>${APP_CONFIG.volontari.squadre.map(s=>`<option>${s}</option>`).join("")}
+            <option value="">—</option><option>ALFA</option><option>CASALE</option>
+            <option>COLLINA</option><option>SEZIONE</option><option>TORINO</option>
           </select>
         </div>
         <div class="vol-form-field"><label class="vol-form-lbl">Tipo</label>
           <select class="vol-form-inp" id="fTipo">
-            <option value="">—</option>${APP_CONFIG.volontari.tipi.map(s=>`<option>${s}</option>`).join("")}
+            <option value="">—</option><option>VOLONTARIO</option>
+            <option>CAPO SQUADRA</option><option>PRESIDENTE</option>
           </select>
         </div>
         <div class="vol-form-field"><label class="vol-form-lbl">Mansione</label>
           <select class="vol-form-inp" id="fMansione">
-            <option value="">—</option>${APP_CONFIG.volontari.mansioni.map(s=>`<option>${s}</option>`).join("")}
+            <option value="">—</option><option>GENERICO</option>
+            <option>LOGISTICA</option><option>MAGAZZINIERE</option>
           </select>
         </div>
         <div class="vol-form-field"><label class="vol-form-lbl">Specializzazione</label><input class="vol-form-inp" id="fSpecializzazione"></div>
@@ -1184,6 +1253,7 @@ function validaCodiceFiscale(cf) {
 }
 
 async function salvaVolontario() {
+  if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   const cognome = document.getElementById('fCognome').value.trim();
   const nome    = document.getElementById('fNome').value.trim();
   const errEl   = document.getElementById('volFormErr');
@@ -1265,6 +1335,7 @@ async function salvaVolontario() {
 }
 
 async function eliminaVolontario() {
+  if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   if (!volCorrenteId) return;
   if (!confirm('Eliminare definitivamente questo volontario?')) return;
   await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'DELETE', headers: H });
@@ -1768,7 +1839,11 @@ async function eliminaVista(id, nome) {
 let interventiData = [];
 let intCorrenteId = null;
 
-const TIPO_ATTIVITA = APP_CONFIG.interventi.tipiAttivita;
+const TIPO_ATTIVITA = [
+  'EMERGENZA', 'ESERCITAZIONE', 'CORSI', 'PREVENZIONE INFORTUNI',
+  'RAPPRESENTANZA', 'ASSEMBLEE E RIUNIONI', 'CONTROLLO TERRITORIO',
+  'SEGRETERIA', 'MAGAZZINO'
+];
 
 async function caricaInterventi() {
   const list    = document.getElementById('intList');
@@ -1795,9 +1870,8 @@ async function caricaInterventi() {
   // Master — carica tutti gli interventi
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=*&order=data.desc', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
     interventiData = await res.json();
-    await consuntivaAutomatica(interventiData);
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
   } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
@@ -1805,52 +1879,11 @@ async function caricaInterventi() {
 
 function aggiornaStatsInterventi() {
   const tot     = interventiData.length;
-  const contati = interventiData.filter(contaNelMonteOre);
-  const volTot  = contati.reduce((s, i) => s + (i.n_volontari || 0), 0);
-  const oreTot  = contati.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0);
+  const volTot  = interventiData.reduce((s, i) => s + (i.n_volontari || 0), 0);
+  const oreTot  = interventiData.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0);
   document.getElementById('intTot').textContent     = tot;
   document.getElementById('intVolTot').textContent  = volTot;
   document.getElementById('intOreTot').textContent  = Math.round(oreTot * 10) / 10;
-}
-
-
-// ── Stato interventi: PROGRAMMATO → CONSUNTIVATO automatico ──
-// Un intervento PROGRAMMATO la cui data di riferimento (data_fine o data)
-// è passata, diventa CONSUNTIVATO e da quel momento conta nel monte ore.
-// Resta sempre modificabile manualmente dal form (es. per annullarlo).
-async function consuntivaAutomatica(lista) {
-  var oggi = new Date(); oggi.setHours(0,0,0,0);
-  var daAggiornare = [];
-  lista.forEach(function(i) {
-    if (i.stato !== 'PROGRAMMATO') return;
-    var rif = i.data_fine || i.data;
-    if (!rif) return;
-    var dRif = new Date(rif + 'T00:00:00');
-    if (dRif < oggi) {
-      i.stato = 'CONSUNTIVATO'; // aggiorna in memoria subito, per i calcoli successivi
-      daAggiornare.push(i.id);
-    }
-  });
-  if (!daAggiornare.length) return;
-  try {
-    await Promise.all(daAggiornare.map(function(id) {
-      return fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id, {
-        method: 'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
-        body: JSON.stringify({ stato: 'CONSUNTIVATO' })
-      });
-    }));
-  } catch(e) { /* silenzioso: i dati in memoria sono già corretti per questa sessione */ }
-}
-
-// Un intervento PROGRAMMATO non entra nel monte ore/volontari finché non è consuntivato
-function contaNelMonteOre(i) {
-  return i.stato !== 'PROGRAMMATO' && i.stato !== 'ANNULLATO';
-}
-
-function badgeStato(i) {
-  if (i.stato === 'PROGRAMMATO') return '<span class="int-pill" style="background:#85400b22;color:#cc7a1c;font-weight:600">🕓 In programma</span>';
-  if (i.stato === 'ANNULLATO')   return '<span class="int-pill" style="background:#7a1c1c22;color:#cc3c3c;font-weight:600">❌ Annullato</span>';
-  return '';
 }
 
 function renderInterventi(data) {
@@ -1883,10 +1916,11 @@ function renderInterventi(data) {
 function _renderIntCard(i, isChild) {
   const card = document.createElement('div');
   card.className = 'int-card' + (isChild ? ' int-card-child' : '');
+  if (i.stato_calcolato === 'PROGRAMMATO') card.classList.add('int-card-prog');
   card.onclick = () => apriDettaglioIntervento(i.id);
   const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
   const pills = [];
-  if (badgeStato(i))    pills.push(badgeStato(i));
+  if (i.stato_calcolato === 'PROGRAMMATO') pills.push('<span class="int-pill prog">⏳ PROGRAMMATO</span>');
   if (i.tipo_attivita)  pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
   if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
   if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
@@ -1914,9 +1948,8 @@ function _renderMacroCard(m, figliMacro) {
   const dataInizio = m.data ? new Date(m.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dataFine   = m.data_fine ? new Date(m.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
-  const figliContati = figliMacro.filter(contaNelMonteOre);
-  const nVol = figliContati.reduce((s, i) => s + (i.n_volontari || 0), 0);
-  const nOre = figliContati.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0) + (contaNelMonteOre(m) ? parseFloat(m.n_ore || 0) : 0);
+  const nVol = figliMacro.reduce((s, i) => s + (i.n_volontari || 0), 0);
+  const nOre = figliMacro.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0) + parseFloat(m.n_ore || 0);
 
   const header = document.createElement('div');
   header.className = 'int-card int-macro-header';
@@ -1931,7 +1964,7 @@ function _renderMacroCard(m, figliMacro) {
     + '<span id="macro-arrow-' + m.id + '" style="font-size:0.7rem;color:var(--testo-3);transition:transform 0.2s">▶</span>'
     + '</div></div>'
     + '<div class="int-card-meta">'
-    + badgeStato(m)
+    + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="int-pill prog">⏳ PROGRAMMATO</span>' : '')
     + (m.tipo_attivita ? '<span class="int-pill green">' + m.tipo_attivita + '</span>' : '')
     + (m.luogo ? '<span class="int-pill">' + m.luogo + '</span>' : '')
     + '<span class="int-pill">' + dateRange + '</span>'
@@ -1986,7 +2019,7 @@ async function apriDettaglioIntervento(id) {
   detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id + '&select=*', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const i = data[0];
     if (!i) { body.innerHTML = '<div class="loading-msg">intervento non trovato.</div>'; return; }
@@ -2058,6 +2091,26 @@ async function apriDettaglioIntervento(id) {
         </div>
       </div>
       ${macroParentSection}
+      ${i.stato_calcolato === 'PROGRAMMATO'
+        ? `<div style="background:rgba(217,164,0,0.12);border:1px solid #d9a400;border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
+            <span style="font-size:1.2rem">⏳</span>
+            <div style="flex:1">
+              <div style="font-size:0.82rem;font-weight:700;color:#a87800">Intervento PROGRAMMATO</div>
+              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore non vengono conteggiate fino al passaggio in SVOLTO.${i.stato_manuale === 'PROGRAMMATO' ? ' (Stato forzato manualmente)' : ''}</div>
+            </div>
+            ${i.stato_manuale === 'PROGRAMMATO'
+              ? `<button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
+              : ''}
+          </div>`
+        : `<div style="background:rgba(34,139,82,0.1);border:1px solid var(--green);border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
+            <span style="font-size:1.2rem">✓</span>
+            <div style="flex:1">
+              <div style="font-size:0.82rem;font-weight:700;color:var(--green)">Intervento SVOLTO</div>
+              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore vengono conteggiate nelle statistiche.</div>
+            </div>
+            <button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
+          </div>`
+      }
       <div class="vol-section">
         <div class="vol-section-head">Dettagli</div>
         <div class="vol-section-body">
@@ -2118,18 +2171,11 @@ function apriFormIntervento(id, macroIdPreset) {
     <div class="vol-form-section">
       <div class="vol-form-section-title">Intervento</div>
       <div class="vol-form-grid">
-        <div class="vol-form-field full"><label class="vol-form-lbl">Evento *</label><input class="vol-form-inp" id="ifEvento" placeholder="es. Alluvione, terremoto..."></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Evento *</label><input class="vol-form-inp" id="ifEvento" placeholder="es. Alluvione Mirabello"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Data inizio *</label><input class="vol-form-inp" type="date" id="ifData"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Data fine</label><input class="vol-form-inp" type="date" id="ifDataFine"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Tipo attività</label><select class="vol-form-inp" id="ifTipo"><option value="">—</option>${tipoOpts}</select></div>
-        <div class="vol-form-field full"><label class="vol-form-lbl">Stato</label>
-          <select class="vol-form-inp" id="ifStato">
-            <option value="CONSUNTIVATO">✅ Consuntivato (conta nel monte ore)</option>
-            <option value="PROGRAMMATO">🕓 Programmato (non conta ancora)</option>
-            <option value="ANNULLATO">❌ Annullato (escluso)</option>
-          </select>
-        </div>
-        <div class="vol-form-field full"><label class="vol-form-lbl">Luogo</label><input class="vol-form-inp" id="ifLuogo" placeholder="es. Via Roma, Comune..."></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Luogo</label><input class="vol-form-inp" id="ifLuogo" placeholder="es. Via Roma, Casale M.to"></div>
         <div class="vol-form-field full"><label class="vol-form-lbl">Registrato da</label><input class="vol-form-inp" id="ifUtente" placeholder="Chi registra"></div>
       </div>
     </div>
@@ -2175,20 +2221,6 @@ function apriFormIntervento(id, macroIdPreset) {
   panel.scrollTop = 0;
   var ifUtente = document.getElementById('ifUtente');
   if (ifUtente && !id && currentUser) ifUtente.value = currentUser.nome || '';
-  // Aggiorna automaticamente lo stato suggerito in base alla data fine inserita
-  var ifData = document.getElementById('ifData'), ifDataFine = document.getElementById('ifDataFine'), ifStato = document.getElementById('ifStato');
-  function suggerisciStato() {
-    if (!id && ifStato) { // solo per nuovi interventi, non sovrascrive una modifica esistente
-      var rif = (ifDataFine && ifDataFine.value) || (ifData && ifData.value);
-      if (rif) {
-        var oggi = new Date(); oggi.setHours(0,0,0,0);
-        var dRif = new Date(rif + 'T00:00:00');
-        ifStato.value = dRif > oggi ? 'PROGRAMMATO' : 'CONSUNTIVATO';
-      }
-    }
-  }
-  if (ifData)     ifData.addEventListener('change', suggerisciStato);
-  if (ifDataFine) ifDataFine.addEventListener('change', suggerisciStato);
   if (macroIdPreset) {
     var selMacro = document.getElementById('ifMacroId');
     if (selMacro) { selMacro.value = macroIdPreset; }
@@ -2254,13 +2286,12 @@ function aggiornaConteggioVolontari() {
 
 async function caricaDatiFormIntervento(id) {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id + '&select=*', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const i = data[0]; if (!i) return;
     const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
     setVal('ifEvento', i.evento); setVal('ifData', i.data); setVal('ifDataFine', i.data_fine);
     setVal('ifTipo', i.tipo_attivita); setVal('ifLuogo', i.luogo);
-    setVal('ifStato', i.stato || 'CONSUNTIVATO');
     setVal('ifUtente', i.utente); setVal('ifNVol', i.n_volontari);
     setVal('ifNOre', i.n_ore); setVal('ifNote', i.note);
     const radio = document.getElementById('ifRadio');
@@ -2312,7 +2343,6 @@ async function salvaIntervento() {
     vola:          document.getElementById('ifVola') ? document.getElementById('ifVola').checked : false,
     vola_numero:   document.getElementById('ifVolaNum') ? document.getElementById('ifVolaNum').value.trim() || null : null,
     volter:        document.getElementById('ifVolter') ? document.getElementById('ifVolter').checked : false,
-    stato:         document.getElementById('ifStato') ? document.getElementById('ifStato').value : 'CONSUNTIVATO',
     is_macro:      document.getElementById('ifIsMacro') ? document.getElementById('ifIsMacro').checked : false,
     macro_id:      (document.getElementById('ifIsMacro') && document.getElementById('ifIsMacro').checked) ? null
                    : (document.getElementById('ifMacroId') && document.getElementById('ifMacroId').value ? parseInt(document.getElementById('ifMacroId').value) : null),
@@ -2332,6 +2362,27 @@ async function salvaIntervento() {
       caricaInterventi();
     } else { errEl.textContent = 'Errore salvataggio.'; errEl.style.display = 'block'; }
   } catch(e) { errEl.textContent = 'Errore di connessione.'; errEl.style.display = 'block'; }
+}
+
+async function cambiaStatoIntervento(id, nuovoStatoManuale) {
+  // nuovoStatoManuale: 'PROGRAMMATO' per forzare programmato, null per sblocca/calcolo auto
+  const msg = nuovoStatoManuale === 'PROGRAMMATO'
+    ? 'Forzare l\'intervento come PROGRAMMATO? Le ore non verranno conteggiate nelle statistiche.'
+    : 'Sbloccare lo stato? Tornerà al calcolo automatico in base alla data.';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ stato_manuale: nuovoStatoManuale })
+    });
+    if (!res.ok) throw new Error('errore');
+    await logAttivita('ha cambiato stato intervento');
+    chiudiDettaglioIntervento();
+    caricaInterventi();
+  } catch(e) {
+    alert('Errore salvataggio stato.');
+  }
 }
 
 async function eliminaIntervento() {
@@ -2378,7 +2429,7 @@ async function apriGeneratoreAttestati(interventoId) {
 
   try {
     // Carica dati intervento
-    var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + interventoId + '&select=*', { headers: H });
+    var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
     var intData = await intRes.json();
     var intv    = intData[0];
     if (!intv) { document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">Intervento non trovato.</div>'; return; }
@@ -2449,7 +2500,7 @@ async function generaAttestatiSelezionati(interventoId, unico) {
 
   await _caricaLibreriaAttestati();
 
-  var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + interventoId + '&select=*', { headers: H });
+  var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
   var intData = await intRes.json();
   var intv    = intData[0];
   var vols    = attestatiVolontari.filter(function(v){ return selezionati.includes(v.id); });
@@ -2571,9 +2622,9 @@ async function _generaPDFBlob(intv, v) {
   doc.setFont('times','bold');   doc.setFontSize(16);
   doc.text('ASSOCIAZIONE NAZIONALE ALPINI', cx, y0+8,  {align:'center'});
   doc.setFontSize(14);
-  doc.text(APP_CONFIG.unita.nomeSezione.toUpperCase(), cx, y0+16, {align:'center'});
+  doc.text('SEZIONE DI CASALE MONFERRATO',  cx, y0+16, {align:'center'});
   doc.setFont('times','italic'); doc.setFontSize(10.5);
-  doc.text(APP_CONFIG.unita.sottotitolo, cx, y0+23, {align:'center'});
+  doc.text("Medaglia d'Oro al M.C. della Citt\u00e0 di Casale Monferrato", cx, y0+23, {align:'center'});
   doc.setFont('times','bold');   doc.setFontSize(14);
   doc.text('UNIT\u00c0 DI PROTEZIONE CIVILE ANA', cx, y0+31, {align:'center'});
 
@@ -2624,7 +2675,7 @@ async function _generaPDFBlob(intv, v) {
 
   // ruolo
   doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(...GRAY);
-  doc.text("Volontario dell'Unità " + APP_CONFIG.unita.nomeLungo, cx, y, {align:'center'});
+  doc.text("Volontario dell'Unit\u00e0 PC ANA Casale Monferrato", cx, y, {align:'center'});
   y += gap*1;
 
   // LINEA LEGGERA
@@ -2657,7 +2708,7 @@ async function _generaPDFBlob(intv, v) {
   var fW = 46, fH = 24; // 46/24 = 1.917
   doc.setFont('times','italic'); doc.setFontSize(12); doc.setTextColor(...BLACK);
   doc.text(oggi, mg+6, yFir+16);
-  doc.text(APP_CONFIG.attestati.ruoloFirmatario, W-mg-12-fW/2, yFir+2, {align:'center'});
+  doc.text('Il Presidente', W-mg-12-fW/2, yFir+2, {align:'center'});
   try { doc.addImage(FIRMA_JPG,'JPEG', W-mg-12-fW, yFir+4, fW, fH); } catch(e){}
 
   return doc.output('blob');
@@ -2757,8 +2808,8 @@ function _buildAttestatiHTML(intv, vols, perStampa) {
       +'<img class="logo" src="'+LOGO_SEZ+'">'
       +'<div class="hcenter">'
       +'<div class="hc1">ASSOCIAZIONE NAZIONALE ALPINI</div>'
-      +'<div class="hc2">'+APP_CONFIG.unita.nomeSezione.toUpperCase()+'</div>'
-      +'<div class="hc3">'+APP_CONFIG.unita.sottotitolo+'</div>'
+      +'<div class="hc2">SEZIONE DI CASALE MONFERRATO</div>'
+      +'<div class="hc3">Medaglia d\'Oro al M.C. della Città di Casale Monferrato</div>'
       +'<div class="hc2">UNITÀ DI PROTEZIONE CIVILE ANA</div>'
       +'</div>'
       +'<img class="logo" src="'+LOGO_VOL+'">'
@@ -2766,7 +2817,7 @@ function _buildAttestatiHTML(intv, vols, perStampa) {
       +'<hr class="ds"><div class="titolo">ATTESTATO DI PARTECIPAZIONE</div><hr class="ds">'
       +'<div class="sia">si attesta che il Volontario</div>'
       +'<div class="nome">'+v.cognome.toUpperCase()+' '+v.nome.toUpperCase()+'</div>'
-      +'<div class="ruolo">Volontario dell\'Unità '+APP_CONFIG.unita.nomeLungo+'</div>'
+      +'<div class="ruolo">Volontario dell\'Unità PC ANA Casale Monferrato</div>'
       +'<hr class="dl">'
       +'<div class="hap">ha partecipato alle attività connesse a:</div>'
       +'<div class="evento">'+(intv.evento||'').toUpperCase()+'</div>'
@@ -2774,7 +2825,7 @@ function _buildAttestatiHTML(intv, vols, perStampa) {
       +'<div class="date"><div>dal '+dataInizio+'</div><div>al '+dataFine+'</div></div>'
       +'<div class="frow">'
       +'<div><em>'+oggi+'</em></div>'
-      +'<div><div class="flabel">'+APP_CONFIG.attestati.ruoloFirmatario+'</div>'
+      +'<div><div class="flabel">Il Presidente</div>'
       +'<img class="fimg" src="'+FIRMA_B64+'">'
       +'<div class="fline"></div></div>'
       +'</div>'
@@ -2800,11 +2851,23 @@ let docUploadVolId = null;
 let docUploadFile  = null;
 
 const DOC_TIPO_LABEL = {
-  'FOTO':'📷 Foto profilo', '4_ORE':'📋 Attestato 4 Ore', '12_ORE':'📋 Attestato 12 Ore',
-  'CAPOSQ':'📋 Caposquadra', 'DAE':'🏥 DAE', 'CDC_1':'🏥 CDC 1° Step',
-  'CDC_2':'🏥 CDC 2° Step', 'VISITA':'🩺 Visita medica', 'EMERCOM':'📡 EMERCOM',
-  'ATTESTATO':'📜 Attestato intervento', 'ALTRO':'📄 Altro'
+  'FOTO':'📷 Foto profilo',
+  'IDENTITA':"🪪 Documento d'identità",
+  '4_ORE':'📜 Attestato 4 Ore', '12_ORE':'📜 Attestato 12 Ore',
+  'CAPOSQ':'📜 Caposquadra', 'DAE':'📜 DAE',
+  'CDC_1':'📜 CDC 1° Step', 'CDC_2':'📜 CDC 2° Step',
+  'EMERCOM':'📜 EMERCOM', 'ATTESTATO':'📜 Attestato intervento',
+  'VISITA':'🩺 Visita medica', 'ALTRO':'📄 Altro'
 };
+
+// Tipi che sono attestati (bucket 'attestati')
+const DOC_TIPI_ATTESTATO = ['4_ORE','12_ORE','CAPOSQ','DAE','CDC_1','CDC_2','EMERCOM','ATTESTATO'];
+
+function bucketPerDocTipo(tipo) {
+  if (tipo === 'FOTO') return 'foto-volontari';
+  if (DOC_TIPI_ATTESTATO.indexOf(tipo) >= 0) return 'attestati';
+  return 'documenti';
+}
 
 async function caricaDocumenti() {
   const list = document.getElementById('docVolList');
@@ -2937,7 +3000,7 @@ async function eseguiUploadDoc() {
   }
   const tipo    = document.getElementById('docTipo').value;
   const nomeDoc = document.getElementById('docNome').value.trim() || docUploadFile.name;
-  const bucket  = tipo === 'FOTO' ? 'foto-volontari' : 'attestati';
+  const bucket  = bucketPerDocTipo(tipo);
   const path    = docUploadVolId + '/' + tipo + '_' + Date.now() + '_' + docUploadFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
   const errEl   = document.getElementById('docUploadErr');
   const btn     = document.getElementById('docUploadBtn');
@@ -2989,18 +3052,54 @@ async function eseguiUploadDoc() {
 
 async function eliminaDoc(docId, volId) {
   if (!confirm('Eliminare questo documento?')) return;
+
+  // Recupera info del documento per sapere tipo e path
+  let doc = null;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId + '&select=tipo,url', { headers: H });
+    const arr = await r.json();
+    doc = arr[0];
+  } catch(e) {}
+
+  // Elimina file dal bucket Storage
+  if (doc && doc.url) {
+    try {
+      // Estrai bucket + path dall'URL pubblico: .../storage/v1/object/public/{bucket}/{path}
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) {
+        const bucket = m[1], path = m[2];
+        await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, { method: 'DELETE', headers: H });
+      }
+    } catch(e) {}
+  }
+
+  // Elimina record dalla tabella documenti
   await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId, { method: 'DELETE', headers: H });
+
+  // Se era una FOTO, azzera foto_url sul volontario
+  if (doc && doc.tipo === 'FOTO' && volId) {
+    await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ foto_url: null })
+    });
+  }
+
   await logAttivita('ha eliminato un documento');
   caricaDocumenti();
 }
 
 // Mostra documenti nella scheda volontario
 async function caricaDocVolontario(volId) {
-  const section = document.getElementById('volDocSection');
-  const body    = document.getElementById('volDocBody');
-  if (!section || !body) return;
+  const body = document.getElementById('volDocBody');
+  if (!body) return;
+  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
+    if (!res.ok) {
+      body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore caricamento (' + res.status + ')</div>';
+      return;
+    }
     const docs = await res.json();
     const count = document.getElementById('volDocCount');
     if (count) count.textContent = '(' + docs.length + ')';
@@ -3011,46 +3110,57 @@ async function caricaDocVolontario(volId) {
       return;
     }
 
-    const attestati = docs.filter(d => d.tipo === 'ATTESTATO');
-    const altri     = docs.filter(d => d.tipo !== 'ATTESTATO');
+    const attestati = docs.filter(d => DOC_TIPI_ATTESTATO.indexOf(d.tipo) >= 0);
+    const foto      = docs.filter(d => d.tipo === 'FOTO');
+    const documenti = docs.filter(d => d.tipo !== 'FOTO' && DOC_TIPI_ATTESTATO.indexOf(d.tipo) < 0);
+
+    const renderItem = (d, evidenziato) => {
+      const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
+      const tipoTxt = label.replace(/^[^ ]+ /, '');
+      const nome  = d.nome_file
+        ? d.nome_file.replace(/^[A-Z_]+_/, '').replace(/_/g, ' ').replace(/\.[a-z]{2,4}$/i, '')
+        : tipoTxt;
+      const bg = evidenziato ? 'background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem' : '';
+      return '<div class="vol-field" style="' + bg + '">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+        + '<div style="font-size:0.65rem;color:var(--testo-3)">' + tipoTxt + ' · ' + data + '</div>'
+        + '</div>'
+        + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+        + '</div>'
+        + '</div>';
+    };
+
+    const sectionLabel = (txt) =>
+      '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.7rem 0 0.4rem">' + txt + '</div>';
 
     let html = '';
 
-    // Sezione attestati
+    // 📷 FOTO
+    if (foto.length) {
+      html += sectionLabel('📷 Foto (' + foto.length + ')');
+      html += foto.map(d => renderItem(d, true)).join('');
+    }
+
+    // 🪪 DOCUMENTI
+    if (documenti.length) {
+      html += sectionLabel('🪪 Documenti (' + documenti.length + ')');
+      html += documenti.map(d => renderItem(d, true)).join('');
+    }
+
+    // 📜 ATTESTATI
     if (attestati.length) {
-      html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.3rem 0 0.4rem">📜 Attestati (' + attestati.length + ')</div>';
-      html += attestati.map(d => {
-        const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-        const nome = d.nome_file ? d.nome_file.replace(/^ATTESTATO_/,'').replace(/_/g,' ').replace(/\.pdf$/i,'') : 'Attestato';
-        return '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '</div>'
-          + '</div>';
-      }).join('');
+      html += sectionLabel('📜 Attestati (' + attestati.length + ')');
+      html += attestati.map(d => renderItem(d, true)).join('');
     }
 
-    // Sezione altri documenti
-    if (altri.length) {
-      if (attestati.length) html += '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.6rem 0 0.4rem">📄 Documenti</div>';
-      html += altri.map(d => {
-        const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
-        const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-        return '<div class="vol-field">'
-          + '<span class="vol-field-label">' + label.replace(/^[^ ]+ /,'') + '</span>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--blue);font-size:0.72rem;text-decoration:none">'
-          + (d.nome_file || label) + ' ↗</a>'
-          + '</div>';
-      }).join('');
-    }
-
-    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn" style="margin-top:0.6rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
     body.innerHTML = html;
-  } catch(e) {}
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore: ' + (e.message || e) + '</div>';
+  }
 }
 
 function apriDocDaScheda(volId) {
@@ -3382,11 +3492,506 @@ async function dbEliminaRecord() {
   caricaVolontari();
 }
 
+// -- TLC (Telecomunicazioni) --
+let tlcData = [];
+let tlcCorrenteId = null;
+let tlcDocCorrenteId = null;
+let tlcDocLoadedFor = null;
+
+const TLC_TIPOLOGIE = {
+  'PORTATILE':       { label: 'Portatile',      icon: '📻' },
+  'VEICOLARE':       { label: 'Veicolare',      icon: '🚗' },
+  'STAZIONE_FISSA':  { label: 'Stazione fissa', icon: '🏢' },
+  'PONTE_RADIO':     { label: 'Ponte radio',    icon: '🗼' }
+};
+
+const TLC_DOC_TIPI = {
+  // Documenti generali (tlc_id null)
+  'MANUALE':         '📚 Manuale / Normativa',
+  'FREQUENZE':       '📡 Piano frequenze / Selettive',
+  'AMMINISTRATIVO':  '📋 Amministrativo / Concessione',
+  // Documenti del singolo apparato (tlc_id valorizzato)
+  'SCHEDA':  '📄 Scheda tecnica',
+  'FOTO':    '📷 Foto',
+  'LICENZA': '📜 Licenza',
+  'ALTRO':   '📁 Altro'
+};
+
+// Tipi disponibili nel menu upload per documenti GENERALI
+const TLC_DOC_TIPI_GENERALI = ['MANUALE', 'FREQUENZE', 'AMMINISTRATIVO', 'ALTRO'];
+
+let tlcDocsGenerali = [];
+
+async function caricaTlc() {
+  const list = document.getElementById('tlcList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const [rApp, rDoc] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=is.null&select=*&order=tipo,data_carico.desc', { headers: H })
+    ]);
+    tlcData = await rApp.json();
+    tlcDocsGenerali = await rDoc.json();
+    renderTlc(tlcData);
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderTlc(data) {
+  const list = document.getElementById('tlcList');
+
+  // Sezione documenti generali (sempre visibile)
+  let html = _renderTlcDocsGenerali();
+
+  if (!data.length) {
+    html += '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    list.innerHTML = html;
+    return;
+  }
+  // Raggruppa per tipologia
+  const gruppi = {};
+  data.forEach(t => {
+    const k = t.tipologia || 'ALTRO';
+    if (!gruppi[k]) gruppi[k] = [];
+    gruppi[k].push(t);
+  });
+
+  html += '<div class="vol-list">';
+  Object.keys(gruppi).forEach(k => {
+    const info = TLC_TIPOLOGIE[k] || { label: k, icon: '📡' };
+    html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.7rem 1rem 0.4rem;border-top:0.5px solid var(--border)">'
+      + info.icon + ' ' + info.label + ' (' + gruppi[k].length + ')</div>';
+    gruppi[k].forEach(t => {
+      const titolo  = [t.marca, t.modello].filter(Boolean).join(' ') || '—';
+      const sub     = [];
+      if (t.seriale)      sub.push('S/N ' + t.seriale);
+      if (t.selettiva)    sub.push('SEL ' + t.selettiva);
+      if (t.frequenza)    sub.push(t.frequenza === 'DIGITALE' ? 'Digitale' : 'Analogica');
+      const badge = t.assegnazione
+        ? '<span class="vol-badge vb-squadra">' + t.assegnazione + '</span>'
+        : '<span class="vol-badge vb-off">non assegnato</span>';
+      html += '<div class="vol-card" onclick="apriDettaglioTlc(' + t.id + ')">'
+        + '<div class="vol-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.1rem">' + info.icon + '</div>'
+        + '<div class="vol-card-info">'
+        + '<div class="vol-card-name">' + titolo + '</div>'
+        + '<div class="vol-card-sub"><span>' + (sub.join(' | ') || '—') + '</span></div>'
+        + '</div>'
+        + '<div class="vol-card-badges">' + badge + '</div>'
+        + '</div>';
+    });
+  });
+  html += '</div>';
+  list.innerHTML = html;
+}
+
+function _renderTlcDocsGenerali() {
+  const count = tlcDocsGenerali.length;
+  const expanded = window._tlcDocsGenAperto === true;
+
+  let html = '<div class="vol-section" style="margin-bottom:0.8rem;background:var(--bg-card);border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden">'
+    + '<div class="vol-section-head" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="toggleTlcDocsGenerali()">'
+    + '<span>📁 Documenti generali TLC <span style="font-size:0.6rem;color:var(--green);margin-left:4px">(' + count + ')</span></span>'
+    + '<span id="tlcDocsGenChev" style="color:var(--testo-3);font-size:0.85rem">' + (expanded ? '▼' : '▶') + '</span>'
+    + '</div>'
+    + '<div class="vol-section-body" id="tlcDocsGenBody" style="' + (expanded ? '' : 'display:none') + '">';
+
+  // Raggruppa per tipo
+  const gruppi = { MANUALE: [], FREQUENZE: [], AMMINISTRATIVO: [], ALTRO: [] };
+  tlcDocsGenerali.forEach(d => {
+    const k = TLC_DOC_TIPI_GENERALI.indexOf(d.tipo) >= 0 ? d.tipo : 'ALTRO';
+    gruppi[k].push(d);
+  });
+
+  if (!count) {
+    html += '<div style="font-size:0.75rem;color:var(--testo-3);padding:0.5rem 0">Nessun documento generale.</div>';
+  } else {
+    TLC_DOC_TIPI_GENERALI.forEach(k => {
+      const docs = gruppi[k];
+      if (!docs.length) return;
+      const lbl = TLC_DOC_TIPI[k] || k;
+      html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.6rem 0 0.3rem">' + lbl + ' (' + docs.length + ')</div>';
+      docs.forEach(d => {
+        const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        const nome = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : lbl;
+        html += '<div style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
+          + '</div>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button>'
+          + '</div></div>';
+      });
+    });
+  }
+
+  html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUploadGenerale()">+ aggiungi documento generale</button>';
+  html += '</div></div>';
+  return html;
+}
+
+function toggleTlcDocsGenerali() {
+  const body = document.getElementById('tlcDocsGenBody');
+  const chev = document.getElementById('tlcDocsGenChev');
+  if (!body) return;
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    chev.textContent = '▼';
+    window._tlcDocsGenAperto = true;
+  } else {
+    body.style.display = 'none';
+    chev.textContent = '▶';
+    window._tlcDocsGenAperto = false;
+  }
+}
+
+function filtraTlc() {
+  const q    = (document.getElementById('tlcSearch').value || '').toLowerCase().trim();
+  const tipo = document.getElementById('tlcFiltroTipo').value;
+  const filtered = tlcData.filter(t => {
+    if (tipo && t.tipologia !== tipo) return false;
+    if (q) {
+      const hay = ((t.marca||'') + ' ' + (t.modello||'') + ' ' + (t.seriale||'') + ' ' + (t.selettiva||'') + ' ' + (t.assegnazione||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  renderTlc(filtered);
+}
+
+function apriDettaglioTlc(id) {
+  const t = tlcData.find(x => x.id === id);
+  if (!t) return;
+  tlcCorrenteId = id;
+  const info = TLC_TIPOLOGIE[t.tipologia] || { label: t.tipologia, icon: '📡' };
+  document.getElementById('tlcDetailTitle').textContent = [t.marca, t.modello].filter(Boolean).join(' ') || 'Apparato';
+
+  const body = document.getElementById('tlcDetailBody');
+  let html = '<div class="vol-detail-hero">'
+    + '<div class="vol-detail-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.6rem">' + info.icon + '</div>'
+    + '<div><div class="vol-detail-name">' + ([t.marca, t.modello].filter(Boolean).join(' ') || '—') + '</div>'
+    + '<div class="vol-detail-role">' + info.label + (t.assegnazione ? ' | ' + t.assegnazione : '') + '</div></div>'
+    + '</div>';
+
+  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body" style="display:block">'
+    + _tlcField('Tipologia', info.label)
+    + _tlcField('Marca', t.marca)
+    + _tlcField('Modello', t.modello)
+    + _tlcField('Seriale', t.seriale)
+    + _tlcField('Selettiva', t.selettiva)
+    + _tlcField('Frequenza', t.frequenza === 'DIGITALE' ? 'Digitale' : (t.frequenza === 'ANALOGICA' ? 'Analogica' : null))
+    + _tlcField('Assegnazione', t.assegnazione)
+    + (t.note ? _tlcField('Note', t.note) : '')
+    + '</div></div>';
+
+  // Sezione documenti
+  html += '<div class="vol-section">'
+    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleTlcDoc(' + id + ')">'
+    + 'Documenti <span id="tlcDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '</div>'
+    + '<div class="vol-section-body" id="tlcDocBody" style="display:none"></div>'
+    + '</div>';
+
+  // Azioni
+  html += '<div style="padding:1rem 0">'
+    + '<button class="btn-sm btn-danger" style="width:100%" onclick="eliminaTlc(' + id + ')">🗑️ Elimina apparato</button>'
+    + '</div>';
+
+  body.innerHTML = html;
+  tlcDocLoadedFor = null;
+  document.getElementById('tlcDetail').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _tlcField(lbl, val) {
+  return '<div class="vol-field"><span class="vol-field-label">' + lbl + '</span><span>' + (val || '—') + '</span></div>';
+}
+
+function chiudiDettaglioTlc() {
+  document.getElementById('tlcDetail').classList.remove('open');
+  document.body.style.overflow = '';
+  tlcCorrenteId = null;
+  tlcDocLoadedFor = null;
+}
+
+function apriFormTlc(id) {
+  tlcCorrenteId = id;
+  const t = id ? tlcData.find(x => x.id === id) : {};
+  if (!t) return;
+  document.getElementById('tlcFormTitle').textContent = id ? 'Modifica apparato' : 'Nuovo apparato TLC';
+
+  let optTipo = '';
+  Object.keys(TLC_TIPOLOGIE).forEach(k => {
+    optTipo += '<option value="' + k + '"' + (t.tipologia === k ? ' selected' : '') + '>' + TLC_TIPOLOGIE[k].icon + ' ' + TLC_TIPOLOGIE[k].label + '</option>';
+  });
+
+  const body = document.getElementById('tlcFormBody');
+  body.innerHTML = '<div class="form-err" id="tlcFormErr"></div>'
+    + '<div class="form-field"><label class="form-lbl">Tipologia *</label><select class="form-inp" id="tlcfTipologia">' + optTipo + '</select></div>'
+    + '<div class="form-field"><label class="form-lbl">Marca</label><input class="form-inp" id="tlcfMarca" value="' + (t.marca || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Modello</label><input class="form-inp" id="tlcfModello" value="' + (t.modello || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Seriale</label><input class="form-inp" id="tlcfSeriale" value="' + (t.seriale || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Selettiva</label><input class="form-inp" id="tlcfSelettiva" value="' + (t.selettiva || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Frequenza</label><select class="form-inp" id="tlcfFrequenza">'
+    + '<option value=""' + (!t.frequenza ? ' selected' : '') + '>— non specificata</option>'
+    + '<option value="ANALOGICA"' + (t.frequenza === 'ANALOGICA' ? ' selected' : '') + '>Analogica</option>'
+    + '<option value="DIGITALE"' + (t.frequenza === 'DIGITALE' ? ' selected' : '') + '>Digitale</option>'
+    + '</select></div>'
+    + '<div class="form-field"><label class="form-lbl">Assegnazione</label><input class="form-inp" id="tlcfAssegnazione" placeholder="es. Aceto Mauro, Auto 1, Sede" value="' + (t.assegnazione || '') + '"></div>'
+    + '<div class="form-field"><label class="form-lbl">Note</label><textarea class="form-inp" id="tlcfNote" rows="3">' + (t.note || '') + '</textarea></div>';
+
+  document.getElementById('tlcFormPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function chiudiFormTlc() {
+  document.getElementById('tlcFormPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function salvaTlc() {
+  const errEl = document.getElementById('tlcFormErr');
+  const payload = {
+    tipologia: document.getElementById('tlcfTipologia').value,
+    marca:     document.getElementById('tlcfMarca').value.trim() || null,
+    modello:   document.getElementById('tlcfModello').value.trim() || null,
+    seriale:   document.getElementById('tlcfSeriale').value.trim() || null,
+    selettiva: document.getElementById('tlcfSelettiva').value.trim() || null,
+    frequenza: document.getElementById('tlcfFrequenza').value || null,
+    assegnazione: document.getElementById('tlcfAssegnazione').value.trim() || null,
+    note:      document.getElementById('tlcfNote').value.trim() || null,
+    data_modifica: new Date().toISOString()
+  };
+  if (!payload.tipologia) { errEl.textContent = 'Tipologia obbligatoria.'; errEl.style.display = 'block'; return; }
+
+  try {
+    let res;
+    if (tlcCorrenteId) {
+      res = await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + tlcCorrenteId, {
+        method: 'PATCH',
+        headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
+      });
+      await logAttivita('ha modificato apparato TLC: ' + (payload.marca || '') + ' ' + (payload.modello || ''));
+    } else {
+      res = await fetch(SUPA_URL + '/rest/v1/tlc', {
+        method: 'POST',
+        headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(payload)
+      });
+      await logAttivita('ha aggiunto apparato TLC: ' + (payload.marca || '') + ' ' + (payload.modello || ''));
+    }
+    if (!res.ok) throw new Error('errore');
+    chiudiFormTlc();
+    chiudiDettaglioTlc();
+    caricaTlc();
+  } catch(e) {
+    errEl.textContent = 'Errore salvataggio.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaTlc(id) {
+  if (!confirm('Eliminare questo apparato? Verranno cancellati anche i documenti collegati.')) return;
+  try {
+    // Cancella prima i file dal bucket
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + id + '&select=url', { headers: H });
+    const docs = await r.json();
+    for (const d of (docs || [])) {
+      if (d.url) {
+        const m = d.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+        if (m) {
+          await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+        }
+      }
+    }
+    // Cancella apparato (cascade su documenti_tlc)
+    await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + id, { method: 'DELETE', headers: H });
+    await logAttivita('ha eliminato apparato TLC');
+    chiudiDettaglioTlc();
+    caricaTlc();
+  } catch(e) { alert('Errore eliminazione.'); }
+}
+
+// -- TLC: documenti --
+function toggleTlcDoc(tlcId) {
+  const body = document.getElementById('tlcDocBody');
+  if (!body) return;
+  if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+  body.style.display = 'block';
+  if (tlcDocLoadedFor !== tlcId || !body.innerHTML.trim()) {
+    tlcDocLoadedFor = tlcId;
+    caricaDocTlc(tlcId);
+  }
+}
+
+async function caricaDocTlc(tlcId) {
+  const body = document.getElementById('tlcDocBody');
+  if (!body) return;
+  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  try {
+    const res  = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
+    const docs = await res.json();
+    const count = document.getElementById('tlcDocCount');
+    if (count) count.textContent = '(' + docs.length + ')';
+
+    let html = '';
+    if (!docs.length) {
+      html += '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.3rem 0">Nessun documento.</div>';
+    } else {
+      docs.forEach(d => {
+        const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
+        const label = TLC_DOC_TIPI[d.tipo] || d.tipo;
+        const nome  = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : label;
+        html += '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
+          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + label + ' · ' + data + '</div>'
+          + '</div>'
+          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
+          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button>'
+          + '</div>'
+          + '</div>';
+      });
+    }
+    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUpload(' + tlcId + ')">+ aggiungi documento</button>';
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore.</div>';
+  }
+}
+
+function apriTlcDocUpload(tlcId) {
+  tlcDocCorrenteId = tlcId;
+  document.getElementById('tlcDocFile').value = '';
+  document.getElementById('tlcDocUploadErr').style.display = 'none';
+  document.getElementById('tlcDocUploadOverlay').classList.add('open');
+}
+
+function chiudiTlcDocUpload() {
+  document.getElementById('tlcDocUploadOverlay').classList.remove('open');
+}
+
+async function eseguiUploadDocTlc() {
+  const errEl = document.getElementById('tlcDocUploadErr');
+  const file  = document.getElementById('tlcDocFile').files[0];
+  const tipo  = document.getElementById('tlcDocTipo').value;
+  if (!file) { errEl.textContent = 'Seleziona un file.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = 'tlc_' + tlcDocCorrenteId + '/' + tipo + '_' + Date.now() + '.' + ext;
+  const bucket = 'documenti-tlc';
+
+  try {
+    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+      method: 'POST',
+      headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error('upload fallito');
+    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ tlc_id: tlcDocCorrenteId, tipo: tipo, nome_file: file.name, url: url })
+    });
+    await logAttivita('ha caricato documento TLC');
+    chiudiTlcDocUpload();
+    caricaDocTlc(tlcDocCorrenteId);
+  } catch(e) {
+    errEl.textContent = 'Errore upload: ' + (e.message || '');
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaDocTlc(docId, tlcId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const arr = await r.json();
+    const doc = arr[0];
+    if (doc && doc.url) {
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+    }
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    caricaDocTlc(tlcId);
+  } catch(e) { alert('Errore.'); }
+}
+
+// -- TLC: documenti GENERALI (non legati a un apparato) --
+function apriTlcDocUploadGenerale() {
+  document.getElementById('tlcDocGenFile').value = '';
+  document.getElementById('tlcDocGenUploadErr').style.display = 'none';
+  document.getElementById('tlcDocGenUploadOverlay').classList.add('open');
+}
+
+function chiudiTlcDocUploadGenerale() {
+  document.getElementById('tlcDocGenUploadOverlay').classList.remove('open');
+}
+
+async function eseguiUploadDocTlcGenerale() {
+  const errEl = document.getElementById('tlcDocGenUploadErr');
+  const file  = document.getElementById('tlcDocGenFile').files[0];
+  const tipo  = document.getElementById('tlcDocGenTipo').value;
+  if (!file) { errEl.textContent = 'Seleziona un file.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = 'generali/' + tipo + '_' + Date.now() + '.' + ext;
+  const bucket = 'documenti-tlc';
+
+  try {
+    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+      method: 'POST',
+      headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error('upload fallito');
+    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ tlc_id: null, tipo: tipo, nome_file: file.name, url: url })
+    });
+    await logAttivita('ha caricato documento TLC generale');
+    chiudiTlcDocUploadGenerale();
+    window._tlcDocsGenAperto = true; // mantieni aperto
+    caricaTlc();
+  } catch(e) {
+    errEl.textContent = 'Errore upload: ' + (e.message || '');
+    errEl.style.display = 'block';
+  }
+}
+
+async function eliminaDocTlcGen(docId) {
+  if (!confirm('Eliminare questo documento?')) return;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const arr = await r.json();
+    const doc = arr[0];
+    if (doc && doc.url) {
+      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+    }
+    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    window._tlcDocsGenAperto = true;
+    caricaTlc();
+  } catch(e) { alert('Errore.'); }
+}
+
 // -- MEZZI --
 var mezziData = [];
 var mezzoCorrenteId = null;
 
-var MEZZO_STATO_OPTIONS = APP_CONFIG.mezzi.stati;
+var MEZZO_STATO_OPTIONS = ['OPERATIVO', 'IN MANUTENZIONE', 'FERMO'];
 
 function getMezzoIcon(tipo) {
   var t = (tipo || '').toUpperCase();
@@ -3441,7 +4046,7 @@ function renderMezzi() {
     html += '<div class="mezzo-tile" onclick="apriDettaglioMezzo(' + m.id + ')">'
       + '<div class="mezzo-tile-foto">'
       + fotoHtml
-      + '<span class="mezzo-tile-stato ' + sbCls + '">' + (m.stato||APP_CONFIG.mezzi.stati[0]) + '</span>'
+      + '<span class="mezzo-tile-stato ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span>'
       + '</div>'
       + '<div class="mezzo-tile-body">'
       + '<div class="mezzo-tile-nome">' + m.automezzo + '</div>'
@@ -3476,7 +4081,7 @@ function apriDettaglioMezzo(id) {
   body.innerHTML = '<div class="vol-detail-hero">'
     + _fotoHtml
     + '<div><div class="vol-detail-name">' + m.automezzo + '</div>'
-    + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||APP_CONFIG.mezzi.stati[0]) + '</span></div></div>'
+    + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span></div></div>'
     + '</div>'
     + '<div class="vol-section"><div class="vol-section-head">Identificazione</div><div class="vol-section-body">'
     + '<div class="vol-field"><span class="vol-field-label">Targa</span>' + fmt(m.targa) + '</div>'
@@ -3584,7 +4189,672 @@ async function eliminaMezzo() {
   caricaMezzi();
 }
 
-// -- DOCUMENTI MEZZI --
+// -- ACCESSI E CREDENZIALI (master) --
+let accessiData = { admin: [], vol: [] };
+
+async function caricaAccessi() {
+  const content = document.getElementById('accessiContent');
+  if (!content) return;
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+
+  try {
+    // Carica utenti admin + tutti i volontari (per i loro accessi)
+    const [uRes, vRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H })
+    ]);
+    accessiData.admin = await uRes.json();
+    accessiData.vol   = await vRes.json();
+    renderAccessi();
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderAccessi() {
+  const content = document.getElementById('accessiContent');
+  const q       = (document.getElementById('accessiSearch').value || '').toLowerCase().trim();
+  const tipo    = document.getElementById('accessiTipo').value;
+
+  let html = '';
+
+  const matchQ = (s) => !q || s.toLowerCase().includes(q);
+
+  // Sezione Amministratori
+  if (tipo !== 'vol') {
+    const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
+    html += '<div class="schedapers-sec-title" style="margin-bottom:0.6rem">🔐 Amministratori (' + admins.length + ')</div>';
+    if (!admins.length) {
+      html += '<div class="loading-msg" style="margin-bottom:1rem">nessun amministratore</div>';
+    } else {
+      html += '<div class="accessi-grid">';
+      admins.forEach(u => {
+        const stato = u.attivo
+          ? '<span class="acc-badge acc-active">ATTIVO</span>'
+          : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
+        const tipoLbl = u.tipo_accesso === 'master'
+          ? '<span class="acc-badge acc-master">MASTER</span>'
+          : '<span class="acc-badge acc-std">STANDARD</span>';
+        html += '<div class="acc-card">'
+          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome || '—') + '</strong></span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  // Sezione Volontari
+  if (tipo !== 'admin') {
+    const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
+    html += '<div class="schedapers-sec-title" style="margin:1.4rem 0 0.6rem">👤 Volontari abilitati all\'accesso (' + vols.length + ')</div>';
+    html += '<div style="font-size:0.78rem;color:var(--testo-3);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--bg-2);border-radius:6px">'
+      + 'I volontari accedono con <strong>Codice Fiscale</strong> + <strong>Data di nascita</strong>. Tutti i volontari ATTIVI e SOSPESI possono accedere.'
+      + '</div>';
+    if (!vols.length) {
+      html += '<div class="loading-msg">nessun volontario</div>';
+    } else {
+      html += '<div class="accessi-grid">';
+      vols.forEach(v => {
+        const dataNasc = v.data_nascita
+          ? new Date(v.data_nascita).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})
+          : '—';
+        const stato = v.stato === 'SOSPESO'
+          ? '<span class="acc-badge acc-sosp">SOSPESO</span>'
+          : '<span class="acc-badge acc-active">ATTIVO</span>';
+        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+        const [bg, fg] = avatarColor(v.cognome);
+        html += '<div class="acc-card">'
+          + '<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.5rem">'
+          + (v.foto_url
+              ? '<img src="' + v.foto_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
+              : '<div style="width:36px;height:36px;border-radius:50%;background:' + bg + ';color:' + fg + ';display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.78rem">' + initials + '</div>')
+          + '<div style="flex:1"><div style="font-weight:600;font-size:0.9rem">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div></div>'
+          + stato
+          + '</div>'
+          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Data nascita</span><span class="acc-val">' + dataNasc + '</span></div>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  content.innerHTML = html;
+}
+
+function filtraAccessi() {
+  renderAccessi();
+}
+
+
+async function caricaSchedaPersonale() {
+  const content = document.getElementById('schedaPersContent');
+  if (!content) return;
+  if (!currentUser || !currentUser.volontario_id) {
+    content.innerHTML = '<div class="loading-msg">Accesso non valido.</div>';
+    return;
+  }
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + currentUser.volontario_id + '&select=*', { headers: H });
+    const arr = await res.json();
+    if (!arr.length) {
+      content.innerHTML = '<div class="loading-msg">Scheda non trovata.</div>';
+      return;
+    }
+    const v = arr[0];
+    renderSchedaPersonale(v);
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderSchedaPersonale(v) {
+  const content = document.getElementById('schedaPersContent');
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : '—';
+  const yes = (b) => b ? '<span style="color:var(--green);font-weight:600">✓ Sì</span>' : '<span style="color:var(--testo-3)">—</span>';
+  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+  const [bg, fg] = avatarColor(v.cognome);
+
+  // Sezioni e campi (sola lettura)
+  const sections = [
+    { titolo: 'Anagrafica', fields: [
+      ['Cognome', v.cognome], ['Nome', v.nome],
+      ['Codice Fiscale', v.codice_fiscale || '—'],
+      ['Data di nascita', formatDate(v.data_nascita)],
+      ['Luogo di nascita', v.luogo_nascita || '—'],
+      ['Professione', v.professione || '—'],
+    ]},
+    { titolo: 'Contatti', fields: [
+      ['Telefono', v.telefono || '—'],
+      ['Email', v.email || '—'],
+      ['Indirizzo', v.indirizzo || '—'],
+      ['CAP', v.cap || '—'],
+      ['Città', v.citta || '—'],
+    ]},
+    { titolo: 'Inquadramento', fields: [
+      ['Squadra', v.squadra || '—'],
+      ['Tipo Volontario', v.tipo_volontario || '—'],
+      ['Mansione', v.mansione || '—'],
+      ['Specializzazione', v.specializzazione || '—'],
+      ['Gruppo Alpini', v.gruppo_alpini || '—'],
+      ['Patenti', v.patenti || '—'],
+      ['Stato', v.stato || 'ATTIVO'],
+    ]},
+  ];
+
+  let html = '<div class="schedapers-hero">'
+    + (v.foto_url
+        ? '<img src="' + v.foto_url + '" class="schedapers-avatar" style="object-fit:cover">'
+        : '<div class="schedapers-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
+    + '<div><div class="schedapers-name">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div>'
+    + '<div class="schedapers-role">' + (v.tipo_volontario||'Volontario') + ' | ' + (v.squadra||'—') + '</div></div>'
+    + '</div>'
+    + '<button class="btn-primary" style="margin-bottom:1rem" onclick="navTo(\'segnalazioni\',\'Segnalazioni\',null)">⚠️ Segnala un errore nei tuoi dati</button>';
+
+  sections.forEach(s => {
+    html += '<div class="schedapers-sec"><div class="schedapers-sec-title">' + s.titolo + '</div>';
+    s.fields.forEach(f => {
+      html += '<div class="schedapers-field"><span class="schedapers-lbl">' + f[0] + '</span><span class="schedapers-val">' + (f[1] || '—') + '</span></div>';
+    });
+    html += '</div>';
+  });
+
+  content.innerHTML = html;
+}
+
+// -- SEGNALAZIONI --
+async function caricaSegnalazioni() {
+  const content = document.getElementById('segnalazioniContent');
+  const sub = document.getElementById('segnalazioniSub');
+  if (!content) return;
+  const isVol = currentUser.tipo_accesso === 'volontario';
+
+  if (isVol) {
+    // Volontario: form per inviare + storico proprie segnalazioni
+    sub.textContent = 'Segnala errori nella tua scheda. Verranno presi in carico dagli amministratori.';
+    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
+      const arr = await res.json();
+      renderSegnalazioniVolontario(arr || []);
+    } catch(e) {
+      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    }
+  } else {
+    // Admin: lista tutte le segnalazioni
+    sub.textContent = 'Segnalazioni ricevute dai volontari';
+    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    try {
+      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
+      const arr = await res.json();
+      renderSegnalazioniAdmin(arr || []);
+    } catch(e) {
+      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    }
+  }
+}
+
+function renderSegnalazioniVolontario(list) {
+  const content = document.getElementById('segnalazioniContent');
+  let html = '<div class="seg-form">'
+    + '<label class="form-lbl">Descrivi l\'errore o l\'aggiornamento necessario</label>'
+    + '<textarea class="form-inp" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea>'
+    + '<button class="btn-primary" style="margin-top:0.6rem" onclick="inviaSegnalazione()">📤 Invia segnalazione</button>'
+    + '</div>';
+
+  if (list.length) {
+    html += '<div class="schedapers-sec-title" style="margin-top:1.4rem">Tue segnalazioni precedenti</div>';
+    list.forEach(s => {
+      const data = new Date(s.data_creazione).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'});
+      const statoLbl = s.gestita ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>' : '<span style="color:#d9a400;font-weight:600">⏳ In attesa</span>';
+      html += '<div class="seg-card">'
+        + '<div class="seg-card-head"><span>' + data + '</span>' + statoLbl + '</div>'
+        + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
+        + (s.note_admin ? '<div class="seg-card-resp"><strong>Risposta:</strong> ' + s.note_admin + '</div>' : '')
+        + '</div>';
+    });
+  }
+  content.innerHTML = html;
+}
+
+function renderSegnalazioniAdmin(list) {
+  const content = document.getElementById('segnalazioniContent');
+  if (!list.length) {
+    content.innerHTML = '<div class="loading-msg">nessuna segnalazione.</div>';
+    return;
+  }
+  let html = '';
+  list.forEach(s => {
+    const v    = s.volontario || {};
+    const data = new Date(s.data_creazione).toLocaleString('it-IT');
+    const statoLbl = s.gestita
+      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
+      : '<span style="color:#d9a400;font-weight:600">⏳ Da gestire</span>';
+    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : '#d9a400') + '">'
+      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
+      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</div>'
+      + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
+      + '<div style="margin-top:0.6rem">'
+      + '<textarea class="form-inp" id="segNote_' + s.id + '" rows="2" placeholder="Risposta opzionale al volontario..." style="font-size:0.8rem">' + (s.note_admin || '') + '</textarea>'
+      + '<div style="display:flex;gap:0.4rem;margin-top:0.4rem">'
+      + (s.gestita
+          ? '<button class="btn-sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">↻ Riapri</button>'
+          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">✓ Segna come gestita</button>')
+      + '<button class="btn-sm" onclick="salvaNoteSegnalazione(' + s.id + ')">💾 Salva nota</button>'
+      + '</div></div>'
+      + '</div>';
+  });
+  content.innerHTML = html;
+}
+
+async function inviaSegnalazione() {
+  const txt = (document.getElementById('segText').value || '').trim();
+  if (!txt) { alert('Inserisci una descrizione.'); return; }
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ volontario_id: currentUser.volontario_id, testo: txt })
+    });
+    if (!res.ok) throw new Error('errore');
+    document.getElementById('segText').value = '';
+    alert('Segnalazione inviata. Grazie!');
+    caricaSegnalazioni();
+  } catch(e) {
+    alert('Errore invio. Riprova.');
+  }
+}
+
+async function cambiaStatoSegnalazione(id, gestita) {
+  try {
+    const body = { gestita: gestita };
+    if (gestita) body.data_gestione = new Date().toISOString();
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('errore');
+    caricaSegnalazioni();
+    caricaBadgeSegnalazioni();
+  } catch(e) { alert('Errore.'); }
+}
+
+async function salvaNoteSegnalazione(id) {
+  const note = document.getElementById('segNote_' + id).value;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ note_admin: note })
+    });
+    if (!res.ok) throw new Error('errore');
+    alert('Nota salvata.');
+  } catch(e) { alert('Errore.'); }
+}
+
+async function caricaBadgeSegnalazioni() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?gestita=eq.false&select=id', {
+      headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
+    });
+    const cr = res.headers.get('Content-Range') || '';
+    const tot = parseInt(cr.split('/')[1] || '0');
+    const b = document.getElementById('siBadgeSegnalazioni');
+    if (b) {
+      if (tot > 0) { b.textContent = tot; b.classList.add('show'); }
+      else { b.classList.remove('show'); b.textContent = ''; }
+    }
+  } catch(e) {}
+}
+
+
+const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
+const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
+
+let galleriaAlbumsCache = null;   // cache album
+let galleriaCurrentAlbum = null;  // album aperto al momento
+let galleriaCurrentPhotos = [];   // foto dell'album corrente
+let galleriaLightboxIdx = 0;
+
+async function caricaGalleria() {
+  const content = document.getElementById('gallContent');
+  const back    = document.getElementById('gallBackBtn');
+  if (!content) return;
+  back.style.display = 'none';
+  galleriaCurrentAlbum = null;
+  document.getElementById('gallTitle').textContent = 'Galleria';
+  document.getElementById('gallSub').textContent = 'Album fotografici degli eventi';
+
+  if (GOOGLE_API_KEY === 'INCOLLA_QUI_LA_TUA_CHIAVE_API' || !GOOGLE_API_KEY) {
+    content.innerHTML = '<div class="loading-msg">⚠️ Chiave API Google non configurata. Inserisci la chiave in area-riservata.js.</div>';
+    return;
+  }
+
+  if (galleriaAlbumsCache) {
+    renderAlbums(galleriaAlbumsCache);
+    return;
+  }
+
+  content.innerHTML = '<div class="loading-msg">caricamento album...</div>';
+  try {
+    // Lista sottocartelle (album) nella cartella principale
+    const q = "'" + GALLERIA_FOLDER_ID + "' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+    const url = 'https://www.googleapis.com/drive/v3/files'
+      + '?q=' + encodeURIComponent(q)
+      + '&fields=' + encodeURIComponent('files(id,name,modifiedTime)')
+      + '&orderBy=name desc'
+      + '&pageSize=100'
+      + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
+      + '&key=' + GOOGLE_API_KEY;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err.error && err.error.message) || 'errore API');
+    }
+    const data = await res.json();
+    const albums = data.files || [];
+
+    // Per ogni album cerco una copertina (prima foto)
+    const albumsConCover = await Promise.all(albums.map(async (alb) => {
+      try {
+        const cq = "'" + alb.id + "' in parents and (mimeType contains 'image/') and trashed = false";
+        const cu = 'https://www.googleapis.com/drive/v3/files'
+          + '?q=' + encodeURIComponent(cq)
+          + '&fields=files(id,thumbnailLink)'
+          + '&pageSize=1'
+          + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
+          + '&key=' + GOOGLE_API_KEY;
+        const cr = await fetch(cu);
+        const cd = await cr.json();
+        const cover = cd.files && cd.files[0];
+        return Object.assign({}, alb, { coverId: cover ? cover.id : null });
+      } catch(e) {
+        return alb;
+      }
+    }));
+
+    galleriaAlbumsCache = albumsConCover;
+    renderAlbums(albumsConCover);
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+  }
+}
+
+function renderAlbums(albums) {
+  const content = document.getElementById('gallContent');
+  if (!albums.length) {
+    content.innerHTML = '<div class="loading-msg">nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
+    return;
+  }
+  let html = '<div class="gall-albums">';
+  albums.forEach(alb => {
+    const dateStr = alb.modifiedTime ? new Date(alb.modifiedTime).toLocaleDateString('it-IT', {month:'short', year:'numeric'}) : '';
+    const cover = alb.coverId
+      ? '<img src="https://lh3.googleusercontent.com/d/' + alb.coverId + '=w600" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=&quot;gall-folder-icon&quot;>📁</span>\'">'
+      : '<span class="gall-folder-icon">📁</span>';
+    html += '<div class="gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
+      + '<div class="gall-album-cover">' + cover + '</div>'
+      + '<div class="gall-album-info">'
+      + '<div class="gall-album-name">' + alb.name + '</div>'
+      + (dateStr ? '<div class="gall-album-meta">' + dateStr + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+async function apriAlbum(folderId, nome) {
+  const content = document.getElementById('gallContent');
+  document.getElementById('gallBackBtn').style.display = 'inline-block';
+  document.getElementById('gallTitle').textContent = nome;
+  document.getElementById('gallSub').textContent = 'caricamento foto...';
+  galleriaCurrentAlbum = folderId;
+  content.innerHTML = '<div class="loading-msg">caricamento foto...</div>';
+
+  try {
+    const q = "'" + folderId + "' in parents and (mimeType contains 'image/') and trashed = false";
+    const url = 'https://www.googleapis.com/drive/v3/files'
+      + '?q=' + encodeURIComponent(q)
+      + '&fields=' + encodeURIComponent('files(id,name,thumbnailLink,imageMediaMetadata)')
+      + '&orderBy=name'
+      + '&pageSize=1000'
+      + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
+      + '&key=' + GOOGLE_API_KEY;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err.error && err.error.message) || 'errore API');
+    }
+    const data = await res.json();
+    galleriaCurrentPhotos = data.files || [];
+    document.getElementById('gallSub').textContent = galleriaCurrentPhotos.length + ' foto';
+
+    if (!galleriaCurrentPhotos.length) {
+      content.innerHTML = '<div class="loading-msg">album vuoto.</div>';
+      return;
+    }
+
+    let html = '<div class="gall-photos">';
+    galleriaCurrentPhotos.forEach((f, i) => {
+      const thumb = 'https://lh3.googleusercontent.com/d/' + f.id + '=w400';
+      html += '<div class="gall-photo" onclick="apriLightbox(' + i + ')">'
+        + '<img src="' + thumb + '" loading="lazy" alt="' + (f.name || '') + '">'
+        + '</div>';
+    });
+    html += '</div>';
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+  }
+}
+
+function galleriaBack() {
+  caricaGalleria();
+}
+
+function apriLightbox(idx) {
+  if (!galleriaCurrentPhotos.length) return;
+  galleriaLightboxIdx = idx;
+  mostraFotoLightbox();
+  document.getElementById('gallLightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function mostraFotoLightbox() {
+  const f = galleriaCurrentPhotos[galleriaLightboxIdx];
+  if (!f) return;
+  document.getElementById('gallLightboxImg').src = 'https://lh3.googleusercontent.com/d/' + f.id + '=w1920';
+  document.getElementById('gallLightboxCap').textContent = (galleriaLightboxIdx + 1) + ' / ' + galleriaCurrentPhotos.length;
+}
+
+function lightboxNav(delta, evt) {
+  if (evt) evt.stopPropagation();
+  const n = galleriaCurrentPhotos.length;
+  galleriaLightboxIdx = (galleriaLightboxIdx + delta + n) % n;
+  mostraFotoLightbox();
+}
+
+function chiudiLightbox(evt, forza) {
+  if (!forza && evt && evt.target.id !== 'gallLightbox') return;
+  document.getElementById('gallLightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Frecce tastiera per il lightbox
+document.addEventListener('keydown', function(e) {
+  const lb = document.getElementById('gallLightbox');
+  if (!lb || !lb.classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+  if (e.key === 'Escape')     chiudiLightbox(null, true);
+});
+
+// -- VISITE MEDICHE --
+let visiteData = [];
+
+const VISITA_STATI = {
+  'ESONERO':    { label: 'Esonero',    cls: 'vs-esonero' },
+  'DA_FARE':    { label: 'Da Fare',    cls: 'vs-da_fare' },
+  'VERIFICA':   { label: 'Verifica',   cls: 'vs-verifica' },
+  'SOLO_ESAMI': { label: 'Solo Esami', cls: 'vs-solo_esami' },
+  'COMPLETATA': { label: 'Completata', cls: 'vs-completata' }
+};
+
+async function caricaVisite() {
+  const list = document.getElementById('visiteList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_visita,stato_visita,cdc_1_step,cdc_2_step,stato&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+    visiteData = await res.json();
+    renderDashboardVisite();
+    renderVisite(visiteData);
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg">errore caricamento.</div>';
+  }
+}
+
+function renderDashboardVisite() {
+  const dash = document.getElementById('visiteDashboard');
+  if (!dash) return;
+  const tot = visiteData.length;
+  // Conteggi per stato
+  const cnt = { TOT: tot, VUOTO: 0, ESONERO: 0, DA_FARE: 0, VERIFICA: 0, SOLO_ESAMI: 0, COMPLETATA: 0 };
+  visiteData.forEach(v => {
+    const k = v.stato_visita || 'VUOTO';
+    if (cnt[k] !== undefined) cnt[k]++;
+  });
+  const currentFilter = document.getElementById('visiteFiltroStato') ? document.getElementById('visiteFiltroStato').value : '';
+  const cards = [
+    { key: '',           label: 'Totale',     n: cnt.TOT,        color: '#222' },
+    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--green)' },
+    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: '#ff8c00' },
+    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: '#d9a400' },
+    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: '#4c8dff' },
+    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: '#9aa0a6' },
+    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: '#dc3545' },
+  ];
+  dash.innerHTML = cards.map(c => {
+    const pct = tot > 0 ? Math.round((c.n / tot) * 100) : 0;
+    const active = currentFilter === c.key ? ' vd-active' : '';
+    return '<div class="vd-card' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
+      + '<div class="vd-card-num" style="color:' + c.color + '">' + c.n + '</div>'
+      + '<div class="vd-card-lbl">' + c.label + '</div>'
+      + '<div class="vd-card-bar"><div class="vd-card-bar-fill" style="width:' + pct + '%;background:' + c.color + '"></div></div>'
+      + '</div>';
+  }).join('');
+}
+
+function filtraVisitePerStato(stato) {
+  const sel = document.getElementById('visiteFiltroStato');
+  if (!sel) return;
+  // Click sulla card già attiva = togli filtro
+  if (sel.value === stato) sel.value = '';
+  else sel.value = stato;
+  filtraVisite();
+  renderDashboardVisite();
+}
+
+function renderVisite(data) {
+  const list = document.getElementById('visiteList');
+  if (!data.length) {
+    list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
+    return;
+  }
+  let html = '<div class="visite-table-wrap"><table class="visite-tbl">'
+    + '<thead><tr>'
+    + '<th>Cognome</th><th>Nome</th><th>Codice Fiscale</th>'
+    + '<th>Stato Visita</th><th>Data Visita</th>'
+    + '<th style="text-align:center">CDC 1°</th><th style="text-align:center">CDC 2°</th>'
+    + '</tr></thead><tbody>';
+
+  data.forEach(v => {
+    const statoKey = v.stato_visita || '';
+    const statoInfo = VISITA_STATI[statoKey] || null;
+    const statoBadge = statoInfo
+      ? '<span class="visite-stato ' + statoInfo.cls + '">' + statoInfo.label + '</span>'
+      : '<span class="visite-stato vs-vuoto">—</span>';
+
+    let selOptions = '<option value="">—</option>';
+    Object.keys(VISITA_STATI).forEach(k => {
+      selOptions += '<option value="' + k + '"' + (statoKey === k ? ' selected' : '') + '>' + VISITA_STATI[k].label + '</option>';
+    });
+
+    html += '<tr id="vtr_' + v.id + '">'
+      + '<td class="vt-nome">' + (v.cognome || '') + '</td>'
+      + '<td>' + (v.nome || '') + '</td>'
+      + '<td class="vt-cf">' + (v.codice_fiscale || '—') + '</td>'
+      + '<td>'
+      + '<select class="vt-sel" onchange="cambiaVisitaCampo(' + v.id + ', \'stato_visita\', this.value)" title="' + (statoInfo ? statoInfo.label : 'Non impostato') + '">'
+      + selOptions
+      + '</select>'
+      + '</td>'
+      + '<td><input type="date" class="vt-date" value="' + (v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ', \'data_visita\', this.value)"></td>'
+      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
+      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  list.innerHTML = html;
+}
+
+function filtraVisite() {
+  const q     = (document.getElementById('visiteSearch').value || '').toLowerCase().trim();
+  const stato = document.getElementById('visiteFiltroStato').value;
+  const filtered = visiteData.filter(v => {
+    if (q) {
+      const hay = ((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (stato) {
+      if (stato === 'VUOTO') {
+        if (v.stato_visita) return false;
+      } else if (v.stato_visita !== stato) return false;
+    }
+    return true;
+  });
+  renderVisite(filtered);
+}
+
+async function cambiaVisitaCampo(volId, campo, valore) {
+  const v = visiteData.find(x => x.id === volId);
+  if (!v) return;
+  const tr = document.getElementById('vtr_' + volId);
+  if (tr) tr.classList.add('visite-saving');
+
+  // Normalizza data vuota a null
+  if (campo === 'data_visita' && !valore) valore = null;
+  if (campo === 'stato_visita' && !valore) valore = null;
+
+  const body = {};
+  body[campo] = valore;
+
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('errore');
+    v[campo] = valore;
+    if (campo === 'stato_visita') renderDashboardVisite();
+  } catch(e) {
+    alert('Errore salvataggio. Ricarico i dati.');
+    caricaVisite();
+    return;
+  } finally {
+    if (tr) tr.classList.remove('visite-saving');
+  }
+}
+
+
 var mezzoDocLoaded = false;
 
 function toggleMezzoDoc(mezzoId) {
@@ -3727,7 +4997,7 @@ var TIPO_COLORS = {
 
 async function caricaStatistiche() {
   var anno = document.getElementById('statsAnno').value;
-  var url  = SUPA_URL + '/rest/v1/interventi?select=*&order=data';
+  var url  = SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data&stato_calcolato=eq.SVOLTO';
   if (anno) url += '&data=gte.' + anno + '-01-01&data=lte.' + anno + '-12-31';
   var res = await fetch(url, { headers: H });
   statsInterventi = await res.json();
@@ -3739,7 +5009,7 @@ async function caricaStatistiche() {
 
 async function initStatistiche() {
   // Popola anni disponibili
-  var res   = await fetch(SUPA_URL + '/rest/v1/interventi?select=data&order=data', { headers: H });
+  var res   = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=data&order=data', { headers: H });
   var dati  = await res.json();
   var anni  = [...new Set((dati||[]).map(function(d){ return d.data ? d.data.slice(0,4) : null; }).filter(Boolean))].sort().reverse();
   var sel   = document.getElementById('statsAnno');
@@ -3753,9 +5023,8 @@ function renderStatCards() {
   var el = document.getElementById('statsCards');
   if (!el) return;
   var totInt  = statsInterventi.length;
-  var statsContati = statsInterventi.filter(contaNelMonteOre);
-  var totOre  = statsContati.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
-  var totVol  = statsContati.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
+  var totOre  = statsInterventi.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
+  var totVol  = statsInterventi.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
   el.innerHTML = [
     ['Interventi', totInt, '#1a7a4a'],
     ['Ore totali', Math.round(totOre*10)/10, '#185fa5'],
@@ -3824,9 +5093,9 @@ function renderChartMesi(anno) {
 function renderOreTable() {
   var el = document.getElementById('statsOreTable');
   if (!el) return;
-  // Raccogli ore per volontario dagli ID (esclude PROGRAMMATO/ANNULLATO)
+  // Raccogli ore per volontario dagli ID
   var volMap = {};
-  statsInterventi.filter(contaNelMonteOre).forEach(function(i){
+  statsInterventi.forEach(function(i){
     var oreT = parseFloat(i.n_ore||0);
     var nVol = (i.volontari_ids||[]).length || i.n_volontari || 1;
     var oreInd = nVol > 0 ? oreT / nVol : oreT;
@@ -3869,13 +5138,12 @@ async function stampaPDFStatistiche() {
   var anno  = document.getElementById('statsAnno').value || 'tutti gli anni';
   var oggi  = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
   var totInt = statsInterventi.length;
-  var statsContatiPdf = statsInterventi.filter(contaNelMonteOre);
-  var totOre = Math.round(statsContatiPdf.reduce(function(s,i){ return s+parseFloat(i.n_ore||0); },0)*10)/10;
-  var totVol = statsContatiPdf.reduce(function(s,i){ return s+(i.n_volontari||0); },0);
+  var totOre = Math.round(statsInterventi.reduce(function(s,i){ return s+parseFloat(i.n_ore||0); },0)*10)/10;
+  var totVol = statsInterventi.reduce(function(s,i){ return s+(i.n_volontari||0); },0);
 
-  // Ore per volontario (esclude PROGRAMMATO/ANNULLATO)
+  // Ore per volontario
   var volMap = {};
-  statsContatiPdf.forEach(function(i){
+  statsInterventi.forEach(function(i){
     var oreT = parseFloat(i.n_ore||0);
     var nVol = (i.volontari_ids||[]).length || i.n_volontari || 1;
     var oreInd = nVol > 0 ? oreT / nVol : oreT;
@@ -3912,7 +5180,7 @@ async function stampaPDFStatistiche() {
     + 'tr:nth-child(even) td{background:#f9fafb}'
     + '@media print{body{margin:1.5cm}.stat{-webkit-print-color-adjust:exact;print-color-adjust:exact}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
     + '</style></head><body>'
-    + '<h1>Statistiche Interventi — '+APP_CONFIG.unita.nomeBreve+'</h1>'
+    + '<h1>Statistiche Interventi — PC ANA Casale</h1>'
     + '<div class="meta">Anno: ' + anno + ' &nbsp;|&nbsp; Generato il ' + oggi + '</div>'
     + '<div class="stats">'
     + '<div class="stat"><div class="stat-num" style="color:#1a7a4a">'+totInt+'</div><div class="stat-lbl">Interventi</div></div>'
@@ -3931,6 +5199,74 @@ async function stampaPDFStatistiche() {
         return '<tr><td>'+(i+1)+'. '+r.nome+'</td><td style="text-align:right">'+r.count+'</td><td style="text-align:right;font-weight:700;color:#1a7a4a">'+r.ore+'h</td></tr>';
       }).join('')
     + '</tbody></table>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
+    + '</body></html>');
+  win.document.close();
+}
+
+// -- EXPORT INTERVENTO CON CF --
+async function stampaIntervento(id) {
+  // Carica i dati dell'intervento
+  var res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+  var dati = await res.json();
+  if (!dati.length) return;
+  var i = dati[0];
+
+  // Carica volontari con CF
+  var volIds = i.volontari_ids || [];
+  var vols = [];
+  if (volIds.length) {
+    var rv = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + volIds.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
+    vols = await rv.json();
+  }
+
+  var ora    = new Date().toLocaleString('it-IT');
+  var data   = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' }) : '—';
+  var dataF  = i.data_fine ? new Date(i.data_fine).toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' }) : null;
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">'
+    + '<title>Intervento — ' + (i.evento||'—') + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10pt;color:#111;margin:1.5cm;max-width:18cm}'
+    + '.header{border-bottom:3px solid #1a7a4a;padding-bottom:0.8rem;margin-bottom:1rem}'
+    + 'h1{font-size:14pt;color:#1a7a4a;margin:0 0 0.2rem}'
+    + '.meta{font-size:8pt;color:#666}'
+    + 'h2{font-size:10pt;font-weight:700;color:#1a7a4a;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin:1rem 0 0.5rem}'
+    + 'table{width:100%;border-collapse:collapse;font-size:9pt}'
+    + 'td,th{padding:5px 8px;border:0.5px solid #e5e7eb;text-align:left}'
+    + 'th{background:#1a7a4a;color:white;font-weight:700}'
+    + 'tr:nth-child(even) td{background:#f9fafb}'
+    + '.info-table td:first-child{font-weight:600;color:#555;width:35%;background:#f9fafb}'
+    + '.no-cf{color:#999;font-style:italic}'
+    + '@media print{body{margin:1cm}th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + '</style></head><body>'
+    + '<div class="header">'
+    + '<h1>Intervento — ' + (i.evento||'—') + '</h1>'
+    + '<div class="meta">PC ANA Casale Monferrato &nbsp;·&nbsp; Generato il ' + ora + '</div>'
+    + '</div>'
+    + '<h2>Dati intervento</h2>'
+    + '<table class="info-table"><tbody>'
+    + '<tr><td>Evento</td><td>' + (i.evento||'—') + '</td></tr>'
+    + '<tr><td>Tipo attività</td><td>' + (i.tipo_attivita||'—') + '</td></tr>'
+    + '<tr><td>Data inizio</td><td>' + data + '</td></tr>'
+    + (dataF ? '<tr><td>Data fine</td><td>' + dataF + '</td></tr>' : '')
+    + '<tr><td>Ore</td><td>' + (i.n_ore||'—') + '</td></tr>'
+    + '<tr><td>N° volontari</td><td>' + (i.n_volontari||vols.length) + '</td></tr>'
+    + '<tr><td>Registrato da</td><td>' + (i.utente||'—') + '</td></tr>'
+    + (i.note ? '<tr><td>Note</td><td>' + i.note + '</td></tr>' : '')
+    + '</tbody></table>'
+    + '<h2>Volontari partecipanti (' + vols.length + ')</h2>'
+    + '<table><thead><tr><th>#</th><th>Cognome e Nome</th><th>Codice Fiscale</th></tr></thead><tbody>'
+    + vols.map(function(v, idx) {
+        var cf = v.codice_fiscale ? v.codice_fiscale : '<span class="no-cf">non inserito</span>';
+        return '<tr><td>' + (idx+1) + '</td><td>' + v.cognome + ' ' + v.nome + '</td><td>' + cf + '</td></tr>';
+      }).join('')
+    + '</tbody></table>'
+    + '<div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem">'
+    + '<div style="border-top:0.5px solid #111;padding-top:4px;font-size:8pt;color:#666;text-align:center;margin-top:2rem">Responsabile intervento</div>'
+    + '<div style="border-top:0.5px solid #111;padding-top:4px;font-size:8pt;color:#666;text-align:center;margin-top:2rem">Coordinatore PC ANA Casale</div>'
+    + '</div>'
     + '<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>'
     + '</body></html>');
   win.document.close();
