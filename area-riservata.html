@@ -350,8 +350,13 @@ div:hover > .vista-edit-btn { display:flex; }
 .vol-form-save { background:var(--green); color:#fff; border:none; border-radius:20px; padding:0.35rem 1rem; font-family:var(--font); font-size:0.82rem; font-weight:600; cursor:pointer; }
 .vol-form-body { padding:1rem; }
 .vol-form-section { margin-bottom:1.2rem; }
-.vol-form-section-title { font-size:0.72rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem; }
+.vol-form-section-title { font-size:0.72rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; }
+.vol-form-section-title::after { content:'▾'; font-size:0.65rem; color:var(--testo-3); transition:transform 0.15s; }
+.vol-form-section-title.collapsed::after { transform:rotate(-90deg); }
+.vol-form-section-title.collapsed { margin-bottom:0; }
 .vol-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
+.vol-form-grid.collapsed { display:none; }
+.vol-form-checks.collapsed { display:none; }
 .vol-form-field { margin-bottom:0; }
 .vol-form-field.full { grid-column:span 2; }
 .vol-form-lbl { display:block; font-size:0.72rem; color:var(--testo-3); margin-bottom:0.25rem; font-weight:500; }
@@ -1482,6 +1487,6 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="area-riservata.js?v=89"></script>
+<script src="area-riservata.js?v=90"></script>
 </body>
 </html>

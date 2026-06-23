@@ -1099,7 +1099,7 @@ function apriFormVolontario(id) {
   body.innerHTML = `
     <div class="vol-form-err" id="volFormErr"></div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Anagrafica</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Anagrafica</div>
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Cognome *</label><input class="vol-form-inp" id="fCognome" placeholder="Rossi"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Nome *</label><input class="vol-form-inp" id="fNome" placeholder="Mario"></div>
@@ -1113,7 +1113,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Unità</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Unità</div>
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Squadra</label>
           <select class="vol-form-inp" id="fSquadra">
@@ -1139,7 +1139,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Contatti</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Contatti</div>
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
@@ -1147,7 +1147,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Abilitazioni e formazione</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Abilitazioni e formazione</div>
       <div class="vol-form-checks">
         <label class="vol-form-check"><input type="checkbox" id="fCommUnita"> Comm. Unità</label>
         <label class="vol-form-check"><input type="checkbox" id="fRadioAna"> Radio ANA</label>
@@ -1175,7 +1175,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Note</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Note</div>
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Disponibilità</label><input class="vol-form-inp" id="fDispon"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Varchi</label><input class="vol-form-inp" id="fVarchi"></div>
@@ -1183,7 +1183,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title">Datore di lavoro (Art. 39)</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Datore di lavoro (Art. 39)</div>
       <div class="vol-form-grid">
         <div class="vol-form-field full"><label class="vol-form-lbl">Ragione sociale ditta</label><input class="vol-form-inp" id="fDatoreLavoro" placeholder="es. EPTA SPA"></div>
         <div class="vol-form-field full"><label class="vol-form-lbl">Indirizzo ditta</label><input class="vol-form-inp" id="fIndirizzoLavoro" placeholder="es. Via Achille Grandi 43"></div>
@@ -1198,6 +1198,16 @@ function apriFormVolontario(id) {
   // Precarica schema se vuoto
   if (!schemaCache.length) caricaSchema().then(() => { if (id) caricaDatiForm(id); });
   else if (id) caricaDatiForm(id);
+}
+
+function toggleFormSection(titleEl) {
+  titleEl.classList.toggle('collapsed');
+  const collapsed = titleEl.classList.contains('collapsed');
+  let sib = titleEl.nextElementSibling;
+  while (sib) {
+    sib.classList.toggle('collapsed', collapsed);
+    sib = sib.nextElementSibling;
+  }
 }
 
 async function caricaDatiForm(id) {
@@ -1402,7 +1412,7 @@ function renderCampiCustomForm() {
   });
   let html = '';
   Object.entries(sezioni).forEach(([sez, campi]) => {
-    html += '<div class="vol-form-section"><div class="vol-form-section-title">' + sez + ' (custom)</div><div class="vol-form-grid">';
+    html += '<div class="vol-form-section"><div class="vol-form-section-title" onclick="toggleFormSection(this)">' + sez + ' (custom)</div><div class="vol-form-grid">';
     campi.forEach(c => {
       if (c.tipo === 'boolean') {
         html += '<label class="vol-form-check" style="grid-column:span 1"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
