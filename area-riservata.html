@@ -332,7 +332,10 @@ div:hover > .vista-edit-btn { display:flex; }
 .vol-detail-name { font-size:1rem; font-weight:700; color:var(--testo); }
 .vol-detail-role { font-size:0.75rem; color:var(--green); margin-top:0.2rem; font-weight:500; }
 .vol-section { background:var(--bg-card); border-radius:var(--r); margin-bottom:0.6rem; overflow:hidden; box-shadow:var(--shadow); }
-.vol-section-head { padding:0.7rem 1rem; font-size:0.72rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg-2); border-bottom:0.5px solid var(--border); }
+.vol-section-head { padding:0.7rem 1rem; font-size:0.72rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg-2); border-bottom:0.5px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; }
+.vol-section-head::after { content:'▾'; font-size:0.65rem; transition:transform 0.15s; }
+.vol-section-head.collapsed::after { transform:rotate(-90deg); }
+.vol-section-head.collapsed { border-bottom:none; }
 .vol-section-body { padding:0.4rem 0; }
 .vol-field { display:flex; justify-content:space-between; align-items:center; padding:0.55rem 1rem; border-bottom:0.5px solid var(--border); gap:1rem; }
 .vol-field:last-child { border-bottom:none; }
@@ -1487,6 +1490,6 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="area-riservata.js?v=90"></script>
+<script src="area-riservata.js?v=91"></script>
 </body>
 </html>

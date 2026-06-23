@@ -935,7 +935,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Anagrafica</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Anagrafica</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Codice Fiscale</span>${fmt(v.codice_fiscale)}</div>
           <div class="vol-field"><span class="vol-field-label">Data nascita</span>${fmtDate(v.data_nascita)}</div>
@@ -945,7 +945,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Unità</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Unità</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Squadra</span>${fmt(v.squadra)}</div>
           <div class="vol-field"><span class="vol-field-label">Tipo</span>${fmt(v.tipo_volontario)}</div>
@@ -958,7 +958,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Contatti</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Contatti</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
           <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
@@ -966,7 +966,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Abilitazioni</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Abilitazioni</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Comm. Unità</span>${fmtBool(v.comm_unita)}</div>
           <div class="vol-field"><span class="vol-field-label">Radio ANA</span>${fmtBool(v.radio_ana)}</div>
@@ -978,7 +978,7 @@ async function apriDettaglio(id) {
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Formazione</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Formazione</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">4 Ore</span>${fmtBool(v.quattro_ore)}</div>
           <div class="vol-field"><span class="vol-field-label">12 Ore</span>${fmtBool(v.dodici_ore)}</div>
@@ -993,21 +993,21 @@ async function apriDettaglio(id) {
       ${await renderCampiCustomDettaglio(v)}
 
       <div class="vol-section" id="volInterventiSection">
-        <div class="vol-section-head" style="cursor:pointer" onclick="toggleVolInterventi(${v.id})">
+        <div class="vol-section-head collapsed" onclick="toggleVolInterventi(${v.id})">
           Interventi <span id="volInterventiCount" style="font-size:0.6rem;color:var(--green);margin-left:4px">caricamento...</span>
         </div>
         <div class="vol-section-body" id="volInterventiBody" style="display:none"></div>
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head" style="cursor:pointer" onclick="toggleVolDoc(${v.id})">
+        <div class="vol-section-head collapsed" onclick="toggleVolDoc(${v.id})">
           Documenti <span id="volDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>
         </div>
         <div class="vol-section-body" id="volDocBody" style="display:none"></div>
       </div>
 
       <div class="vol-section">
-        <div class="vol-section-head">Amministrativo</div>
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Amministrativo</div>
         <div class="vol-section-body">
           <div class="vol-field"><span class="vol-field-label">Iscrizione</span>${fmtBool(v.iscrizione)}</div>
           <div class="vol-field"><span class="vol-field-label">Tutela legale CAP</span>${fmtBool(v.tutela_legale_cap)}</div>
@@ -1016,8 +1016,24 @@ async function apriDettaglio(id) {
           <div class="vol-field"><span class="vol-field-label">Varchi</span>${fmt(v.varchi)}</div>
           <div class="vol-field"><span class="vol-field-label">Attivo</span>${fmtBool(v.attivo)}</div>
         </div>
+      </div>
+
+      <div class="vol-section">
+        <div class="vol-section-head" onclick="toggleVolSection(this)">Datore di lavoro (Art. 39)</div>
+        <div class="vol-section-body">
+          <div class="vol-field"><span class="vol-field-label">Ragione sociale</span>${fmt(v.datore_lavoro)}</div>
+          <div class="vol-field"><span class="vol-field-label">Indirizzo ditta</span>${fmt(v.indirizzo_lavoro)}</div>
+          <div class="vol-field"><span class="vol-field-label">CAP ditta</span>${fmt(v.cap_lavoro)}</div>
+          <div class="vol-field"><span class="vol-field-label">Città ditta</span>${fmt(v.citta_lavoro)}</div>
+        </div>
       </div>`;
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+function toggleVolSection(headEl) {
+  headEl.classList.toggle('collapsed');
+  const body = headEl.nextElementSibling;
+  if (body) body.style.display = headEl.classList.contains('collapsed') ? 'none' : '';
 }
 
 function chiudiDettaglio() {
@@ -1032,9 +1048,15 @@ let volDocLoadedFor = null;
 
 function toggleVolDoc(volId) {
   const body = document.getElementById('volDocBody');
+  const head = body ? body.previousElementSibling : null;
   if (!body) return;
-  if (body.style.display !== 'none') { body.style.display = 'none'; return; }
+  if (body.style.display !== 'none') {
+    body.style.display = 'none';
+    if (head) head.classList.add('collapsed');
+    return;
+  }
   body.style.display = 'block';
+  if (head) head.classList.remove('collapsed');
   // Ricarica se cambio volontario O se il body è vuoto (scheda riaperta)
   if (volDocLoadedFor !== volId || !body.innerHTML.trim()) {
     volDocLoadedFor = volId;
@@ -1046,14 +1068,17 @@ let volInterventiLoadedFor = null;
 async function toggleVolInterventi(volId) {
   const body  = document.getElementById('volInterventiBody');
   const count = document.getElementById('volInterventiCount');
+  const head  = body ? body.previousElementSibling : null;
   if (!body) return;
 
   // Toggle visibilità
   if (body.style.display !== 'none') {
     body.style.display = 'none';
+    if (head) head.classList.add('collapsed');
     return;
   }
   body.style.display = 'block';
+  if (head) head.classList.remove('collapsed');
 
   if (volInterventiLoadedFor === volId && body.innerHTML.trim()) return;
   volInterventiLoadedFor = volId;
@@ -1396,7 +1421,7 @@ async function renderCampiCustomDettaglio(v) {
       }
       return '<div class="vol-field"><span class="vol-field-label">' + c.etichetta + '</span>' + valHtml + '</div>';
     }).join('');
-    html += '<div class="vol-section"><div class="vol-section-head">' + sez + ' (custom)</div><div class="vol-section-body">' + fields + '</div></div>';
+    html += '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">' + sez + ' (custom)</div><div class="vol-section-body">' + fields + '</div></div>';
   });
   return html;
 }
