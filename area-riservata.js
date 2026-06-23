@@ -1182,6 +1182,15 @@ function apriFormVolontario(id) {
         <div class="vol-form-field full"><label class="vol-form-lbl">Note disponibilità</label><input class="vol-form-inp" id="fNoteDispon"></div>
       </div>
     </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Datore di lavoro (Art. 39)</div>
+      <div class="vol-form-grid">
+        <div class="vol-form-field full"><label class="vol-form-lbl">Ragione sociale ditta</label><input class="vol-form-inp" id="fDatoreLavoro" placeholder="es. EPTA SPA"></div>
+        <div class="vol-form-field full"><label class="vol-form-lbl">Indirizzo ditta</label><input class="vol-form-inp" id="fIndirizzoLavoro" placeholder="es. Via Achille Grandi 43"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">CAP ditta</label><input class="vol-form-inp" id="fCapLavoro"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Città ditta</label><input class="vol-form-inp" id="fCittaLavoro"></div>
+      </div>
+    </div>
     ${renderCampiCustomForm()}
     ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">elimina volontario</button>' : ''}`;
 
@@ -1215,6 +1224,8 @@ async function caricaDatiForm(id) {
     setVal('fScadDae', v.scad_dae); setVal('fDataVisita', v.data_visita);
     setVal('fStatoVisita', v.stato_visita); setVal('fCodEmercom', v.cod_emercom);
     setVal('fDispon', v.dispon); setVal('fVarchi', v.varchi); setVal('fNoteDispon', v.note_dispon);
+    setVal('fDatoreLavoro', v.datore_lavoro); setVal('fIndirizzoLavoro', v.indirizzo_lavoro);
+    setVal('fCapLavoro', v.cap_lavoro); setVal('fCittaLavoro', v.citta_lavoro);
     // Campi custom
     const extra = v.campi_extra || {};
     schemaCache.forEach(c => {
@@ -1309,6 +1320,8 @@ async function salvaVolontario() {
     scad_dae: d('fScadDae'), data_visita: d('fDataVisita'),
     stato_visita: g('fStatoVisita'), cod_emercom: g('fCodEmercom'),
     dispon: g('fDispon'), varchi: g('fVarchi'), note_dispon: g('fNoteDispon'),
+    datore_lavoro: g('fDatoreLavoro'), indirizzo_lavoro: g('fIndirizzoLavoro'),
+    cap_lavoro: g('fCapLavoro'), citta_lavoro: g('fCittaLavoro'),
     campi_extra,
   };
 
