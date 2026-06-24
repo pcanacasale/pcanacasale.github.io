@@ -1920,9 +1920,21 @@ async function caricaInterventi() {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
     interventiData = await res.json();
+    await caricaIntOreMancanti();
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
   } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+// Set degli intervento_id che hanno almeno un volontario con ore non segnate (0 o null)
+let intOreMancantiSet = new Set();
+async function caricaIntOreMancanti() {
+  intOreMancantiSet = new Set();
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
+    const rows = await r.json();
+    rows.forEach(row => intOreMancantiSet.add(row.intervento_id));
+  } catch(e) { /* non bloccante */ }
 }
 
 function aggiornaStatsInterventi() {
@@ -1972,7 +1984,7 @@ function _renderIntCard(i, isChild) {
   if (i.tipo_attivita)  pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
   if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
   if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
-  if (i.n_ore)          pills.push('<span class="int-pill blue">' + i.n_ore + 'h</span>');
+  if (i.n_ore)          pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (intOreMancantiSet.has(i.id) ? ' ⚠️' : '') + '</span>');
   if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
   if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
   if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
@@ -1998,6 +2010,7 @@ function _renderMacroCard(m, figliMacro) {
   const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
   const nVol = figliMacro.reduce((s, i) => s + (i.n_volontari || 0), 0);
   const nOre = figliMacro.reduce((s, i) => s + parseFloat(i.n_ore || 0), 0) + parseFloat(m.n_ore || 0);
+  const macroOreMancanti = intOreMancantiSet.has(m.id) || figliMacro.some(f => intOreMancantiSet.has(f.id));
 
   const header = document.createElement('div');
   header.className = 'int-card int-macro-header';
@@ -2017,7 +2030,7 @@ function _renderMacroCard(m, figliMacro) {
     + (m.luogo ? '<span class="int-pill">' + m.luogo + '</span>' : '')
     + '<span class="int-pill">' + dateRange + '</span>'
     + (nVol ? '<span class="int-pill blue">' + nVol + ' vol. tot.</span>' : '')
-    + (nOre ? '<span class="int-pill blue">' + Math.round(nOre*10)/10 + 'h tot.</span>' : '')
+    + (nOre ? '<span class="int-pill blue">' + Math.round(nOre*10)/10 + 'h tot.' + (macroOreMancanti ? ' ⚠️' : '') + '</span>' : '')
     + '</div></div>'
     + '<button class="btn-sm" style="flex-shrink:0;font-size:0.7rem;padding:3px 8px;margin-left:0.3rem;align-self:flex-start" onclick="event.stopPropagation();apriDettaglioIntervento(' + m.id + ')">✏️</button>'
     + '</div>';
@@ -2381,6 +2394,16 @@ function aggiornaCampoVolIntervento(volId, campo, valore) {
   aggiornaContatoriVolontari();
 }
 
+function applicaOreATutti() {
+  if (!intVolSelezionati.length) return;
+  const valore = prompt('Inserisci il numero di ore da applicare a tutti i ' + intVolSelezionati.length + ' volontari:');
+  if (valore === null) return; // annullato
+  const ore = parseFloat(valore);
+  if (isNaN(ore) || ore < 0) { alert('Valore non valido.'); return; }
+  intVolSelezionati.forEach(v => { v.ore = ore; });
+  renderIntVolList();
+}
+
 function renderIntVolList() {
   const list = document.getElementById('intVolList');
   if (!list) return;
@@ -2389,7 +2412,16 @@ function renderIntVolList() {
     aggiornaContatoriVolontari();
     return;
   }
-  list.innerHTML = intVolSelezionati.map(v =>
+  // Ordine alfabetico per cognome, poi nome
+  intVolSelezionati.sort((a, b) => {
+    const ca = (a.cognome || '').localeCompare(b.cognome || '', 'it');
+    if (ca !== 0) return ca;
+    return (a.nome || '').localeCompare(b.nome || '', 'it');
+  });
+  const applicaTuttiBtn = intVolSelezionati.length > 1
+    ? '<button type="button" class="btn-sm" style="width:100%;margin-bottom:0.5rem;background:var(--bg-2)" onclick="applicaOreATutti()">🕐 Applica le stesse ore a tutti</button>'
+    : '';
+  list.innerHTML = applicaTuttiBtn + intVolSelezionati.map(v =>
     '<div class="int-vol-card">'
     + '<div class="int-vol-card-head">'
     + '<strong>' + v.cognome + ' ' + v.nome + '</strong>'
