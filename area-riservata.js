@@ -1931,10 +1931,16 @@ let intOreMancantiSet = new Set();
 async function caricaIntOreMancanti() {
   intOreMancantiSet = new Set();
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
+    const url = SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)';
+    const r = await fetch(url, { headers: H });
+    console.log('[DEBUG ore mancanti] status:', r.status, r.ok);
     const rows = await r.json();
+    console.log('[DEBUG ore mancanti] righe ricevute:', rows);
     rows.forEach(row => intOreMancantiSet.add(row.intervento_id));
-  } catch(e) { /* non bloccante */ }
+    console.log('[DEBUG ore mancanti] Set risultante:', Array.from(intOreMancantiSet));
+  } catch(e) {
+    console.error('[DEBUG ore mancanti] ERRORE:', e);
+  }
 }
 
 function aggiornaStatsInterventi() {
@@ -1984,7 +1990,11 @@ function _renderIntCard(i, isChild) {
   if (i.tipo_attivita)  pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
   if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
   if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
-  if (i.n_ore)          pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (intOreMancantiSet.has(i.id) ? ' ⚠️' : '') + '</span>');
+  if (i.n_ore) {
+    const haOreMancanti = intOreMancantiSet.has(i.id);
+    console.log('[DEBUG pill ore] intervento id=', i.id, typeof i.id, '-> mancanti?', haOreMancanti, '| Set contiene:', Array.from(intOreMancantiSet));
+    pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
+  }
   if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
   if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
   if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
