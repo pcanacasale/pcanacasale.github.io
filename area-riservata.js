@@ -1985,8 +1985,8 @@ function _renderIntCard(i, isChild) {
   if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
   if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
   const oreOk = i.n_ore && parseFloat(i.n_ore) > 0;
-  const hasVolontari = i.n_volontari && i.n_volontari > 0;
-  const haOreMancanti = intOreMancantiSet.has(i.id) || (hasVolontari && !oreOk);
+  const hasVolontari = (i.n_volontari > 0) || (i.volontari_ids && i.volontari_ids.length > 0) || intOreMancantiSet.has(i.id);
+  const haOreMancanti = hasVolontari && (!oreOk || intOreMancantiSet.has(i.id));
   if (oreOk) {
     pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
   } else if (haOreMancanti) {
