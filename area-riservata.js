@@ -1938,6 +1938,7 @@ async function caricaIntOreMancanti() {
     console.log('[DEBUG ore mancanti] righe ricevute:', rows);
     rows.forEach(row => intOreMancantiSet.add(row.intervento_id));
     console.log('[DEBUG ore mancanti] Set risultante:', Array.from(intOreMancantiSet));
+    console.log('[DEBUG ore mancanti] Dettaglio righe:', JSON.stringify(rows));
   } catch(e) {
     console.error('[DEBUG ore mancanti] ERRORE:', e);
   }
@@ -1994,6 +1995,8 @@ function _renderIntCard(i, isChild) {
     const haOreMancanti = intOreMancantiSet.has(i.id);
     console.log('[DEBUG pill ore] intervento id=', i.id, typeof i.id, '-> mancanti?', haOreMancanti, '| Set contiene:', Array.from(intOreMancantiSet));
     pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
+  } else if (intOreMancantiSet.has(i.id)) {
+    pills.push('<span class="int-pill" style="background:rgba(255,160,0,0.15);color:#e08000;border:1px solid #e08000">⚠️ ore mancanti</span>');
   }
   if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
   if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
