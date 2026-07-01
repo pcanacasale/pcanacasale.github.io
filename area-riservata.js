@@ -1931,9 +1931,23 @@ let intOreMancantiSet = new Set();
 async function caricaIntOreMancanti() {
   intOreMancantiSet = new Set();
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
-    const rows = await r.json();
-    rows.forEach(row => intOreMancantiSet.add(row.intervento_id));
+    // Caso 1 (nuovo schema): righe in intervento_volontari con ore null o 0
+    const r1 = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
+    const rows1 = await r1.json();
+    rows1.forEach(row => intOreMancantiSet.add(row.intervento_id));
+
+    // Caso 2 (vecchio schema): interventi con volontari_ids non vuoto ma senza righe in intervento_volontari
+    // Recupero tutti gli intervento_id presenti in intervento_volontari (quelli migrati)
+    const r2 = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id', { headers: H });
+    const rows2 = await r2.json();
+    const migrati = new Set(rows2.map(r => r.intervento_id));
+
+    // Gli interventiData già caricati: quelli con volontari_ids non vuoto ma non migrati → alarm
+    (interventiData || []).forEach(i => {
+      if (i.volontari_ids && i.volontari_ids.length > 0 && !migrati.has(i.id)) {
+        intOreMancantiSet.add(i.id);
+      }
+    });
   } catch(e) { /* non bloccante */ }
 }
 
@@ -1985,8 +1999,7 @@ function _renderIntCard(i, isChild) {
   if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
   if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
   const oreOk = i.n_ore && parseFloat(i.n_ore) > 0;
-  const hasVolontari = (i.n_volontari > 0) || (i.volontari_ids && i.volontari_ids.length > 0) || intOreMancantiSet.has(i.id);
-  const haOreMancanti = hasVolontari && (!oreOk || intOreMancantiSet.has(i.id));
+  const haOreMancanti = intOreMancantiSet.has(i.id);
   if (oreOk) {
     pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
   } else if (haOreMancanti) {
