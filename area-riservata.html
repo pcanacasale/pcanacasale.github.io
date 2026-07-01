@@ -358,8 +358,8 @@ div:hover > .vista-edit-btn { display:flex; }
 .vol-form-section-title.collapsed::after { transform:rotate(-90deg); }
 .vol-form-section-title.collapsed { margin-bottom:0; }
 .vol-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
-.vol-form-grid.collapsed { display:none; }
-.vol-form-checks.collapsed { display:none; }
+.acc-collapsible-body { overflow:hidden; }
+.vol-section-head.collapsed + .acc-collapsible-body { display:none; }
 .vol-form-field { margin-bottom:0; }
 .vol-form-field.full { grid-column:span 2; }
 .vol-form-lbl { display:block; font-size:0.72rem; color:var(--testo-3); margin-bottom:0.25rem; font-weight:500; }
@@ -1149,7 +1149,9 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <!-- ACCESSI (per master) -->
     <div class="panel" id="panelAccessi">
-      <div class="panel-hdr"><h2>Accessi e credenziali</h2><p>Riepilogo accessi al sistema</p></div>
+      <div class="panel-hdr"><h2>Accessi e credenziali</h2><p>Gestione utenti e log</p></div>
+
+      <!-- Ricerca/filtro -->
       <div class="form-row" style="margin-bottom:0.8rem">
         <input type="text" id="accessiSearch" class="form-inp" placeholder="cerca per nome, CF, ruolo..." oninput="filtraAccessi()" style="flex:1">
         <select id="accessiTipo" class="form-inp" onchange="filtraAccessi()" style="max-width:180px">
@@ -1158,6 +1160,31 @@ div:hover > .vista-edit-btn { display:flex; }
           <option value="vol">Solo volontari</option>
         </select>
       </div>
+
+      <!-- Nuovo utente (spostato da Impostazioni) -->
+      <div class="impo-section" id="accNuovoUtenteSection">
+        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
+        <div class="nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
+          <h4>+ Nuovo utente</h4>
+          <div class="form-err" id="nuovoUtenteErr"></div>
+          <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" type="text" id="nuovoNome" placeholder="Mario Rossi"></div>
+          <div class="form-field"><label class="form-lbl">Username</label><input class="form-inp" type="text" id="nuovoUsername" placeholder="mrossi"></div>
+          <div class="form-field"><label class="form-lbl">Password</label><input class="form-inp" type="password" id="nuovaPassword" placeholder="••••••••"></div>
+          <div class="form-field"><label class="form-lbl">Ruolo</label><input class="form-inp" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
+          <div class="perm-grid">
+            <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
+            <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
+            <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
+            <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
+            <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
+            <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
+            <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
+            <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
+          </div>
+          <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
+        </div>
+      </div>
+
       <div id="accessiContent"><div class="loading-msg">caricamento...</div></div>
     </div>
 
@@ -1332,34 +1359,7 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <!-- IMPOSTAZIONI -->
     <div class="panel" id="panelImpostazioni">
-      <div class="panel-hdr"><h2>Impostazioni</h2><p>Solo superadmin</p></div>
-
-      <div class="impo-section">
-        <div class="sec-label">Utenti</div>
-        <div class="impo-users-list" id="utentiList">
-          <div class="loading-msg">caricamento...</div>
-        </div>
-        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
-          <div class="nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
-          <h4>+ Nuovo utente</h4>
-          <div class="form-err" id="nuovoUtenteErr"></div>
-          <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" type="text" id="nuovoNome" placeholder="Mario Rossi"></div>
-          <div class="form-field"><label class="form-lbl">Username</label><input class="form-inp" type="text" id="nuovoUsername" placeholder="mrossi"></div>
-          <div class="form-field"><label class="form-lbl">Password</label><input class="form-inp" type="password" id="nuovaPassword" placeholder="••••••••"></div>
-          <div class="form-field"><label class="form-lbl">Ruolo</label><input class="form-inp" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
-          <div class="perm-grid">
-            <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
-            <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
-            <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
-            <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
-            <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
-            <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
-            <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
-            <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
-          </div>
-          <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
-          </div>
-      </div>
+      <div class="panel-hdr"><h2>Impostazioni</h2><p>Configurazione campi e struttura</p></div>
 
       <div class="impo-section">
         <div class="sec-label">Campi volontari</div>
@@ -1399,13 +1399,6 @@ div:hover > .vista-edit-btn { display:flex; }
             </div>
           </div>
           <button class="btn-primary" onclick="salvaNuovoCampo()">aggiungi campo</button>
-        </div>
-      </div>
-
-      <div class="impo-section">
-        <div class="sec-label" style="margin-top:0.5rem">Log attività</div>
-        <div class="log-list" id="logList">
-          <div class="loading-msg">caricamento...</div>
         </div>
       </div>
     </div>
@@ -1490,6 +1483,6 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="area-riservata.js?v=102"></script>
+<script src="area-riservata.js?v=103"></script>
 </body>
 </html>

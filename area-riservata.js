@@ -575,7 +575,7 @@ async function caricaImpostazioni() {
 
 async function caricaUtenti() {
   const list = document.getElementById('utentiList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  if (!list) return; // utentiList rimosso da Impostazioni, ora la lista è in Accessi
   try {
     const res    = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
     const utenti = await res.json();
@@ -4482,100 +4482,99 @@ async function caricaAccessi() {
   if (!content) return;
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
 
+  // Mostra/nascondi sezione nuovo utente solo per master
+  const nuovoSec = document.getElementById('accNuovoUtenteSection');
+  if (nuovoSec) nuovoSec.style.display = isMaster ? 'block' : 'none';
+
   try {
-    const [uRes, vRes, logRes] = await Promise.all([
+    const [uRes, vRes, logRes, attRes] = await Promise.all([
       fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
       fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H })
+      fetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
     ]);
     accessiData.admin = await uRes.json();
     accessiData.vol   = await vRes.json();
     accessiData.log   = await logRes.json();
+    accessiData.att   = await attRes.json();
     renderAccessi();
   } catch(e) {
     content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
   }
 }
 
+function _accCollapsibleHead(label, id) {
+  return '<div class="vol-section-head" onclick="toggleVolSection(this)" style="margin-bottom:0;border-radius:var(--r-sm)">' + label + '</div>'
+    + '<div id="' + id + '" class="acc-collapsible-body">';
+}
+
 function renderAccessi() {
   const content = document.getElementById('accessiContent');
   const q       = (document.getElementById('accessiSearch').value || '').toLowerCase().trim();
   const tipo    = document.getElementById('accessiTipo').value;
+  const matchQ  = (s) => !q || s.toLowerCase().includes(q);
 
   let html = '';
 
-  const matchQ = (s) => !q || s.toLowerCase().includes(q);
-
-  // Sezione Amministratori
+  // --- Amministratori ---
   if (tipo !== 'vol') {
     const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
-    html += '<div class="schedapers-sec-title" style="margin-bottom:0.6rem">🔐 Amministratori (' + admins.length + ')</div>';
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
+    html += _accCollapsibleHead('🔐 Amministratori (' + admins.length + ')', 'accAdminBody');
     if (!admins.length) {
-      html += '<div class="loading-msg" style="margin-bottom:1rem">nessun amministratore</div>';
+      html += '<div class="loading-msg" style="padding:0.6rem">nessun amministratore</div>';
     } else {
-      html += '<div class="accessi-grid">';
+      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
       admins.forEach(u => {
-        const stato = u.attivo
-          ? '<span class="acc-badge acc-active">ATTIVO</span>'
-          : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
-        const tipoLbl = u.tipo_accesso === 'master'
-          ? '<span class="acc-badge acc-master">MASTER</span>'
-          : '<span class="acc-badge acc-std">STANDARD</span>';
+        const stato  = u.attivo ? '<span class="acc-badge acc-active">ATTIVO</span>' : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
+        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="acc-badge acc-master">MASTER</span>' : '<span class="acc-badge acc-std">STANDARD</span>';
         html += '<div class="acc-card">'
-          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome || '—') + '</strong></span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username || '—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo || '—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome||'—') + '</strong></span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username||'—') + '</span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
+          + (isMaster ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtente(' + u.id + ')">✏️ Modifica</button></div>' : '')
           + '</div>';
       });
       html += '</div>';
     }
+    html += '</div></div>'; // chiude body + vol-section
   }
 
-  // Sezione Volontari
+  // --- Volontari abilitati ---
   if (tipo !== 'admin') {
     const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
-    html += '<div class="schedapers-sec-title" style="margin:1.4rem 0 0.6rem">👤 Volontari abilitati all\'accesso (' + vols.length + ')</div>';
-    html += '<div style="font-size:0.78rem;color:var(--testo-3);margin-bottom:0.8rem;padding:0.6rem 0.8rem;background:var(--bg-2);border-radius:6px">'
-      + 'I volontari accedono con <strong>Codice Fiscale</strong> + <strong>Data di nascita</strong>. Tutti i volontari ATTIVI e SOSPESI possono accedere.'
-      + '</div>';
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
+    html += _accCollapsibleHead('👤 Volontari abilitati (' + vols.length + ')', 'accVolBody');
     if (!vols.length) {
-      html += '<div class="loading-msg">nessun volontario</div>';
+      html += '<div class="loading-msg" style="padding:0.6rem">nessun volontario</div>';
     } else {
-      html += '<div class="accessi-grid">';
+      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
       vols.forEach(v => {
-        const dataNasc = v.data_nascita
-          ? new Date(v.data_nascita).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'numeric'})
-          : '—';
-        const stato = v.stato === 'SOSPESO'
-          ? '<span class="acc-badge acc-sosp">SOSPESO</span>'
-          : '<span class="acc-badge acc-active">ATTIVO</span>';
-        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-        const [bg, fg] = avatarColor(v.cognome);
+        const dataNasc = v.data_nascita ? v.data_nascita.split('-').reverse().join('/') : '—';
+        const avatar = v.foto_url
+          ? '<img src="' + v.foto_url + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
+          : '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;font-weight:700">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</div>';
         html += '<div class="acc-card">'
-          + '<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.5rem">'
-          + (v.foto_url
-              ? '<img src="' + v.foto_url + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">'
-              : '<div style="width:36px;height:36px;border-radius:50%;background:' + bg + ';color:' + fg + ';display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.78rem">' + initials + '</div>')
-          + '<div style="flex:1"><div style="font-weight:600;font-size:0.9rem">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div></div>'
-          + stato
-          + '</div>'
-          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale || '—') + '</span></div>'
+          + '<div class="acc-row" style="gap:0.4rem">' + avatar + '<span class="acc-val"><strong>' + (v.cognome||'') + ' ' + (v.nome||'') + '</strong></span></div>'
+          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Data nascita</span><span class="acc-val">' + dataNasc + '</span></div>'
           + '</div>';
       });
       html += '</div>';
     }
+    html += '</div></div>';
   }
 
-  // Log accessi recenti (solo se non c'è filtro di ricerca attivo)
+  // --- Log accessi recenti ---
   if (!q) {
     const logs = accessiData.log || [];
-    html += '<div class="schedapers-sec-title" style="margin-top:1.5rem;margin-bottom:0.6rem">🕐 Log accessi recenti</div>';
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
+    html += _accCollapsibleHead('🕐 Log accessi (' + logs.length + ')', 'accLogBody');
     if (!logs.length) {
-      html += '<div class="loading-msg">nessun accesso registrato</div>';
+      html += '<div class="loading-msg" style="padding:0.6rem">nessun accesso registrato</div>';
     } else {
-      html += '<div class="acc-log-table"><table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
+      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;padding:0 0.4rem">'
         + '<thead><tr>'
         + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
         + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Tipo</th>'
@@ -4588,13 +4587,40 @@ function renderAccessi() {
           ? '<span class="acc-badge acc-master" style="font-size:0.6rem">ADMIN</span>'
           : '<span class="acc-badge acc-std" style="font-size:0.6rem">VOL</span>';
         html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo)">' + (l.utente_label || '—') + '</td>'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo)">' + (l.utente_label||'—') + '</td>'
           + '<td style="padding:0.45rem 0.6rem">' + badge + '</td>'
           + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
           + '</tr>';
       });
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
     }
+    html += '</div></div>';
+
+    // --- Log attività ---
+    const atts = accessiData.att || [];
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
+    html += _accCollapsibleHead('📋 Log attività (' + atts.length + ')', 'accAttBody');
+    if (!atts.length) {
+      html += '<div class="loading-msg" style="padding:0.6rem">nessuna attività registrata</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
+        + '<thead><tr>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Azione</th>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
+        + '</tr></thead><tbody>';
+      atts.forEach(a => {
+        const dt = new Date(a.created_at);
+        const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500">' + (a.utente||'—') + '</td>'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + (a.azione||'—') + '</td>'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div></div>';
   }
 
   content.innerHTML = html;
@@ -4605,7 +4631,6 @@ function filtraAccessi() {
 }
 
 function logAccesso(tipo, volontarioId, label) {
-  // fire-and-forget, non bloccante
   fetch(SUPA_URL + '/rest/v1/log_accessi', {
     method: 'POST',
     headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
