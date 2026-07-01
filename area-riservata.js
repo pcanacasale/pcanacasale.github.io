@@ -2212,10 +2212,12 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
       </div>` : ''}
       <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
-      <button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>
-      <button class="btn-primary" style="width:100%;margin-top:0.5rem" onclick="stampaIntervento(${i.id})">📄 Esporta con CF</button>
-      <button class="btn-primary" style="width:100%;margin-top:0.5rem;background:var(--green)" onclick="apriGeneratoreAttestati(${i.id})">📜 Genera attestati</button>
-      <button class="btn-primary" style="width:100%;margin-top:0.5rem;background:#1a4a9a" onclick="esportaModuloTerritoriale(${i.id})">📋 Esporta modulo Territoriale</button>`;
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem">
+        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="stampaIntervento(${i.id})">📄 Esporta CF</button>
+        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="apriGeneratoreAttestati(${i.id})">📜 Attestati</button>
+        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem;background:var(--bg-2);border-color:#1a4a9a;color:#4a90d9" onclick="esportaModuloTerritoriale(${i.id})">📋 Territoriale</button>
+      </div>
+      <button class="vol-delete-btn" style="margin-top:0.8rem;font-size:0.72rem;opacity:0.6" onclick="eliminaIntervento()">elimina intervento</button>`;
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
 }
 
