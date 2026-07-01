@@ -4901,20 +4901,33 @@ async function apriAlbum(folderId, nome) {
 
   try {
     const q = "'" + folderId + "' in parents and (mimeType contains 'image/') and trashed = false";
-    const url = 'https://www.googleapis.com/drive/v3/files'
-      + '?q=' + encodeURIComponent(q)
-      + '&fields=' + encodeURIComponent('files(id,name,thumbnailLink,imageMediaMetadata)')
-      + '&orderBy=name'
-      + '&pageSize=1000'
-      + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
-      + '&key=' + GOOGLE_API_KEY;
-    const res = await fetch(url);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err.error && err.error.message) || 'errore API');
-    }
-    const data = await res.json();
-    galleriaCurrentPhotos = data.files || [];
+    let allFiles = [];
+    let pageToken = null;
+
+    do {
+      let url = 'https://www.googleapis.com/drive/v3/files'
+        + '?q=' + encodeURIComponent(q)
+        + '&fields=' + encodeURIComponent('nextPageToken,files(id,name,thumbnailLink,imageMediaMetadata)')
+        + '&orderBy=name'
+        + '&pageSize=1000'
+        + '&supportsAllDrives=true&includeItemsFromAllDrives=true'
+        + '&key=' + GOOGLE_API_KEY;
+      if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err.error && err.error.message) || 'errore API');
+      }
+      const data = await res.json();
+      allFiles = allFiles.concat(data.files || []);
+      pageToken = data.nextPageToken || null;
+
+      // aggiorna contatore progressivo durante il caricamento
+      document.getElementById('gallSub').textContent = allFiles.length + ' foto (caricamento...)';
+    } while (pageToken);
+
+    galleriaCurrentPhotos = allFiles;
     document.getElementById('gallSub').textContent = galleriaCurrentPhotos.length + ' foto';
 
     if (!galleriaCurrentPhotos.length) {
