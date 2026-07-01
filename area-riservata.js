@@ -4533,7 +4533,7 @@ function renderAccessi() {
           + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
-          + (isMasterUser ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtente(' + u.id + ')">✏️ Modifica</button></div>' : '')
+          + (isMasterUser ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏️ Modifica</button></div>' : '')
           + '</div>';
       });
       html += '</div>';
