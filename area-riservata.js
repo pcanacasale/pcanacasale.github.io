@@ -1297,6 +1297,61 @@ function validaCodiceFiscale(cf) {
   return { ok: true, cf: cf };
 }
 
+// -- DECODIFICA CF: data nascita + codice Belfiore --
+const CF_MESI = { A:1, B:2, C:3, D:4, E:5, H:6, L:7, M:8, P:9, R:10, S:11, T:12 };
+const CF_OMOCODIA = { L:'0', M:'1', N:'2', P:'3', Q:'4', R:'5', S:'6', T:'7', U:'8', V:'9' };
+
+function decodificaCF(cfRaw) {
+  const cf = (cfRaw || '').toUpperCase().replace(/\s/g, '');
+  if (!/^[A-Z0-9]{16}$/.test(cf)) return { errore: 'formato non valido' };
+  // normalizza omocodia sulle posizioni numeriche
+  const chars = cf.split('');
+  [6, 7, 9, 10, 12, 13, 14].forEach(i => {
+    if (/[A-Z]/.test(chars[i])) chars[i] = CF_OMOCODIA[chars[i]] || chars[i];
+  });
+  const norm = chars.join('');
+  const anno2 = parseInt(norm.substr(6, 2), 10);
+  const mese = CF_MESI[norm.charAt(8)];
+  let giorno = parseInt(norm.substr(9, 2), 10);
+  const sesso = giorno > 40 ? 'F' : 'M';
+  if (giorno > 40) giorno -= 40;
+  if (!mese || giorno < 1 || giorno > 31) return { errore: 'data non decodificabile' };
+  // euristica secolo
+  const soglia = new Date().getFullYear() - 2000;
+  const anno = anno2 > soglia ? 1900 + anno2 : 2000 + anno2;
+  const belfiore = norm.substr(11, 4);
+  const dataISO = anno + '-' + String(mese).padStart(2, '0') + '-' + String(giorno).padStart(2, '0');
+  const comune = (typeof BELFIORE_COMUNI !== 'undefined') ? BELFIORE_COMUNI[belfiore] : null;
+  return { dataISO, sesso, belfiore, comune: comune || null, estero: belfiore.charAt(0) === 'Z' };
+}
+
+function normComuneCF(s) {
+  return (s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z]/g, '');
+}
+
+// Confronto incrociato CF vs data/luogo. Ritorna array di discrepanze (vuoto = tutto ok)
+function verificaCoerenzaCF(cf, dataNascita, luogoNascita) {
+  const dec = decodificaCF(cf);
+  if (dec.errore) return [];  // il formato è già validato altrove
+  const out = [];
+  if (dataNascita && dataNascita.substr(0, 10) !== dec.dataISO) {
+    out.push({ campo: 'data', tipo: 'errore', msg: 'Data di nascita: il CF indica ' + dec.dataISO.split('-').reverse().join('/') + ', inserito ' + dataNascita.substr(0, 10).split('-').reverse().join('/') });
+  }
+  if (luogoNascita) {
+    if (dec.estero) {
+      const dbItaliano = typeof BELFIORE_COMUNI !== 'undefined' && Object.values(BELFIORE_COMUNI).some(n => normComuneCF(n) === normComuneCF(luogoNascita));
+      if (dbItaliano) out.push({ campo: 'luogo', tipo: 'errore', msg: 'Luogo: il CF indica nascita all\'estero (' + dec.belfiore + '), inserito ' + luogoNascita });
+    } else if (dec.comune) {
+      if (normComuneCF(luogoNascita) !== normComuneCF(dec.comune)) {
+        out.push({ campo: 'luogo', tipo: 'errore', msg: 'Luogo di nascita: il CF indica ' + dec.comune + ' (' + dec.belfiore + '), inserito ' + luogoNascita });
+      }
+    } else {
+      out.push({ campo: 'luogo', tipo: 'info', msg: 'Luogo non verificabile: codice ' + dec.belfiore + ' non in mappa (comune fuori Nord-Ovest o soppresso), inserito ' + luogoNascita });
+    }
+  }
+  return out;
+}
+
 async function salvaVolontario() {
   if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   const cognome = document.getElementById('fCognome').value.trim();
@@ -1309,6 +1364,18 @@ async function salvaVolontario() {
   const cfCheck = validaCodiceFiscale(cfInput);
   if (!cfCheck.ok) { errEl.textContent = cfCheck.msg; errEl.style.display = 'block'; return; }
   const codiceFiscale = cfCheck.cf;
+
+  // Verifica incrociata CF vs data/luogo di nascita inseriti
+  const _discr = verificaCoerenzaCF(codiceFiscale, document.getElementById('fDataNascita') ? document.getElementById('fDataNascita').value : null, document.getElementById('fLuogoNascita') ? document.getElementById('fLuogoNascita').value : null)
+    .filter(x => x.tipo === 'errore');
+  if (_discr.length) {
+    const msgConf = '⚠️ Il Codice Fiscale non coincide con i dati inseriti:\n\n' + _discr.map(x => '• ' + x.msg).join('\n') + '\n\nSalvare comunque?';
+    if (!confirm(msgConf)) {
+      errEl.textContent = 'Salvataggio annullato: verifica CF, data e luogo di nascita.';
+      errEl.style.display = 'block';
+      return;
+    }
+  }
 
   // Controllo unicità: nessun altro volontario con lo stesso CF
   try {
@@ -4620,7 +4687,79 @@ function renderAccessi() {
     html += '</div></div>';
   }
 
+  // --- Verifica CF (solo master) ---
+  if (!q && isMasterUser) {
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
+    html += _accCollapsibleHead('🔍 Verifica codici fiscali', 'accVerCFBody');
+    html += '<div style="padding:0.6rem">'
+      + '<div style="font-size:0.78rem;color:var(--testo-3);margin-bottom:0.5rem">Confronta data e luogo di nascita nel database con quanto codificato nel CF di ogni volontario non dimesso.</div>'
+      + '<button class="btn-sm" onclick="eseguiVerificaCF()">Avvia verifica</button>'
+      + '<div id="verCFRisultati" style="margin-top:0.6rem"></div>'
+      + '</div>';
+    html += '</div></div>';
+  }
+
   content.innerHTML = html;
+}
+
+async function eseguiVerificaCF() {
+  const box = document.getElementById('verCFRisultati');
+  if (!box) return;
+  box.innerHTML = '<div class="loading-msg">verifica in corso...</div>';
+  let vols;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+    vols = await r.json();
+  } catch(e) {
+    box.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento volontari.</div>';
+    return;
+  }
+
+  const errori = [], info = [];
+  let ok = 0;
+  vols.forEach(v => {
+    const nomeC = (v.cognome||'') + ' ' + (v.nome||'');
+    if (!v.codice_fiscale) { errori.push({ v: nomeC, msg: 'CF mancante' }); return; }
+    const chk = validaCodiceFiscale(v.codice_fiscale);
+    if (!chk.ok) { errori.push({ v: nomeC, msg: 'CF non valido: ' + chk.msg }); return; }
+    if (!v.data_nascita) {
+      const dec = decodificaCF(chk.cf);
+      errori.push({ v: nomeC, msg: 'Data di nascita mancante nel DB (il CF indica ' + (dec.dataISO ? dec.dataISO.split('-').reverse().join('/') : '?') + ')' });
+    }
+    const disc = verificaCoerenzaCF(chk.cf, v.data_nascita, v.luogo_nascita);
+    if (v.data_nascita && !v.luogo_nascita) info.push({ v: nomeC, msg: 'Luogo di nascita mancante nel DB' });
+    let haErr = false;
+    disc.forEach(x => {
+      if (x.tipo === 'errore') { errori.push({ v: nomeC, msg: x.msg }); haErr = true; }
+      else info.push({ v: nomeC, msg: x.msg });
+    });
+    if (!haErr && v.data_nascita) ok++;
+  });
+
+  const rigaTab = arr => {
+    let t = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr>'
+      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Volontario</th>'
+      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Dettaglio</th>'
+      + '</tr></thead><tbody>';
+    arr.forEach(p => {
+      t += '<tr style="border-bottom:0.5px solid var(--border-2)">'
+        + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500;white-space:nowrap">' + p.v + '</td>'
+        + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + p.msg + '</td>'
+        + '</tr>';
+    });
+    return t + '</tbody></table>';
+  };
+
+  let out = '<div style="font-size:0.8rem;margin-bottom:0.5rem">'
+    + '<strong>' + vols.length + '</strong> volontari verificati — '
+    + '<span style="color:var(--green,#2e7d32)">✔ ' + ok + ' coerenti</span> · '
+    + '<span style="color:var(--red,#c62828)">⚠ ' + errori.length + ' discrepanze</span>'
+    + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '')
+    + '</div>';
+  if (errori.length) out += rigaTab(errori);
+  if (info.length) out += '<details style="margin-top:0.5rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
+  if (!errori.length && !info.length) out += '<div class="loading-msg">nessuna discrepanza trovata 🎉</div>';
+  box.innerHTML = out;
 }
 
 function filtraAccessi() {
