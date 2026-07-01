@@ -296,7 +296,8 @@ function logout() {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panelHome').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('navHome').classList.add('active');
+  const navHome = document.getElementById('navHome');
+  if (navHome) navHome.classList.add('active');
 }
 
 // -- NAVIGAZIONE --
