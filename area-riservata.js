@@ -101,6 +101,7 @@ async function doLogin() {
       sessionStorage.setItem('ar_user', u);
       sessionStorage.setItem('ar_pass', p);
       await logAttivita('ha effettuato il login');
+      logAccesso('admin', null, currentUser.nome || u);
       avviaDashboard();
     } else {
       err.textContent = 'Credenziali non corrette.'; err.style.display = 'block';
@@ -161,6 +162,7 @@ async function doLoginVolontario() {
       sessionStorage.setItem('ar_vol_data', data);
       sessionStorage.removeItem('ar_user');
       sessionStorage.removeItem('ar_pass');
+      logAccesso('volontario', v.id, v.cognome + ' ' + v.nome);
       avviaDashboard();
     } else {
       err.textContent = 'Codice fiscale o data di nascita non corretti.';
@@ -4480,13 +4482,14 @@ async function caricaAccessi() {
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
 
   try {
-    // Carica utenti admin + tutti i volontari (per i loro accessi)
-    const [uRes, vRes] = await Promise.all([
+    const [uRes, vRes, logRes] = await Promise.all([
       fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H })
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H })
     ]);
     accessiData.admin = await uRes.json();
     accessiData.vol   = await vRes.json();
+    accessiData.log   = await logRes.json();
     renderAccessi();
   } catch(e) {
     content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
@@ -4564,11 +4567,54 @@ function renderAccessi() {
     }
   }
 
+  // Log accessi recenti (solo se non c'è filtro di ricerca attivo)
+  if (!q) {
+    const logs = accessiData.log || [];
+    html += '<div class="schedapers-sec-title" style="margin-top:1.5rem;margin-bottom:0.6rem">🕐 Log accessi recenti</div>';
+    if (!logs.length) {
+      html += '<div class="loading-msg">nessun accesso registrato</div>';
+    } else {
+      html += '<div class="acc-log-table"><table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
+        + '<thead><tr>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Tipo</th>'
+        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
+        + '</tr></thead><tbody>';
+      logs.forEach(l => {
+        const dt = new Date(l.accesso_at);
+        const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+        const badge = l.utente_tipo === 'admin'
+          ? '<span class="acc-badge acc-master" style="font-size:0.6rem">ADMIN</span>'
+          : '<span class="acc-badge acc-std" style="font-size:0.6rem">VOL</span>';
+        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo)">' + (l.utente_label || '—') + '</td>'
+          + '<td style="padding:0.45rem 0.6rem">' + badge + '</td>'
+          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
+          + '</tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+  }
+
   content.innerHTML = html;
 }
 
 function filtraAccessi() {
   renderAccessi();
+}
+
+function logAccesso(tipo, volontarioId, label) {
+  // fire-and-forget, non bloccante
+  fetch(SUPA_URL + '/rest/v1/log_accessi', {
+    method: 'POST',
+    headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+    body: JSON.stringify({
+      utente_tipo: tipo,
+      utente_id: volontarioId || null,
+      utente_label: label || null,
+      user_agent: navigator.userAgent || null
+    })
+  }).catch(() => {});
 }
 
 
