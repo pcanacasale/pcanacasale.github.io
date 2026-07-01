@@ -725,7 +725,7 @@ async function toggleAttivo(id, attivo) {
 
 async function caricaLog() {
   const list = document.getElementById('logList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  if (!list) return; // logList rimosso da Impostazioni, ora il log è in Accessi
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=30', { headers: H });
     const logs = await res.json();
@@ -4484,7 +4484,7 @@ async function caricaAccessi() {
 
   // Mostra/nascondi sezione nuovo utente solo per master
   const nuovoSec = document.getElementById('accNuovoUtenteSection');
-  if (nuovoSec) nuovoSec.style.display = isMaster ? 'block' : 'none';
+  if (nuovoSec) nuovoSec.style.display = isMasterUser ? 'block' : 'none';
 
   try {
     const [uRes, vRes, logRes, attRes] = await Promise.all([
@@ -4533,7 +4533,7 @@ function renderAccessi() {
           + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo||'—') + '</span></div>'
           + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
-          + (isMaster ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtente(' + u.id + ')">✏️ Modifica</button></div>' : '')
+          + (isMasterUser ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtente(' + u.id + ')">✏️ Modifica</button></div>' : '')
           + '</div>';
       });
       html += '</div>';
