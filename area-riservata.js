@@ -228,7 +228,7 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siConvocazioni','siDividerStrumenti','siLabelStrumenti'
+      'siConvocazioni','siGalleria','siSegnalazioni'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -239,32 +239,28 @@ function avviaDashboard() {
     showSi('siSchedaPersonale');
     showSi('siGalleria');
     showSi('siSegnalazioni');
-    showSi('siLabelOperativo');
   } else {
-    // Reset esplicito: "La mia scheda" non esiste per gli admin
     var spers = document.getElementById('siSchedaPersonale');
     if (spers) spers.style.display = 'none';
 
-    if (hasPerm('volontari'))  { showSi('siVolontari'); showSi('siLabelOperativo'); }
-
-    // Pulsanti modifica volontari visibili solo a chi ha il permesso
+    if (hasPerm('volontari'))    showSi('siVolontari');
     if (canModificaVolontari()) {
       var btnNuovo = document.getElementById('btnNuovoVolontario');
       if (btnNuovo) btnNuovo.style.display = '';
     }
-    if (hasPerm('interventi')) { showSi('siInterventi'); showSi('siLabelOperativo'); }
-    if (hasPerm('mezzi'))      { showSi('siMezzi'); showSi('siLabelOperativo'); }
-    if (hasPerm('tlc'))        { showSi('siTlc'); showSi('siLabelOperativo'); }
-    if (hasPerm('documenti'))  { showSi('siDocumenti'); showSi('siLabelOperativo'); }
-    if (hasPerm('visite'))     { showSi('siVisite'); showSi('siLabelOperativo'); }
-    if (hasPerm('galleria'))   { showSi('siGalleria'); showSi('siLabelOperativo'); }
-    if (hasPerm('richieste'))  showSi('siRichieste');
+    if (hasPerm('interventi'))   showSi('siInterventi');
+    if (hasPerm('mezzi'))        showSi('siMezzi');
+    if (hasPerm('tlc'))          showSi('siTlc');
+    if (hasPerm('galleria'))     showSi('siGalleria');
+    if (hasPerm('documenti'))    showSi('siDocumenti');
+    if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
-    showSi('siConvocazioni'); // Convocazioni sempre visibile per admin/standard
-    if (isMaster)                 showSi('siImpostazioni');
-    if (isMaster)                 showSi('siSegnalazioni');
-    if (isMaster)                 showSi('siAccessi');
-    if (hasPerm('db'))            showSi('siDb');
+    showSi('siConvocazioni');
+    if (hasPerm('db'))           showSi('siDb');
+    if (isMaster)                showSi('siAccessi');
+    if (isMaster)                showSi('siSegnalazioni');
+    if (hasPerm('richieste'))    showSi('siRichieste');
+    if (isMaster)                showSi('siImpostazioni');
   }
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
@@ -4494,6 +4490,7 @@ async function caricaAccessi() {
       fetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
     ]);
     accessiData.admin = await uRes.json();
+    _utentiList = accessiData.admin;
     accessiData.vol   = await vRes.json();
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();

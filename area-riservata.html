@@ -540,7 +540,7 @@ div:hover > .vista-edit-btn { display:flex; }
 /* -- SIDEBAR -- */
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:300; }
 .sidebar-overlay.open { display:block; }
-.sidebar { position:fixed; top:0; left:-280px; width:280px; height:100vh; height:100dvh;
+.sidebar { position:fixed; top:0; left:-180px; width:180px; height:100vh; height:100dvh;
   background:var(--bg-card); border-right:0.5px solid var(--border);
   z-index:400; transition:left 0.28s cubic-bezier(0.4,0,0.2,1);
   display:flex; flex-direction:column; overflow:hidden;
@@ -556,24 +556,19 @@ div:hover > .vista-edit-btn { display:flex; }
 .sidebar-nav { flex:1; overflow-y:auto; padding:0.5rem 0; }
 .sidebar-section-label { font-size:0.65rem; font-weight:600; color:var(--testo-3);
   text-transform:uppercase; letter-spacing:0.6px; padding:0.8rem 1.2rem 0.3rem; }
-.sidebar-item { display:flex; align-items:center; gap:0.9rem; padding:0.75rem 1.2rem;
-  cursor:pointer; border:none; background:none; width:100%; font-family:var(--font);
-  text-align:left; transition:background 0.12s; position:relative; }
+.sidebar-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border:none; background:transparent; width:calc(100% - 12px); text-align:left; cursor:pointer; border-radius:6px; margin:1px 6px; }
 .sidebar-item:active { background:var(--bg-2); }
 .sidebar-item.active { background:var(--green-pale); }
 .sidebar-item.active .si-label { color:var(--green); font-weight:600; }
-.sidebar-item.active .si-icon { background:var(--green); color:#fff; }
-.si-icon { width:34px; height:34px; border-radius:9px; background:var(--bg-2);
-  display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.si-icon svg { width:17px; height:17px; stroke:currentColor; stroke-width:1.8;
-  fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--testo-3); }
-.sidebar-item.active .si-icon svg { color:#fff; }
-.si-label { font-size:0.9rem; color:var(--testo-2); flex:1; }
+.sidebar-item.active .si-icon svg { color:var(--green); }
+.si-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.si-icon svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--testo-3); }
+.si-label { font-size:0.82rem; color:var(--testo-2); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .si-badge { background:var(--red); color:#fff; font-size:0.6rem; font-weight:700;
   min-width:18px; height:18px; border-radius:9px; display:none;
   align-items:center; justify-content:center; padding:0 4px; }
 .si-badge.show { display:flex; }
-.sidebar-divider { height:0.5px; background:var(--border); margin:0.4rem 1.2rem; }
+.sidebar-divider { height:0.5px; background:var(--border); margin:0.4rem 0.8rem; }
 .sidebar-footer { padding:0.8rem 1.2rem calc(0.8rem + var(--safe-b));
   border-top:0.5px solid var(--border); flex-shrink:0; }
 .sidebar-logout { display:flex; align-items:center; gap:0.8rem; padding:0.6rem 0;
@@ -818,90 +813,81 @@ div:hover > .vista-edit-btn { display:flex; }
 
     <nav class="sidebar-nav">
       <button class="sidebar-item active" id="siHome" onclick="navTo('home','Home',this)">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg></div>
         <span class="si-label">Home</span>
       </button>
 
-      <div class="sidebar-section-label" id="siLabelOperativo" style="display:none">Operativo</div>
+      <div class="sidebar-divider"></div>
 
       <button class="sidebar-item" id="siVolontari" onclick="navTo('volontari','Volontari',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="3.5"/><path d="M2 21c0-4 2.7-7 6-7h1"/><circle cx="17" cy="10" r="3"/><path d="M14 21c0-3.3 1.3-6 3-6s3 2.7 3 6"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="7" r="3.5"/><path d="M2 21c0-4 2.7-7 6-7h1"/><circle cx="17" cy="10" r="3"/><path d="M14 21c0-3.3 1.3-6 3-6s3 2.7 3 6"/></svg></div>
         <span class="si-label">Volontari</span>
       </button>
-
-      <button class="sidebar-item" id="siStatistiche" onclick="navTo('statistiche','Statistiche',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
-        <span class="si-label">Statistiche</span>
-      </button>
       <button class="sidebar-item" id="siInterventi" onclick="navTo('interventi','Interventi',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
         <span class="si-label">Interventi</span>
       </button>
-
       <button class="sidebar-item" id="siMezzi" onclick="navTo('mezzi','Mezzi',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
         <span class="si-label">Mezzi</span>
       </button>
-
       <button class="sidebar-item" id="siTlc" onclick="navTo('tlc','TLC',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/><path d="M14 4l3 3-3 3"/><path d="M21 4l-3 3 3 3"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/><path d="M14 4l3 3-3 3"/><path d="M21 4l-3 3 3 3"/></svg></div>
         <span class="si-label">TLC</span>
       </button>
-
-      <button class="sidebar-item" id="siDb" onclick="navTo('db','DB Avanzato',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v5c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 10v5c0 1.66 4 3 9 3s9-1.34 9-3v-5"/><path d="M3 15v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg></div>
-        <span class="si-label">DB Avanzato</span>
+      <button class="sidebar-item" id="siGalleria" onclick="navTo('galleria','Galleria',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        <span class="si-label">Galleria</span>
       </button>
-
       <button class="sidebar-item" id="siDocumenti" onclick="navTo('documenti','Documenti',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
         <span class="si-label">Documenti</span>
       </button>
 
+      <div class="sidebar-divider"></div>
+
       <button class="sidebar-item" id="siVisite" onclick="navTo('visite','Visite Mediche',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z"/></svg></div>
         <span class="si-label">Visite Mediche</span>
       </button>
-
-      <button class="sidebar-item" id="siSchedaPersonale" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-        <span class="si-label">La mia scheda</span>
+      <button class="sidebar-item" id="siStatistiche" onclick="navTo('statistiche','Statistiche',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
+        <span class="si-label">Statistiche</span>
+      </button>
+      <button class="sidebar-item" id="siConvocazioni" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></div>
+        <span class="si-label">Convocazioni</span>
+      </button>
+      <button class="sidebar-item" id="siDb" onclick="navTo('db','DB Avanzato',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v5c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 10v5c0 1.66 4 3 9 3s9-1.34 9-3v-5"/><path d="M3 15v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg></div>
+        <span class="si-label">DB Avanzato</span>
       </button>
 
-      <button class="sidebar-item" id="siGalleria" onclick="navTo('galleria','Galleria',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-        <span class="si-label">Galleria</span>
-      </button>
+      <div class="sidebar-divider"></div>
 
+      <button class="sidebar-item" id="siAccessi" onclick="navTo('accessi','Accessi',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="18" cy="6" r="2"/></svg></div>
+        <span class="si-label">Accessi</span>
+      </button>
       <button class="sidebar-item" id="siSegnalazioni" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <span class="si-label">Segnalazioni</span>
         <span class="si-badge" id="siBadgeSegnalazioni"></span>
       </button>
-
-      <div class="sidebar-divider" id="siDividerStrumenti"></div>
-      <div class="sidebar-section-label" id="siLabelStrumenti">Strumenti</div>
-
-
-      <button class="sidebar-item" id="siConvocazioni" onclick="window.location.href='generatore-convocazioni.html'; closeSidebar();" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></div>
-        <span class="si-label">Convocazioni</span>
-      </button>
-
       <button class="sidebar-item" id="siRichieste" onclick="navTo('richieste','Richieste',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></div>
         <span class="si-label">Richieste</span>
         <span class="si-badge" id="siBadgeRichieste"></span>
       </button>
-
       <button class="sidebar-item" id="siImpostazioni" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+        <div class="si-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
         <span class="si-label">Impostazioni</span>
       </button>
 
-      <button class="sidebar-item" id="siAccessi" onclick="navTo('accessi','Accessi',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/><path d="M6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="18" cy="6" r="2"/></svg></div>
-        <span class="si-label">Accessi</span>
+      <!-- Volontari -->
+      <button class="sidebar-item" id="siSchedaPersonale" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <span class="si-label">La mia scheda</span>
       </button>
     </nav>
 
@@ -1483,6 +1469,6 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="area-riservata.js?v=105"></script>
+<script src="area-riservata.js?v=107"></script>
 </body>
 </html>
