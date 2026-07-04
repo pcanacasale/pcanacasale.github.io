@@ -1077,8 +1077,10 @@ div:hover > .vista-edit-btn { display:flex; }
       <div class="db-toolbar">
         <input class="db-search" id="dbSearch" placeholder="🔍 cerca..." oninput="dbFiltra(this.value)">
         <button class="db-btn" onclick="dbToggleCols()">⚙ Colonne</button>
+        <button class="db-btn" onclick="eseguiVerificaCF()">🔍 Verifica CF</button>
         <button class="db-btn green" onclick="dbNuovoRecord()">+ Nuovo</button>
       </div>
+      <div id="verCFRisultati" style="display:none;margin:0.6rem 0"></div>
       <div class="db-wrap">
         <table class="db-table" id="dbTable">
           <thead id="dbThead"></thead>
@@ -1470,6 +1472,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=108"></script>
+<script src="area-riservata.js?v=109"></script>
 </body>
 </html>

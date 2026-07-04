@@ -3572,6 +3572,71 @@ document.addEventListener('keydown', e => {
 });
 
 
+// -- VERIFICA CF (pagina DB Avanzato) --
+async function eseguiVerificaCF() {
+  const box = document.getElementById('verCFRisultati');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = '<div class="db-loading" style="padding:0.6rem">verifica in corso...</div>';
+  let vols;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+    vols = await r.json();
+  } catch(e) {
+    box.innerHTML = '<div class="db-loading" style="color:var(--red)">errore caricamento volontari.</div>';
+    return;
+  }
+
+  const errori = [], info = [];
+  let ok = 0;
+  vols.forEach(v => {
+    const nomeC = (v.cognome||'') + ' ' + (v.nome||'');
+    if (!v.codice_fiscale) { errori.push({ v: nomeC, msg: 'CF mancante' }); return; }
+    const chk = validaCodiceFiscale(v.codice_fiscale);
+    if (!chk.ok) { errori.push({ v: nomeC, msg: 'CF non valido: ' + chk.msg }); return; }
+    if (!v.data_nascita) {
+      const dec = decodificaCF(chk.cf);
+      errori.push({ v: nomeC, msg: 'Data di nascita mancante nel DB (il CF indica ' + (dec.dataISO ? dec.dataISO.split('-').reverse().join('/') : '?') + ')' });
+    }
+    const disc = verificaCoerenzaCF(chk.cf, v.data_nascita, v.luogo_nascita);
+    if (v.data_nascita && !v.luogo_nascita) info.push({ v: nomeC, msg: 'Luogo di nascita mancante nel DB' });
+    let haErr = false;
+    disc.forEach(x => {
+      if (x.tipo === 'errore') { errori.push({ v: nomeC, msg: x.msg }); haErr = true; }
+      else info.push({ v: nomeC, msg: x.msg });
+    });
+    if (!haErr && v.data_nascita) ok++;
+  });
+
+  const rigaTab = arr => {
+    let t = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr>'
+      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Volontario</th>'
+      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Dettaglio</th>'
+      + '</tr></thead><tbody>';
+    arr.forEach(p => {
+      t += '<tr style="border-bottom:0.5px solid var(--border-2)">'
+        + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500;white-space:nowrap">' + p.v + '</td>'
+        + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + p.msg + '</td>'
+        + '</tr>';
+    });
+    return t + '</tbody></table>';
+  };
+
+  let out = '<div class="panel" style="padding:0.8rem">'
+    + '<div style="font-size:0.8rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center">'
+    + '<span><strong>' + vols.length + '</strong> volontari verificati — '
+    + '<span style="color:var(--green,#2e7d32)">✔ ' + ok + ' coerenti</span> · '
+    + '<span style="color:var(--red,#c62828)">⚠ ' + errori.length + ' discrepanze</span>'
+    + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '') + '</span>'
+    + '<button class="db-btn" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">✕ chiudi</button>'
+    + '</div>';
+  if (errori.length) out += rigaTab(errori);
+  if (info.length) out += '<details style="margin-top:0.5rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
+  if (!errori.length && !info.length) out += '<div class="db-loading">nessuna discrepanza trovata 🎉</div>';
+  out += '</div>';
+  box.innerHTML = out;
+}
+
 // -- DB AVANZATO (Supabase) --
 
 const DB_ALL_COLS = [
@@ -4687,79 +4752,7 @@ function renderAccessi() {
     html += '</div></div>';
   }
 
-  // --- Verifica CF (solo master) ---
-  if (!q && isMasterUser) {
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('🔍 Verifica codici fiscali', 'accVerCFBody');
-    html += '<div style="padding:0.6rem">'
-      + '<div style="font-size:0.78rem;color:var(--testo-3);margin-bottom:0.5rem">Confronta data e luogo di nascita nel database con quanto codificato nel CF di ogni volontario non dimesso.</div>'
-      + '<button class="btn-sm" onclick="eseguiVerificaCF()">Avvia verifica</button>'
-      + '<div id="verCFRisultati" style="margin-top:0.6rem"></div>'
-      + '</div>';
-    html += '</div></div>';
-  }
-
   content.innerHTML = html;
-}
-
-async function eseguiVerificaCF() {
-  const box = document.getElementById('verCFRisultati');
-  if (!box) return;
-  box.innerHTML = '<div class="loading-msg">verifica in corso...</div>';
-  let vols;
-  try {
-    const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
-    vols = await r.json();
-  } catch(e) {
-    box.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento volontari.</div>';
-    return;
-  }
-
-  const errori = [], info = [];
-  let ok = 0;
-  vols.forEach(v => {
-    const nomeC = (v.cognome||'') + ' ' + (v.nome||'');
-    if (!v.codice_fiscale) { errori.push({ v: nomeC, msg: 'CF mancante' }); return; }
-    const chk = validaCodiceFiscale(v.codice_fiscale);
-    if (!chk.ok) { errori.push({ v: nomeC, msg: 'CF non valido: ' + chk.msg }); return; }
-    if (!v.data_nascita) {
-      const dec = decodificaCF(chk.cf);
-      errori.push({ v: nomeC, msg: 'Data di nascita mancante nel DB (il CF indica ' + (dec.dataISO ? dec.dataISO.split('-').reverse().join('/') : '?') + ')' });
-    }
-    const disc = verificaCoerenzaCF(chk.cf, v.data_nascita, v.luogo_nascita);
-    if (v.data_nascita && !v.luogo_nascita) info.push({ v: nomeC, msg: 'Luogo di nascita mancante nel DB' });
-    let haErr = false;
-    disc.forEach(x => {
-      if (x.tipo === 'errore') { errori.push({ v: nomeC, msg: x.msg }); haErr = true; }
-      else info.push({ v: nomeC, msg: x.msg });
-    });
-    if (!haErr && v.data_nascita) ok++;
-  });
-
-  const rigaTab = arr => {
-    let t = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Volontario</th>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Dettaglio</th>'
-      + '</tr></thead><tbody>';
-    arr.forEach(p => {
-      t += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500;white-space:nowrap">' + p.v + '</td>'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + p.msg + '</td>'
-        + '</tr>';
-    });
-    return t + '</tbody></table>';
-  };
-
-  let out = '<div style="font-size:0.8rem;margin-bottom:0.5rem">'
-    + '<strong>' + vols.length + '</strong> volontari verificati — '
-    + '<span style="color:var(--green,#2e7d32)">✔ ' + ok + ' coerenti</span> · '
-    + '<span style="color:var(--red,#c62828)">⚠ ' + errori.length + ' discrepanze</span>'
-    + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '')
-    + '</div>';
-  if (errori.length) out += rigaTab(errori);
-  if (info.length) out += '<details style="margin-top:0.5rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
-  if (!errori.length && !info.length) out += '<div class="loading-msg">nessuna discrepanza trovata 🎉</div>';
-  box.innerHTML = out;
 }
 
 function filtraAccessi() {
