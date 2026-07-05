@@ -4321,11 +4321,16 @@ async function pstCaricaImmagineMappa(file) {
   } catch(e) { alert('Errore nel caricamento dell\'immagine.'); }
 }
 
+let pstImgZoom = 1;
+const PST_IMG_BASE_WIDTH = 1000; // px, larghezza di riferimento non scalata dell'immagine
+
 function pstRenderCanvasImmagine() {
   const canvas  = document.getElementById('pstMapCanvas');
   const noImg   = document.getElementById('pstMapNessunaImmagine');
   const layout  = document.getElementById('pstMapLayout');
   const toolbar = document.getElementById('pstMapToolbar');
+  const zoomCtrl = document.getElementById('pstMapZoomControls');
+  const btnScarica = document.getElementById('pstBtnScaricaMappa');
   if (!pstMappaData || !pstMappaData.immagine_url) {
     layout.style.display = 'none';
     toolbar.style.display = 'none';
@@ -4336,37 +4341,47 @@ function pstRenderCanvasImmagine() {
   noImg.style.display = 'none';
   layout.style.display = 'grid';
   toolbar.style.display = 'flex';
+  zoomCtrl.style.display = 'inline-flex';
+  btnScarica.style.display = 'inline-block';
+  document.getElementById('pstSpessorePercorso').value = pstMappaData.route_thickness || 3;
 
+  const spessore = ((pstMappaData.route_thickness || 3) * 0.2);
   const percorso = pstMappaData.percorso || [];
   const puntiSvg = percorso.map(p => p.x + ',' + p.y).join(' ');
-  const cerchi = percorso.map(p => '<circle cx="' + p.x + '" cy="' + p.y + '" r="0.8" fill="#d92b2b" />').join('');
+  const cerchi = percorso.map(p => '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (spessore * 0.8) + '" fill="#d92b2b" />').join('');
 
   const pins = pstPostazioni.filter(p => p.map_x != null && p.map_y != null).map(p => {
-    return '<div class="pst-map-pin" data-pid="' + p.id + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%;transform:translate(-50%,-100%);cursor:pointer">'
-      + '<div style="background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:10px 10px 10px 0;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3)">📍 ' + (p.numero || p.indirizzo || ('#' + p.id)) + '</div>'
+    const label = p.numero || p.indirizzo || ('#' + p.id);
+    return '<div class="pst-map-pin" data-pid="' + p.id + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
+      + '<div style="position:absolute;width:10px;height:10px;left:-5px;top:-5px;border-radius:50%;background:var(--green);border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5)"></div>'
+      + '<div style="position:absolute;left:-1px;top:-24px;width:2px;height:24px;background:var(--green)"></div>'
+      + '<div class="pst-map-pin-label" style="position:absolute;left:6px;top:-38px;cursor:pointer;background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3)">📍 ' + label + '</div>'
       + '</div>';
   }).join('');
 
   canvas.innerHTML =
-    '<img src="' + pstMappaData.immagine_url + '" style="width:100%;display:block;pointer-events:none" draggable="false">'
-    + '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
-    + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="0.6" />' : '')
+    '<div id="pstMapZoomWrap" style="position:relative;width:' + PST_IMG_BASE_WIDTH + 'px;transform-origin:0 0;transform:scale(' + pstImgZoom + ')">'
+    + '<img id="pstMapImgEl" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px;display:block;pointer-events:none" draggable="false">'
+    + '<svg id="pstMapSvg" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
+    + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
     + cerchi
     + '</svg>'
-    + pins;
+    + pins
+    + '</div>';
 
-  canvas.onclick = (e) => pstGestisciClickImmagine(e, canvas);
-  canvas.querySelectorAll('.pst-map-pin').forEach(el => {
+  const zoomWrap = document.getElementById('pstMapZoomWrap');
+  zoomWrap.onclick = (e) => pstGestisciClickImmagine(e, zoomWrap);
+  zoomWrap.querySelectorAll('.pst-map-pin-label').forEach(el => {
     el.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      const pid = parseInt(el.getAttribute('data-pid'), 10);
+      const pid = parseInt(el.closest('.pst-map-pin').getAttribute('data-pid'), 10);
       if (confirm('Rimuovere questa postazione dalla mappa?')) pstRimuoviDallaMappa(pid);
     });
   });
 }
 
-function pstGestisciClickImmagine(e, canvas) {
-  const rect = canvas.getBoundingClientRect();
+function pstGestisciClickImmagine(e, zoomWrap) {
+  const rect = zoomWrap.getBoundingClientRect();
   let xPct = (e.clientX - rect.left) / rect.width * 100;
   let yPct = (e.clientY - rect.top) / rect.height * 100;
   xPct = Math.max(0, Math.min(100, Math.round(xPct * 10) / 10));
@@ -4381,6 +4396,98 @@ function pstGestisciClickImmagine(e, canvas) {
   } else if (pstMapArmedPostazioneId) {
     pstSalvaPinImmagine(pstMapArmedPostazioneId, xPct, yPct);
   }
+}
+
+function pstZoomImmagine(direzione) {
+  pstImgZoom = Math.max(0.5, Math.min(4, Math.round((pstImgZoom + direzione * 0.25) * 100) / 100));
+  document.getElementById('pstMapZoomWrap').style.transform = 'scale(' + pstImgZoom + ')';
+  document.getElementById('pstMapZoomLabel').textContent = Math.round(pstImgZoom * 100) + '%';
+}
+
+function pstZoomImmagineReset() {
+  pstImgZoom = 1;
+  document.getElementById('pstMapZoomWrap').style.transform = 'scale(1)';
+  document.getElementById('pstMapZoomLabel').textContent = '100%';
+}
+
+function pstAnteprimaSpessorePercorso(valore) {
+  const spessore = valore * 0.2;
+  if (pstMappaData.tipo === 'google') return; // il google mode aggiorna solo al rilascio
+  const svg = document.getElementById('pstMapSvg');
+  if (!svg) return;
+  const linea = svg.querySelector('polyline');
+  if (linea) linea.setAttribute('stroke-width', spessore);
+  svg.querySelectorAll('circle').forEach(c => c.setAttribute('r', spessore * 0.8));
+}
+
+async function pstSalvaSpessorePercorso(valore) {
+  pstMappaData.route_thickness = parseInt(valore, 10);
+  await pstUpsertMappa({ route_thickness: pstMappaData.route_thickness });
+  if (pstMappaData.tipo === 'google') pstDisegnaPercorsoGoogle();
+}
+
+async function pstScaricaMappaImmagine() {
+  if (!pstMappaData || !pstMappaData.immagine_url) return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    const spessorePx = (pstMappaData.route_thickness || 3) * 0.002 * cv.width;
+    const percorso = pstMappaData.percorso || [];
+    if (percorso.length > 1) {
+      ctx.strokeStyle = '#d92b2b';
+      ctx.lineWidth = spessorePx;
+      ctx.beginPath();
+      percorso.forEach((p, i) => {
+        const px = p.x / 100 * cv.width, py = p.y / 100 * cv.height;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+    }
+    percorso.forEach(p => {
+      ctx.fillStyle = '#d92b2b';
+      ctx.beginPath();
+      ctx.arc(p.x / 100 * cv.width, p.y / 100 * cv.height, spessorePx * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    pstPostazioni.filter(p => p.map_x != null && p.map_y != null).forEach(p => {
+      const px = p.map_x / 100 * cv.width, py = p.map_y / 100 * cv.height;
+      const leaderLen = cv.width * 0.024;
+      ctx.strokeStyle = '#0f6e56'; ctx.lineWidth = cv.width * 0.002;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - leaderLen); ctx.stroke();
+      ctx.fillStyle = '#0f6e56';
+      ctx.beginPath(); ctx.arc(px, py, cv.width * 0.004, 0, Math.PI * 2); ctx.fill();
+      const label = ' ' + (p.numero || p.indirizzo || ('#' + p.id)) + ' ';
+      ctx.font = 'bold ' + Math.round(cv.width * 0.014) + 'px sans-serif';
+      const w = ctx.measureText(label).width;
+      const boxY = py - leaderLen - cv.width * 0.02;
+      ctx.fillStyle = '#0f6e56';
+      ctx.fillRect(px + cv.width * 0.006, boxY - cv.width * 0.014, w, cv.width * 0.02);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, px + cv.width * 0.006, boxY);
+    });
+
+    cv.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = (pstIntervento.evento || 'evento').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 40);
+      a.href = url; a.download = 'Mappa_' + safeName + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+    } catch(err) {
+      alert('Impossibile generare il download (limitazione di sicurezza del browser sull\'immagine). Prova a fare uno screenshot della mappa.');
+    }
+  };
+  img.onerror = () => alert('Impossibile scaricare l\'immagine (problema di accesso all\'immagine salvata).');
+  img.src = pstMappaData.immagine_url;
 }
 
 async function pstSalvaPinImmagine(postazioneId, xPct, yPct) {
@@ -4417,6 +4524,10 @@ async function pstRenderCanvasGoogle() {
   const noImg   = document.getElementById('pstMapNessunaImmagine');
   const layout  = document.getElementById('pstMapLayout');
   const toolbar = document.getElementById('pstMapToolbar');
+  const zoomCtrl = document.getElementById('pstMapZoomControls');
+  const btnScarica = document.getElementById('pstBtnScaricaMappa');
+  zoomCtrl.style.display = 'none';
+  btnScarica.style.display = 'none';
 
   const apiKey = (document.getElementById('pstMapApiKey').value || localStorage.getItem('pst_gmaps_key') || '').trim();
   if (!apiKey) {
@@ -4433,6 +4544,7 @@ async function pstRenderCanvasGoogle() {
   noImg.style.display = 'none';
   layout.style.display = 'grid';
   toolbar.style.display = 'flex';
+  document.getElementById('pstSpessorePercorso').value = pstMappaData.route_thickness || 3;
 
   canvas.innerHTML = '';
   const center = { lat: pstMappaData.google_center_lat || 45.1367, lng: pstMappaData.google_center_lng || 8.4519 };
@@ -4450,7 +4562,7 @@ function pstDisegnaPercorsoGoogle() {
   const percorso = pstMappaData.percorso || [];
   pstMapGooglePolyline = new google.maps.Polyline({
     path: percorso.map(p => ({ lat: p.lat, lng: p.lng })),
-    strokeColor: '#d92b2b', strokeWeight: 3
+    strokeColor: '#d92b2b', strokeWeight: pstMappaData.route_thickness || 3
   });
   pstMapGooglePolyline.setMap(pstMapGoogleInstance);
 }
