@@ -3813,6 +3813,8 @@ function pstRenderLista() {
 
     const infoRighe = [];
     infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
+    infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span style="color:var(--testo-3)">nessun vigile</span>');
+    infoRighe.push(p.assegnata_ana === false ? '🏳️ <span style="color:#e08000">non assegnata a noi</span>' : '🏳️ ANA');
     infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
 
     const righeVol = p.volontari.length
@@ -3820,8 +3822,13 @@ function pstRenderLista() {
           const v = a.volontari || {};
           const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.indirizzo));
           const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;display:block">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem">'
-            + '<span style="font-size:0.8rem">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
+          const tr = a.trasporto || 'piedi';
+          const opt = (val, label) => '<option value="' + val + '"' + (tr === val ? ' selected' : '') + '>' + label + '</option>';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem;gap:0.4rem">'
+            + '<span style="font-size:0.8rem;flex:1;min-width:0">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
+            + '<select class="form-inp" style="width:auto;font-size:0.72rem;padding:2px 4px" onchange="pstAggiornaTrasporto(' + a.id + ',this.value)">'
+            + opt('piedi','🚶 a piedi') + opt('mezzo_fisso','🚗 con mezzo (resta)') + opt('trasportato','🚐 trasportato')
+            + '</select>'
             + '<button class="btn-sm btn-danger" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
             + '</div>';
         }).join('')
@@ -3876,6 +3883,8 @@ async function pstNuovaPostazione() {
   const nVolStr = document.getElementById('pstFNVol').value;
   const radioId = document.getElementById('pstFRadio').value;
   const mezzoId = document.getElementById('pstFMezzo').value;
+  const vigile = document.getElementById('pstFVigile').checked;
+  const ana = document.getElementById('pstFAna').checked;
   if (!numero && !indirizzo) { alert('Inserisci almeno un numero o un indirizzo per la postazione.'); return; }
 
   const ordine = pstPostazioni.length ? Math.max(...pstPostazioni.map(p => p.ordine || 0)) + 1 : 1;
@@ -3890,13 +3899,17 @@ async function pstNuovaPostazione() {
         indirizzo: indirizzo || null,
         n_volontari_previsti: nVolStr ? parseInt(nVolStr, 10) : null,
         radio_id: radioId ? parseInt(radioId, 10) : null,
-        mezzo_id: mezzoId ? parseInt(mezzoId, 10) : null
+        mezzo_id: mezzoId ? parseInt(mezzoId, 10) : null,
+        vigile_presente: vigile,
+        assegnata_ana: ana
       })
     });
     if (!res.ok) throw new Error();
     ['pstFNumero','pstFNome','pstFIndirizzo','pstFNVol'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('pstFRadio').value = '';
     document.getElementById('pstFMezzo').value = '';
+    document.getElementById('pstFVigile').checked = false;
+    document.getElementById('pstFAna').checked = true;
     pstToggleNuovaForm();
     await pstCaricaLista();
   } catch(e) { alert('Errore nella creazione della postazione.'); }
@@ -3912,6 +3925,8 @@ function pstApriModificaPostazione(id) {
   document.getElementById('pstEFNVol').value = p.n_volontari_previsti || '';
   document.getElementById('pstEFRadio').value = p.radio_id || '';
   document.getElementById('pstEFMezzo').value = p.mezzo_id || '';
+  document.getElementById('pstEFVigile').checked = !!p.vigile_presente;
+  document.getElementById('pstEFAna').checked = p.assegnata_ana !== false;
   document.getElementById('pstEditOverlay').classList.add('open');
 }
 
@@ -3923,6 +3938,8 @@ async function pstSalvaModificaPostazione() {
   const nVolStr = document.getElementById('pstEFNVol').value;
   const radioId = document.getElementById('pstEFRadio').value;
   const mezzoId = document.getElementById('pstEFMezzo').value;
+  const vigile = document.getElementById('pstEFVigile').checked;
+  const ana = document.getElementById('pstEFAna').checked;
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, {
       method: 'PATCH',
@@ -3931,7 +3948,9 @@ async function pstSalvaModificaPostazione() {
         numero: numero || null, nome: nome || null, indirizzo: indirizzo || null,
         n_volontari_previsti: nVolStr ? parseInt(nVolStr, 10) : null,
         radio_id: radioId ? parseInt(radioId, 10) : null,
-        mezzo_id: mezzoId ? parseInt(mezzoId, 10) : null
+        mezzo_id: mezzoId ? parseInt(mezzoId, 10) : null,
+        vigile_presente: vigile,
+        assegnata_ana: ana
       })
     });
     if (!res.ok) throw new Error();
@@ -3959,6 +3978,15 @@ async function pstEliminaTutte() {
     if (searchEl) searchEl.value = '';
     await pstCaricaLista();
   } catch(e) { alert('Errore durante l\'eliminazione massiva.'); }
+}
+
+async function pstAggiornaTrasporto(assegnazioneId, valore) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, {
+      method: 'PATCH', headers: HJ, body: JSON.stringify({ trasporto: valore })
+    });
+    pstPostazioni.forEach(p => { const a = p.volontari.find(x => x.id === assegnazioneId); if (a) a.trasporto = valore; });
+  } catch(e) { alert('Errore nel salvataggio del trasporto.'); }
 }
 
 async function pstRimuoviVolontario(assegnazioneId) {
@@ -4035,24 +4063,30 @@ async function pstEsportaExcel() {
     { header: 'Tag',       key: 'tag',       width: 20 },
     { header: 'Radio',     key: 'radio',     width: 22 },
     { header: 'Mezzo',     key: 'mezzo',     width: 22 },
+    { header: 'Vigile',    key: 'vigile',    width: 10 },
+    { header: 'ANA',       key: 'ana',       width: 8  },
     { header: 'Cognome',   key: 'cognome',   width: 18 },
     { header: 'Nome vol.', key: 'nome',      width: 16 },
     { header: 'Squadra',   key: 'squadra',   width: 14 },
     { header: 'Telefono',  key: 'telefono',  width: 16 },
+    { header: 'Trasporto', key: 'trasporto', width: 16 },
   ];
   ws.getRow(1).font = { bold: true };
+  const trasportoLbl = { mezzo_fisso: 'Con mezzo (resta)', trasportato: 'Trasportato', piedi: 'A piedi' };
   pstPostazioni.forEach(p => {
     const base = {
       numero: p.numero || '', indirizzo: p.indirizzo || '', tag: p.nome || '',
       radio: p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : '',
-      mezzo: p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : ''
+      mezzo: p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : '',
+      vigile: p.vigile_presente ? 'Sì' : 'No',
+      ana: p.assegnata_ana === false ? 'No' : 'Sì'
     };
     if (!p.volontari.length) {
-      ws.addRow(Object.assign({ cognome:'', nome:'', squadra:'', telefono:'' }, base));
+      ws.addRow(Object.assign({ cognome:'', nome:'', squadra:'', telefono:'', trasporto:'' }, base));
     } else {
       p.volontari.forEach(a => {
         const v = a.volontari || {};
-        ws.addRow(Object.assign({ cognome: v.cognome||'', nome: v.nome||'', squadra: v.squadra||'', telefono: v.telefono||'' }, base));
+        ws.addRow(Object.assign({ cognome: v.cognome||'', nome: v.nome||'', squadra: v.squadra||'', telefono: v.telefono||'', trasporto: trasportoLbl[a.trasporto||'piedi'] }, base));
       });
     }
   });
@@ -4074,9 +4108,9 @@ async function pstEsportaExcel() {
 function pstEsportaPDF() {
   if (!pstIntervento || !pstPostazioni.length) { alert('Nessuna postazione da esportare.'); return; }
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, H = 297, mg = 10;
-  const GREEN = [15, 110, 86], LIGHT = [225, 245, 238], BLACK = [20, 20, 20], GRAY = [110, 110, 110];
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const W = 297, H = 210, mg = 8;
+  const GREEN = [15, 110, 86], BLACK = [20, 20, 20], GRAY = [110, 110, 110], LIGHTROW = [240, 248, 245];
 
   const radioById = {}; (tlcData || []).forEach(t => radioById[t.id] = t);
   const mezzoById = {}; (mezziData || []).forEach(m => mezzoById[m.id] = m);
@@ -4084,76 +4118,85 @@ function pstEsportaPDF() {
   const dataStr = pstIntervento.data ? new Date(pstIntervento.data).toLocaleDateString('it-IT') : '';
   const sottotitolo = (pstIntervento.evento || '') + (dataStr ? ' — ' + dataStr : '') + (pstIntervento.luogo ? ' (' + pstIntervento.luogo + ')' : '');
 
+  // Colonne: label, larghezza (mm)
+  const cols = [
+    { key: 'numero', label: 'N°', w: 12 },
+    { key: 'indirizzo', label: 'Indirizzo', w: 45 },
+    { key: 'tag', label: 'Tag', w: 22 },
+    { key: 'radio', label: 'Radio', w: 32 },
+    { key: 'mezzo', label: 'Mezzo', w: 32 },
+    { key: 'vigile', label: 'Vigile', w: 14 },
+    { key: 'ana', label: 'ANA', w: 12 },
+    { key: 'contatore', label: 'Vol.', w: 14 },
+    { key: 'volontari', label: 'Volontari (nome, telefono)', w: W - mg * 2 - (12+45+22+32+32+14+12+14) }
+  ];
+  const colX = []; let acc = mg; cols.forEach(c => { colX.push(acc); acc += c.w; });
+
   function disegnaHeader() {
-    doc.setFillColor(...GREEN); doc.rect(0, 0, W, 26, 'F');
+    doc.setFillColor(...GREEN); doc.rect(0, 0, W, 20, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-    doc.text('GESTIONE POSTAZIONI', mg, 11);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-    doc.text(sottotitolo, mg, 18, { maxWidth: W - mg * 2 - 40 });
-    doc.setFontSize(8);
-    doc.text('Stampato il ' + new Date().toLocaleDateString('it-IT'), W - mg, 18, { align: 'right' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+    doc.text('GESTIONE POSTAZIONI', mg, 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(sottotitolo, mg, 15);
+    doc.setFontSize(7.5);
+    doc.text('Stampato il ' + new Date().toLocaleDateString('it-IT'), W - mg, 15, { align: 'right' });
+
+    let y = 25;
+    doc.setFillColor(...GREEN);
+    doc.rect(mg, y, W - mg * 2, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    cols.forEach((c, i) => doc.text(c.label, colX[i] + 1.5, y + 4));
+    return y + 6;
   }
 
-  disegnaHeader();
-
-  const colGap = 6;
-  const colW = (W - mg * 2 - colGap) / 2;
-  const colX = [mg, mg + colW + colGap];
-  let col = 0, y = 32;
+  let y = disegnaHeader();
+  let rowIdx = 0;
 
   pstPostazioni.forEach(p => {
-    const nRighe = Math.max(p.volontari.length, 1);
-    const boxH = 20 + nRighe * 5;
+    const radioLbl = p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : '—';
+    const mezzoLbl = p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : '—';
+    const iconTr = { mezzo_fisso: '[M]', trasportato: '[T]', piedi: '[P]' };
+    const volTesto = p.volontari.length
+      ? p.volontari.map(a => { const v = a.volontari || {}; return iconTr[a.trasporto||'piedi'] + ' ' + (v.cognome || '') + ' ' + (v.nome || '') + (v.telefono ? ' (' + v.telefono + ')' : ''); }).join('  •  ')
+      : 'nessuno';
 
-    if (y + boxH > H - mg - 10) {
-      if (col === 0) { col = 1; y = 32; }
-      else { doc.addPage(); disegnaHeader(); col = 0; y = 32; }
-    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    const volLines = doc.splitTextToSize(volTesto, cols[8].w - 3);
+    const indLines = doc.splitTextToSize(p.indirizzo || '—', cols[1].w - 3);
+    const nRighe = Math.max(volLines.length, indLines.length, 1);
+    const rowH = Math.max(7, nRighe * 3.6 + 2);
 
-    const x = colX[col];
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
-    doc.roundedRect(x, y, colW, boxH, 1.5, 1.5);
+    if (y + rowH > H - mg - 6) { doc.addPage(); y = disegnaHeader(); rowIdx = 0; }
 
-    doc.setFillColor(...LIGHT);
-    doc.roundedRect(x, y, colW, 8, 1.5, 1.5, 'F');
-    doc.setTextColor(...GREEN);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo');
-    doc.text(titolo, x + 3, y + 5.5, { maxWidth: colW - 6 });
+    if (rowIdx % 2 === 1) { doc.setFillColor(...LIGHTROW); doc.rect(mg, y, W - mg * 2, rowH, 'F'); }
+    doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.15);
+    doc.line(mg, y + rowH, W - mg, y + rowH);
 
-    let yy = y + 11;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    const radioLbl = p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : null;
-    const mezzoLbl = p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : null;
-    const metaParts = [];
-    if (radioLbl) metaParts.push('Radio: ' + radioLbl);
-    if (mezzoLbl) metaParts.push('Mezzo: ' + mezzoLbl);
-    if (metaParts.length) { doc.text(metaParts.join('   '), x + 3, yy, { maxWidth: colW - 6 }); yy += 5; }
+    doc.setTextColor(...BLACK);
+    doc.setFont('helvetica', 'bold'); doc.text(p.numero || '—', colX[0] + 1.5, y + 4.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(indLines, colX[1] + 1.5, y + 4.5);
+    doc.text(p.nome || '—', colX[2] + 1.5, y + 4.5, { maxWidth: cols[2].w - 3 });
+    doc.text(radioLbl, colX[3] + 1.5, y + 4.5, { maxWidth: cols[3].w - 3 });
+    doc.text(mezzoLbl, colX[4] + 1.5, y + 4.5, { maxWidth: cols[4].w - 3 });
+    doc.setTextColor(p.vigile_presente ? 6 : 150, p.vigile_presente ? 130 : 150, p.vigile_presente ? 150 : 150);
+    doc.text(p.vigile_presente ? 'Sì' : 'No', colX[5] + 1.5, y + 4.5);
+    doc.setTextColor(...(p.assegnata_ana === false ? [200, 120, 0] : BLACK));
+    doc.text(p.assegnata_ana === false ? 'No' : 'Sì', colX[6] + 1.5, y + 4.5);
+    doc.setTextColor(...GRAY);
+    doc.text(String(p.volontari.length) + (p.n_volontari_previsti ? '/' + p.n_volontari_previsti : ''), colX[7] + 1.5, y + 4.5);
+    doc.setTextColor(...BLACK);
+    doc.text(volLines, colX[8] + 1.5, y + 4.5);
 
-    doc.text('Volontari: ' + p.volontari.length + (p.n_volontari_previsti ? '/' + p.n_volontari_previsti : ''), x + 3, yy);
-    yy += 5;
-
-    if (p.volontari.length) {
-      doc.setTextColor(...BLACK);
-      p.volontari.forEach(a => {
-        const v = a.volontari || {};
-        const riga = '• ' + (v.cognome || '') + ' ' + (v.nome || '') + (v.telefono ? '   ' + v.telefono : '');
-        doc.text(riga, x + 3, yy, { maxWidth: colW - 6 });
-        yy += 5;
-      });
-    } else {
-      doc.setTextColor(...GRAY);
-      doc.text('nessun volontario assegnato', x + 3, yy);
-      yy += 5;
-    }
-
-    y += boxH + 4;
+    y += rowH;
+    rowIdx++;
   });
 
   const totVol = pstPostazioni.reduce((s, p) => s + p.volontari.length, 0);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-  doc.text(pstPostazioni.length + ' postazioni — ' + totVol + ' volontari assegnati', mg, H - 6);
+  doc.text(pstPostazioni.length + ' postazioni — ' + totVol + ' volontari assegnati   |   [M] con mezzo (resta)   [T] trasportato   [P] a piedi', mg, H - 4);
 
   const safeName = (pstIntervento.evento || 'evento').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 40);
   doc.save('Postazioni_' + safeName + '.pdf');
@@ -4452,16 +4495,39 @@ function pstRenderCanvasImmagine() {
   const partenzaHtml = (pstMappaData.partenza_x != null) ? bandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩') : '';
   const arrivoHtml = (pstMappaData.arrivo_x != null) ? bandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁') : '';
 
+  const radioByIdM = {}; (tlcData||[]).forEach(t => radioByIdM[t.id] = t);
+  const mezzoByIdM = {}; (mezziData||[]).forEach(m => mezzoByIdM[m.id] = m);
+  const iconTrasporto = { mezzo_fisso: '🚗', trasportato: '🚐', piedi: '🚶' };
+
   const pins = pstPostazioni.filter(p => p.map_x != null && p.map_y != null).map(p => {
-    const label = p.numero || p.indirizzo || ('#' + p.id);
+    const numero = p.numero || ('#' + p.id);
     const dx = (p.label_dx != null) ? p.label_dx : 10;
     const dy = (p.label_dy != null) ? p.label_dy : -40;
     const lunghezza = Math.sqrt(dx * dx + dy * dy);
     const angolo = Math.atan2(dy, dx) * 180 / Math.PI;
+    const haVol = p.volontari.length > 0;
+    const haVigile = !!p.vigile_presente;
+    let bordo, outline = '';
+    if (haVigile && haVol) { bordo = '2px solid #16a34a'; outline = 'outline:2px solid #06b6d4;outline-offset:2px;'; }
+    else if (haVigile) { bordo = '2px solid #06b6d4'; }
+    else if (haVol) { bordo = '2px solid #16a34a'; }
+    else { bordo = '2px dashed #999'; }
+    const dashNonAna = p.assegnata_ana === false ? 'opacity:0.6;' : '';
+
+    const mezzoTxt = p.mezzo_id && mezzoByIdM[p.mezzo_id] ? _pstLabelMezzo(mezzoByIdM[p.mezzo_id]) : null;
+    const volRighe = p.volontari.length
+      ? p.volontari.map(a => { const v = a.volontari || {}; return (iconTrasporto[a.trasporto || 'piedi']) + ' ' + (v.cognome||'') + ' ' + (v.nome||''); }).join('<br>')
+      : '<span style="color:#999">nessuno</span>';
+
+    const contenuto = '<div style="font-weight:700;font-size:0.78rem">' + numero + '</div>'
+      + (p.indirizzo ? '<div style="font-size:0.66rem;color:#444">' + p.indirizzo + '</div>' : '')
+      + (mezzoTxt ? '<div style="font-size:0.66rem">🚛 ' + mezzoTxt + '</div>' : '')
+      + '<div style="font-size:0.66rem;margin-top:2px">' + volRighe + '</div>';
+
     return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
-      + '<div style="position:absolute;width:10px;height:10px;left:-5px;top:-5px;border-radius:50%;background:var(--green);border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
-      + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:var(--green);transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
-      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);z-index:3">📍 ' + label + '</div>'
+      + '<div style="position:absolute;width:8px;height:8px;left:-4px;top:-4px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
+      + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:#333;transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
+      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:#fff;color:#111;padding:4px 8px;border-radius:4px;min-width:70px;max-width:170px;border:' + bordo + ';' + outline + dashNonAna + 'line-height:1.4;box-shadow:0 1px 4px rgba(0,0,0,0.35);z-index:3">' + contenuto + '</div>'
       + '</div>';
   }).join('');
 
@@ -4686,24 +4752,63 @@ async function pstScaricaMappaImmagine() {
     disegnaBandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩');
     disegnaBandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁');
 
+    const mezzoByIdD = {}; (mezziData||[]).forEach(m => mezzoByIdD[m.id] = m);
+    const iconTrasportoD = { mezzo_fisso: '🚗', trasportato: '🚐', piedi: '🚶' };
+
     pstPostazioni.filter(p => p.map_x != null && p.map_y != null).forEach(p => {
       const px = p.map_x / 100 * cv.width, py = p.map_y / 100 * cv.height;
       const dx = ((p.label_dx != null ? p.label_dx : 10) / PST_IMG_BASE_WIDTH) * cv.width;
       const dy = ((p.label_dy != null ? p.label_dy : -40) / PST_IMG_BASE_WIDTH) * cv.width;
       const lx = px + dx, ly = py + dy;
-      ctx.strokeStyle = '#0f6e56'; ctx.lineWidth = cv.width * 0.0015;
+      const haVol = p.volontari.length > 0, haVigile = !!p.vigile_presente;
+      let bordo = '#999';
+      if (haVigile && haVol) bordo = '#16a34a';
+      else if (haVigile) bordo = '#06b6d4';
+      else if (haVol) bordo = '#16a34a';
+
+      ctx.strokeStyle = '#333'; ctx.lineWidth = cv.width * 0.0015;
       ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
-      ctx.fillStyle = '#0f6e56';
-      ctx.beginPath(); ctx.arc(px, py, cv.width * 0.004, 0, Math.PI * 2); ctx.fill();
-      const label = ' ' + (p.numero || p.indirizzo || ('#' + p.id)) + ' ';
-      ctx.font = 'bold ' + Math.round(cv.width * 0.014) + 'px sans-serif';
-      const w = ctx.measureText(label).width;
-      const boxH = cv.width * 0.02;
-      ctx.fillStyle = '#0f6e56';
-      ctx.fillRect(lx, ly - boxH, w, boxH); // il bordo inferiore del box tocca esattamente la fine della linea (lx,ly)
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(px, py, cv.width * 0.003, 0, Math.PI * 2); ctx.fill();
+
+      // Righe di testo del box: numero, indirizzo, mezzo, volontari
+      const fontBase = Math.round(cv.width * 0.012);
+      const righe = [];
+      righe.push({ testo: p.numero || ('#' + p.id), bold: true, size: fontBase * 1.15 });
+      if (p.indirizzo) righe.push({ testo: p.indirizzo, bold: false, size: fontBase * 0.9, colore: '#444' });
+      const mezzoTxt = p.mezzo_id && mezzoByIdD[p.mezzo_id] ? _pstLabelMezzo(mezzoByIdD[p.mezzo_id]) : null;
+      if (mezzoTxt) righe.push({ testo: '🚛 ' + mezzoTxt, bold: false, size: fontBase * 0.9 });
+      if (p.volontari.length) {
+        p.volontari.forEach(a => { const v = a.volontari || {}; righe.push({ testo: iconTrasportoD[a.trasporto||'piedi'] + ' ' + (v.cognome||'') + ' ' + (v.nome||''), bold: false, size: fontBase * 0.9 }); });
+      } else {
+        righe.push({ testo: 'nessuno', bold: false, size: fontBase * 0.9, colore: '#999' });
+      }
+
+      let maxW = 0;
+      righe.forEach(r => { ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif'; maxW = Math.max(maxW, ctx.measureText(r.testo).width); });
+      const padX = cv.width * 0.006, padY = cv.width * 0.005;
+      const lineH = fontBase * 1.35;
+      const boxW = maxW + padX * 2;
+      const boxH = righe.length * lineH + padY * 2;
+
+      if (p.assegnata_ana === false) ctx.globalAlpha = 0.6;
       ctx.fillStyle = '#fff';
+      ctx.fillRect(lx, ly - boxH, boxW, boxH); // il bordo inferiore del box tocca esattamente la fine della linea (lx,ly)
+      ctx.strokeStyle = bordo; ctx.lineWidth = cv.width * 0.0018;
+      if (!haVigile && !haVol) ctx.setLineDash([cv.width * 0.004, cv.width * 0.004]);
+      ctx.strokeRect(lx, ly - boxH, boxW, boxH);
+      ctx.setLineDash([]);
+      if (haVigile && haVol) { ctx.strokeStyle = '#06b6d4'; ctx.strokeRect(lx - cv.width * 0.0025, ly - boxH - cv.width * 0.0025, boxW + cv.width * 0.005, boxH + cv.width * 0.005); }
+
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(label, lx, ly - boxH * 0.25);
+      let ty = ly - boxH + padY + fontBase;
+      righe.forEach(r => {
+        ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif';
+        ctx.fillStyle = r.colore || '#111';
+        ctx.fillText(r.testo, lx + padX, ty);
+        ty += lineH;
+      });
+      ctx.globalAlpha = 1;
     });
 
     cv.toBlob(blob => {
