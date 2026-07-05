@@ -3711,6 +3711,8 @@ async function pstSelezionaIntervento(interventoId) {
   pstIntervento = pstInterventiOpts.find(i => String(i.id) === String(interventoId)) || { id: interventoId };
   if (body) body.style.display = 'block';
   if (empty) empty.style.display = 'none';
+  const searchEl = document.getElementById('pstSearch');
+  if (searchEl) searchEl.value = '';
   await pstCaricaVolontariIntervento();
   await pstCaricaLista();
 }
@@ -3762,6 +3764,20 @@ async function pstCaricaLista() {
   }
 }
 
+function pstFiltraLista() {
+  pstRenderLista();
+}
+
+function _pstTestoRicercabile(p, radioById, mezzoById) {
+  const parti = [
+    p.numero || '', p.indirizzo || '', p.nome || '',
+    p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : '',
+    p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : '',
+    (p.volontari || []).map(a => a.volontari ? (a.volontari.cognome + ' ' + a.volontari.nome) : '').join(' ')
+  ];
+  return parti.join(' ').toLowerCase();
+}
+
 function pstRenderLista() {
   const list = document.getElementById('pstList');
   if (!list) return;
@@ -3771,12 +3787,23 @@ function pstRenderLista() {
   }
   const assegnatoIn = {};
   pstPostazioni.forEach(p => p.volontari.forEach(a => {
-    (assegnatoIn[a.volontario_id] = assegnatoIn[a.volontario_id] || []).push(p.numero || p.nome);
+    (assegnatoIn[a.volontario_id] = assegnatoIn[a.volontario_id] || []).push(p.numero || p.indirizzo);
   }));
   const radioById = {}; (tlcData||[]).forEach(t => radioById[t.id] = t);
   const mezzoById = {}; (mezziData||[]).forEach(m => mezzoById[m.id] = m);
 
-  list.innerHTML = pstPostazioni.map(p => {
+  const qEl = document.getElementById('pstSearch');
+  const q = qEl ? qEl.value.toLowerCase().trim() : '';
+  const postazioniFiltrate = q
+    ? pstPostazioni.filter(p => _pstTestoRicercabile(p, radioById, mezzoById).includes(q))
+    : pstPostazioni;
+
+  if (!postazioniFiltrate.length) {
+    list.innerHTML = '<div class="loading-msg">nessuna postazione corrisponde alla ricerca.</div>';
+    return;
+  }
+
+  list.innerHTML = postazioniFiltrate.map(p => {
     const nVolAssegnati = p.volontari.length;
     const previsti = p.n_volontari_previsti;
     const contatore = previsti
@@ -3784,14 +3811,13 @@ function pstRenderLista() {
       : '<span class="acc-badge acc-std">' + nVolAssegnati + '</span>';
 
     const infoRighe = [];
-    if (p.indirizzo) infoRighe.push('📍 ' + p.indirizzo);
     infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
     infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
 
     const righeVol = p.volontari.length
       ? p.volontari.map(a => {
           const v = a.volontari || {};
-          const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.nome));
+          const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.indirizzo));
           const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;display:block">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem">'
             + '<span style="font-size:0.8rem">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
@@ -3800,7 +3826,7 @@ function pstRenderLista() {
         }).join('')
       : '<div class="loading-msg" style="padding:0.3rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
 
-    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.nome || 'senza nome');
+    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span style="color:var(--testo-3);font-weight:400;font-size:0.75em">(' + p.nome + ')</span>' : '');
     const bodyId = 'pstCardBody' + p.id;
     const chevId = 'pstCardChev' + p.id;
 
@@ -3817,7 +3843,7 @@ function pstRenderLista() {
       + '<span style="font-size:0.72rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px">Volontari</span>' + contatore
       + '</div>'
       + righeVol
-      + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.nome||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
+      + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.indirizzo||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
       + '</div></div></div>';
   }).join('');
 }
@@ -3849,7 +3875,7 @@ async function pstNuovaPostazione() {
   const nVolStr = document.getElementById('pstFNVol').value;
   const radioId = document.getElementById('pstFRadio').value;
   const mezzoId = document.getElementById('pstFMezzo').value;
-  if (!numero && !nome) { alert('Inserisci almeno un numero o un nome per la postazione.'); return; }
+  if (!numero && !indirizzo) { alert('Inserisci almeno un numero o un indirizzo per la postazione.'); return; }
 
   const ordine = pstPostazioni.length ? Math.max(...pstPostazioni.map(p => p.ordine || 0)) + 1 : 1;
   try {
@@ -3919,6 +3945,19 @@ async function pstEliminaPostazione(id) {
     await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, { method: 'DELETE', headers: H });
     await pstCaricaLista();
   } catch(e) { alert('Errore durante l\'eliminazione.'); }
+}
+
+async function pstEliminaTutte() {
+  if (!pstIntervento || !pstPostazioni.length) { alert('Non ci sono postazioni da eliminare per questo intervento.'); return; }
+  const n = pstPostazioni.length;
+  if (!confirm('Eliminare TUTTE le ' + n + ' postazioni di questo intervento (e tutte le assegnazioni volontari collegate)? L\'operazione non è reversibile.')) return;
+  if (!confirm('Ultima conferma: procedere con l\'eliminazione di tutte le ' + n + ' postazioni?')) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazioni?intervento_id=eq.' + pstIntervento.id, { method: 'DELETE', headers: H });
+    const searchEl = document.getElementById('pstSearch');
+    if (searchEl) searchEl.value = '';
+    await pstCaricaLista();
+  } catch(e) { alert('Errore durante l\'eliminazione massiva.'); }
 }
 
 async function pstRimuoviVolontario(assegnazioneId) {
@@ -3991,8 +4030,8 @@ async function pstEsportaExcel() {
   const ws = wb.addWorksheet('Postazioni');
   ws.columns = [
     { header: 'Numero',    key: 'numero',    width: 12 },
-    { header: 'Nome',      key: 'nomep',     width: 24 },
     { header: 'Indirizzo', key: 'indirizzo', width: 26 },
+    { header: 'Tag',       key: 'tag',       width: 20 },
     { header: 'Radio',     key: 'radio',     width: 22 },
     { header: 'Mezzo',     key: 'mezzo',     width: 22 },
     { header: 'Cognome',   key: 'cognome',   width: 18 },
@@ -4003,7 +4042,7 @@ async function pstEsportaExcel() {
   ws.getRow(1).font = { bold: true };
   pstPostazioni.forEach(p => {
     const base = {
-      numero: p.numero || '', nomep: p.nome || '', indirizzo: p.indirizzo || '',
+      numero: p.numero || '', indirizzo: p.indirizzo || '', tag: p.nome || '',
       radio: p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : '',
       mezzo: p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : ''
     };
@@ -4041,15 +4080,15 @@ async function pstScaricaModello() {
   const ws = wb.addWorksheet('Postazioni da creare');
   ws.columns = [
     { header: 'Numero',                key: 'numero',    width: 12 },
-    { header: 'Nome',                  key: 'nome',      width: 24 },
     { header: 'Indirizzo',             key: 'indirizzo', width: 26 },
+    { header: 'Tag (opzionale)',       key: 'tag',       width: 20 },
     { header: 'N. Volontari Previsti', key: 'nvol',      width: 20 },
     { header: 'Radio (copia da foglio Riferimenti)', key: 'radio', width: 30 },
     { header: 'Mezzo (copia da foglio Riferimenti)', key: 'mezzo', width: 30 },
     { header: 'Volontari (Cognome Nome; separati da ;)', key: 'volontari', width: 45 },
   ];
   ws.getRow(1).font = { bold: true };
-  ws.addRow({ numero: 'T3', nome: 'Km 5 - Incrocio via Roma', indirizzo: 'Via Roma 5', nvol: 2, radio: '', mezzo: '', volontari: 'Rossi Mario; Bianchi Luca' });
+  ws.addRow({ numero: 'T3', indirizzo: 'Via Roma 5', tag: 'Partenza', nvol: 2, radio: '', mezzo: '', volontari: 'Rossi Mario; Bianchi Luca' });
 
   const wsRef = wb.addWorksheet('Riferimenti');
   wsRef.columns = [
@@ -4108,13 +4147,13 @@ async function pstImportaExcel(file) {
       if (num === 1) return; // header
       const val = (c) => (c && c.value !== null && c.value !== undefined) ? String(c.value).trim() : '';
       const numero = val(row.getCell(1));
-      const nome = val(row.getCell(2));
-      const indirizzo = val(row.getCell(3));
+      const indirizzo = val(row.getCell(2));
+      const nome = val(row.getCell(3));
       const nvolRaw = val(row.getCell(4));
       const radioLabel = val(row.getCell(5));
       const mezzoLabel = val(row.getCell(6));
       const volontariRaw = val(row.getCell(7));
-      if (!numero && !nome && !indirizzo && !volontariRaw) return; // riga vuota
+      if (!numero && !indirizzo && !nome && !volontariRaw) return; // riga vuota
       righe.push({ numero, nome, indirizzo, nvol: nvolRaw ? parseInt(nvolRaw, 10) : null, radioLabel, mezzoLabel, volontariRaw });
     });
 
