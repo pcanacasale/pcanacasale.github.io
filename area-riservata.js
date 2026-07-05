@@ -3645,8 +3645,7 @@ async function eseguiVerificaCF() {
 let pstIntervento = null;      // record intervento selezionato
 let pstInterventiOpts = [];    // lista per la select
 let pstPostazioni = [];        // postazioni dell'intervento corrente, ciascuna con .volontari[]
-let pstVolontariAttivi = [];   // cache volontari attivi/sospesi per la modale "aggiungi volontario"
-let pstVolontariIntervento = []; // volontari collegati all'intervento corrente (per match import massivo)
+let pstVolontariIntervento = []; // volontari collegati all'intervento corrente (unica fonte per assegnazioni e import massivo)
 let pstTargetPostazioneId = null;
 
 function _pstLabelRadio(t) {
@@ -3766,28 +3765,28 @@ function pstRenderLista() {
   const mezzoById = {}; (mezziData||[]).forEach(m => mezzoById[m.id] = m);
 
   list.innerHTML = pstPostazioni.map(p => {
+    const nVolAssegnati = p.volontari.length;
+    const previsti = p.n_volontari_previsti;
+    const contatore = previsti
+      ? '<span class="acc-badge ' + (nVolAssegnati < previsti ? 'acc-inactive' : 'acc-active') + '">' + nVolAssegnati + '/' + previsti + '</span>'
+      : '<span class="acc-badge acc-std">' + nVolAssegnati + '</span>';
+
+    const infoRighe = [];
+    if (p.indirizzo) infoRighe.push('📍 ' + p.indirizzo);
+    infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
+    infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
+
     const righeVol = p.volontari.length
       ? p.volontari.map(a => {
           const v = a.volontari || {};
           const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.nome));
-          const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;margin-left:0.3rem">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
-          return '<div class="acc-row" style="padding:0.3rem 0;border-bottom:0.5px solid var(--border-2)">'
-            + '<span class="acc-val">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
-            + '<button class="btn-sm btn-danger" style="margin-left:auto" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
+          const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;display:block">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem">'
+            + '<span style="font-size:0.8rem">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
+            + '<button class="btn-sm btn-danger" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
             + '</div>';
         }).join('')
-      : '<div class="loading-msg" style="padding:0.4rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
-
-    const nVolAssegnati = p.volontari.length;
-    const previsti = p.n_volontari_previsti;
-    const contatore = previsti
-      ? '<span class="int-pill' + (nVolAssegnati < previsti ? '' : ' green') + '">' + nVolAssegnati + '/' + previsti + ' vol.</span>'
-      : '<span class="int-pill blue">' + nVolAssegnati + ' vol.</span>';
-
-    const pills = [contatore];
-    if (p.indirizzo) pills.push('<span class="int-pill">📍 ' + p.indirizzo + '</span>');
-    if (p.radio_id && radioById[p.radio_id]) pills.push('<span class="int-pill green">📻 ' + _pstLabelRadio(radioById[p.radio_id]) + '</span>');
-    if (p.mezzo_id && mezzoById[p.mezzo_id]) pills.push('<span class="int-pill green">🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) + '</span>');
+      : '<div class="loading-msg" style="padding:0.3rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
 
     const titolo = (p.numero ? p.numero + ' — ' : '') + (p.nome || 'senza nome');
 
@@ -3797,12 +3796,26 @@ function pstRenderLista() {
       + '<button class="btn-sm" onclick="pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
       + '<button class="btn-sm btn-danger" onclick="pstEliminaPostazione(' + p.id + ')">elimina</button>'
       + '</div></div>'
-      + '<div style="padding:0.5rem 0.7rem">'
-      + '<div class="int-card-meta" style="margin-bottom:0.4rem">' + pills.join('') + '</div>'
+      + '<div style="padding:0.6rem;display:grid;grid-template-columns:180px 1fr;gap:1rem">'
+      + '<div style="font-size:0.78rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.35rem">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
+      + '<div style="border-left:0.5px solid var(--border);padding-left:1rem">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">'
+      + '<span style="font-size:0.72rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px">Volontari</span>' + contatore
+      + '</div>'
       + righeVol
-      + '<button class="btn-sm" style="margin-top:0.5rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.nome||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
-      + '</div></div>';
+      + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.nome||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
+      + '</div></div></div>';
   }).join('');
+}
+
+function pstToggleNuovaForm() {
+  const fields = document.getElementById('pstNuovaFields');
+  const btnWrap = document.getElementById('pstNuovaBtnWrap');
+  const chevron = document.getElementById('pstNuovaChevron');
+  const aperto = fields.style.display === 'grid';
+  fields.style.display = aperto ? 'none' : 'grid';
+  btnWrap.style.display = aperto ? 'none' : 'block';
+  chevron.textContent = aperto ? '▸' : '▾';
 }
 
 async function pstNuovaPostazione() {
@@ -3834,6 +3847,7 @@ async function pstNuovaPostazione() {
     ['pstFNumero','pstFNome','pstFIndirizzo','pstFNVol'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('pstFRadio').value = '';
     document.getElementById('pstFMezzo').value = '';
+    pstToggleNuovaForm();
     await pstCaricaLista();
   } catch(e) { alert('Errore nella creazione della postazione.'); }
 }
@@ -3895,12 +3909,7 @@ async function pstApriAggiungiVolontario(postazioneId, nomePostazione) {
   pstTargetPostazioneId = postazioneId;
   document.getElementById('pstAddVolTitle').textContent = 'Aggiungi volontario — ' + nomePostazione;
   document.getElementById('pstAddVolSearch').value = '';
-  if (!pstVolontariAttivi.length) {
-    try {
-      const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,telefono,stato&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
-      pstVolontariAttivi = await r.json();
-    } catch(e) { pstVolontariAttivi = []; }
-  }
+  if (!pstVolontariIntervento.length) await pstCaricaVolontariIntervento();
   pstRenderModalList();
   document.getElementById('pstAddVolOverlay').classList.add('open');
 }
@@ -3916,12 +3925,12 @@ function pstRenderModalList() {
   const postaz = pstPostazioni.find(p => p.id === pstTargetPostazioneId);
   const giaQui = new Set((postaz ? postaz.volontari : []).map(a => a.volontario_id));
 
-  const filtrati = pstVolontariAttivi.filter(v => {
+  const filtrati = pstVolontariIntervento.filter(v => {
     if (!q) return true;
     return ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.squadra||'')).toLowerCase().includes(q);
   });
 
-  if (!filtrati.length) { box.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>'; return; }
+  if (!filtrati.length) { box.innerHTML = '<div class="loading-msg">nessun volontario trovato tra i partecipanti a questo intervento.</div>'; return; }
 
   box.innerHTML = filtrati.map(v => {
     const assegnato = giaQui.has(v.id);
