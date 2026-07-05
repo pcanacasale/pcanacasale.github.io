@@ -3713,6 +3713,7 @@ async function pstSelezionaIntervento(interventoId) {
   if (empty) empty.style.display = 'none';
   const searchEl = document.getElementById('pstSearch');
   if (searchEl) searchEl.value = '';
+  pstMostraTab('elenco');
   await pstCaricaVolontariIntervento();
   await pstCaricaLista();
 }
@@ -4227,6 +4228,356 @@ async function pstImportaExcel(file) {
   } catch(e) {
     status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante la lettura del file: ' + e.message + '</div>';
   }
+}
+
+// -- MAPPA POSTAZIONI --
+let pstMappaData = null;
+let pstMapModalitaDisegno = false;
+let pstMapArmedPostazioneId = null;
+let pstMapGoogleInstance = null;
+let pstMapGoogleMarkers = {};
+let pstMapGooglePolyline = null;
+let pstMapGoogleClickListener = null;
+
+function pstSetTabActive(id, active) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.background = active ? 'var(--green)' : '';
+  el.style.color = active ? '#fff' : '';
+}
+
+function pstMostraTab(tab) {
+  document.getElementById('pstViewElenco').style.display = tab === 'elenco' ? 'block' : 'none';
+  document.getElementById('pstViewMappa').style.display = tab === 'mappa' ? 'block' : 'none';
+  pstSetTabActive('pstTabElenco', tab === 'elenco');
+  pstSetTabActive('pstTabMappa', tab === 'mappa');
+  if (tab === 'mappa') pstInitMappa();
+}
+
+async function pstInitMappa() {
+  if (!pstIntervento) return;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/mappe_intervento?select=*&intervento_id=eq.' + pstIntervento.id, { headers: H });
+    const rows = await r.json();
+    pstMappaData = (Array.isArray(rows) && rows.length) ? rows[0] : { intervento_id: pstIntervento.id, tipo: 'immagine', immagine_url: null, google_center_lat: null, google_center_lng: null, google_zoom: 15, percorso: [] };
+  } catch(e) {
+    pstMappaData = { intervento_id: pstIntervento.id, tipo: 'immagine', percorso: [] };
+  }
+  document.getElementById('pstMapTipo').value = pstMappaData.tipo || 'immagine';
+  pstMapModalitaDisegno = false;
+  pstMapArmedPostazioneId = null;
+  document.getElementById('pstMapStatus').textContent = '';
+  document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
+  pstAggiornaControlliTipoMappa();
+  pstRenderListePosizionamento();
+}
+
+function pstAggiornaControlliTipoMappa() {
+  const tipo = document.getElementById('pstMapTipo').value;
+  document.getElementById('pstMapImmagineControls').style.display = tipo === 'immagine' ? 'flex' : 'none';
+  document.getElementById('pstMapGoogleControls').style.display = tipo === 'google' ? 'block' : 'none';
+  if (tipo === 'google') {
+    const savedKey = localStorage.getItem('pst_gmaps_key');
+    if (savedKey) document.getElementById('pstMapApiKey').value = savedKey;
+    pstRenderCanvasGoogle();
+  } else {
+    pstRenderCanvasImmagine();
+  }
+}
+
+async function pstCambiaTipoMappa() {
+  const tipo = document.getElementById('pstMapTipo').value;
+  pstMappaData.tipo = tipo;
+  await pstUpsertMappa({ tipo: tipo });
+  pstAggiornaControlliTipoMappa();
+}
+
+async function pstUpsertMappa(campi) {
+  if (!pstIntervento) return;
+  const body = Object.assign({ intervento_id: pstIntervento.id }, campi);
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/mappe_intervento?on_conflict=intervento_id', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates,return=representation' }),
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (Array.isArray(data) && data.length) pstMappaData = data[0];
+  } catch(e) {}
+}
+
+async function pstCaricaImmagineMappa(file) {
+  if (!file || !pstIntervento) return;
+  try {
+    const path = pstIntervento.id + '/mappa_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const up = await fetch(SUPA_URL + '/storage/v1/object/mappe-postazioni/' + path, {
+      method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': file.type }, body: file
+    });
+    if (!up.ok) throw new Error('upload fallito');
+    const url = SUPA_URL + '/storage/v1/object/public/mappe-postazioni/' + path;
+    await pstUpsertMappa({ immagine_url: url, tipo: 'immagine' });
+    document.getElementById('pstMapTipo').value = 'immagine';
+    pstAggiornaControlliTipoMappa();
+  } catch(e) { alert('Errore nel caricamento dell\'immagine.'); }
+}
+
+function pstRenderCanvasImmagine() {
+  const canvas  = document.getElementById('pstMapCanvas');
+  const noImg   = document.getElementById('pstMapNessunaImmagine');
+  const layout  = document.getElementById('pstMapLayout');
+  const toolbar = document.getElementById('pstMapToolbar');
+  if (!pstMappaData || !pstMappaData.immagine_url) {
+    layout.style.display = 'none';
+    toolbar.style.display = 'none';
+    noImg.style.display = 'block';
+    noImg.textContent = 'carica un\'immagine per iniziare a posizionare le postazioni.';
+    return;
+  }
+  noImg.style.display = 'none';
+  layout.style.display = 'grid';
+  toolbar.style.display = 'flex';
+
+  const percorso = pstMappaData.percorso || [];
+  const puntiSvg = percorso.map(p => p.x + ',' + p.y).join(' ');
+  const cerchi = percorso.map(p => '<circle cx="' + p.x + '" cy="' + p.y + '" r="0.8" fill="#d92b2b" />').join('');
+
+  const pins = pstPostazioni.filter(p => p.map_x != null && p.map_y != null).map(p => {
+    return '<div class="pst-map-pin" data-pid="' + p.id + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%;transform:translate(-50%,-100%);cursor:pointer">'
+      + '<div style="background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:10px 10px 10px 0;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3)">📍 ' + (p.numero || p.indirizzo || ('#' + p.id)) + '</div>'
+      + '</div>';
+  }).join('');
+
+  canvas.innerHTML =
+    '<img src="' + pstMappaData.immagine_url + '" style="width:100%;display:block;pointer-events:none" draggable="false">'
+    + '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
+    + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="0.6" />' : '')
+    + cerchi
+    + '</svg>'
+    + pins;
+
+  canvas.onclick = (e) => pstGestisciClickImmagine(e, canvas);
+  canvas.querySelectorAll('.pst-map-pin').forEach(el => {
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const pid = parseInt(el.getAttribute('data-pid'), 10);
+      if (confirm('Rimuovere questa postazione dalla mappa?')) pstRimuoviDallaMappa(pid);
+    });
+  });
+}
+
+function pstGestisciClickImmagine(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  let xPct = (e.clientX - rect.left) / rect.width * 100;
+  let yPct = (e.clientY - rect.top) / rect.height * 100;
+  xPct = Math.max(0, Math.min(100, Math.round(xPct * 10) / 10));
+  yPct = Math.max(0, Math.min(100, Math.round(yPct * 10) / 10));
+
+  if (pstMapModalitaDisegno) {
+    const percorso = (pstMappaData.percorso || []).slice();
+    percorso.push({ x: xPct, y: yPct });
+    pstMappaData.percorso = percorso;
+    pstUpsertMappa({ percorso: percorso });
+    pstRenderCanvasImmagine();
+  } else if (pstMapArmedPostazioneId) {
+    pstSalvaPinImmagine(pstMapArmedPostazioneId, xPct, yPct);
+  }
+}
+
+async function pstSalvaPinImmagine(postazioneId, xPct, yPct) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+      method: 'PATCH', headers: HJ,
+      body: JSON.stringify({ map_x: xPct, map_y: yPct })
+    });
+    const p = pstPostazioni.find(x => x.id === postazioneId);
+    if (p) { p.map_x = xPct; p.map_y = yPct; }
+    pstMapArmedPostazioneId = null;
+    document.getElementById('pstMapStatus').textContent = '';
+    pstRenderCanvasImmagine();
+    pstRenderListePosizionamento();
+  } catch(e) { alert('Errore nel posizionamento.'); }
+}
+
+function pstCaricaGoogleMapsScript(apiKey) {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.maps) { resolve(); return; }
+    const existing = document.getElementById('pstGoogleMapsScript');
+    if (existing) { existing.addEventListener('load', () => resolve()); return; }
+    const s = document.createElement('script');
+    s.id = 'pstGoogleMapsScript';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(apiKey);
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Impossibile caricare Google Maps. Controlla la API key.'));
+    document.head.appendChild(s);
+  });
+}
+
+async function pstRenderCanvasGoogle() {
+  const canvas  = document.getElementById('pstMapCanvas');
+  const noImg   = document.getElementById('pstMapNessunaImmagine');
+  const layout  = document.getElementById('pstMapLayout');
+  const toolbar = document.getElementById('pstMapToolbar');
+
+  const apiKey = (document.getElementById('pstMapApiKey').value || localStorage.getItem('pst_gmaps_key') || '').trim();
+  if (!apiKey) {
+    layout.style.display = 'none'; toolbar.style.display = 'none';
+    noImg.style.display = 'block';
+    noImg.textContent = 'inserisci la tua Google Maps API Key qui sopra per attivare la mappa.';
+    return;
+  }
+  localStorage.setItem('pst_gmaps_key', apiKey);
+
+  try { await pstCaricaGoogleMapsScript(apiKey); }
+  catch(e) { noImg.style.display = 'block'; noImg.textContent = e.message; layout.style.display = 'none'; toolbar.style.display = 'none'; return; }
+
+  noImg.style.display = 'none';
+  layout.style.display = 'grid';
+  toolbar.style.display = 'flex';
+
+  canvas.innerHTML = '';
+  const center = { lat: pstMappaData.google_center_lat || 45.1367, lng: pstMappaData.google_center_lng || 8.4519 };
+  pstMapGoogleInstance = new google.maps.Map(canvas, { center, zoom: pstMappaData.google_zoom || 15 });
+
+  if (pstMapGoogleClickListener) google.maps.event.removeListener(pstMapGoogleClickListener);
+  pstMapGoogleClickListener = pstMapGoogleInstance.addListener('click', (e) => pstGestisciClickGoogle(e));
+
+  pstDisegnaPercorsoGoogle();
+  pstDisegnaPinGoogle();
+}
+
+function pstDisegnaPercorsoGoogle() {
+  if (pstMapGooglePolyline) pstMapGooglePolyline.setMap(null);
+  const percorso = pstMappaData.percorso || [];
+  pstMapGooglePolyline = new google.maps.Polyline({
+    path: percorso.map(p => ({ lat: p.lat, lng: p.lng })),
+    strokeColor: '#d92b2b', strokeWeight: 3
+  });
+  pstMapGooglePolyline.setMap(pstMapGoogleInstance);
+}
+
+function pstDisegnaPinGoogle() {
+  Object.values(pstMapGoogleMarkers).forEach(m => m.setMap(null));
+  pstMapGoogleMarkers = {};
+  pstPostazioni.filter(p => p.map_lat != null && p.map_lng != null).forEach(p => {
+    const marker = new google.maps.Marker({
+      position: { lat: p.map_lat, lng: p.map_lng },
+      map: pstMapGoogleInstance,
+      label: p.numero || '',
+      title: (p.numero || '') + ' ' + (p.indirizzo || '')
+    });
+    marker.addListener('click', () => {
+      if (confirm('Rimuovere questa postazione dalla mappa?')) pstRimuoviDallaMappa(p.id);
+    });
+    pstMapGoogleMarkers[p.id] = marker;
+  });
+}
+
+function pstGestisciClickGoogle(e) {
+  const lat = e.latLng.lat(), lng = e.latLng.lng();
+  if (pstMapModalitaDisegno) {
+    const percorso = (pstMappaData.percorso || []).slice();
+    percorso.push({ lat, lng });
+    pstMappaData.percorso = percorso;
+    pstUpsertMappa({ percorso: percorso });
+    pstDisegnaPercorsoGoogle();
+  } else if (pstMapArmedPostazioneId) {
+    pstSalvaPinGoogle(pstMapArmedPostazioneId, lat, lng);
+  }
+}
+
+async function pstSalvaPinGoogle(postazioneId, lat, lng) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+      method: 'PATCH', headers: HJ,
+      body: JSON.stringify({ map_lat: lat, map_lng: lng })
+    });
+    const p = pstPostazioni.find(x => x.id === postazioneId);
+    if (p) { p.map_lat = lat; p.map_lng = lng; }
+    pstMapArmedPostazioneId = null;
+    document.getElementById('pstMapStatus').textContent = '';
+    pstDisegnaPinGoogle();
+    pstRenderListePosizionamento();
+  } catch(e) { alert('Errore nel posizionamento.'); }
+}
+
+async function pstCentraGoogleMap() {
+  const apiKey = (document.getElementById('pstMapApiKey').value || '').trim();
+  const indirizzo = (document.getElementById('pstMapIndirizzoCentro').value || '').trim();
+  if (!apiKey || !indirizzo) { alert('Inserisci API key e indirizzo.'); return; }
+  try {
+    const res = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(indirizzo) + '&key=' + encodeURIComponent(apiKey));
+    const data = await res.json();
+    if (!data.results || !data.results.length) { alert('Indirizzo non trovato.'); return; }
+    const loc = data.results[0].geometry.location;
+    await pstUpsertMappa({ google_center_lat: loc.lat, google_center_lng: loc.lng });
+    if (pstMapGoogleInstance) pstMapGoogleInstance.setCenter(loc);
+  } catch(e) { alert('Errore nella ricerca dell\'indirizzo.'); }
+}
+
+function pstToggleDisegnoPercorso() {
+  pstMapModalitaDisegno = !pstMapModalitaDisegno;
+  pstMapArmedPostazioneId = null;
+  const btn = document.getElementById('pstBtnDisegnaPercorso');
+  const status = document.getElementById('pstMapStatus');
+  if (pstMapModalitaDisegno) {
+    btn.textContent = '✔ Fine disegno';
+    status.textContent = 'Clicca sulla mappa per aggiungere punti al percorso.';
+  } else {
+    btn.textContent = '✏️ Disegna percorso';
+    status.textContent = '';
+  }
+}
+
+async function pstCancellaPercorso() {
+  if (!confirm('Cancellare il percorso disegnato?')) return;
+  pstMappaData.percorso = [];
+  await pstUpsertMappa({ percorso: [] });
+  if (pstMappaData.tipo === 'google') pstDisegnaPercorsoGoogle(); else pstRenderCanvasImmagine();
+}
+
+function pstArmaPosizionamento(postazioneId) {
+  pstMapModalitaDisegno = false;
+  document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
+  pstMapArmedPostazioneId = postazioneId;
+  const p = pstPostazioni.find(x => x.id === postazioneId);
+  document.getElementById('pstMapStatus').textContent = 'Clicca sulla mappa per posizionare: ' + (p ? (p.numero || p.indirizzo) : '');
+  pstRenderListePosizionamento();
+}
+
+async function pstRimuoviDallaMappa(postazioneId) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+      method: 'PATCH', headers: HJ,
+      body: JSON.stringify({ map_x: null, map_y: null, map_lat: null, map_lng: null })
+    });
+    const p = pstPostazioni.find(x => x.id === postazioneId);
+    if (p) { p.map_x = null; p.map_y = null; p.map_lat = null; p.map_lng = null; }
+    if (pstMappaData.tipo === 'google') pstDisegnaPinGoogle(); else pstRenderCanvasImmagine();
+    pstRenderListePosizionamento();
+  } catch(e) { alert('Errore.'); }
+}
+
+function pstRenderListePosizionamento() {
+  const boxDa = document.getElementById('pstMapDaPosizionare');
+  const boxOk = document.getElementById('pstMapPosizionate');
+  if (!boxDa || !boxOk) return;
+  const tipo = pstMappaData ? pstMappaData.tipo : 'immagine';
+  const isPosizionata = (p) => tipo === 'google' ? (p.map_lat != null && p.map_lng != null) : (p.map_x != null && p.map_y != null);
+
+  const daPosizionare = pstPostazioni.filter(p => !isPosizionata(p));
+  const posizionate = pstPostazioni.filter(isPosizionata);
+
+  boxDa.innerHTML = daPosizionare.length ? daPosizionare.map(p => {
+    const attivo = pstMapArmedPostazioneId === p.id;
+    return '<button class="btn-sm" style="text-align:left' + (attivo ? ';background:var(--green);color:#fff' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
+  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">tutte posizionate</div>';
+
+  boxOk.innerHTML = posizionate.length ? posizionate.map(p => {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.5rem;background:var(--bg-2);border-radius:6px;font-size:0.76rem">'
+      + '<span>📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
+      + '<button class="btn-sm btn-danger" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
+      + '</div>';
+  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">nessuna postazione sulla mappa</div>';
 }
 
 // -- DB AVANZATO (Supabase) --
