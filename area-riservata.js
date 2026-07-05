@@ -4070,6 +4070,95 @@ async function pstEsportaExcel() {
   URL.revokeObjectURL(url);
 }
 
+// -- ESPORTAZIONE PDF (griglia postazioni, stile report Varchi) --
+function pstEsportaPDF() {
+  if (!pstIntervento || !pstPostazioni.length) { alert('Nessuna postazione da esportare.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, H = 297, mg = 10;
+  const GREEN = [15, 110, 86], LIGHT = [225, 245, 238], BLACK = [20, 20, 20], GRAY = [110, 110, 110];
+
+  const radioById = {}; (tlcData || []).forEach(t => radioById[t.id] = t);
+  const mezzoById = {}; (mezziData || []).forEach(m => mezzoById[m.id] = m);
+
+  const dataStr = pstIntervento.data ? new Date(pstIntervento.data).toLocaleDateString('it-IT') : '';
+  const sottotitolo = (pstIntervento.evento || '') + (dataStr ? ' — ' + dataStr : '') + (pstIntervento.luogo ? ' (' + pstIntervento.luogo + ')' : '');
+
+  function disegnaHeader() {
+    doc.setFillColor(...GREEN); doc.rect(0, 0, W, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+    doc.text('GESTIONE POSTAZIONI', mg, 11);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text(sottotitolo, mg, 18, { maxWidth: W - mg * 2 - 40 });
+    doc.setFontSize(8);
+    doc.text('Stampato il ' + new Date().toLocaleDateString('it-IT'), W - mg, 18, { align: 'right' });
+  }
+
+  disegnaHeader();
+
+  const colGap = 6;
+  const colW = (W - mg * 2 - colGap) / 2;
+  const colX = [mg, mg + colW + colGap];
+  let col = 0, y = 32;
+
+  pstPostazioni.forEach(p => {
+    const nRighe = Math.max(p.volontari.length, 1);
+    const boxH = 20 + nRighe * 5;
+
+    if (y + boxH > H - mg - 10) {
+      if (col === 0) { col = 1; y = 32; }
+      else { doc.addPage(); disegnaHeader(); col = 0; y = 32; }
+    }
+
+    const x = colX[col];
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
+    doc.roundedRect(x, y, colW, boxH, 1.5, 1.5);
+
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(x, y, colW, 8, 1.5, 1.5, 'F');
+    doc.setTextColor(...GREEN);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo');
+    doc.text(titolo, x + 3, y + 5.5, { maxWidth: colW - 6 });
+
+    let yy = y + 11;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    const radioLbl = p.radio_id && radioById[p.radio_id] ? _pstLabelRadio(radioById[p.radio_id]) : null;
+    const mezzoLbl = p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : null;
+    const metaParts = [];
+    if (radioLbl) metaParts.push('Radio: ' + radioLbl);
+    if (mezzoLbl) metaParts.push('Mezzo: ' + mezzoLbl);
+    if (metaParts.length) { doc.text(metaParts.join('   '), x + 3, yy, { maxWidth: colW - 6 }); yy += 5; }
+
+    doc.text('Volontari: ' + p.volontari.length + (p.n_volontari_previsti ? '/' + p.n_volontari_previsti : ''), x + 3, yy);
+    yy += 5;
+
+    if (p.volontari.length) {
+      doc.setTextColor(...BLACK);
+      p.volontari.forEach(a => {
+        const v = a.volontari || {};
+        const riga = '• ' + (v.cognome || '') + ' ' + (v.nome || '') + (v.telefono ? '   ' + v.telefono : '');
+        doc.text(riga, x + 3, yy, { maxWidth: colW - 6 });
+        yy += 5;
+      });
+    } else {
+      doc.setTextColor(...GRAY);
+      doc.text('nessun volontario assegnato', x + 3, yy);
+      yy += 5;
+    }
+
+    y += boxH + 4;
+  });
+
+  const totVol = pstPostazioni.reduce((s, p) => s + p.volontari.length, 0);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+  doc.text(pstPostazioni.length + ' postazioni — ' + totVol + ' volontari assegnati', mg, H - 6);
+
+  const safeName = (pstIntervento.evento || 'evento').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 40);
+  doc.save('Postazioni_' + safeName + '.pdf');
+}
+
 // -- SCARICA MODELLO PER CREAZIONE MASSIVA --
 async function pstScaricaModello() {
   if (!pstIntervento) { alert('Seleziona prima un intervento.'); return; }
@@ -4233,11 +4322,15 @@ async function pstImportaExcel(file) {
 // -- MAPPA POSTAZIONI --
 let pstMappaData = null;
 let pstMapModalitaDisegno = false;
+let pstMapArmaPartenza = false;
+let pstMapArmaArrivo = false;
 let pstMapArmedPostazioneId = null;
 let pstMapGoogleInstance = null;
 let pstMapGoogleMarkers = {};
 let pstMapGooglePolyline = null;
 let pstMapGoogleClickListener = null;
+let pstDragLabel = null; // { postazioneId, startX, startY, origDx, origDy, moved }
+let pstPanState = null;  // { startX, startY, scrollLeft, scrollTop, moved }
 
 function pstSetTabActive(id, active) {
   const el = document.getElementById(id);
@@ -4265,9 +4358,13 @@ async function pstInitMappa() {
   }
   document.getElementById('pstMapTipo').value = pstMappaData.tipo || 'immagine';
   pstMapModalitaDisegno = false;
+  pstMapArmaPartenza = false;
+  pstMapArmaArrivo = false;
   pstMapArmedPostazioneId = null;
   document.getElementById('pstMapStatus').textContent = '';
   document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
+  pstSetTabActive('pstBtnPartenza', false);
+  pstSetTabActive('pstBtnArrivo', false);
   pstAggiornaControlliTipoMappa();
   pstRenderListePosizionamento();
 }
@@ -4339,23 +4436,32 @@ function pstRenderCanvasImmagine() {
     return;
   }
   noImg.style.display = 'none';
-  layout.style.display = 'grid';
+  layout.style.display = 'block';
   toolbar.style.display = 'flex';
   zoomCtrl.style.display = 'inline-flex';
   btnScarica.style.display = 'inline-block';
   document.getElementById('pstSpessorePercorso').value = pstMappaData.route_thickness || 3;
 
-  const spessore = ((pstMappaData.route_thickness || 3) * 0.2);
+  const spessore = ((pstMappaData.route_thickness || 3) * 0.1);
   const percorso = pstMappaData.percorso || [];
   const puntiSvg = percorso.map(p => p.x + ',' + p.y).join(' ');
-  const cerchi = percorso.map(p => '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (spessore * 0.8) + '" fill="#d92b2b" />').join('');
+
+  const bandiera = (x, y, emoji, colore) => {
+    return '<div style="position:absolute;left:' + x + '%;top:' + y + '%;transform:translate(-50%,-100%);font-size:1.1rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))">' + emoji + '</div>';
+  };
+  const partenzaHtml = (pstMappaData.partenza_x != null) ? bandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩') : '';
+  const arrivoHtml = (pstMappaData.arrivo_x != null) ? bandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁') : '';
 
   const pins = pstPostazioni.filter(p => p.map_x != null && p.map_y != null).map(p => {
     const label = p.numero || p.indirizzo || ('#' + p.id);
-    return '<div class="pst-map-pin" data-pid="' + p.id + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
-      + '<div style="position:absolute;width:10px;height:10px;left:-5px;top:-5px;border-radius:50%;background:var(--green);border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5)"></div>'
-      + '<div style="position:absolute;left:-1px;top:-24px;width:2px;height:24px;background:var(--green)"></div>'
-      + '<div class="pst-map-pin-label" style="position:absolute;left:6px;top:-38px;cursor:pointer;background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3)">📍 ' + label + '</div>'
+    const dx = (p.label_dx != null) ? p.label_dx : 10;
+    const dy = (p.label_dy != null) ? p.label_dy : -40;
+    const lunghezza = Math.sqrt(dx * dx + dy * dy);
+    const angolo = Math.atan2(dy, dx) * 180 / Math.PI;
+    return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
+      + '<div style="position:absolute;width:10px;height:10px;left:-5px;top:-5px;border-radius:50%;background:var(--green);border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
+      + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:var(--green);transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
+      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:var(--green);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);z-index:3">📍 ' + label + '</div>'
       + '</div>';
   }).join('');
 
@@ -4364,21 +4470,103 @@ function pstRenderCanvasImmagine() {
     + '<img id="pstMapImgEl" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px;display:block;pointer-events:none" draggable="false">'
     + '<svg id="pstMapSvg" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
     + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
-    + cerchi
     + '</svg>'
+    + partenzaHtml + arrivoHtml
     + pins
     + '</div>';
 
   const zoomWrap = document.getElementById('pstMapZoomWrap');
-  zoomWrap.onclick = (e) => pstGestisciClickImmagine(e, zoomWrap);
+
+  // Click (posiziona punto/pin) vs Drag (pan) — distinti per soglia di movimento
+  canvas.onmousedown = (e) => {
+    if (e.target.closest('.pst-map-pin-label')) return; // gestito dal drag etichetta
+    pstPanState = { startX: e.clientX, startY: e.clientY, scrollLeft: canvas.scrollLeft, scrollTop: canvas.scrollTop, moved: false, zoomWrap };
+  };
+
+  // Zoom con Ctrl + rotella, ancorato al cursore
+  canvas.onwheel = (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+    const baseX = (canvas.scrollLeft + mouseX) / pstImgZoom;
+    const baseY = (canvas.scrollTop + mouseY) / pstImgZoom;
+    pstImgZoom = Math.max(0.5, Math.min(4, Math.round((pstImgZoom + (e.deltaY < 0 ? 0.15 : -0.15)) * 100) / 100));
+    zoomWrap.style.transform = 'scale(' + pstImgZoom + ')';
+    document.getElementById('pstMapZoomLabel').textContent = Math.round(pstImgZoom * 100) + '%';
+    canvas.scrollLeft = baseX * pstImgZoom - mouseX;
+    canvas.scrollTop = baseY * pstImgZoom - mouseY;
+  };
+
+  // Drag etichetta postazione
   zoomWrap.querySelectorAll('.pst-map-pin-label').forEach(el => {
-    el.addEventListener('click', (ev) => {
+    el.addEventListener('mousedown', (ev) => {
       ev.stopPropagation();
-      const pid = parseInt(el.closest('.pst-map-pin').getAttribute('data-pid'), 10);
-      if (confirm('Rimuovere questa postazione dalla mappa?')) pstRimuoviDallaMappa(pid);
+      ev.preventDefault();
+      const pinEl = el.closest('.pst-map-pin');
+      pstDragLabel = {
+        postazioneId: parseInt(pinEl.getAttribute('data-pid'), 10),
+        startX: ev.clientX, startY: ev.clientY,
+        origDx: parseFloat(pinEl.getAttribute('data-dx')), origDy: parseFloat(pinEl.getAttribute('data-dy')),
+        moved: false, el
+      };
+      el.style.cursor = 'grabbing';
     });
   });
 }
+
+function pstGestisciPanMove(e) {
+  if (pstDragLabel) {
+    const dx = (e.clientX - pstDragLabel.startX) / pstImgZoom;
+    const dy = (e.clientY - pstDragLabel.startY) / pstImgZoom;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) pstDragLabel.moved = true;
+    const nuovaDx = pstDragLabel.origDx + dx, nuovaDy = pstDragLabel.origDy + dy;
+    pstDragLabel.el.style.left = nuovaDx + 'px';
+    pstDragLabel.el.style.top = nuovaDy + 'px';
+    return;
+  }
+  if (pstPanState) {
+    const dx = e.clientX - pstPanState.startX, dy = e.clientY - pstPanState.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) pstPanState.moved = true;
+    if (pstPanState.moved) {
+      const canvas = document.getElementById('pstMapCanvas');
+      if (canvas) { canvas.scrollLeft = pstPanState.scrollLeft - dx; canvas.scrollTop = pstPanState.scrollTop - dy; }
+    }
+  }
+}
+
+async function pstGestisciPanEnd(e) {
+  if (pstDragLabel) {
+    const drag = pstDragLabel;
+    pstDragLabel = null;
+    if (drag.moved) {
+      const dx = (e.clientX - drag.startX) / pstImgZoom;
+      const dy = (e.clientY - drag.startY) / pstImgZoom;
+      const nuovaDx = Math.round(drag.origDx + dx), nuovaDy = Math.round(drag.origDy + dy);
+      const p = pstPostazioni.find(x => x.id === drag.postazioneId);
+      if (p) { p.label_dx = nuovaDx; p.label_dy = nuovaDy; }
+      try {
+        await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + drag.postazioneId, {
+          method: 'PATCH', headers: HJ, body: JSON.stringify({ label_dx: nuovaDx, label_dy: nuovaDy })
+        });
+      } catch(err) {}
+      pstRenderCanvasImmagine();
+    } else {
+      if (confirm('Rimuovere questa postazione dalla mappa?')) pstRimuoviDallaMappa(drag.postazioneId);
+    }
+    return;
+  }
+  if (pstPanState) {
+    const pan = pstPanState;
+    pstPanState = null;
+    if (!pan.moved && pan.zoomWrap && document.body.contains(pan.zoomWrap)) {
+      pstGestisciClickImmagine(e, pan.zoomWrap);
+    }
+  }
+}
+
+document.addEventListener('mousemove', (e) => pstGestisciPanMove(e));
+document.addEventListener('mouseup', (e) => pstGestisciPanEnd(e));
 
 function pstGestisciClickImmagine(e, zoomWrap) {
   const rect = zoomWrap.getBoundingClientRect();
@@ -4393,9 +4581,45 @@ function pstGestisciClickImmagine(e, zoomWrap) {
     pstMappaData.percorso = percorso;
     pstUpsertMappa({ percorso: percorso });
     pstRenderCanvasImmagine();
+  } else if (pstMapArmaPartenza) {
+    pstMappaData.partenza_x = xPct; pstMappaData.partenza_y = yPct;
+    pstUpsertMappa({ partenza_x: xPct, partenza_y: yPct });
+    pstMapArmaPartenza = false;
+    pstSetTabActive('pstBtnPartenza', false);
+    document.getElementById('pstMapStatus').textContent = '';
+    pstRenderCanvasImmagine();
+  } else if (pstMapArmaArrivo) {
+    pstMappaData.arrivo_x = xPct; pstMappaData.arrivo_y = yPct;
+    pstUpsertMappa({ arrivo_x: xPct, arrivo_y: yPct });
+    pstMapArmaArrivo = false;
+    pstSetTabActive('pstBtnArrivo', false);
+    document.getElementById('pstMapStatus').textContent = '';
+    pstRenderCanvasImmagine();
   } else if (pstMapArmedPostazioneId) {
     pstSalvaPinImmagine(pstMapArmedPostazioneId, xPct, yPct);
   }
+}
+
+function pstToggleArmaPartenza() {
+  pstMapArmaPartenza = !pstMapArmaPartenza;
+  pstMapArmaArrivo = false;
+  pstMapModalitaDisegno = false;
+  pstMapArmedPostazioneId = null;
+  pstSetTabActive('pstBtnPartenza', pstMapArmaPartenza);
+  pstSetTabActive('pstBtnArrivo', false);
+  document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
+  document.getElementById('pstMapStatus').textContent = pstMapArmaPartenza ? 'Clicca sulla mappa per indicare la partenza.' : '';
+}
+
+function pstToggleArmaArrivo() {
+  pstMapArmaArrivo = !pstMapArmaArrivo;
+  pstMapArmaPartenza = false;
+  pstMapModalitaDisegno = false;
+  pstMapArmedPostazioneId = null;
+  pstSetTabActive('pstBtnArrivo', pstMapArmaArrivo);
+  pstSetTabActive('pstBtnPartenza', false);
+  document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
+  document.getElementById('pstMapStatus').textContent = pstMapArmaArrivo ? 'Clicca sulla mappa per indicare l\'arrivo.' : '';
 }
 
 function pstZoomImmagine(direzione) {
@@ -4411,7 +4635,7 @@ function pstZoomImmagineReset() {
 }
 
 function pstAnteprimaSpessorePercorso(valore) {
-  const spessore = valore * 0.2;
+  const spessore = valore * 0.1;
   if (pstMappaData.tipo === 'google') return; // il google mode aggiorna solo al rilascio
   const svg = document.getElementById('pstMapSvg');
   if (!svg) return;
@@ -4438,11 +4662,12 @@ async function pstScaricaMappaImmagine() {
     const ctx = cv.getContext('2d');
     ctx.drawImage(img, 0, 0);
 
-    const spessorePx = (pstMappaData.route_thickness || 3) * 0.002 * cv.width;
+    const spessorePx = (pstMappaData.route_thickness || 3) * 0.001 * cv.width;
     const percorso = pstMappaData.percorso || [];
     if (percorso.length > 1) {
       ctx.strokeStyle = '#d92b2b';
       ctx.lineWidth = spessorePx;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       ctx.beginPath();
       percorso.forEach((p, i) => {
         const px = p.x / 100 * cv.width, py = p.y / 100 * cv.height;
@@ -4450,28 +4675,35 @@ async function pstScaricaMappaImmagine() {
       });
       ctx.stroke();
     }
-    percorso.forEach(p => {
-      ctx.fillStyle = '#d92b2b';
-      ctx.beginPath();
-      ctx.arc(p.x / 100 * cv.width, p.y / 100 * cv.height, spessorePx * 0.8, 0, Math.PI * 2);
-      ctx.fill();
-    });
+
+    const disegnaBandiera = (bx, by, emoji) => {
+      if (bx == null) return;
+      const px = bx / 100 * cv.width, py = by / 100 * cv.height;
+      ctx.font = Math.round(cv.width * 0.03) + 'px sans-serif';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(emoji, px - cv.width * 0.012, py);
+    };
+    disegnaBandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩');
+    disegnaBandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁');
 
     pstPostazioni.filter(p => p.map_x != null && p.map_y != null).forEach(p => {
       const px = p.map_x / 100 * cv.width, py = p.map_y / 100 * cv.height;
-      const leaderLen = cv.width * 0.024;
-      ctx.strokeStyle = '#0f6e56'; ctx.lineWidth = cv.width * 0.002;
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py - leaderLen); ctx.stroke();
+      const dx = ((p.label_dx != null ? p.label_dx : 10) / PST_IMG_BASE_WIDTH) * cv.width;
+      const dy = ((p.label_dy != null ? p.label_dy : -40) / PST_IMG_BASE_WIDTH) * cv.width;
+      const lx = px + dx, ly = py + dy;
+      ctx.strokeStyle = '#0f6e56'; ctx.lineWidth = cv.width * 0.0015;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
       ctx.fillStyle = '#0f6e56';
       ctx.beginPath(); ctx.arc(px, py, cv.width * 0.004, 0, Math.PI * 2); ctx.fill();
       const label = ' ' + (p.numero || p.indirizzo || ('#' + p.id)) + ' ';
       ctx.font = 'bold ' + Math.round(cv.width * 0.014) + 'px sans-serif';
       const w = ctx.measureText(label).width;
-      const boxY = py - leaderLen - cv.width * 0.02;
+      const boxH = cv.width * 0.02;
       ctx.fillStyle = '#0f6e56';
-      ctx.fillRect(px + cv.width * 0.006, boxY - cv.width * 0.014, w, cv.width * 0.02);
+      ctx.fillRect(lx, ly - boxH, w, boxH); // il bordo inferiore del box tocca esattamente la fine della linea (lx,ly)
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, px + cv.width * 0.006, boxY);
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(label, lx, ly - boxH * 0.25);
     });
 
     cv.toBlob(blob => {
@@ -4567,6 +4799,9 @@ function pstDisegnaPercorsoGoogle() {
   pstMapGooglePolyline.setMap(pstMapGoogleInstance);
 }
 
+let pstMapGooglePartenzaMarker = null;
+let pstMapGoogleArrivoMarker = null;
+
 function pstDisegnaPinGoogle() {
   Object.values(pstMapGoogleMarkers).forEach(m => m.setMap(null));
   pstMapGoogleMarkers = {};
@@ -4582,6 +4817,21 @@ function pstDisegnaPinGoogle() {
     });
     pstMapGoogleMarkers[p.id] = marker;
   });
+
+  if (pstMapGooglePartenzaMarker) pstMapGooglePartenzaMarker.setMap(null);
+  if (pstMappaData.partenza_lat != null) {
+    pstMapGooglePartenzaMarker = new google.maps.Marker({
+      position: { lat: pstMappaData.partenza_lat, lng: pstMappaData.partenza_lng },
+      map: pstMapGoogleInstance, label: '🚩', title: 'Partenza'
+    });
+  }
+  if (pstMapGoogleArrivoMarker) pstMapGoogleArrivoMarker.setMap(null);
+  if (pstMappaData.arrivo_lat != null) {
+    pstMapGoogleArrivoMarker = new google.maps.Marker({
+      position: { lat: pstMappaData.arrivo_lat, lng: pstMappaData.arrivo_lng },
+      map: pstMapGoogleInstance, label: '🏁', title: 'Arrivo'
+    });
+  }
 }
 
 function pstGestisciClickGoogle(e) {
@@ -4592,6 +4842,20 @@ function pstGestisciClickGoogle(e) {
     pstMappaData.percorso = percorso;
     pstUpsertMappa({ percorso: percorso });
     pstDisegnaPercorsoGoogle();
+  } else if (pstMapArmaPartenza) {
+    pstMappaData.partenza_lat = lat; pstMappaData.partenza_lng = lng;
+    pstUpsertMappa({ partenza_lat: lat, partenza_lng: lng });
+    pstMapArmaPartenza = false;
+    pstSetTabActive('pstBtnPartenza', false);
+    document.getElementById('pstMapStatus').textContent = '';
+    pstDisegnaPinGoogle();
+  } else if (pstMapArmaArrivo) {
+    pstMappaData.arrivo_lat = lat; pstMappaData.arrivo_lng = lng;
+    pstUpsertMappa({ arrivo_lat: lat, arrivo_lng: lng });
+    pstMapArmaArrivo = false;
+    pstSetTabActive('pstBtnArrivo', false);
+    document.getElementById('pstMapStatus').textContent = '';
+    pstDisegnaPinGoogle();
   } else if (pstMapArmedPostazioneId) {
     pstSalvaPinGoogle(pstMapArmedPostazioneId, lat, lng);
   }
@@ -4629,6 +4893,10 @@ async function pstCentraGoogleMap() {
 function pstToggleDisegnoPercorso() {
   pstMapModalitaDisegno = !pstMapModalitaDisegno;
   pstMapArmedPostazioneId = null;
+  pstMapArmaPartenza = false;
+  pstMapArmaArrivo = false;
+  pstSetTabActive('pstBtnPartenza', false);
+  pstSetTabActive('pstBtnArrivo', false);
   const btn = document.getElementById('pstBtnDisegnaPercorso');
   const status = document.getElementById('pstMapStatus');
   if (pstMapModalitaDisegno) {
@@ -4649,6 +4917,10 @@ async function pstCancellaPercorso() {
 
 function pstArmaPosizionamento(postazioneId) {
   pstMapModalitaDisegno = false;
+  pstMapArmaPartenza = false;
+  pstMapArmaArrivo = false;
+  pstSetTabActive('pstBtnPartenza', false);
+  pstSetTabActive('pstBtnArrivo', false);
   document.getElementById('pstBtnDisegnaPercorso').textContent = '✏️ Disegna percorso';
   pstMapArmedPostazioneId = postazioneId;
   const p = pstPostazioni.find(x => x.id === postazioneId);

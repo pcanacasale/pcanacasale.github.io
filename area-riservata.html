@@ -1018,6 +1018,7 @@ div:hover > .vista-edit-btn { display:flex; }
             <button class="btn-sm" onclick="document.getElementById('pstFileInput').click()">⬆️ Carica file Excel</button>
             <input type="file" id="pstFileInput" accept=".xlsx" style="display:none" onchange="pstImportaExcel(this.files[0])">
             <button class="btn-sm" onclick="pstEsportaExcel()">📊 Esporta elenco attuale</button>
+            <button class="btn-sm" onclick="pstEsportaPDF()">📄 Scarica PDF</button>
             <button class="btn-sm btn-danger" style="margin-left:auto" onclick="pstEliminaTutte()">🗑️ Elimina tutte</button>
           </div>
           <div style="padding:0 0.9rem 0.6rem">
@@ -1070,6 +1071,8 @@ div:hover > .vista-edit-btn { display:flex; }
           <div id="pstMapToolbar" style="padding:0 0.9rem 0.6rem;display:none;gap:0.5rem;flex-wrap:wrap;align-items:center">
             <button class="btn-sm" id="pstBtnDisegnaPercorso" onclick="pstToggleDisegnoPercorso()">✏️ Disegna percorso</button>
             <button class="btn-sm btn-danger" onclick="pstCancellaPercorso()">🗑️ Cancella percorso</button>
+            <button class="btn-sm" id="pstBtnPartenza" onclick="pstToggleArmaPartenza()">🚩 Partenza</button>
+            <button class="btn-sm" id="pstBtnArrivo" onclick="pstToggleArmaArrivo()">🏁 Arrivo</button>
             <span style="display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--testo-3)">
               spessore
               <input type="range" id="pstSpessorePercorso" min="1" max="10" step="1" value="3" style="width:80px" oninput="pstAnteprimaSpessorePercorso(this.value)" onchange="pstSalvaSpessorePercorso(this.value)">
@@ -1081,16 +1084,20 @@ div:hover > .vista-edit-btn { display:flex; }
               <button class="btn-sm" onclick="pstZoomImmagineReset()">↺</button>
             </span>
             <button class="btn-sm" id="pstBtnScaricaMappa" style="display:none" onclick="pstScaricaMappaImmagine()">⬇️ Scarica immagine mappa</button>
-            <span id="pstMapStatus" style="font-size:0.72rem;color:var(--testo-3)"></span>
+            <span id="pstMapStatus" style="font-size:0.72rem;color:var(--testo-3);width:100%"></span>
           </div>
 
-          <div id="pstMapLayout" style="padding:0 0.9rem 0.9rem;display:none;grid-template-columns:1fr 220px;gap:0.8rem">
-            <div id="pstMapCanvas" style="position:relative;border:0.5px solid var(--border);border-radius:8px;overflow:auto;background:var(--bg-2);min-height:400px;max-height:65vh"></div>
-            <div>
-              <div style="font-size:0.7rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.4rem">Da posizionare</div>
-              <div id="pstMapDaPosizionare" style="display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.8rem"></div>
-              <div style="font-size:0.7rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.4rem">Già sulla mappa</div>
-              <div id="pstMapPosizionate" style="display:flex;flex-direction:column;gap:0.3rem"></div>
+          <div id="pstMapLayout" style="padding:0 0.9rem 0.9rem;display:none">
+            <div id="pstMapCanvas" style="position:relative;border:0.5px solid var(--border);border-radius:8px;overflow:auto;background:var(--bg-2);min-height:400px;max-height:70vh;margin-bottom:0.8rem"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem">
+              <div>
+                <div style="font-size:0.7rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.4rem">Da posizionare</div>
+                <div id="pstMapDaPosizionare" style="display:flex;flex-direction:column;gap:0.3rem"></div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:0.4rem">Già sulla mappa</div>
+                <div id="pstMapPosizionate" style="display:flex;flex-direction:column;gap:0.3rem"></div>
+              </div>
             </div>
           </div>
 
@@ -1611,6 +1618,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=117"></script>
+<script src="area-riservata.js?v=119"></script>
 </body>
 </html>
