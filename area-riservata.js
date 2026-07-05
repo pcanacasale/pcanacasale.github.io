@@ -2344,6 +2344,7 @@ function apriFormIntervento(id, macroIdPreset) {
           <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA" style="flex:1">
         </div>
         <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifVolter"> VolTer</label></div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifPostazioni"> 📍 Gestione Postazioni (mostra questo intervento nella pagina Postazioni)</label></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -2589,6 +2590,8 @@ async function caricaDatiFormIntervento(id) {
     if (volaNum) volaNum.value = i.vola_numero || '';
     const volter = document.getElementById('ifVolter');
     if (volter) volter.checked = !!i.volter;
+    const postazioniFlag = document.getElementById('ifPostazioni');
+    if (postazioniFlag) postazioniFlag.checked = !!i.usa_postazioni;
     // Override n_ore?
     const override = document.getElementById('ifNOreOverride');
     if (override) {
@@ -2670,6 +2673,7 @@ async function salvaIntervento() {
     vola:          document.getElementById('ifVola') ? document.getElementById('ifVola').checked : false,
     vola_numero:   document.getElementById('ifVolaNum') ? document.getElementById('ifVolaNum').value.trim() || null : null,
     volter:        document.getElementById('ifVolter') ? document.getElementById('ifVolter').checked : false,
+    usa_postazioni: document.getElementById('ifPostazioni') ? document.getElementById('ifPostazioni').checked : false,
     is_macro:      document.getElementById('ifIsMacro') ? document.getElementById('ifIsMacro').checked : false,
     macro_id:      (document.getElementById('ifIsMacro') && document.getElementById('ifIsMacro').checked) ? null
                    : (document.getElementById('ifMacroId') && document.getElementById('ifMacroId').value ? parseInt(document.getElementById('ifMacroId').value) : null),
@@ -3673,9 +3677,17 @@ async function caricaPostazioni() {
   if (!sel) return;
   const prevVal = sel.value;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,luogo,volontari_ids&order=data.desc&limit=500', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,luogo,volontari_ids&usa_postazioni=eq.true&order=data.desc&limit=500', { headers: H });
     pstInterventiOpts = await res.json();
   } catch(e) { pstInterventiOpts = []; }
+
+  const empty = document.getElementById('pstEmpty');
+  if (!pstInterventiOpts.length) {
+    sel.innerHTML = '<option value="">— nessun intervento abilitato —</option>';
+    if (empty) { empty.style.display = 'block'; empty.textContent = 'nessun intervento ha la gestione postazioni attiva. Abilitala dal form di modifica dell\'intervento (checkbox "📍 Gestione Postazioni").'; }
+    document.getElementById('pstBody').style.display = 'none';
+    return;
+  }
 
   sel.innerHTML = '<option value="">— seleziona un intervento —</option>' + pstInterventiOpts.map(i => {
     const d = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '—';
@@ -3789,14 +3801,16 @@ function pstRenderLista() {
       : '<div class="loading-msg" style="padding:0.3rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
 
     const titolo = (p.numero ? p.numero + ' — ' : '') + (p.nome || 'senza nome');
+    const bodyId = 'pstCardBody' + p.id;
+    const chevId = 'pstCardChev' + p.id;
 
     return '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div class="vol-section-head" style="cursor:default"><h3>📍 ' + titolo + '</h3>'
+      + '<div class="vol-section-head" onclick="pstToggleCard(' + p.id + ')"><h3>📍 ' + titolo + ' <span id="' + chevId + '" style="font-size:0.7rem">▸</span></h3>'
       + '<div style="display:flex;gap:0.3rem">'
-      + '<button class="btn-sm" onclick="pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
-      + '<button class="btn-sm btn-danger" onclick="pstEliminaPostazione(' + p.id + ')">elimina</button>'
+      + '<button class="btn-sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
+      + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">elimina</button>'
       + '</div></div>'
-      + '<div style="padding:0.6rem;display:grid;grid-template-columns:180px 1fr;gap:1rem">'
+      + '<div id="' + bodyId + '" style="padding:0.6rem;display:none;grid-template-columns:180px 1fr;gap:1rem">'
       + '<div style="font-size:0.78rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.35rem">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
       + '<div style="border-left:0.5px solid var(--border);padding-left:1rem">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">'
@@ -3806,6 +3820,15 @@ function pstRenderLista() {
       + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.nome||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
       + '</div></div></div>';
   }).join('');
+}
+
+function pstToggleCard(id) {
+  const body = document.getElementById('pstCardBody' + id);
+  const chev = document.getElementById('pstCardChev' + id);
+  if (!body) return;
+  const aperto = body.style.display === 'grid';
+  body.style.display = aperto ? 'none' : 'grid';
+  if (chev) chev.textContent = aperto ? '▸' : '▾';
 }
 
 function pstToggleNuovaForm() {
