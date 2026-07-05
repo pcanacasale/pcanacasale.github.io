@@ -3839,10 +3839,12 @@ function pstRenderLista() {
     const chevId = 'pstCardChev' + p.id;
 
     return '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div class="vol-section-head" onclick="pstToggleCard(' + p.id + ')"><h3>📍 ' + titolo + ' <span id="' + chevId + '" style="font-size:0.7rem">▸</span></h3>'
-      + '<div style="display:flex;gap:0.3rem">'
+      + '<div class="vol-section-head" onclick="pstToggleCard(' + p.id + ')" style="gap:0.6rem">'
+      + '<h3 style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0">📍 ' + titolo + '</h3>'
+      + '<div style="display:flex;gap:0.3rem;align-items:center;flex-shrink:0">'
       + '<button class="btn-sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
       + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">elimina</button>'
+      + '<span id="' + chevId + '" style="font-size:0.7rem">▸</span>'
       + '</div></div>'
       + '<div id="' + bodyId + '" style="padding:0.6rem;display:none;grid-template-columns:180px 1fr;gap:1rem">'
       + '<div style="font-size:0.78rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.35rem">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
@@ -4483,6 +4485,7 @@ function pstRenderCanvasImmagine() {
   toolbar.style.display = 'flex';
   zoomCtrl.style.display = 'inline-flex';
   btnScarica.style.display = 'inline-block';
+  document.getElementById('pstBtnScaricaMappeAna').style.display = 'inline-block';
   document.getElementById('pstSpessorePercorso').value = pstMappaData.route_thickness || 3;
 
   const spessore = ((pstMappaData.route_thickness || 3) * 0.1);
@@ -4494,10 +4497,6 @@ function pstRenderCanvasImmagine() {
   };
   const partenzaHtml = (pstMappaData.partenza_x != null) ? bandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩') : '';
   const arrivoHtml = (pstMappaData.arrivo_x != null) ? bandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁') : '';
-
-  const radioByIdM = {}; (tlcData||[]).forEach(t => radioByIdM[t.id] = t);
-  const mezzoByIdM = {}; (mezziData||[]).forEach(m => mezzoByIdM[m.id] = m);
-  const iconTrasporto = { mezzo_fisso: '🚗', trasportato: '🚐', piedi: '🚶' };
 
   const pins = pstPostazioni.filter(p => p.map_x != null && p.map_y != null).map(p => {
     const numero = p.numero || ('#' + p.id);
@@ -4514,20 +4513,10 @@ function pstRenderCanvasImmagine() {
     else { bordo = '2px dashed #999'; }
     const dashNonAna = p.assegnata_ana === false ? 'opacity:0.6;' : '';
 
-    const mezzoTxt = p.mezzo_id && mezzoByIdM[p.mezzo_id] ? _pstLabelMezzo(mezzoByIdM[p.mezzo_id]) : null;
-    const volRighe = p.volontari.length
-      ? p.volontari.map(a => { const v = a.volontari || {}; return (iconTrasporto[a.trasporto || 'piedi']) + ' ' + (v.cognome||'') + ' ' + (v.nome||''); }).join('<br>')
-      : '<span style="color:#999">nessuno</span>';
-
-    const contenuto = '<div style="font-weight:700;font-size:0.78rem">' + numero + '</div>'
-      + (p.indirizzo ? '<div style="font-size:0.66rem;color:#444">' + p.indirizzo + '</div>' : '')
-      + (mezzoTxt ? '<div style="font-size:0.66rem">🚛 ' + mezzoTxt + '</div>' : '')
-      + '<div style="font-size:0.66rem;margin-top:2px">' + volRighe + '</div>';
-
     return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
       + '<div style="position:absolute;width:8px;height:8px;left:-4px;top:-4px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
       + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:#333;transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
-      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:#fff;color:#111;padding:4px 8px;border-radius:4px;min-width:70px;max-width:170px;border:' + bordo + ';' + outline + dashNonAna + 'line-height:1.4;box-shadow:0 1px 4px rgba(0,0,0,0.35);z-index:3">' + contenuto + '</div>'
+      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:#fff;color:#111;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:3px;border:' + bordo + ';' + outline + dashNonAna + 'white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);z-index:3">' + numero + '</div>'
       + '</div>';
   }).join('');
 
@@ -4716,6 +4705,94 @@ async function pstSalvaSpessorePercorso(valore) {
   if (pstMappaData.tipo === 'google') pstDisegnaPercorsoGoogle();
 }
 
+// Disegna il pin di una postazione sul canvas. ricco=true mostra indirizzo/mezzo/volontari (per le mappe singole).
+function _pstDisegnaPinCanvas(ctx, cv, p, ricco) {
+  const radioById = {}; (tlcData||[]).forEach(t => radioById[t.id] = t);
+  const mezzoById = {}; (mezziData||[]).forEach(m => mezzoById[m.id] = m);
+  const iconTr = { mezzo_fisso: '🚗', trasportato: '🚐', piedi: '🚶' };
+
+  const px = p.map_x / 100 * cv.width, py = p.map_y / 100 * cv.height;
+  const dx = ((p.label_dx != null ? p.label_dx : 10) / PST_IMG_BASE_WIDTH) * cv.width;
+  const dy = ((p.label_dy != null ? p.label_dy : -40) / PST_IMG_BASE_WIDTH) * cv.width;
+  const lx = px + dx, ly = py + dy;
+  const haVol = p.volontari.length > 0, haVigile = !!p.vigile_presente;
+  let bordo = '#999';
+  if (haVigile && haVol) bordo = '#16a34a';
+  else if (haVigile) bordo = '#06b6d4';
+  else if (haVol) bordo = '#16a34a';
+
+  ctx.strokeStyle = '#333'; ctx.lineWidth = cv.width * 0.0015;
+  ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(px, py, cv.width * 0.003, 0, Math.PI * 2); ctx.fill();
+
+  const fontBase = Math.round(cv.width * (ricco ? 0.012 : 0.014));
+  const righe = [];
+  righe.push({ testo: p.numero || ('#' + p.id), bold: true, size: fontBase * (ricco ? 1.15 : 1) });
+  if (ricco) {
+    if (p.indirizzo) righe.push({ testo: p.indirizzo, bold: false, size: fontBase * 0.9, colore: '#444' });
+    const mezzoTxt = p.mezzo_id && mezzoById[p.mezzo_id] ? _pstLabelMezzo(mezzoById[p.mezzo_id]) : null;
+    if (mezzoTxt) righe.push({ testo: '🚛 ' + mezzoTxt, bold: false, size: fontBase * 0.9 });
+    if (p.volontari.length) {
+      p.volontari.forEach(a => { const v = a.volontari || {}; righe.push({ testo: iconTr[a.trasporto||'piedi'] + ' ' + (v.cognome||'') + ' ' + (v.nome||''), bold: false, size: fontBase * 0.9 }); });
+    } else {
+      righe.push({ testo: 'nessuno', bold: false, size: fontBase * 0.9, colore: '#999' });
+    }
+  }
+
+  let maxW = 0;
+  righe.forEach(r => { ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif'; maxW = Math.max(maxW, ctx.measureText(r.testo).width); });
+  const padX = cv.width * 0.006, padY = cv.width * 0.005;
+  const lineH = fontBase * 1.35;
+  const boxW = maxW + padX * 2;
+  const boxH = righe.length * lineH + padY * 2;
+
+  if (p.assegnata_ana === false) ctx.globalAlpha = 0.6;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(lx, ly - boxH, boxW, boxH);
+  ctx.strokeStyle = bordo; ctx.lineWidth = cv.width * 0.0018;
+  if (!haVigile && !haVol) ctx.setLineDash([cv.width * 0.004, cv.width * 0.004]);
+  ctx.strokeRect(lx, ly - boxH, boxW, boxH);
+  ctx.setLineDash([]);
+  if (haVigile && haVol) { ctx.strokeStyle = '#06b6d4'; ctx.strokeRect(lx - cv.width * 0.0025, ly - boxH - cv.width * 0.0025, boxW + cv.width * 0.005, boxH + cv.width * 0.005); }
+
+  ctx.textBaseline = 'alphabetic';
+  let ty = ly - boxH + padY + fontBase;
+  righe.forEach(r => {
+    ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif';
+    ctx.fillStyle = r.colore || '#111';
+    ctx.fillText(r.testo, lx + padX, ty);
+    ty += lineH;
+  });
+  ctx.globalAlpha = 1;
+}
+
+// Disegna sfondo + percorso + partenza/arrivo su un canvas già dimensionato; ritorna via callback
+function _pstDisegnaBaseMappa(cv, ctx, img) {
+  ctx.drawImage(img, 0, 0);
+  const spessorePx = (pstMappaData.route_thickness || 3) * 0.001 * cv.width;
+  const percorso = pstMappaData.percorso || [];
+  if (percorso.length > 1) {
+    ctx.strokeStyle = '#d92b2b'; ctx.lineWidth = spessorePx;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    percorso.forEach((p, i) => {
+      const px = p.x / 100 * cv.width, py = p.y / 100 * cv.height;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+  const disegnaBandiera = (bx, by, emoji) => {
+    if (bx == null) return;
+    const px = bx / 100 * cv.width, py = by / 100 * cv.height;
+    ctx.font = Math.round(cv.width * 0.03) + 'px sans-serif';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(emoji, px - cv.width * 0.012, py);
+  };
+  disegnaBandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩');
+  disegnaBandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁');
+}
+
 async function pstScaricaMappaImmagine() {
   if (!pstMappaData || !pstMappaData.immagine_url) return;
   const img = new Image();
@@ -4726,89 +4803,10 @@ async function pstScaricaMappaImmagine() {
     cv.width = img.naturalWidth;
     cv.height = img.naturalHeight;
     const ctx = cv.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-
-    const spessorePx = (pstMappaData.route_thickness || 3) * 0.001 * cv.width;
-    const percorso = pstMappaData.percorso || [];
-    if (percorso.length > 1) {
-      ctx.strokeStyle = '#d92b2b';
-      ctx.lineWidth = spessorePx;
-      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      ctx.beginPath();
-      percorso.forEach((p, i) => {
-        const px = p.x / 100 * cv.width, py = p.y / 100 * cv.height;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-      });
-      ctx.stroke();
-    }
-
-    const disegnaBandiera = (bx, by, emoji) => {
-      if (bx == null) return;
-      const px = bx / 100 * cv.width, py = by / 100 * cv.height;
-      ctx.font = Math.round(cv.width * 0.03) + 'px sans-serif';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(emoji, px - cv.width * 0.012, py);
-    };
-    disegnaBandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩');
-    disegnaBandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁');
-
-    const mezzoByIdD = {}; (mezziData||[]).forEach(m => mezzoByIdD[m.id] = m);
-    const iconTrasportoD = { mezzo_fisso: '🚗', trasportato: '🚐', piedi: '🚶' };
+    _pstDisegnaBaseMappa(cv, ctx, img);
 
     pstPostazioni.filter(p => p.map_x != null && p.map_y != null).forEach(p => {
-      const px = p.map_x / 100 * cv.width, py = p.map_y / 100 * cv.height;
-      const dx = ((p.label_dx != null ? p.label_dx : 10) / PST_IMG_BASE_WIDTH) * cv.width;
-      const dy = ((p.label_dy != null ? p.label_dy : -40) / PST_IMG_BASE_WIDTH) * cv.width;
-      const lx = px + dx, ly = py + dy;
-      const haVol = p.volontari.length > 0, haVigile = !!p.vigile_presente;
-      let bordo = '#999';
-      if (haVigile && haVol) bordo = '#16a34a';
-      else if (haVigile) bordo = '#06b6d4';
-      else if (haVol) bordo = '#16a34a';
-
-      ctx.strokeStyle = '#333'; ctx.lineWidth = cv.width * 0.0015;
-      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lx, ly); ctx.stroke();
-      ctx.fillStyle = '#333';
-      ctx.beginPath(); ctx.arc(px, py, cv.width * 0.003, 0, Math.PI * 2); ctx.fill();
-
-      // Righe di testo del box: numero, indirizzo, mezzo, volontari
-      const fontBase = Math.round(cv.width * 0.012);
-      const righe = [];
-      righe.push({ testo: p.numero || ('#' + p.id), bold: true, size: fontBase * 1.15 });
-      if (p.indirizzo) righe.push({ testo: p.indirizzo, bold: false, size: fontBase * 0.9, colore: '#444' });
-      const mezzoTxt = p.mezzo_id && mezzoByIdD[p.mezzo_id] ? _pstLabelMezzo(mezzoByIdD[p.mezzo_id]) : null;
-      if (mezzoTxt) righe.push({ testo: '🚛 ' + mezzoTxt, bold: false, size: fontBase * 0.9 });
-      if (p.volontari.length) {
-        p.volontari.forEach(a => { const v = a.volontari || {}; righe.push({ testo: iconTrasportoD[a.trasporto||'piedi'] + ' ' + (v.cognome||'') + ' ' + (v.nome||''), bold: false, size: fontBase * 0.9 }); });
-      } else {
-        righe.push({ testo: 'nessuno', bold: false, size: fontBase * 0.9, colore: '#999' });
-      }
-
-      let maxW = 0;
-      righe.forEach(r => { ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif'; maxW = Math.max(maxW, ctx.measureText(r.testo).width); });
-      const padX = cv.width * 0.006, padY = cv.width * 0.005;
-      const lineH = fontBase * 1.35;
-      const boxW = maxW + padX * 2;
-      const boxH = righe.length * lineH + padY * 2;
-
-      if (p.assegnata_ana === false) ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(lx, ly - boxH, boxW, boxH); // il bordo inferiore del box tocca esattamente la fine della linea (lx,ly)
-      ctx.strokeStyle = bordo; ctx.lineWidth = cv.width * 0.0018;
-      if (!haVigile && !haVol) ctx.setLineDash([cv.width * 0.004, cv.width * 0.004]);
-      ctx.strokeRect(lx, ly - boxH, boxW, boxH);
-      ctx.setLineDash([]);
-      if (haVigile && haVol) { ctx.strokeStyle = '#06b6d4'; ctx.strokeRect(lx - cv.width * 0.0025, ly - boxH - cv.width * 0.0025, boxW + cv.width * 0.005, boxH + cv.width * 0.005); }
-
-      ctx.textBaseline = 'alphabetic';
-      let ty = ly - boxH + padY + fontBase;
-      righe.forEach(r => {
-        ctx.font = (r.bold ? 'bold ' : '') + Math.round(r.size) + 'px sans-serif';
-        ctx.fillStyle = r.colore || '#111';
-        ctx.fillText(r.testo, lx + padX, ty);
-        ty += lineH;
-      });
-      ctx.globalAlpha = 1;
+      _pstDisegnaPinCanvas(ctx, cv, p, false);
     });
 
     cv.toBlob(blob => {
@@ -4825,6 +4823,43 @@ async function pstScaricaMappaImmagine() {
   };
   img.onerror = () => alert('Impossibile scaricare l\'immagine (problema di accesso all\'immagine salvata).');
   img.src = pstMappaData.immagine_url;
+}
+
+// Scarica una mappa individuale per ogni postazione con assegnata_ana=true e già posizionata,
+// mostrando solo il quadrato ricco (indirizzo/mezzo/volontari) di quella postazione.
+async function pstScaricaMappeIndividuali() {
+  if (!pstMappaData || !pstMappaData.immagine_url) { alert('Serve una mappa a immagine per questa funzione.'); return; }
+  const target = pstPostazioni.filter(p => p.assegnata_ana !== false && p.map_x != null && p.map_y != null);
+  if (!target.length) { alert('Nessuna postazione ANA posizionata sulla mappa.'); return; }
+  if (!confirm('Scaricare ' + target.length + ' mappe (una per postazione ANA)?')) return;
+
+  const img = await new Promise((resolve, reject) => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('Impossibile caricare l\'immagine mappa.'));
+    im.src = pstMappaData.immagine_url;
+  }).catch(e => { alert(e.message); return null; });
+  if (!img) return;
+
+  for (let i = 0; i < target.length; i++) {
+    const p = target[i];
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const ctx = cv.getContext('2d');
+    _pstDisegnaBaseMappa(cv, ctx, img);
+    _pstDisegnaPinCanvas(ctx, cv, p, true);
+
+    await new Promise(resolve => {
+      cv.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const safeNum = (p.numero || p.indirizzo || ('postazione' + p.id)).replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 30);
+        a.href = url; a.download = 'Mappa_' + safeNum + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => { URL.revokeObjectURL(url); resolve(); }, 300);
+      }, 'image/png');
+    });
+  }
 }
 
 async function pstSalvaPinImmagine(postazioneId, xPct, yPct) {
@@ -4865,6 +4900,7 @@ async function pstRenderCanvasGoogle() {
   const btnScarica = document.getElementById('pstBtnScaricaMappa');
   zoomCtrl.style.display = 'none';
   btnScarica.style.display = 'none';
+  document.getElementById('pstBtnScaricaMappeAna').style.display = 'none';
 
   const apiKey = (document.getElementById('pstMapApiKey').value || localStorage.getItem('pst_gmaps_key') || '').trim();
   if (!apiKey) {
