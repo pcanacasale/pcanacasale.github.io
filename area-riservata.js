@@ -228,7 +228,7 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siConvocazioni','siGalleria','siSegnalazioni'
+      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -249,6 +249,7 @@ function avviaDashboard() {
       if (btnNuovo) btnNuovo.style.display = '';
     }
     if (hasPerm('interventi'))   showSi('siInterventi');
+    if (hasPerm('postazioni'))   showSi('siPostazioni');
     if (hasPerm('mezzi'))        showSi('siMezzi');
     if (hasPerm('tlc'))          showSi('siTlc');
     if (hasPerm('galleria'))     showSi('siGalleria');
@@ -310,6 +311,7 @@ function showPanel(name, btn) {
   if (name === 'richieste') caricaRichieste();
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
+  if (name === 'postazioni') caricaPostazioni();
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
@@ -619,6 +621,7 @@ async function salvaUtente() {
     volontari:  document.getElementById('permVolontari').checked,
     modifica_volontari: document.getElementById('permModificaVolontari') ? document.getElementById('permModificaVolontari').checked : false,
     interventi: document.getElementById('permInterventi').checked,
+    postazioni: document.getElementById('permPostazioni') ? document.getElementById('permPostazioni').checked : false,
     mezzi:      document.getElementById('permMezzi').checked,
     tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
     richieste:  document.getElementById('permRichieste').checked,
@@ -661,7 +664,7 @@ function apriModificaUtente(u) {
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
   var permMap = {
-    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
+    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
@@ -690,6 +693,7 @@ async function salvaModificaUtente() {
     volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
     modifica_volontari: document.getElementById('modPermModificaVolontari') ? document.getElementById('modPermModificaVolontari').checked : false,
     interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
+    postazioni:   document.getElementById('modPermPostazioni') ? document.getElementById('modPermPostazioni').checked : false,
     mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
     tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
     db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
@@ -3635,6 +3639,232 @@ async function eseguiVerificaCF() {
   if (!errori.length && !info.length) out += '<div class="db-loading">nessuna discrepanza trovata 🎉</div>';
   out += '</div>';
   box.innerHTML = out;
+}
+
+// -- GESTIONE POSTAZIONI --
+let pstIntervento = null;      // record intervento selezionato (da interventiData o fetch dedicato)
+let pstInterventiOpts = [];    // lista per la select
+let pstPostazioni = [];        // postazioni dell'intervento corrente, ciascuna con .volontari[]
+let pstVolontariAttivi = [];   // cache volontari attivi/sospesi per la modale
+let pstTargetPostazioneId = null;
+
+async function caricaPostazioni() {
+  const sel = document.getElementById('pstIntervento');
+  if (!sel) return;
+  const prevVal = sel.value;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,luogo&order=data.desc&limit=500', { headers: H });
+    pstInterventiOpts = await res.json();
+  } catch(e) { pstInterventiOpts = []; }
+
+  sel.innerHTML = '<option value="">— seleziona un intervento —</option>' + pstInterventiOpts.map(i => {
+    const d = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '—';
+    return '<option value="' + i.id + '">' + (i.evento || 'senza nome') + ' — ' + d + (i.luogo ? ' (' + i.luogo + ')' : '') + '</option>';
+  }).join('');
+
+  if (prevVal) { sel.value = prevVal; pstSelezionaIntervento(prevVal); }
+}
+
+async function pstSelezionaIntervento(interventoId) {
+  const body  = document.getElementById('pstBody');
+  const empty = document.getElementById('pstEmpty');
+  if (!interventoId) {
+    pstIntervento = null; pstPostazioni = [];
+    if (body) body.style.display = 'none';
+    if (empty) { empty.style.display = 'block'; empty.textContent = 'seleziona un intervento per gestire le postazioni.'; }
+    return;
+  }
+  pstIntervento = pstInterventiOpts.find(i => String(i.id) === String(interventoId)) || { id: interventoId };
+  if (body) body.style.display = 'block';
+  if (empty) empty.style.display = 'none';
+  await pstCaricaLista();
+}
+
+async function pstCaricaLista() {
+  const list = document.getElementById('pstList');
+  if (!list || !pstIntervento) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const rP = await fetch(SUPA_URL + '/rest/v1/postazioni?select=*&intervento_id=eq.' + pstIntervento.id + '&order=ordine.asc', { headers: H });
+    const postazioni = await rP.json();
+
+    let assegnazioni = [];
+    if (postazioni.length) {
+      const ids = postazioni.map(p => p.id).join(',');
+      const rA = await fetch(SUPA_URL + '/rest/v1/postazione_volontari?select=*,volontari(id,cognome,nome,squadra,telefono)&postazione_id=in.(' + ids + ')&order=id.asc', { headers: H });
+      assegnazioni = await rA.json();
+    }
+
+    pstPostazioni = postazioni.map(p => ({
+      ...p,
+      volontari: assegnazioni.filter(a => a.postazione_id === p.id)
+    }));
+
+    pstRenderLista();
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento postazioni.</div>';
+  }
+}
+
+function pstRenderLista() {
+  const list = document.getElementById('pstList');
+  if (!list) return;
+  if (!pstPostazioni.length) {
+    list.innerHTML = '<div class="loading-msg">nessuna postazione creata per questo intervento. Aggiungine una qui sopra.</div>';
+    return;
+  }
+  // Mappa volontario_id -> nomi postazioni in cui è già assegnato (per avviso duplicati)
+  const assegnatoIn = {};
+  pstPostazioni.forEach(p => p.volontari.forEach(a => {
+    (assegnatoIn[a.volontario_id] = assegnatoIn[a.volontario_id] || []).push(p.nome);
+  }));
+
+  list.innerHTML = pstPostazioni.map(p => {
+    const righeVol = p.volontari.length
+      ? p.volontari.map(a => {
+          const v = a.volontari || {};
+          const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== p.nome);
+          const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;margin-left:0.3rem">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
+          return '<div class="acc-row" style="padding:0.3rem 0;border-bottom:0.5px solid var(--border-2)">'
+            + '<span class="acc-val">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
+            + '<button class="btn-sm btn-danger" style="margin-left:auto" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
+            + '</div>';
+        }).join('')
+      : '<div class="loading-msg" style="padding:0.4rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
+
+    return '<div class="vol-section" style="margin-bottom:0.6rem">'
+      + '<div class="vol-section-head" style="cursor:default"><h3>📍 ' + (p.nome || '—') + '</h3>'
+      + '<button class="btn-sm btn-danger" onclick="pstEliminaPostazione(' + p.id + ')">elimina postazione</button></div>'
+      + '<div style="padding:0.5rem 0.7rem">'
+      + righeVol
+      + '<button class="btn-sm" style="margin-top:0.5rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.nome||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function pstNuovaPostazione() {
+  const inp = document.getElementById('pstNuovoNome');
+  const nome = (inp.value || '').trim();
+  if (!nome || !pstIntervento) return;
+  const ordine = pstPostazioni.length ? Math.max(...pstPostazioni.map(p => p.ordine || 0)) + 1 : 1;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/postazioni', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ intervento_id: pstIntervento.id, nome, ordine })
+    });
+    if (!res.ok) throw new Error();
+    inp.value = '';
+    await pstCaricaLista();
+  } catch(e) { alert('Errore nella creazione della postazione.'); }
+}
+
+async function pstEliminaPostazione(id) {
+  if (!confirm('Eliminare questa postazione e tutte le assegnazioni collegate?')) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, { method: 'DELETE', headers: H });
+    await pstCaricaLista();
+  } catch(e) { alert('Errore durante l\'eliminazione.'); }
+}
+
+async function pstRimuoviVolontario(assegnazioneId) {
+  try {
+    await fetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, { method: 'DELETE', headers: H });
+    await pstCaricaLista();
+  } catch(e) { alert('Errore durante la rimozione.'); }
+}
+
+async function pstApriAggiungiVolontario(postazioneId, nomePostazione) {
+  pstTargetPostazioneId = postazioneId;
+  document.getElementById('pstAddVolTitle').textContent = 'Aggiungi volontario — ' + nomePostazione;
+  document.getElementById('pstAddVolSearch').value = '';
+  if (!pstVolontariAttivi.length) {
+    try {
+      const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,telefono,stato&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+      pstVolontariAttivi = await r.json();
+    } catch(e) { pstVolontariAttivi = []; }
+  }
+  pstRenderModalList();
+  document.getElementById('pstAddVolOverlay').classList.add('open');
+}
+
+function pstChiudiModaleVol() {
+  document.getElementById('pstAddVolOverlay').classList.remove('open');
+  pstTargetPostazioneId = null;
+}
+
+function pstRenderModalList() {
+  const box = document.getElementById('pstAddVolList');
+  const q = (document.getElementById('pstAddVolSearch').value || '').toLowerCase().trim();
+  const postaz = pstPostazioni.find(p => p.id === pstTargetPostazioneId);
+  const giaQui = new Set((postaz ? postaz.volontari : []).map(a => a.volontario_id));
+
+  const filtrati = pstVolontariAttivi.filter(v => {
+    if (!q) return true;
+    return ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.squadra||'')).toLowerCase().includes(q);
+  });
+
+  if (!filtrati.length) { box.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>'; return; }
+
+  box.innerHTML = filtrati.map(v => {
+    const assegnato = giaQui.has(v.id);
+    return '<div class="acc-row" style="padding:0.4rem 0;border-bottom:0.5px solid var(--border-2)">'
+      + '<span class="acc-val">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + '</span>'
+      + (assegnato
+          ? '<span class="acc-badge acc-active" style="margin-left:auto">✓ assegnato</span>'
+          : '<button class="btn-sm" style="margin-left:auto" onclick="pstAggiungiVolontarioA(' + v.id + ')">+ aggiungi</button>')
+      + '</div>';
+  }).join('');
+}
+
+async function pstAggiungiVolontarioA(volontarioId) {
+  if (!pstTargetPostazioneId) return;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/postazione_volontari', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ postazione_id: pstTargetPostazioneId, volontario_id: volontarioId })
+    });
+    if (!res.ok) throw new Error();
+    await pstCaricaLista();
+    pstRenderModalList();
+  } catch(e) { alert('Errore durante l\'assegnazione (forse è già presente in questa postazione).'); }
+}
+
+async function pstEsportaExcel() {
+  if (!pstIntervento || !pstPostazioni.length) { alert('Nessuna postazione da esportare.'); return; }
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Postazioni');
+  ws.columns = [
+    { header: 'Postazione', key: 'postazione', width: 28 },
+    { header: 'Cognome',    key: 'cognome',    width: 18 },
+    { header: 'Nome',       key: 'nome',       width: 16 },
+    { header: 'Squadra',    key: 'squadra',    width: 14 },
+    { header: 'Telefono',   key: 'telefono',   width: 16 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  pstPostazioni.forEach(p => {
+    if (!p.volontari.length) {
+      ws.addRow({ postazione: p.nome, cognome: '', nome: '', squadra: '', telefono: '' });
+    } else {
+      p.volontari.forEach(a => {
+        const v = a.volontari || {};
+        ws.addRow({ postazione: p.nome, cognome: v.cognome || '', nome: v.nome || '', squadra: v.squadra || '', telefono: v.telefono || '' });
+      });
+    }
+  });
+
+  const out = await wb.xlsx.writeBuffer();
+  const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = (pstIntervento.evento || 'evento').replace(/[^A-Za-z0-9_\-]/g, '_').slice(0, 40);
+  a.href = url;
+  a.download = 'Postazioni_' + safeName + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // -- DB AVANZATO (Supabase) --

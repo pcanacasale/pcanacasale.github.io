@@ -827,6 +827,10 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="si-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
         <span class="si-label">Interventi</span>
       </button>
+      <button class="sidebar-item" id="siPostazioni" onclick="navTo('postazioni','Postazioni',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.3-7-11a7 7 0 0114 0c0 4.7-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+        <span class="si-label">Postazioni</span>
+      </button>
       <button class="sidebar-item" id="siMezzi" onclick="navTo('mezzi','Mezzi',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
         <span class="si-label">Mezzi</span>
@@ -989,6 +993,40 @@ div:hover > .vista-edit-btn { display:flex; }
         <button class="int-add-btn" onclick="apriFormIntervento(null)">+ nuovo</button>
       </div>
       <div class="int-list" id="intList"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- POSTAZIONI -->
+    <div class="panel" id="panelPostazioni">
+      <div class="panel-hdr"><h2>Postazioni</h2><p>Elenchi volontari per percorsi, gare ed eventi</p></div>
+
+      <div style="padding:0 0.9rem 0.6rem">
+        <label class="form-lbl">Intervento collegato</label>
+        <select class="form-inp" id="pstIntervento" onchange="pstSelezionaIntervento(this.value)">
+          <option value="">— seleziona un intervento —</option>
+        </select>
+      </div>
+
+      <div id="pstBody" style="display:none">
+        <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem">
+          <input class="form-inp" id="pstNuovoNome" placeholder="nome postazione (es. Km 5 - Incrocio via Roma)" style="flex:1">
+          <button class="btn-primary" style="width:auto;padding:0 1rem" onclick="pstNuovaPostazione()">+ postazione</button>
+        </div>
+        <div style="padding:0 0.9rem 0.6rem;display:flex;justify-content:flex-end">
+          <button class="btn-sm" onclick="pstEsportaExcel()">📊 Esporta Excel</button>
+        </div>
+        <div id="pstList" style="padding:0 0.9rem"></div>
+      </div>
+      <div id="pstEmpty" class="loading-msg" style="padding:1rem">seleziona un intervento per gestire le postazioni.</div>
+    </div>
+
+    <!-- MODALE AGGIUNGI VOLONTARIO A POSTAZIONE -->
+    <div class="vista-form-overlay" id="pstAddVolOverlay">
+      <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+        <h4 id="pstAddVolTitle">Aggiungi volontario</h4>
+        <input class="form-inp" id="pstAddVolSearch" placeholder="🔍 cerca cognome, nome, squadra..." oninput="pstRenderModalList()" style="margin-bottom:0.5rem">
+        <div id="pstAddVolList" style="max-height:50vh;overflow-y:auto"></div>
+        <button class="vol-detail-back" style="width:100%;margin-top:0.6rem" onclick="pstChiudiModaleVol()">chiudi</button>
+      </div>
     </div>
 
     <!-- SCHEDA INTERVENTO -->
@@ -1163,6 +1201,7 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
+            <label class="perm-check"><input type="checkbox" id="permPostazioni"> Postazioni</label>
             <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
             <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
@@ -1452,6 +1491,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> ✏️ Modifica Volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPostazioni"> 📍 Postazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
           <label class="perm-check"><input type="checkbox" id="modPermTlc"> 📻 TLC</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
@@ -1472,6 +1512,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=109"></script>
+<script src="area-riservata.js?v=110"></script>
 </body>
 </html>
