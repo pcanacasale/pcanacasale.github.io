@@ -6457,7 +6457,16 @@ async function pdcSelezionaPiano(id) {
   pdcPianoCorrente = pdcPianiList.find(p => String(p.id) === String(id));
   document.getElementById('pdcBody').style.display = 'block';
   document.getElementById('pdcBtnElimina').style.display = '';
+  document.getElementById('pdcMostraComposizione').checked = !!pdcPianoCorrente.mostra_composizione;
   await pdcCaricaMezzi();
+}
+
+async function pdcToggleComposizione(checked) {
+  if (!pdcPianoCorrente) return;
+  pdcPianoCorrente.mostra_composizione = checked;
+  try { await fetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ mostra_composizione: checked }) }); }
+  catch(e) {}
+  pdcRenderMezzi();
 }
 
 async function pdcCaricaMezzi() {
@@ -6487,11 +6496,13 @@ function pdcRenderMezzi() {
   const datalistArticoli = '<datalist id="pdcDotazioniList">' +
     dotAll.map(d => '<option value="' + (d.articolo + (d.magazzino ? ' — ' + d.magazzino : '')).replace(/"/g,'&quot;') + '">').join('') +
     '</datalist>';
+  const mostraOrdine = pdcPianoCorrente && pdcPianoCorrente.mostra_composizione;
   let html = datalistArticoli;
   pdcMezzi.forEach(m => {
     const isAltro = m.descrizione_mezzo && etichetteMezzi.indexOf(m.descrizione_mezzo) === -1;
     html += '<div class="vol-section" style="margin-bottom:0.6rem">'
       + '<div style="padding:0.6rem 0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
+      + (mostraOrdine ? '<input class="form-inp" type="number" style="width:56px;flex:none" title="Ordine in colonna" value="' + (m.ordine||0) + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'ordine\',parseInt(this.value)||0)">' : '')
       + '<select class="form-inp" style="flex:2;min-width:180px" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
       + '<option value="">— seleziona mezzo —</option>'
       + etichetteMezzi.map(l => '<option value="' + l.replace(/"/g,'&quot;') + '"' + (m.descrizione_mezzo===l?' selected':'') + '>' + l + '</option>').join('')
@@ -6548,10 +6559,24 @@ async function pdcAggiungiMezzo() {
   await pdcCaricaMezzi();
 }
 
+function _pdcVerificaQuantita(dotazioneId) {
+  if (!dotazioneId) return;
+  const d = dotAll.find(x => x.id === dotazioneId);
+  if (!d || d.quantita === null || d.quantita === undefined) return;
+  let richiesto = 0;
+  pdcMezzi.forEach(m => m.voci.forEach(v => {
+    if (v.dotazione_id === dotazioneId) richiesto += (v.quantita === null || v.quantita === undefined) ? 1 : v.quantita;
+  }));
+  if (richiesto > d.quantita) {
+    alert('⚠️ Attenzione: hai assegnato ' + richiesto + ' × "' + d.articolo + '" in questo piano di carico, ma in dotazione ce ne sono solo ' + d.quantita + ' disponibili.');
+  }
+}
+
 async function pdcAggiornaMezzo(id, campo, valore) {
-  const body = {}; body[campo] = valore || null;
+  const body = {}; body[campo] = valore || (campo === 'ordine' ? 0 : null);
   try { await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
   catch(e) {}
+  if (campo === 'ordine') { await pdcCaricaMezzi(); return; }
   const m = pdcMezzi.find(x => x.id === id); if (m) m[campo] = valore;
 }
 
@@ -6581,6 +6606,7 @@ async function pdcAggiungiVoceDaDotazione(mezzoId) {
   } catch(e) { alert('Errore aggiunta voce.'); return; }
   inp.value = '';
   await pdcCaricaMezzi();
+  _pdcVerificaQuantita(d.id);
 }
 
 async function pdcAggiungiVoceLibera(mezzoId) {
@@ -6603,8 +6629,10 @@ async function pdcAggiornaVoce(id, campo, valore) {
   const body = {}; body[campo] = valore;
   try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
   catch(e) {}
-  pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) v[campo] = valore; });
+  let voceAggiornata = null;
+  pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) { v[campo] = valore; voceAggiornata = v; } });
   if (campo === 'spuntato') pdcRenderMezzi();
+  if (campo === 'quantita' && voceAggiornata && voceAggiornata.dotazione_id) _pdcVerificaQuantita(voceAggiornata.dotazione_id);
 }
 
 async function pdcEliminaVoce(id) {
@@ -6640,7 +6668,9 @@ async function pdcEsportaPDF() {
     doc.text(titolo, cx, 45, {align:'center'});
   }
 
-  pdcMezzi.forEach((m, idx) => {
+  var mezziOrdinati = pdcMezzi.slice().sort((a,b) => (a.ordine||0) - (b.ordine||0));
+
+  mezziOrdinati.forEach((m, idx) => {
     if (idx > 0) doc.addPage();
     intestazione(pdcPianoCorrente.nome.toUpperCase());
     var y = 55;
@@ -6657,17 +6687,19 @@ async function pdcEsportaPDF() {
     });
   });
 
-  // Pagina composizione colonna
-  doc.addPage();
-  intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI');
-  var y2 = 60;
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  pdcMezzi.forEach(m => {
-    if (y2 > H - 20) { doc.addPage(); intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI'); y2 = 55; }
-    var riga = (m.descrizione_mezzo || '\u2014') + (m.autista_nome ? ' - ' + m.autista_nome : '');
-    doc.text(riga, mg, y2);
-    y2 += 10;
-  });
+  // Pagina composizione colonna, solo se il piano ha il flag attivo
+  if (pdcPianoCorrente.mostra_composizione) {
+    doc.addPage();
+    intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI');
+    var y2 = 60;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    mezziOrdinati.forEach(m => {
+      if (y2 > H - 20) { doc.addPage(); intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI'); y2 = 55; }
+      var riga = (m.descrizione_mezzo || '\u2014') + (m.autista_nome ? ' - ' + m.autista_nome : '');
+      doc.text(riga, mg, y2);
+      y2 += 10;
+    });
+  }
 
   doc.save(pdcPianoCorrente.nome.replace(/[^a-z0-9]+/gi,'_') + '.pdf');
 }

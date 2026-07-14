@@ -1425,9 +1425,13 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
 
       <div id="pdcBody" style="display:none">
-        <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+        <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
           <button class="btn-sm" onclick="pdcAggiungiMezzo()">+ Aggiungi mezzo</button>
           <button class="btn-sm" onclick="pdcEsportaPDF()">📄 Scarica PDF</button>
+          <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--testo-2);margin-left:0.4rem">
+            <input type="checkbox" id="pdcMostraComposizione" onchange="pdcToggleComposizione(this.checked)">
+            Includi pagina "Composizione colonna" (abilita l'ordine dei mezzi)
+          </label>
         </div>
         <div id="pdcMezziList" style="padding:0 0.9rem 1rem"></div>
       </div>
@@ -1714,6 +1718,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=131"></script>
+<script src="area-riservata.js?v=132"></script>
 </body>
 </html>
