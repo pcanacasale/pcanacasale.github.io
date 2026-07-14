@@ -6050,7 +6050,7 @@ function dotRenderLista() {
       + (r.codice ? '<span style="color:var(--testo-3);font-weight:400">' + r.codice + ' · </span>' : '') + r.articolo
       + '</h3>'
       + '<div style="display:flex;gap:0.6rem;align-items:center;flex-shrink:0;font-size:0.8rem;color:var(--testo-2)">'
-      + '<span>' + r.magazzino + '</span><span style="font-weight:600;color:var(--testo-1)">' + qtaLbl + '</span>'
+      + '<span style="font-weight:600;color:var(--testo-1)">' + qtaLbl + '</span>'
       + '<button class="btn-sm" onclick="event.stopPropagation();dotApriModifica(' + r.id + ')">✏️</button>'
       + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();dotEliminaArticolo(' + r.id + ')">🗑️</button>'
       + '<span>' + (espansa ? '▾' : '▸') + '</span>'
@@ -6065,7 +6065,10 @@ function dotRenderLista() {
 
       if (dotExpandedTab === 'dettagli') {
         html += '<div style="font-size:0.85rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.3rem">'
+          + '<div><b>Codice:</b> ' + (r.codice || '—') + '</div>'
+          + '<div><b>Magazzino:</b> ' + r.magazzino + '</div>'
           + '<div><b>Categoria:</b> ' + (catPath || '—') + '</div>'
+          + '<div><b>Quantità:</b> ' + qtaLbl + '</div>'
           + '<div><b>Descrizione:</b> ' + (r.descrizione || '—') + '</div>'
           + '<div><b>Note:</b> ' + (r.note || '—') + '</div>'
           + '</div>';
