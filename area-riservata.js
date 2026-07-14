@@ -6463,6 +6463,9 @@ async function pdcSelezionaPiano(id) {
 async function pdcCaricaMezzi() {
   const list = document.getElementById('pdcMezziList');
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  if (!mezziData || !mezziData.length) {
+    try { const r = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
+  }
   try {
     const mezziRes = await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?select=*&piano_id=eq.' + pdcPianoCorrente.id + '&order=ordine.asc', { headers: H });
     const mezzi = await mezziRes.json();
@@ -6473,15 +6476,28 @@ async function pdcCaricaMezzi() {
   pdcRenderMezzi();
 }
 
+function _pdcLabelMezzo(m) {
+  return [m.automezzo, m.targa].filter(Boolean).join(' — ') || ('Mezzo #' + m.id);
+}
+
 function pdcRenderMezzi() {
   const list = document.getElementById('pdcMezziList');
   if (!pdcMezzi.length) { list.innerHTML = '<div class="loading-msg">nessun mezzo aggiunto. Usa "+ Aggiungi mezzo".</div>'; return; }
-  const opzioniArticoli = dotAll.map(d => '<option value="' + d.id + '">' + d.articolo + (d.magazzino ? ' (' + d.magazzino + ')' : '') + '</option>').join('');
-  let html = '';
+  const etichetteMezzi = (mezziData || []).map(m => _pdcLabelMezzo(m));
+  const datalistArticoli = '<datalist id="pdcDotazioniList">' +
+    dotAll.map(d => '<option value="' + (d.articolo + (d.magazzino ? ' — ' + d.magazzino : '')).replace(/"/g,'&quot;') + '">').join('') +
+    '</datalist>';
+  let html = datalistArticoli;
   pdcMezzi.forEach(m => {
+    const isAltro = m.descrizione_mezzo && etichetteMezzi.indexOf(m.descrizione_mezzo) === -1;
     html += '<div class="vol-section" style="margin-bottom:0.6rem">'
       + '<div style="padding:0.6rem 0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
-      + '<input class="form-inp" style="flex:2;min-width:180px" placeholder="Descrizione mezzo (es. DEFENDER - TRAINO POMPONE)" value="' + (m.descrizione_mezzo||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
+      + '<select class="form-inp" style="flex:2;min-width:180px" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
+      + '<option value="">— seleziona mezzo —</option>'
+      + etichetteMezzi.map(l => '<option value="' + l.replace(/"/g,'&quot;') + '"' + (m.descrizione_mezzo===l?' selected':'') + '>' + l + '</option>').join('')
+      + '<option value="__altro__"' + (isAltro?' selected':'') + '>✏️ Altro (testo libero)</option>'
+      + '</select>'
+      + '<input class="form-inp" style="flex:2;min-width:180px' + (isAltro?'':';display:none') + '" id="pdcMezzoLibero' + m.id + '" placeholder="Descrizione mezzo (es. CARRELLO BIANCO)" value="' + (isAltro?(m.descrizione_mezzo||'').replace(/"/g,'&quot;'):'') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
       + '<input class="form-inp" style="flex:1;min-width:140px" placeholder="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
       + '<button class="btn-sm btn-danger" onclick="pdcEliminaMezzo(' + m.id + ')">🗑️ mezzo</button>'
       + '</div>'
@@ -6497,7 +6513,7 @@ function pdcRenderMezzi() {
     });
 
     html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">'
-      + '<select class="form-inp" style="flex:1;min-width:160px" id="pdcSelArticolo' + m.id + '"><option value="">— da dotazioni —</option>' + opzioniArticoli + '</select>'
+      + '<input class="form-inp" style="flex:1;min-width:160px" list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="🔍 cerca articolo per nome...">'
       + '<button class="btn-sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">+ aggiungi</button>'
       + '<input class="form-inp" style="flex:1;min-width:160px" placeholder="oppure voce libera..." id="pdcLiberaVoce' + m.id + '">'
       + '<button class="btn-sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">+ aggiungi</button>'
@@ -6506,6 +6522,18 @@ function pdcRenderMezzi() {
     html += '</div></div>';
   });
   list.innerHTML = html;
+}
+
+function pdcSelezionaMezzoVeicolo(id, valore) {
+  const liberoInp = document.getElementById('pdcMezzoLibero' + id);
+  if (valore === '__altro__') {
+    liberoInp.style.display = '';
+    liberoInp.focus();
+    return;
+  }
+  liberoInp.style.display = 'none';
+  liberoInp.value = '';
+  pdcAggiornaMezzo(id, 'descrizione_mezzo', valore);
 }
 
 async function pdcAggiungiMezzo() {
@@ -6535,11 +6563,14 @@ async function pdcEliminaMezzo(id) {
 }
 
 async function pdcAggiungiVoceDaDotazione(mezzoId) {
-  const sel = document.getElementById('pdcSelArticolo' + mezzoId);
-  const dotId = sel.value;
-  if (!dotId) return;
-  const d = dotAll.find(x => String(x.id) === String(dotId));
-  if (!d) return;
+  const inp = document.getElementById('pdcSelArticolo' + mezzoId);
+  const testo = inp.value.trim();
+  if (!testo) return;
+  // prova prima "Articolo — Magazzino" esatto, poi solo articolo (esatto), poi corrispondenza parziale
+  let d = dotAll.find(x => (x.articolo + (x.magazzino ? ' — ' + x.magazzino : '')).toLowerCase() === testo.toLowerCase());
+  if (!d) d = dotAll.find(x => x.articolo.toLowerCase() === testo.toLowerCase());
+  if (!d) d = dotAll.find(x => x.articolo.toLowerCase().includes(testo.toLowerCase()));
+  if (!d) { alert('Articolo non trovato nelle dotazioni. Usa "voce libera" oppure controlla il nome.'); return; }
   const m = pdcMezzi.find(x => x.id === mezzoId);
   const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
   try {
@@ -6548,7 +6579,7 @@ async function pdcAggiungiVoceDaDotazione(mezzoId) {
       body: JSON.stringify({ mezzo_id: mezzoId, dotazione_id: d.id, descrizione: d.articolo, quantita: null, ordine })
     });
   } catch(e) { alert('Errore aggiunta voce.'); return; }
-  sel.value = '';
+  inp.value = '';
   await pdcCaricaMezzi();
 }
 
