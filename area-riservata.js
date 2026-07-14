@@ -315,7 +315,7 @@ function showPanel(name, btn) {
   if (name === 'interventi') caricaInterventi();
   if (name === 'postazioni') caricaPostazioni();
   if (name === 'dotazioni') caricaDotazioni();
-  if (name === 'pianicarico') caricaPianiCarico();
+  if (name === 'pianiCarico') caricaPianiCarico();
   if (name === 'impostazioni') caricaCategorieDotazioni();
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
