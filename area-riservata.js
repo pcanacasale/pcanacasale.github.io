@@ -228,7 +228,7 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni'
+      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -250,6 +250,8 @@ function avviaDashboard() {
     }
     if (hasPerm('interventi'))   showSi('siInterventi');
     if (hasPerm('postazioni'))   showSi('siPostazioni');
+    if (hasPerm('dotazioni'))    showSi('siDotazioni');
+    if (hasPerm('pianicarico'))  showSi('siPianiCarico');
     if (hasPerm('mezzi'))        showSi('siMezzi');
     if (hasPerm('tlc'))          showSi('siTlc');
     if (hasPerm('galleria'))     showSi('siGalleria');
@@ -312,6 +314,8 @@ function showPanel(name, btn) {
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
   if (name === 'postazioni') caricaPostazioni();
+  if (name === 'dotazioni') caricaDotazioni();
+  if (name === 'pianicarico') caricaPianiCarico();
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
@@ -622,6 +626,8 @@ async function salvaUtente() {
     modifica_volontari: document.getElementById('permModificaVolontari') ? document.getElementById('permModificaVolontari').checked : false,
     interventi: document.getElementById('permInterventi').checked,
     postazioni: document.getElementById('permPostazioni') ? document.getElementById('permPostazioni').checked : false,
+    dotazioni:  document.getElementById('permDotazioni') ? document.getElementById('permDotazioni').checked : false,
+    pianicarico: document.getElementById('permPianiCarico') ? document.getElementById('permPianiCarico').checked : false,
     mezzi:      document.getElementById('permMezzi').checked,
     tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
     richieste:  document.getElementById('permRichieste').checked,
@@ -664,7 +670,7 @@ function apriModificaUtente(u) {
   document.getElementById('modRuolo').value         = u.ruolo || '';
   var p = u.permessi || {};
   var permMap = {
-    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
+    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche'
   };
@@ -694,6 +700,8 @@ async function salvaModificaUtente() {
     modifica_volontari: document.getElementById('modPermModificaVolontari') ? document.getElementById('modPermModificaVolontari').checked : false,
     interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
     postazioni:   document.getElementById('modPermPostazioni') ? document.getElementById('modPermPostazioni').checked : false,
+    dotazioni:    document.getElementById('modPermDotazioni') ? document.getElementById('modPermDotazioni').checked : false,
+    pianicarico:  document.getElementById('modPermPianiCarico') ? document.getElementById('modPermPianiCarico').checked : false,
     mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
     tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
     db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
@@ -5895,6 +5903,546 @@ function getRevisioneStatus(dataStr) {
   if (diff < 0)   return { cls:'scaduta', label:'Scaduta il ' + d.toLocaleDateString('it-IT') };
   if (diff < 60)  return { cls:'vicina',  label:'Scade il ' + d.toLocaleDateString('it-IT') };
   return { cls:'', label:'Revisione: ' + d.toLocaleDateString('it-IT') };
+}
+
+// ==================== DOTAZIONI ====================
+var dotCategorie = [];
+var dotAll = [];
+var dotCategoriaAttiva = null; // null = tutte
+var dotEditId = null;
+
+async function caricaDotazioni() {
+  const lista = document.getElementById('dotLista');
+  lista.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const [catRes, dotRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=categoria.asc,articolo.asc', { headers: H })
+    ]);
+    dotCategorie = await catRes.json();
+    dotAll = await dotRes.json();
+  } catch(e) {
+    lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento dotazioni.</div>';
+    return;
+  }
+  dotRenderTabs();
+  dotRenderCategoriaSelect();
+  dotRenderLista();
+}
+
+function dotRenderTabs() {
+  const el = document.getElementById('dotCategorieTabs');
+  if (!el) return;
+  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
+  html += '<button class="btn-sm' + (dotCategoriaAttiva === null ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
+  dotCategorie.forEach((c, idx) => {
+    const attiva = dotCategoriaAttiva === c.nome;
+    html += '<span style="display:inline-flex;align-items:center;gap:0.15rem;border:1px solid var(--border);border-radius:8px;padding:0.15rem">';
+    if (idx > 0) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a sinistra" onclick="event.stopPropagation();dotSpostaCategoria(' + c.id + ',-1)">◀</button>';
+    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" style="border:none" onclick="dotSelezionaCategoria(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
+    if (idx < dotCategorie.length - 1) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a destra" onclick="event.stopPropagation();dotSpostaCategoria(' + c.id + ',1)">▶</button>';
+    html += '</span>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function dotRenderCategoriaSelect() {
+  const sel = document.getElementById('dotNuovoCategoria');
+  if (!sel) return;
+  sel.innerHTML = dotCategorie.map(c => '<option value="' + c.nome + '">' + c.nome + '</option>').join('');
+}
+
+async function dotSpostaCategoria(id, direzione) {
+  const idx = dotCategorie.findIndex(c => c.id === id);
+  const altroIdx = idx + direzione;
+  if (idx < 0 || altroIdx < 0 || altroIdx >= dotCategorie.length) return;
+  const a = dotCategorie[idx], b = dotCategorie[altroIdx];
+  const ordineA = a.ordine, ordineB = b.ordine;
+  try {
+    await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + a.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineB }) }),
+      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + b.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineA }) })
+    ]);
+  } catch(e) { alert('Errore nello spostamento.'); return; }
+  await caricaDotazioni();
+}
+
+function dotSelezionaCategoria(nome) {
+  dotCategoriaAttiva = nome;
+  dotRenderTabs();
+  dotRenderLista();
+}
+
+function dotFiltraLista() { dotRenderLista(); }
+
+function dotRenderLista() {
+  const el = document.getElementById('dotLista');
+  if (!el) return;
+  const q = (document.getElementById('dotSearch').value || '').trim().toLowerCase();
+  let righe = dotAll.slice();
+  if (dotCategoriaAttiva !== null) righe = righe.filter(r => r.categoria === dotCategoriaAttiva);
+  if (q) {
+    righe = righe.filter(r =>
+      (r.articolo||'').toLowerCase().includes(q) ||
+      (r.ubicazione||'').toLowerCase().includes(q) ||
+      (r.note||'').toLowerCase().includes(q) ||
+      (r.categoria||'').toLowerCase().includes(q)
+    );
+  }
+  if (!righe.length) { el.innerHTML = '<div class="loading-msg">nessun articolo trovato.</div>'; return; }
+  let html = '<div style="display:flex;flex-direction:column;gap:0.4rem">';
+  righe.forEach(r => {
+    const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita + (r.unita_misura ? ' ' + r.unita_misura : '');
+    html += '<div class="vol-section" style="margin:0">'
+      + '<div style="padding:0.6rem 0.8rem;display:flex;align-items:center;gap:0.6rem">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:600">' + r.articolo + '</div>'
+      + '<div style="font-size:0.78rem;color:var(--testo-2)">' + r.categoria + (r.ubicazione ? ' · ' + r.ubicazione : '') + (r.note ? ' · ' + r.note : '') + '</div>'
+      + '</div>'
+      + '<div style="font-weight:600;white-space:nowrap">' + qtaLbl + '</div>'
+      + '<button class="btn-sm" onclick="dotApriModifica(' + r.id + ')">✏️</button>'
+      + '<button class="btn-sm btn-danger" onclick="dotEliminaArticolo(' + r.id + ')">🗑️</button>'
+      + '</div></div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function dotToggleNuovaForm() {
+  const body = document.getElementById('dotNuovaBody');
+  const chev = document.getElementById('dotNuovaChevron');
+  const apri = body.style.display === 'none';
+  body.style.display = apri ? 'flex' : 'none';
+  chev.textContent = apri ? '▾' : '▸';
+  if (apri && !dotEditId) dotResetForm();
+}
+
+function dotResetForm() {
+  dotEditId = null;
+  document.getElementById('dotNuovaHead').querySelector('h3').textContent = '+ Nuovo articolo';
+  if (dotCategoriaAttiva) document.getElementById('dotNuovoCategoria').value = dotCategoriaAttiva;
+  document.getElementById('dotNuovoArticolo').value = '';
+  document.getElementById('dotNuovoQuantita').value = '';
+  document.getElementById('dotNuovoUM').value = '';
+  document.getElementById('dotNuovoUbicazione').value = '';
+  document.getElementById('dotNuovoNote').value = '';
+}
+
+function dotApriModifica(id) {
+  const r = dotAll.find(x => x.id === id);
+  if (!r) return;
+  dotEditId = id;
+  document.getElementById('dotNuovaHead').querySelector('h3').textContent = '✏️ Modifica articolo';
+  document.getElementById('dotNuovoCategoria').value = r.categoria;
+  document.getElementById('dotNuovoArticolo').value = r.articolo || '';
+  document.getElementById('dotNuovoQuantita').value = (r.quantita === null || r.quantita === undefined) ? '' : r.quantita;
+  document.getElementById('dotNuovoUM').value = r.unita_misura || '';
+  document.getElementById('dotNuovoUbicazione').value = r.ubicazione || '';
+  document.getElementById('dotNuovoNote').value = r.note || '';
+  document.getElementById('dotNuovaBody').style.display = 'flex';
+  document.getElementById('dotNuovaChevron').textContent = '▾';
+}
+
+async function dotSalvaNuovo() {
+  const categoria = document.getElementById('dotNuovoCategoria').value;
+  const articolo = document.getElementById('dotNuovoArticolo').value.trim();
+  if (!articolo) { alert('Inserisci il nome articolo.'); return; }
+  const qtaRaw = document.getElementById('dotNuovoQuantita').value;
+  const body = {
+    categoria: categoria,
+    articolo: articolo,
+    quantita: qtaRaw === '' ? null : parseFloat(qtaRaw),
+    unita_misura: document.getElementById('dotNuovoUM').value.trim() || null,
+    ubicazione: document.getElementById('dotNuovoUbicazione').value.trim() || null,
+    note: document.getElementById('dotNuovoNote').value.trim() || null,
+    updated_at: new Date().toISOString()
+  };
+  try {
+    if (dotEditId) {
+      await fetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + dotEditId, { method:'PATCH', headers: HJ, body: JSON.stringify(body) });
+    } else {
+      await fetch(SUPA_URL + '/rest/v1/dotazioni', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(body) });
+    }
+  } catch(e) { alert('Errore salvataggio articolo.'); return; }
+  dotResetForm();
+  document.getElementById('dotNuovaBody').style.display = 'none';
+  document.getElementById('dotNuovaChevron').textContent = '▸';
+  await caricaDotazioni();
+}
+
+async function dotEliminaArticolo(id) {
+  if (!confirm('Eliminare questo articolo?')) return;
+  try { await fetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + id, { method:'DELETE', headers: H }); }
+  catch(e) { alert('Errore eliminazione.'); return; }
+  await caricaDotazioni();
+}
+
+async function dotScaricaModello() {
+  try { await caricaExcelJS(); } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
+  const wb = new ExcelJS.Workbook();
+  const cats = dotCategorie.length ? dotCategorie.map(c => c.nome) : ['Magazzino A','Magazzino B','Magazzino C'];
+  cats.forEach(nome => {
+    const ws = wb.addWorksheet(nome);
+    ws.columns = [
+      { header: 'Articolo', key: 'articolo', width: 40 },
+      { header: 'Quantità', key: 'quantita', width: 12 },
+      { header: 'Note',     key: 'note',     width: 30 }
+    ];
+    ws.getRow(1).font = { bold: true };
+  });
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/octet-stream' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'modello_dotazioni.xlsx'; a.click();
+}
+
+async function dotEsportaExcel() {
+  try { await caricaExcelJS(); } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
+  const wb = new ExcelJS.Workbook();
+  const cats = dotCategorie.length ? dotCategorie.map(c => c.nome) : Array.from(new Set(dotAll.map(r => r.categoria)));
+  cats.forEach(nome => {
+    const ws = wb.addWorksheet(nome);
+    ws.columns = [
+      { header: 'Articolo', key: 'articolo', width: 40 },
+      { header: 'Quantità', key: 'quantita', width: 12 },
+      { header: 'U.M.',     key: 'um',       width: 10 },
+      { header: 'Ubicazione', key: 'ubicazione', width: 20 },
+      { header: 'Note',     key: 'note',     width: 30 }
+    ];
+    ws.getRow(1).font = { bold: true };
+    dotAll.filter(r => r.categoria === nome).forEach(r => {
+      ws.addRow({ articolo: r.articolo, quantita: r.quantita, um: r.unita_misura||'', ubicazione: r.ubicazione||'', note: r.note||'' });
+    });
+  });
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/octet-stream' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'dotazioni.xlsx'; a.click();
+}
+
+function _dotParseQuantita(raw) {
+  if (raw === null || raw === undefined || raw === '') return { valore: null, extra: null };
+  const s = String(raw).trim();
+  const n = parseFloat(s.replace(',', '.'));
+  if (!isNaN(n) && String(n) === s.replace(',', '.')) return { valore: n, extra: null };
+  // valori tipo "3+3": prova a sommare
+  if (/^[\d\s.+]+$/.test(s)) {
+    const parti = s.split('+').map(p => parseFloat(p.trim().replace(',', '.'))).filter(v => !isNaN(v));
+    if (parti.length > 1) return { valore: parti.reduce((a,b) => a+b, 0), extra: s };
+  }
+  return { valore: null, extra: s };
+}
+
+async function dotImportaExcel(file) {
+  if (!file) return;
+  const status = document.getElementById('dotImportStatus');
+  status.style.display = 'block';
+  status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
+  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
+
+  const CATEGORIE_VALIDE = { 'magazzino a':'Magazzino A', 'magazzino b':'Magazzino B', 'magazzino c':'Magazzino C' };
+
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+
+    let totRighe = 0, fogliUsati = [];
+    for (const ws of wb.worksheets) {
+      const key = ws.name.trim().toLowerCase();
+      const categoria = CATEGORIE_VALIDE[key];
+      if (!categoria) continue; // ignora automezzi, cassetta attrezzi, COC, abbigliamento, altri fogli
+      fogliUsati.push(categoria);
+
+      const righe = [];
+      ws.eachRow((row, num) => {
+        if (num === 1) return; // header
+        const val = (c) => (c && c.value !== null && c.value !== undefined) ? String(c.value).trim() : '';
+        const articolo = val(row.getCell(1));
+        const quantitaRaw = val(row.getCell(2));
+        const note = val(row.getCell(3));
+        if (!articolo) return;
+        righe.push({ articolo, quantitaRaw, note });
+      });
+      if (!righe.length) continue;
+
+      // sostituisce gli articoli esistenti della categoria con quelli importati
+      await fetch(SUPA_URL + '/rest/v1/dotazioni?categoria=eq.' + encodeURIComponent(categoria), { method: 'DELETE', headers: H });
+
+      const nuovi = righe.map(r => {
+        const q = _dotParseQuantita(r.quantitaRaw);
+        let note = r.note || null;
+        if (q.extra && !note) note = 'quantità originale: ' + q.extra;
+        else if (q.extra) note = note + ' (quantità originale: ' + q.extra + ')';
+        return { categoria: categoria, articolo: r.articolo, quantita: q.valore, note: note };
+      });
+      await fetch(SUPA_URL + '/rest/v1/dotazioni', { method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(nuovi) });
+      totRighe += nuovi.length;
+    }
+
+    if (!fogliUsati.length) {
+      status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
+      return;
+    }
+    status.innerHTML = '<div class="loading-msg" style="color:var(--green)">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + ').</div>';
+    await logAttivita('ha importato dotazioni da Excel (' + fogliUsati.join(', ') + ')');
+    await caricaDotazioni();
+  } catch(e) {
+    status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante l\'importazione: ' + e.message + '</div>';
+  }
+}
+
+// ==================== PIANI DI CARICO ====================
+var pdcPianiList = [];
+var pdcPianoCorrente = null;
+var pdcMezzi = []; // [{...mezzo, voci:[...]}]
+
+async function caricaPianiCarico() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/piani_carico?select=*&order=created_at.desc', { headers: H });
+    pdcPianiList = await res.json();
+  } catch(e) { pdcPianiList = []; }
+  const sel = document.getElementById('pdcPiano');
+  sel.innerHTML = '<option value="">— seleziona un piano —</option>' +
+    pdcPianiList.map(p => '<option value="' + p.id + '">' + p.nome + (p.data ? ' (' + new Date(p.data).toLocaleDateString('it-IT') + ')' : '') + '</option>').join('');
+  document.getElementById('pdcBody').style.display = 'none';
+  document.getElementById('pdcBtnElimina').style.display = 'none';
+  pdcPianoCorrente = null;
+  if (!dotCategorie.length && !dotAll.length) {
+    try {
+      const [catRes, dotRes] = await Promise.all([
+        fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc', { headers: H }),
+        fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=categoria.asc,articolo.asc', { headers: H })
+      ]);
+      dotCategorie = await catRes.json();
+      dotAll = await dotRes.json();
+    } catch(e) {}
+  }
+}
+
+function pdcApriNuovoPiano() {
+  const body = document.getElementById('pdcNuovoBody');
+  body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+  document.getElementById('pdcNuovoNome').value = '';
+  document.getElementById('pdcNuovoData').value = '';
+}
+
+async function pdcSalvaNuovoPiano() {
+  const nome = document.getElementById('pdcNuovoNome').value.trim();
+  if (!nome) { alert('Inserisci il nome del piano.'); return; }
+  const data = document.getElementById('pdcNuovoData').value || null;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/piani_carico', {
+      method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=representation'}),
+      body: JSON.stringify({ nome, data })
+    });
+    const created = await res.json();
+    await logAttivita('ha creato il piano di carico: ' + nome);
+    document.getElementById('pdcNuovoBody').style.display = 'none';
+    await caricaPianiCarico();
+    document.getElementById('pdcPiano').value = created[0].id;
+    await pdcSelezionaPiano(created[0].id);
+  } catch(e) { alert('Errore creazione piano.'); }
+}
+
+async function pdcEliminaPianoCorrente() {
+  if (!pdcPianoCorrente) return;
+  if (!confirm('Eliminare il piano "' + pdcPianoCorrente.nome + '" e tutti i mezzi/voci collegati?')) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method: 'DELETE', headers: H });
+    await logAttivita('ha eliminato il piano di carico: ' + pdcPianoCorrente.nome);
+  } catch(e) { alert('Errore eliminazione piano.'); return; }
+  await caricaPianiCarico();
+}
+
+async function pdcSelezionaPiano(id) {
+  if (!id) { document.getElementById('pdcBody').style.display = 'none'; document.getElementById('pdcBtnElimina').style.display = 'none'; pdcPianoCorrente = null; return; }
+  pdcPianoCorrente = pdcPianiList.find(p => String(p.id) === String(id));
+  document.getElementById('pdcBody').style.display = 'block';
+  document.getElementById('pdcBtnElimina').style.display = '';
+  await pdcCaricaMezzi();
+}
+
+async function pdcCaricaMezzi() {
+  const list = document.getElementById('pdcMezziList');
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const mezziRes = await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?select=*&piano_id=eq.' + pdcPianoCorrente.id + '&order=ordine.asc', { headers: H });
+    const mezzi = await mezziRes.json();
+    const vociRes = await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?select=*&order=ordine.asc', { headers: H });
+    const vociAll = await vociRes.json();
+    pdcMezzi = mezzi.map(m => Object.assign({}, m, { voci: vociAll.filter(v => v.mezzo_id === m.id) }));
+  } catch(e) { pdcMezzi = []; }
+  pdcRenderMezzi();
+}
+
+function pdcRenderMezzi() {
+  const list = document.getElementById('pdcMezziList');
+  if (!pdcMezzi.length) { list.innerHTML = '<div class="loading-msg">nessun mezzo aggiunto. Usa "+ Aggiungi mezzo".</div>'; return; }
+  const opzioniArticoli = dotAll.map(d => '<option value="' + d.id + '">' + d.articolo + (d.categoria ? ' (' + d.categoria + ')' : '') + '</option>').join('');
+  let html = '';
+  pdcMezzi.forEach(m => {
+    html += '<div class="vol-section" style="margin-bottom:0.6rem">'
+      + '<div style="padding:0.6rem 0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
+      + '<input class="form-inp" style="flex:2;min-width:180px" placeholder="Descrizione mezzo (es. DEFENDER - TRAINO POMPONE)" value="' + (m.descrizione_mezzo||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
+      + '<input class="form-inp" style="flex:1;min-width:140px" placeholder="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
+      + '<button class="btn-sm btn-danger" onclick="pdcEliminaMezzo(' + m.id + ')">🗑️ mezzo</button>'
+      + '</div>'
+      + '<div style="padding:0 0.8rem 0.6rem">';
+
+    m.voci.forEach(v => {
+      html += '<div style="display:flex;gap:0.4rem;align-items:center;padding:0.25rem 0">'
+        + '<input type="checkbox" ' + (v.spuntato ? 'checked' : '') + ' onchange="pdcAggiornaVoce(' + v.id + ',\'spuntato\',this.checked)">'
+        + '<div style="flex:1' + (v.spuntato ? ';text-decoration:line-through;color:var(--testo-3)' : '') + '">' + v.descrizione + '</div>'
+        + '<input class="form-inp" type="number" step="0.01" style="width:80px" placeholder="Qta" value="' + (v.quantita===null||v.quantita===undefined?'':v.quantita) + '" onchange="pdcAggiornaVoce(' + v.id + ',\'quantita\',this.value===\'\'?null:parseFloat(this.value))">'
+        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="pdcEliminaVoce(' + v.id + ')">✕</button>'
+        + '</div>';
+    });
+
+    html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">'
+      + '<select class="form-inp" style="flex:1;min-width:160px" id="pdcSelArticolo' + m.id + '"><option value="">— da dotazioni —</option>' + opzioniArticoli + '</select>'
+      + '<button class="btn-sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">+ aggiungi</button>'
+      + '<input class="form-inp" style="flex:1;min-width:160px" placeholder="oppure voce libera..." id="pdcLiberaVoce' + m.id + '">'
+      + '<button class="btn-sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">+ aggiungi</button>'
+      + '</div>';
+
+    html += '</div></div>';
+  });
+  list.innerHTML = html;
+}
+
+async function pdcAggiungiMezzo() {
+  if (!pdcPianoCorrente) return;
+  const ordine = pdcMezzi.length ? Math.max(...pdcMezzi.map(m => m.ordine||0)) + 1 : 1;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi', {
+      method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ piano_id: pdcPianoCorrente.id, descrizione_mezzo: '', autista_nome: '', ordine })
+    });
+  } catch(e) { alert('Errore aggiunta mezzo.'); return; }
+  await pdcCaricaMezzi();
+}
+
+async function pdcAggiornaMezzo(id, campo, valore) {
+  const body = {}; body[campo] = valore || null;
+  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
+  catch(e) {}
+  const m = pdcMezzi.find(x => x.id === id); if (m) m[campo] = valore;
+}
+
+async function pdcEliminaMezzo(id) {
+  if (!confirm('Eliminare questo mezzo e tutte le voci collegate?')) return;
+  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'DELETE', headers: H }); }
+  catch(e) {}
+  await pdcCaricaMezzi();
+}
+
+async function pdcAggiungiVoceDaDotazione(mezzoId) {
+  const sel = document.getElementById('pdcSelArticolo' + mezzoId);
+  const dotId = sel.value;
+  if (!dotId) return;
+  const d = dotAll.find(x => String(x.id) === String(dotId));
+  if (!d) return;
+  const m = pdcMezzi.find(x => x.id === mezzoId);
+  const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
+      method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ mezzo_id: mezzoId, dotazione_id: d.id, descrizione: d.articolo, quantita: null, ordine })
+    });
+  } catch(e) { alert('Errore aggiunta voce.'); return; }
+  sel.value = '';
+  await pdcCaricaMezzi();
+}
+
+async function pdcAggiungiVoceLibera(mezzoId) {
+  const inp = document.getElementById('pdcLiberaVoce' + mezzoId);
+  const testo = inp.value.trim();
+  if (!testo) return;
+  const m = pdcMezzi.find(x => x.id === mezzoId);
+  const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
+      method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ mezzo_id: mezzoId, dotazione_id: null, descrizione: testo, quantita: null, ordine })
+    });
+  } catch(e) { alert('Errore aggiunta voce.'); return; }
+  inp.value = '';
+  await pdcCaricaMezzi();
+}
+
+async function pdcAggiornaVoce(id, campo, valore) {
+  const body = {}; body[campo] = valore;
+  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
+  catch(e) {}
+  pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) v[campo] = valore; });
+  if (campo === 'spuntato') pdcRenderMezzi();
+}
+
+async function pdcEliminaVoce(id) {
+  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'DELETE', headers: H }); }
+  catch(e) {}
+  await pdcCaricaMezzi();
+}
+
+async function pdcEsportaPDF() {
+  if (!pdcPianoCorrente || !pdcMezzi.length) { alert('Nessun mezzo da esportare.'); return; }
+  var LOGO_SEZ = 'data:image/png;base64,' + _getLogoSez();
+  var LOGO_VOL = 'data:image/png;base64,' + _getLogoVol();
+  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var W = 210, H = 297, cx = W/2, mg = 14;
+  var GREEN = [26,122,74];
+
+  function intestazione(titolo) {
+    doc.setDrawColor(...GREEN); doc.setLineWidth(0.35); doc.rect(7,7,W-14,H-14);
+    try { doc.addImage(LOGO_SEZ,'PNG', mg, 10, 20, 20); } catch(e){}
+    try { doc.addImage(LOGO_VOL,'PNG', W-mg-16, 10, 16, 20); } catch(e){}
+    doc.setTextColor(...GREEN);
+    doc.setFont('times','bold'); doc.setFontSize(12);
+    doc.text('ASSOCIAZIONE NAZIONALE ALPINI', cx, 16, {align:'center'});
+    doc.setFontSize(10);
+    doc.text('SEZIONE DI CASALE MONFERRATO', cx, 21, {align:'center'});
+    doc.setFont('times','italic'); doc.setFontSize(8);
+    doc.text("Medaglia d'Oro al M.C. della Citt\u00e0 di Casale Monferrato", cx, 26, {align:'center'});
+    doc.setFont('times','bold'); doc.setFontSize(10);
+    doc.text('UNIT\u00c0 DI PROTEZIONE CIVILE ANA', cx, 31, {align:'center'});
+    doc.setDrawColor(...GREEN); doc.line(mg, 35, W-mg, 35);
+    doc.setTextColor(17,17,17);
+    doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text(titolo, cx, 45, {align:'center'});
+  }
+
+  pdcMezzi.forEach((m, idx) => {
+    if (idx > 0) doc.addPage();
+    intestazione(pdcPianoCorrente.nome.toUpperCase());
+    var y = 55;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text((m.descrizione_mezzo || ('MEZZO ' + (idx+1))).toUpperCase(), mg, y);
+    y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    m.voci.forEach(v => {
+      if (y > H - 20) { doc.addPage(); intestazione(pdcPianoCorrente.nome.toUpperCase()); y = 55; }
+      doc.rect(mg, y-3.2, 4, 4);
+      var testo = v.descrizione + (v.quantita !== null && v.quantita !== undefined ? '  (' + v.quantita + ')' : '');
+      doc.text(testo, mg + 7, y);
+      y += 7;
+    });
+  });
+
+  // Pagina composizione colonna
+  doc.addPage();
+  intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI');
+  var y2 = 60;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  pdcMezzi.forEach(m => {
+    if (y2 > H - 20) { doc.addPage(); intestazione('COMPOSIZIONE COLONNA CON IPOTESI AUTISTI'); y2 = 55; }
+    var riga = (m.descrizione_mezzo || '\u2014') + (m.autista_nome ? ' - ' + m.autista_nome : '');
+    doc.text(riga, mg, y2);
+    y2 += 10;
+  });
+
+  doc.save(pdcPianoCorrente.nome.replace(/[^a-z0-9]+/gi,'_') + '.pdf');
 }
 
 async function caricaMezzi() {
