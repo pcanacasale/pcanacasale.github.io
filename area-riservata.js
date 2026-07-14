@@ -6559,17 +6559,20 @@ async function pdcAggiungiMezzo() {
   await pdcCaricaMezzi();
 }
 
-function _pdcVerificaQuantita(dotazioneId) {
-  if (!dotazioneId) return;
-  const d = dotAll.find(x => x.id === dotazioneId);
-  if (!d || d.quantita === null || d.quantita === undefined) return;
-  let richiesto = 0;
+// Quanti pezzi di una dotazione sono già assegnati nel piano corrente (esclude eventualmente una voce specifica)
+function _pdcQuantitaAllocata(dotazioneId, escludiVoceId) {
+  let tot = 0;
   pdcMezzi.forEach(m => m.voci.forEach(v => {
-    if (v.dotazione_id === dotazioneId) richiesto += (v.quantita === null || v.quantita === undefined) ? 1 : v.quantita;
+    if (v.dotazione_id === dotazioneId && v.id !== escludiVoceId) tot += (v.quantita === null || v.quantita === undefined) ? 1 : v.quantita;
   }));
-  if (richiesto > d.quantita) {
-    alert('⚠️ Attenzione: hai assegnato ' + richiesto + ' × "' + d.articolo + '" in questo piano di carico, ma in dotazione ce ne sono solo ' + d.quantita + ' disponibili.');
-  }
+  return tot;
+}
+
+// Ritorna null se la disponibilità non è tracciata (quantita non impostata in dotazioni), altrimenti i pezzi ancora liberi
+function _pdcQuantitaResidua(dotazioneId, escludiVoceId) {
+  const d = dotAll.find(x => x.id === dotazioneId);
+  if (!d || d.quantita === null || d.quantita === undefined) return null;
+  return d.quantita - _pdcQuantitaAllocata(dotazioneId, escludiVoceId);
 }
 
 async function pdcAggiornaMezzo(id, campo, valore) {
@@ -6596,6 +6599,13 @@ async function pdcAggiungiVoceDaDotazione(mezzoId) {
   if (!d) d = dotAll.find(x => x.articolo.toLowerCase() === testo.toLowerCase());
   if (!d) d = dotAll.find(x => x.articolo.toLowerCase().includes(testo.toLowerCase()));
   if (!d) { alert('Articolo non trovato nelle dotazioni. Usa "voce libera" oppure controlla il nome.'); return; }
+
+  const residua = _pdcQuantitaResidua(d.id, null);
+  if (residua !== null && residua < 1) {
+    alert('❌ Non puoi aggiungere "' + d.articolo + '": in dotazione ce ne sono ' + d.quantita + ' e sono già tutti assegnati in questo piano di carico.');
+    return;
+  }
+
   const m = pdcMezzi.find(x => x.id === mezzoId);
   const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
   try {
@@ -6606,7 +6616,6 @@ async function pdcAggiungiVoceDaDotazione(mezzoId) {
   } catch(e) { alert('Errore aggiunta voce.'); return; }
   inp.value = '';
   await pdcCaricaMezzi();
-  _pdcVerificaQuantita(d.id);
 }
 
 async function pdcAggiungiVoceLibera(mezzoId) {
@@ -6626,13 +6635,24 @@ async function pdcAggiungiVoceLibera(mezzoId) {
 }
 
 async function pdcAggiornaVoce(id, campo, valore) {
+  if (campo === 'quantita' && valore !== null) {
+    let voceCorrente = null;
+    pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) voceCorrente = v; });
+    if (voceCorrente && voceCorrente.dotazione_id) {
+      const d = dotAll.find(x => x.id === voceCorrente.dotazione_id);
+      const residuaEscludendoQuesta = _pdcQuantitaResidua(voceCorrente.dotazione_id, id);
+      if (residuaEscludendoQuesta !== null && valore > residuaEscludendoQuesta) {
+        alert('❌ Quantità non disponibile: "' + d.articolo + '" ha ' + d.quantita + ' pezzi in dotazione, il massimo inseribile qui è ' + Math.max(0, residuaEscludendoQuesta) + '.');
+        pdcRenderMezzi(); // ripristina il valore precedente mostrato nel campo
+        return;
+      }
+    }
+  }
   const body = {}; body[campo] = valore;
   try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
   catch(e) {}
-  let voceAggiornata = null;
-  pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) { v[campo] = valore; voceAggiornata = v; } });
+  pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) v[campo] = valore; });
   if (campo === 'spuntato') pdcRenderMezzi();
-  if (campo === 'quantita' && voceAggiornata && voceAggiornata.dotazione_id) _pdcVerificaQuantita(voceAggiornata.dotazione_id);
 }
 
 async function pdcEliminaVoce(id) {
