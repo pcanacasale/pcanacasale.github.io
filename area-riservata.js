@@ -316,6 +316,7 @@ function showPanel(name, btn) {
   if (name === 'postazioni') caricaPostazioni();
   if (name === 'dotazioni') caricaDotazioni();
   if (name === 'pianicarico') caricaPianiCarico();
+  if (name === 'impostazioni') caricaCategorieDotazioni();
   if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
@@ -5906,107 +5907,231 @@ function getRevisioneStatus(dataStr) {
 }
 
 // ==================== DOTAZIONI ====================
-var dotCategorie = [];
-var dotAll = [];
-var dotCategoriaAttiva = null; // null = tutte
+var dotMagazzini = [];         // tab A/B/C (tabella dotazioni_magazzini)
+var dotCategorieAlbero = [];   // categorie/sottocategorie (tabella dotazioni_categorie)
+var dotAll = [];               // tutti gli articoli
+var dotMagazzinoAttivo = null; // null = tutti
 var dotEditId = null;
+var dotExpandedId = null;
+var dotExpandedTab = 'dettagli';
+var dotManCache = {};
 
 async function caricaDotazioni() {
   const lista = document.getElementById('dotLista');
   lista.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const [catRes, dotRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=categoria.asc,articolo.asc', { headers: H })
+    const [magRes, catRes, dotRes] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?select=*&order=ordine.asc', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H })
     ]);
-    dotCategorie = await catRes.json();
+    dotMagazzini = await magRes.json();
+    dotCategorieAlbero = await catRes.json();
     dotAll = await dotRes.json();
   } catch(e) {
     lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento dotazioni.</div>';
     return;
   }
-  dotRenderTabs();
+  dotRenderMagazziniTabs();
   dotRenderCategoriaSelect();
+  dotRenderMagazzinoSelect();
   dotRenderLista();
 }
 
-function dotRenderTabs() {
+function dotRenderMagazziniTabs() {
   const el = document.getElementById('dotCategorieTabs');
   if (!el) return;
   let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
-  html += '<button class="btn-sm' + (dotCategoriaAttiva === null ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
-  dotCategorie.forEach((c, idx) => {
-    const attiva = dotCategoriaAttiva === c.nome;
+  html += '<button class="btn-sm' + (dotMagazzinoAttivo === null ? ' btn-primary' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
+  dotMagazzini.forEach((c, idx) => {
+    const attiva = dotMagazzinoAttivo === c.nome;
     html += '<span style="display:inline-flex;align-items:center;gap:0.15rem;border:1px solid var(--border);border-radius:8px;padding:0.15rem">';
-    if (idx > 0) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a sinistra" onclick="event.stopPropagation();dotSpostaCategoria(' + c.id + ',-1)">◀</button>';
-    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" style="border:none" onclick="dotSelezionaCategoria(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
-    if (idx < dotCategorie.length - 1) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a destra" onclick="event.stopPropagation();dotSpostaCategoria(' + c.id + ',1)">▶</button>';
+    if (idx > 0) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a sinistra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',-1)">◀</button>';
+    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" style="border:none" onclick="dotSelezionaMagazzino(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
+    if (idx < dotMagazzini.length - 1) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a destra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',1)">▶</button>';
     html += '</span>';
   });
   html += '</div>';
   el.innerHTML = html;
 }
 
+function dotRenderMagazzinoSelect() {
+  const sel = document.getElementById('dotNuovoMagazzino');
+  if (!sel) return;
+  sel.innerHTML = dotMagazzini.map(c => '<option value="' + c.nome + '">' + c.nome + '</option>').join('');
+}
+
+// -- Categoria/sottocategoria: helper condivisi --
+function _dotCategoriaPath(id) {
+  if (!id) return '';
+  const nodo = dotCategorieAlbero.find(c => c.id === id);
+  if (!nodo) return '';
+  if (nodo.parent_id) {
+    const genitore = dotCategorieAlbero.find(c => c.id === nodo.parent_id);
+    return (genitore ? genitore.nome + ' › ' : '') + nodo.nome;
+  }
+  return nodo.nome;
+}
+
 function dotRenderCategoriaSelect() {
   const sel = document.getElementById('dotNuovoCategoria');
   if (!sel) return;
-  sel.innerHTML = dotCategorie.map(c => '<option value="' + c.nome + '">' + c.nome + '</option>').join('');
+  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
+  let html = '<option value="">— nessuna —</option>';
+  principali.forEach(p => {
+    html += '<option value="' + p.id + '">' + p.nome + '</option>';
+    dotCategorieAlbero.filter(c => c.parent_id === p.id).forEach(f => {
+      html += '<option value="' + f.id + '">— ' + f.nome + '</option>';
+    });
+  });
+  sel.innerHTML = html;
 }
 
-async function dotSpostaCategoria(id, direzione) {
-  const idx = dotCategorie.findIndex(c => c.id === id);
+async function dotSpostaMagazzino(id, direzione) {
+  const idx = dotMagazzini.findIndex(c => c.id === id);
   const altroIdx = idx + direzione;
-  if (idx < 0 || altroIdx < 0 || altroIdx >= dotCategorie.length) return;
-  const a = dotCategorie[idx], b = dotCategorie[altroIdx];
+  if (idx < 0 || altroIdx < 0 || altroIdx >= dotMagazzini.length) return;
+  const a = dotMagazzini[idx], b = dotMagazzini[altroIdx];
   const ordineA = a.ordine, ordineB = b.ordine;
   try {
     await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + a.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineB }) }),
-      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + b.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineA }) })
+      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + a.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineB }) }),
+      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + b.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineA }) })
     ]);
   } catch(e) { alert('Errore nello spostamento.'); return; }
   await caricaDotazioni();
 }
 
-function dotSelezionaCategoria(nome) {
-  dotCategoriaAttiva = nome;
-  dotRenderTabs();
+function dotSelezionaMagazzino(nome) {
+  dotMagazzinoAttivo = nome;
+  dotRenderMagazziniTabs();
   dotRenderLista();
 }
 
 function dotFiltraLista() { dotRenderLista(); }
+
+function dotToggleCard(id) {
+  if (dotExpandedId === id) { dotExpandedId = null; }
+  else { dotExpandedId = id; dotExpandedTab = 'dettagli'; }
+  dotRenderLista();
+}
+
+function dotMostraTabArticolo(id, tab) {
+  dotExpandedTab = tab;
+  if (tab === 'manutenzione' && !dotManCache[id]) { dotCaricaManutenzioni(id); return; }
+  dotRenderLista();
+}
 
 function dotRenderLista() {
   const el = document.getElementById('dotLista');
   if (!el) return;
   const q = (document.getElementById('dotSearch').value || '').trim().toLowerCase();
   let righe = dotAll.slice();
-  if (dotCategoriaAttiva !== null) righe = righe.filter(r => r.categoria === dotCategoriaAttiva);
+  if (dotMagazzinoAttivo !== null) righe = righe.filter(r => r.magazzino === dotMagazzinoAttivo);
   if (q) {
     righe = righe.filter(r =>
+      (r.codice||'').toLowerCase().includes(q) ||
       (r.articolo||'').toLowerCase().includes(q) ||
-      (r.ubicazione||'').toLowerCase().includes(q) ||
+      (r.descrizione||'').toLowerCase().includes(q) ||
       (r.note||'').toLowerCase().includes(q) ||
-      (r.categoria||'').toLowerCase().includes(q)
+      (r.magazzino||'').toLowerCase().includes(q) ||
+      _dotCategoriaPath(r.categoria_id).toLowerCase().includes(q)
     );
   }
   if (!righe.length) { el.innerHTML = '<div class="loading-msg">nessun articolo trovato.</div>'; return; }
   let html = '<div style="display:flex;flex-direction:column;gap:0.4rem">';
   righe.forEach(r => {
-    const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita + (r.unita_misura ? ' ' + r.unita_misura : '');
+    const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
+    const catPath = _dotCategoriaPath(r.categoria_id);
+    const espansa = dotExpandedId === r.id;
     html += '<div class="vol-section" style="margin:0">'
-      + '<div style="padding:0.6rem 0.8rem;display:flex;align-items:center;gap:0.6rem">'
-      + '<div style="flex:1;min-width:0">'
-      + '<div style="font-weight:600">' + r.articolo + '</div>'
-      + '<div style="font-size:0.78rem;color:var(--testo-2)">' + r.categoria + (r.ubicazione ? ' · ' + r.ubicazione : '') + (r.note ? ' · ' + r.note : '') + '</div>'
-      + '</div>'
-      + '<div style="font-weight:600;white-space:nowrap">' + qtaLbl + '</div>'
-      + '<button class="btn-sm" onclick="dotApriModifica(' + r.id + ')">✏️</button>'
-      + '<button class="btn-sm btn-danger" onclick="dotEliminaArticolo(' + r.id + ')">🗑️</button>'
+      + '<div class="vol-section-head" onclick="dotToggleCard(' + r.id + ')" style="gap:0.6rem">'
+      + '<h3 style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0">'
+      + (r.codice ? '<span style="color:var(--testo-3);font-weight:400">' + r.codice + ' · </span>' : '') + r.articolo
+      + '</h3>'
+      + '<div style="display:flex;gap:0.6rem;align-items:center;flex-shrink:0;font-size:0.8rem;color:var(--testo-2)">'
+      + '<span>' + r.magazzino + '</span><span style="font-weight:600;color:var(--testo-1)">' + qtaLbl + '</span>'
+      + '<button class="btn-sm" onclick="event.stopPropagation();dotApriModifica(' + r.id + ')">✏️</button>'
+      + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();dotEliminaArticolo(' + r.id + ')">🗑️</button>'
+      + '<span>' + (espansa ? '▾' : '▸') + '</span>'
       + '</div></div>';
+
+    if (espansa) {
+      html += '<div style="padding:0.6rem 0.9rem;border-top:0.5px solid var(--border)">'
+        + '<div style="display:flex;gap:0.4rem;margin-bottom:0.6rem">'
+        + '<button class="btn-sm' + (dotExpandedTab==='dettagli'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(' + r.id + ',\'dettagli\')">Dettagli</button>'
+        + '<button class="btn-sm' + (dotExpandedTab==='manutenzione'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(' + r.id + ',\'manutenzione\')">🔧 Manutenzione</button>'
+        + '</div>';
+
+      if (dotExpandedTab === 'dettagli') {
+        html += '<div style="font-size:0.85rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.3rem">'
+          + '<div><b>Categoria:</b> ' + (catPath || '—') + '</div>'
+          + '<div><b>Descrizione:</b> ' + (r.descrizione || '—') + '</div>'
+          + '<div><b>Note:</b> ' + (r.note || '—') + '</div>'
+          + '</div>';
+      } else {
+        const entries = dotManCache[r.id];
+        if (!entries) {
+          html += '<div class="loading-msg">caricamento manutenzioni...</div>';
+        } else {
+          if (!entries.length) html += '<div class="loading-msg">nessun intervento registrato.</div>';
+          else {
+            html += '<div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem">';
+            entries.forEach(m => {
+              html += '<div style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;border-bottom:0.5px dashed var(--border);padding-bottom:0.3rem">'
+                + '<div style="white-space:nowrap;color:var(--testo-3)">' + (m.data ? new Date(m.data).toLocaleDateString('it-IT') : '') + '</div>'
+                + '<div style="flex:1"><b>' + (m.utente||'—') + '</b> — ' + (m.nota||'') + '</div>'
+                + '<button class="btn-sm btn-danger" style="padding:0.1rem 0.35rem" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
+                + '</div>';
+            });
+            html += '</div>';
+          }
+          html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
+            + '<input class="form-inp" type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '" style="max-width:150px">'
+            + '<input class="form-inp" id="dotManUtente' + r.id + '" placeholder="Utente" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '" style="max-width:160px">'
+            + '<input class="form-inp" id="dotManNota' + r.id + '" placeholder="Intervento effettuato..." style="flex:1;min-width:160px">'
+            + '<button class="btn-sm" onclick="dotAggiungiManutenzione(' + r.id + ')">+ aggiungi</button>'
+            + '</div>';
+        }
+      }
+      html += '</div>';
+    }
+    html += '</div>';
   });
   html += '</div>';
   el.innerHTML = html;
+}
+
+async function dotCaricaManutenzioni(id) {
+  dotRenderLista(); // mostra "caricamento..."
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?select=*&dotazione_id=eq.' + id + '&order=data.desc', { headers: H });
+    dotManCache[id] = await res.json();
+  } catch(e) { dotManCache[id] = []; }
+  dotRenderLista();
+}
+
+async function dotAggiungiManutenzione(id) {
+  const data = document.getElementById('dotManData' + id).value || new Date().toISOString().slice(0,10);
+  const utente = document.getElementById('dotManUtente' + id).value.trim() || null;
+  const nota = document.getElementById('dotManNota' + id).value.trim();
+  if (!nota) { alert('Inserisci una nota per l\'intervento.'); return; }
+  try {
+    await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni', {
+      method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ dotazione_id: id, data, utente, nota })
+    });
+  } catch(e) { alert('Errore salvataggio manutenzione.'); return; }
+  delete dotManCache[id];
+  await dotCaricaManutenzioni(id);
+}
+
+async function dotEliminaManutenzione(manId, dotazioneId) {
+  if (!confirm('Eliminare questo intervento di manutenzione?')) return;
+  try { await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?id=eq.' + manId, { method:'DELETE', headers: H }); }
+  catch(e) {}
+  delete dotManCache[dotazioneId];
+  await dotCaricaManutenzioni(dotazioneId);
 }
 
 function dotToggleNuovaForm() {
@@ -6021,11 +6146,12 @@ function dotToggleNuovaForm() {
 function dotResetForm() {
   dotEditId = null;
   document.getElementById('dotNuovaHead').querySelector('h3').textContent = '+ Nuovo articolo';
-  if (dotCategoriaAttiva) document.getElementById('dotNuovoCategoria').value = dotCategoriaAttiva;
+  document.getElementById('dotNuovoCodice').value = '';
+  if (dotMagazzinoAttivo) document.getElementById('dotNuovoMagazzino').value = dotMagazzinoAttivo;
   document.getElementById('dotNuovoArticolo').value = '';
+  document.getElementById('dotNuovoDescrizione').value = '';
+  document.getElementById('dotNuovoCategoria').value = '';
   document.getElementById('dotNuovoQuantita').value = '';
-  document.getElementById('dotNuovoUM').value = '';
-  document.getElementById('dotNuovoUbicazione').value = '';
   document.getElementById('dotNuovoNote').value = '';
 }
 
@@ -6034,27 +6160,30 @@ function dotApriModifica(id) {
   if (!r) return;
   dotEditId = id;
   document.getElementById('dotNuovaHead').querySelector('h3').textContent = '✏️ Modifica articolo';
-  document.getElementById('dotNuovoCategoria').value = r.categoria;
+  document.getElementById('dotNuovoCodice').value = r.codice || '';
+  document.getElementById('dotNuovoMagazzino').value = r.magazzino;
   document.getElementById('dotNuovoArticolo').value = r.articolo || '';
+  document.getElementById('dotNuovoDescrizione').value = r.descrizione || '';
+  document.getElementById('dotNuovoCategoria').value = r.categoria_id || '';
   document.getElementById('dotNuovoQuantita').value = (r.quantita === null || r.quantita === undefined) ? '' : r.quantita;
-  document.getElementById('dotNuovoUM').value = r.unita_misura || '';
-  document.getElementById('dotNuovoUbicazione').value = r.ubicazione || '';
   document.getElementById('dotNuovoNote').value = r.note || '';
   document.getElementById('dotNuovaBody').style.display = 'flex';
   document.getElementById('dotNuovaChevron').textContent = '▾';
 }
 
 async function dotSalvaNuovo() {
-  const categoria = document.getElementById('dotNuovoCategoria').value;
+  const magazzino = document.getElementById('dotNuovoMagazzino').value;
   const articolo = document.getElementById('dotNuovoArticolo').value.trim();
   if (!articolo) { alert('Inserisci il nome articolo.'); return; }
   const qtaRaw = document.getElementById('dotNuovoQuantita').value;
+  const catId = document.getElementById('dotNuovoCategoria').value;
   const body = {
-    categoria: categoria,
+    magazzino: magazzino,
+    codice: document.getElementById('dotNuovoCodice').value.trim() || null,
     articolo: articolo,
+    descrizione: document.getElementById('dotNuovoDescrizione').value.trim() || null,
+    categoria_id: catId ? parseInt(catId, 10) : null,
     quantita: qtaRaw === '' ? null : parseFloat(qtaRaw),
-    unita_misura: document.getElementById('dotNuovoUM').value.trim() || null,
-    ubicazione: document.getElementById('dotNuovoUbicazione').value.trim() || null,
     note: document.getElementById('dotNuovoNote').value.trim() || null,
     updated_at: new Date().toISOString()
   };
@@ -6081,8 +6210,8 @@ async function dotEliminaArticolo(id) {
 async function dotScaricaModello() {
   try { await caricaExcelJS(); } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
   const wb = new ExcelJS.Workbook();
-  const cats = dotCategorie.length ? dotCategorie.map(c => c.nome) : ['Magazzino A','Magazzino B','Magazzino C'];
-  cats.forEach(nome => {
+  const mags = dotMagazzini.length ? dotMagazzini.map(c => c.nome) : ['Magazzino A','Magazzino B','Magazzino C'];
+  mags.forEach(nome => {
     const ws = wb.addWorksheet(nome);
     ws.columns = [
       { header: 'Articolo', key: 'articolo', width: 40 },
@@ -6100,19 +6229,20 @@ async function dotScaricaModello() {
 async function dotEsportaExcel() {
   try { await caricaExcelJS(); } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
   const wb = new ExcelJS.Workbook();
-  const cats = dotCategorie.length ? dotCategorie.map(c => c.nome) : Array.from(new Set(dotAll.map(r => r.categoria)));
-  cats.forEach(nome => {
+  const mags = dotMagazzini.length ? dotMagazzini.map(c => c.nome) : Array.from(new Set(dotAll.map(r => r.magazzino)));
+  mags.forEach(nome => {
     const ws = wb.addWorksheet(nome);
     ws.columns = [
-      { header: 'Articolo', key: 'articolo', width: 40 },
-      { header: 'Quantità', key: 'quantita', width: 12 },
-      { header: 'U.M.',     key: 'um',       width: 10 },
-      { header: 'Ubicazione', key: 'ubicazione', width: 20 },
-      { header: 'Note',     key: 'note',     width: 30 }
+      { header: 'Codice',      key: 'codice',      width: 12 },
+      { header: 'Articolo',    key: 'articolo',    width: 30 },
+      { header: 'Descrizione', key: 'descrizione', width: 30 },
+      { header: 'Categoria',   key: 'categoria',   width: 22 },
+      { header: 'Quantità',    key: 'quantita',    width: 12 },
+      { header: 'Note',        key: 'note',        width: 30 }
     ];
     ws.getRow(1).font = { bold: true };
-    dotAll.filter(r => r.categoria === nome).forEach(r => {
-      ws.addRow({ articolo: r.articolo, quantita: r.quantita, um: r.unita_misura||'', ubicazione: r.ubicazione||'', note: r.note||'' });
+    dotAll.filter(r => r.magazzino === nome).forEach(r => {
+      ws.addRow({ codice: r.codice||'', articolo: r.articolo, descrizione: r.descrizione||'', categoria: _dotCategoriaPath(r.categoria_id), quantita: r.quantita, note: r.note||'' });
     });
   });
   const buf = await wb.xlsx.writeBuffer();
@@ -6141,7 +6271,7 @@ async function dotImportaExcel(file) {
   status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
   try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
 
-  const CATEGORIE_VALIDE = { 'magazzino a':'Magazzino A', 'magazzino b':'Magazzino B', 'magazzino c':'Magazzino C' };
+  const MAGAZZINI_VALIDI = { 'magazzino a':'Magazzino A', 'magazzino b':'Magazzino B', 'magazzino c':'Magazzino C' };
 
   try {
     const buf = await file.arrayBuffer();
@@ -6151,9 +6281,9 @@ async function dotImportaExcel(file) {
     let totRighe = 0, fogliUsati = [];
     for (const ws of wb.worksheets) {
       const key = ws.name.trim().toLowerCase();
-      const categoria = CATEGORIE_VALIDE[key];
-      if (!categoria) continue; // ignora automezzi, cassetta attrezzi, COC, abbigliamento, altri fogli
-      fogliUsati.push(categoria);
+      const magazzino = MAGAZZINI_VALIDI[key];
+      if (!magazzino) continue; // ignora automezzi, cassetta attrezzi, COC, abbigliamento, altri fogli
+      fogliUsati.push(magazzino);
 
       const righe = [];
       ws.eachRow((row, num) => {
@@ -6167,15 +6297,15 @@ async function dotImportaExcel(file) {
       });
       if (!righe.length) continue;
 
-      // sostituisce gli articoli esistenti della categoria con quelli importati
-      await fetch(SUPA_URL + '/rest/v1/dotazioni?categoria=eq.' + encodeURIComponent(categoria), { method: 'DELETE', headers: H });
+      // sostituisce gli articoli esistenti del magazzino (codice/descrizione/categoria andranno reinseriti a mano)
+      await fetch(SUPA_URL + '/rest/v1/dotazioni?magazzino=eq.' + encodeURIComponent(magazzino), { method: 'DELETE', headers: H });
 
       const nuovi = righe.map(r => {
         const q = _dotParseQuantita(r.quantitaRaw);
         let note = r.note || null;
         if (q.extra && !note) note = 'quantità originale: ' + q.extra;
         else if (q.extra) note = note + ' (quantità originale: ' + q.extra + ')';
-        return { categoria: categoria, articolo: r.articolo, quantita: q.valore, note: note };
+        return { magazzino: magazzino, articolo: r.articolo, quantita: q.valore, note: note };
       });
       await fetch(SUPA_URL + '/rest/v1/dotazioni', { method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(nuovi) });
       totRighe += nuovi.length;
@@ -6185,12 +6315,79 @@ async function dotImportaExcel(file) {
       status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
       return;
     }
-    status.innerHTML = '<div class="loading-msg" style="color:var(--green)">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + ').</div>';
+    status.innerHTML = '<div class="loading-msg" style="color:var(--green)">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + '). Codice, descrizione e categoria vanno completati a mano.</div>';
     await logAttivita('ha importato dotazioni da Excel (' + fogliUsati.join(', ') + ')');
     await caricaDotazioni();
   } catch(e) {
     status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante l\'importazione: ' + e.message + '</div>';
   }
+}
+
+// -- Categorie/sottocategorie (gestite da Impostazioni) --
+async function caricaCategorieDotazioni() {
+  const el = document.getElementById('catDotList');
+  if (!el) return;
+  el.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H });
+    dotCategorieAlbero = await res.json();
+  } catch(e) { el.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento categorie.</div>'; return; }
+  catDotRenderList();
+}
+
+function catDotRenderList() {
+  const el = document.getElementById('catDotList');
+  if (!el) return;
+  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
+  if (!principali.length) { el.innerHTML = '<div class="loading-msg">nessuna categoria creata.</div>'; return; }
+  let html = '';
+  principali.forEach(p => {
+    html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.4rem;background:var(--bg-2);border-radius:6px">'
+      + '<div style="flex:1;font-weight:600">' + p.nome + '</div>'
+      + '<button class="btn-sm" style="padding:0.15rem 0.4rem" onclick="catDotAggiungiSottocategoria(' + p.id + ')">+ sottocategoria</button>'
+      + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + p.id + ')">🗑️</button>'
+      + '</div>';
+    dotCategorieAlbero.filter(c => c.parent_id === p.id).forEach(f => {
+      html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.4rem 0.25rem 1.4rem">'
+        + '<div style="flex:1;color:var(--testo-2)">— ' + f.nome + '</div>'
+        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + f.id + ')">🗑️</button>'
+        + '</div>';
+    });
+  });
+  el.innerHTML = html;
+}
+
+async function catDotAggiungiCategoria() {
+  const inp = document.getElementById('catDotNuovaCategoria');
+  const nome = inp.value.trim();
+  if (!nome) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
+      method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ nome: nome, parent_id: null })
+    });
+  } catch(e) { alert('Errore salvataggio categoria.'); return; }
+  inp.value = '';
+  await caricaCategorieDotazioni();
+}
+
+async function catDotAggiungiSottocategoria(parentId) {
+  const nome = prompt('Nome sottocategoria:');
+  if (!nome || !nome.trim()) return;
+  try {
+    await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
+      method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
+      body: JSON.stringify({ nome: nome.trim(), parent_id: parentId })
+    });
+  } catch(e) { alert('Errore salvataggio sottocategoria.'); return; }
+  await caricaCategorieDotazioni();
+}
+
+async function catDotElimina(id) {
+  if (!confirm('Eliminare questa categoria? Le sottocategorie collegate verranno eliminate e gli articoli che la usano resteranno senza categoria.')) return;
+  try { await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + id, { method:'DELETE', headers: H }); }
+  catch(e) { alert('Errore eliminazione.'); return; }
+  await caricaCategorieDotazioni();
 }
 
 // ==================== PIANI DI CARICO ====================
@@ -6209,13 +6406,9 @@ async function caricaPianiCarico() {
   document.getElementById('pdcBody').style.display = 'none';
   document.getElementById('pdcBtnElimina').style.display = 'none';
   pdcPianoCorrente = null;
-  if (!dotCategorie.length && !dotAll.length) {
+  if (!dotAll.length) {
     try {
-      const [catRes, dotRes] = await Promise.all([
-        fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc', { headers: H }),
-        fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=categoria.asc,articolo.asc', { headers: H })
-      ]);
-      dotCategorie = await catRes.json();
+      const dotRes = await fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H });
       dotAll = await dotRes.json();
     } catch(e) {}
   }
@@ -6280,7 +6473,7 @@ async function pdcCaricaMezzi() {
 function pdcRenderMezzi() {
   const list = document.getElementById('pdcMezziList');
   if (!pdcMezzi.length) { list.innerHTML = '<div class="loading-msg">nessun mezzo aggiunto. Usa "+ Aggiungi mezzo".</div>'; return; }
-  const opzioniArticoli = dotAll.map(d => '<option value="' + d.id + '">' + d.articolo + (d.categoria ? ' (' + d.categoria + ')' : '') + '</option>').join('');
+  const opzioniArticoli = dotAll.map(d => '<option value="' + d.id + '">' + d.articolo + (d.magazzino ? ' (' + d.magazzino + ')' : '') + '</option>').join('');
   let html = '';
   pdcMezzi.forEach(m => {
     html += '<div class="vol-section" style="margin-bottom:0.6rem">'
