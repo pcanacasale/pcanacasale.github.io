@@ -141,6 +141,33 @@ header .sub{font-size:14px;opacity:.95;}
 }
 .note strong{color:var(--wind-dark);}
 
+.addbox{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;margin:16px 0;
+}
+.addbox input[type="text"]{
+  flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:7px;font-family:'Inter';font-size:13px;
+}
+.addbox select{
+  padding:8px 10px;border:1px solid var(--line);border-radius:7px;
+  font-family:'Inter';font-size:13px;background:white;color:var(--ink);
+}
+.addbox button{
+  font-family:'Space Grotesk';font-weight:600;font-size:13px;
+  background:var(--wind);color:white;border:none;border-radius:7px;
+  padding:9px 16px;cursor:pointer;transition:background .15s;
+}
+.addbox button:hover{background:var(--wind-dark);}
+.del{
+  flex-shrink:0;width:22px;height:22px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);cursor:pointer;font-size:16px;font-weight:600;
+  transition:all .15s;
+}
+.del:hover{background:#fee2e2;color:var(--red);}
+
 .reset{
   margin:8px 0 0;font-size:12px;color:var(--muted);
   background:none;border:none;cursor:pointer;text-decoration:underline;
@@ -159,6 +186,7 @@ header .sub{font-size:14px;opacity:.95;}
   header h1{font-size:24px;}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -193,9 +221,31 @@ header .sub{font-size:14px;opacity:.95;}
     <div class="chip" data-filter="Giulia">Giulia</div>
     <div class="chip" data-filter="Nicolò">Nicolò</div>
     <div class="chip" data-filter="Marco">Marco</div>
+    <div class="chip" data-filter="Carolina">Carolina</div>
   </div>
 
   <div class="celebrate" id="celebrate">🎉 Percorso completato! Luca è pronto.</div>
+
+  <div class="addbox" id="addbox">
+    <input type="text" id="newTaskName" placeholder="Nome nuova attività...">
+    <select id="newTaskOwner">
+      <option value="Riccardo">Riccardo</option>
+      <option value="Giovanni">Giovanni</option>
+      <option value="Ambra">Ambra</option>
+      <option value="Elena">Elena</option>
+      <option value="Giulia">Giulia</option>
+      <option value="Nicolò">Nicolò</option>
+      <option value="Marco">Marco</option>
+      <option value="Carolina">Carolina</option>
+    </select>
+    <select id="newTaskDiff">
+      <option value="2">Facile</option>
+      <option value="5" selected>Media</option>
+      <option value="7">Difficile</option>
+      <option value="9">Massima</option>
+    </select>
+    <button id="addTaskBtn">+ Aggiungi</button>
+  </div>
 
   <div id="list"></div>
 
@@ -278,15 +328,39 @@ const TASKS = [
 
 function diffClass(d){ if(d<=3)return'd-low'; if(d<=5)return'd-mid'; if(d<=8)return'd-high'; return'd-max'; }
 
-const STORAGE_KEY = "percorso_luca_progress";
-let done = {};
-try{
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if(saved) done = JSON.parse(saved);
-}catch(e){ done = {}; }
+const SUPABASE_URL = "https://pggtmyarpuztfewqgwyc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function saveProgress(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(done)); }catch(e){}
+let done = {};
+let customTasks = [];
+let saveTimeout = null;
+
+async function loadFromCloud(){
+  const { data, error } = await sb.from('et_percorso_luca').select('*').eq('id',1).single();
+  if(!error && data){
+    done = data.done || {};
+    customTasks = data.custom_tasks || [];
+  }
+  render();
+  updateProgress();
+}
+
+function saveToCloud(){
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async ()=>{
+    await sb.from('et_percorso_luca').update({
+      done: done, custom_tasks: customTasks, updated_at: new Date().toISOString()
+    }).eq('id',1);
+  }, 400);
+}
+
+function getPhases(){
+  const phases = TASKS.slice();
+  if(customTasks.length){
+    phases.push({ f:"Attività aggiunte", w:"Extra", items: customTasks, custom:true });
+  }
+  return phases;
 }
 
 let currentFilter = "all";
@@ -298,7 +372,8 @@ const list = document.getElementById('list');
 
 function render(){
   list.innerHTML = "";
-  TASKS.forEach((phase, pi)=>{
+  const phases = getPhases();
+  phases.forEach((phase, pi)=>{
     const phaseDiv = document.createElement('div');
     phaseDiv.className = 'phase';
 
@@ -306,7 +381,7 @@ function render(){
     const tasksHtml = document.createElement('div');
 
     phase.items.forEach((it, ii)=>{
-      const id = idOf(pi,ii);
+      const id = phase.custom ? it.id : idOf(pi,ii);
       const isDone = !!done[id];
 
       // filter logic
@@ -324,10 +399,18 @@ function render(){
         <div class="diff ${diffClass(it.d)}">${it.d}</div>
         <div class="task-body"><div class="task-name">${it.n}${it.nuova?'<span class="newflag">NUOVA</span>':''}</div></div>
         <div class="owner o-${it.o}">${it.o}</div>
+        ${phase.custom?'<div class="del" title="Elimina">✕</div>':''}
       `;
-      t.addEventListener('click', ()=>{
+      t.addEventListener('click', (e)=>{
+        if(e.target.closest('.del')){
+          customTasks = customTasks.filter(ct=>ct.id!==it.id);
+          delete done[id];
+          saveToCloud();
+          render(); updateProgress();
+          return;
+        }
         done[id] = !done[id];
-        saveProgress();
+        saveToCloud();
         render();
         updateProgress();
       });
@@ -337,7 +420,7 @@ function render(){
     if(visibleInPhase===0){ return; } // hide empty phase under filter
 
     const total = phase.items.length;
-    const doneCount = phase.items.filter((_,ii)=>done[idOf(pi,ii)]).length;
+    const doneCount = phase.items.filter((it,ii)=>done[phase.custom?it.id:idOf(pi,ii)]).length;
 
     const head = document.createElement('div');
     head.className='phase-head';
@@ -351,13 +434,38 @@ function render(){
 
 function updateProgress(){
   let total=0, d=0;
-  TASKS.forEach((p,pi)=>p.items.forEach((_,ii)=>{ total++; if(done[idOf(pi,ii)])d++; }));
+  const phases = getPhases();
+  phases.forEach((p,pi)=>p.items.forEach((it,ii)=>{
+    total++;
+    const id = p.custom ? it.id : idOf(pi,ii);
+    if(done[id])d++;
+  }));
   const pct = total? Math.round(d/total*100):0;
   document.getElementById('fill').style.width = pct+'%';
   document.getElementById('plabel').textContent = pct+'%';
   document.getElementById('psub').textContent = `${d} di ${total} completate`;
   document.getElementById('celebrate').style.display = (d===total && total>0)?'block':'none';
 }
+
+// aggiunta nuovo task
+document.getElementById('addTaskBtn').addEventListener('click', ()=>{
+  const nameInput = document.getElementById('newTaskName');
+  const name = nameInput.value.trim();
+  if(!name) return;
+  const owner = document.getElementById('newTaskOwner').value;
+  const diff = parseInt(document.getElementById('newTaskDiff').value, 10);
+  customTasks.push({
+    id: 'c_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+    n: name, o: owner, d: diff
+  });
+  saveToCloud();
+  nameInput.value = '';
+  render();
+  updateProgress();
+});
+document.getElementById('newTaskName').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('addTaskBtn').click();
+});
 
 // filters
 document.getElementById('filters').addEventListener('click', e=>{
@@ -372,13 +480,12 @@ document.getElementById('filters').addEventListener('click', e=>{
 document.getElementById('reset').addEventListener('click', ()=>{
   if(confirm('Vuoi azzerare tutti i progressi di Luca?')){
     done = {};
-    saveProgress();
+    saveToCloud();
     render(); updateProgress();
   }
 });
 
-render();
-updateProgress();
+loadFromCloud();
 </script>
 </body>
 </html>
