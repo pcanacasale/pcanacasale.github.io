@@ -340,7 +340,7 @@
         </div>
       </div>
       <div class="field wide">
-        <label>Firma <span class="req">*</span> &mdash; disegna qui con mouse o dito</label>
+        <label>Firma <span class="req">*</span> &mdash; disegna qui con mouse o dito, oppure carica un'immagine</label>
         <canvas id="sigpad"></canvas>
         <div class="sigrow">
           <div style="display:flex; gap:16px; align-items:center;">
@@ -351,17 +351,26 @@
           <span class="status" id="sigstatus"></span>
         </div>
       </div>
-      <div class="field wide" style="margin-top:14px">
-        <label>Dove va messa la firma sul modulo? <span style="font-weight:400">Clicca sull'anteprima per spostarla</span></label>
-        <div id="sigPreviewMobileFisso"></div>
-        <button class="linkbtn" id="resetSigPosStandard" type="button" style="margin-top:6px">Riporta alla posizione predefinita</button>
-      </div>
     </fieldset>
 
     <div class="actions">
-      <button id="generate" type="button">Genera PDF</button>
+      <button id="previewStandard" type="button">1. Compila e genera anteprima</button>
       <span class="status" id="status"></span>
     </div>
+
+    <fieldset id="standardSignFieldset" style="display:none; margin-top:18px">
+      <legend>Posiziona la firma sul documento</legend>
+      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato con i dati inseriti. Clicca su <strong>ogni punto</strong> dove serve la firma &mdash; puoi cliccare tante volte quante servono.</p>
+      <div style="display:flex; gap:8px; margin:6px 0 8px; flex-wrap:wrap;">
+        <button type="button" class="linkbtn" id="undoLastMarkStandard">Annulla ultimo punto</button>
+        <button type="button" class="linkbtn" id="clearAllMarksStandard">Cancella tutti i punti</button>
+      </div>
+      <div id="sigPreviewMobileFisso"></div>
+      <div class="actions" style="margin-top:14px">
+        <button id="generate" type="button" disabled>2. Scarica PDF firmato</button>
+        <span class="status" id="statusStandardFinal"></span>
+      </div>
+    </fieldset>
   </div>
 
   <div id="panel-cessione" class="tab-panel" data-hidden="true">
@@ -552,23 +561,28 @@
           </div>
         </div>
       </div>
-      <p class="sub" style="margin:6px 0 0">La firma del Cessionario viene applicata automaticamente anche alla sezione pagamento (se compilata) e al consenso privacy.</p>
-
-      <div class="field wide" style="margin-top:14px">
-        <label>Dove vanno messe le firme sul modulo? <span style="font-weight:400">Clicca sull'anteprima per spostarle</span></label>
-        <div style="display:flex; gap:8px; margin:6px 0 8px;">
-          <button type="button" class="tab-btn active" id="placeBtnCessionario" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sposto: Cessionario</button>
-          <button type="button" class="tab-btn" id="placeBtnCedente" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sposto: Cedente</button>
-        </div>
-        <div id="sigPreviewCessione"></div>
-        <button class="linkbtn" id="resetSigPosCessione" type="button" style="margin-top:6px">Riporta entrambe alla posizione predefinita</button>
-      </div>
     </fieldset>
 
     <div class="actions">
-      <button id="generateCessione" type="button">Genera PDF</button>
+      <button id="previewCessione" type="button">1. Compila e genera anteprima</button>
       <span class="status" id="statusCessione"></span>
     </div>
+
+    <fieldset id="cessioneSignFieldset" style="display:none; margin-top:18px">
+      <legend>Posiziona le firme sul documento</legend>
+      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato con i dati inseriti. Scegli chi stai posizionando e clicca su <strong>ogni punto</strong> dove serve la firma (il modulo ne richiede pi&ugrave; di una a testa) &mdash; puoi cliccare tante volte quante servono.</p>
+      <div style="display:flex; gap:8px; margin:6px 0 8px; flex-wrap:wrap;">
+        <button type="button" class="tab-btn active" id="placeBtnCedente" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Cedente</button>
+        <button type="button" class="tab-btn" id="placeBtnCessionario" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Cessionario</button>
+        <button type="button" class="linkbtn" id="undoLastMark">Annulla ultimo punto</button>
+        <button type="button" class="linkbtn" id="clearAllMarks">Cancella tutti i punti</button>
+      </div>
+      <div id="sigPreviewCessione"></div>
+      <div class="actions" style="margin-top:14px">
+        <button id="generateCessione" type="button" disabled>2. Scarica PDF firmato</button>
+        <span class="status" id="statusCessioneFinal"></span>
+      </div>
+    </fieldset>
   </div>
 
   <fieldset style="margin-top:28px">
@@ -581,6 +595,16 @@
       </div>
     </div>
     <div id="docPages"></div>
+    <div class="row" id="docSizeControls" style="display:none">
+      <div class="field narrow">
+        <label>Dimensione firma <span id="docSigSizeVal">28</span>pt</label>
+        <input type="range" id="docSigSize" min="14" max="60" value="28" style="width:100%">
+      </div>
+      <div class="field narrow">
+        <label>Dimensione data <span id="docDateSizeVal">16</span>pt</label>
+        <input type="range" id="docDateSize" min="8" max="30" value="16" style="width:100%">
+      </div>
+    </div>
     <div class="actions" id="docActions" style="display:none">
       <button id="generateDocs" type="button">Genera documenti firmati</button>
       <button class="linkbtn" id="clearDocPositions" type="button">Cancella posizioni</button>
@@ -730,10 +754,9 @@
     return pdfjsLib;
   }
 
-  async function renderPdfPreview(base64, containerEl) {
+  async function renderPdfPreviewFromBytes(bytes, containerEl) {
     containerEl.innerHTML = '<p class="sub" style="margin:4px 0">Carico l\'anteprima\u2026</p>';
     var pdfjsLib = ensurePdfWorker();
-    var bytes = b64ToBytes(base64);
     var pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
     var page = await pdf.getPage(1);
     var baseViewport = page.getViewport({ scale: 1 });
@@ -755,6 +778,9 @@
     wrap.appendChild(canvasEl);
     containerEl.appendChild(wrap);
     return { wrap: wrap, canvas: canvasEl, pageWidthPt: baseViewport.width, pageHeightPt: baseViewport.height };
+  }
+  async function renderPdfPreview(base64, containerEl) {
+    return renderPdfPreviewFromBytes(b64ToBytes(base64), containerEl);
   }
 
   function placeMarker(wrap, existingMarker, xRatio, yRatio, label, color) {
@@ -779,55 +805,47 @@
     return { x: r.x * pageW, y: (1 - r.y) * pageH };
   }
 
-  // Mobile / Fisso preview (re-rendered whenever the active tab changes)
-  var mobileFissoMarker = null;
-  var mobileFissoState = null;
-  async function refreshMobileFissoPreview() {
-    var cfg = MODES[currentMode];
-    var container = document.getElementById('sigPreviewMobileFisso');
-    mobileFissoState = await renderPdfPreview(cfg.pdfBase64, container);
-    var r = sigOverrides[currentMode] || ratioFromDefaultBox(cfg.sigBox, mobileFissoState.pageWidthPt, mobileFissoState.pageHeightPt);
-    mobileFissoMarker = placeMarker(mobileFissoState.wrap, null, r.x, r.y, 'Firma qui', '#EE6C1F');
-    mobileFissoState.wrap.onclick = function(ev) {
-      var rect = mobileFissoState.wrap.getBoundingClientRect();
-      var xr = (ev.clientX - rect.left) / rect.width;
-      var yr = (ev.clientY - rect.top) / rect.height;
-      sigOverrides[currentMode] = { x: xr, y: yr };
-      mobileFissoMarker = placeMarker(mobileFissoState.wrap, mobileFissoMarker, xr, yr, 'Firma qui', '#EE6C1F');
-    };
+  // Mobile / Fisso: preview of the FILLED document, with multiple click-to-place
+  // signature marks (only one signer here, but can be stamped as many times as needed)
+  var standardMarks = [];
+  var standardMarkerEls = [];
+  var standardPreviewInfo = null;
+  var standardFilledBytes = null;
+
+  function redrawStandardMarkers() {
+    standardMarkerEls.forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
+    standardMarkerEls = standardMarks.map(function(m, i) {
+      return placeMarker(standardPreviewInfo.wrap, null, m.x, m.y, 'Firma ' + (i + 1), '#EE6C1F');
+    });
   }
-  document.getElementById('resetSigPosStandard').addEventListener('click', function() {
-    sigOverrides[currentMode] = null;
-    refreshMobileFissoPreview();
+  document.getElementById('undoLastMarkStandard').addEventListener('click', function() {
+    if (!standardPreviewInfo) return;
+    standardMarks.pop();
+    redrawStandardMarkers();
+  });
+  document.getElementById('clearAllMarksStandard').addEventListener('click', function() {
+    standardMarks = [];
+    if (standardPreviewInfo) redrawStandardMarkers();
   });
 
-  // Cessione preview (rendered once, lazily, with two movable markers)
-  var cessioneMarkerCed = null, cessioneMarkerCes = null;
-  var cessioneState = null;
-  var activeCessionePlacer = 'cessionario';
-  var CESSIONE_DEFAULT_CED_BOX = { x: 42, y: 131.69 };
-  var CESSIONE_DEFAULT_CES_BOX = { x: 245, y: 131.69 };
-  async function ensureCessionePreview() {
-    if (cessioneState) return;
-    var container = document.getElementById('sigPreviewCessione');
-    cessioneState = await renderPdfPreview(PDF_BASE64_CESSIONE, container);
-    var rCed = sigOverrides.cessione_ced || ratioFromDefaultBox(CESSIONE_DEFAULT_CED_BOX, cessioneState.pageWidthPt, cessioneState.pageHeightPt);
-    var rCes = sigOverrides.cessione_ces || ratioFromDefaultBox(CESSIONE_DEFAULT_CES_BOX, cessioneState.pageWidthPt, cessioneState.pageHeightPt);
-    cessioneMarkerCed = placeMarker(cessioneState.wrap, null, rCed.x, rCed.y, 'Cedente', '#EE6C1F');
-    cessioneMarkerCes = placeMarker(cessioneState.wrap, null, rCes.x, rCes.y, 'Cessionario', '#2E6FDB');
-    cessioneState.wrap.onclick = function(ev) {
-      var rect = cessioneState.wrap.getBoundingClientRect();
-      var xr = (ev.clientX - rect.left) / rect.width;
-      var yr = (ev.clientY - rect.top) / rect.height;
-      if (activeCessionePlacer === 'cedente') {
-        sigOverrides.cessione_ced = { x: xr, y: yr };
-        cessioneMarkerCed = placeMarker(cessioneState.wrap, cessioneMarkerCed, xr, yr, 'Cedente', '#EE6C1F');
-      } else {
-        sigOverrides.cessione_ces = { x: xr, y: yr };
-        cessioneMarkerCes = placeMarker(cessioneState.wrap, cessioneMarkerCes, xr, yr, 'Cessionario', '#2E6FDB');
-      }
-    };
+  // Cessione: preview of the FILLED document, with multiple click-to-place
+  // signature marks per signer (the form needs the same signature more than once)
+  var cessioneMarks = { cedente: [], cessionario: [] };
+  var cessioneMarkerEls = { cedente: [], cessionario: [] };
+  var cessionePreviewInfo = null; // {wrap, canvas, pageWidthPt, pageHeightPt}
+  var cessioneFilledBytes = null; // the filled-but-unsigned PDF, kept for the final signing step
+  var activeCessionePlacer = 'cedente';
+  var CESSIONE_COLORS = { cedente: '#EE6C1F', cessionario: '#2E6FDB' };
+
+  function redrawCessioneMarkers() {
+    ['cedente', 'cessionario'].forEach(function(who) {
+      cessioneMarkerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
+      cessioneMarkerEls[who] = cessioneMarks[who].map(function(m, i) {
+        return placeMarker(cessionePreviewInfo.wrap, null, m.x, m.y, (who === 'cedente' ? 'Cedente' : 'Cessionario') + ' ' + (i + 1), CESSIONE_COLORS[who]);
+      });
+    });
   }
+
   document.getElementById('placeBtnCedente').addEventListener('click', function() {
     activeCessionePlacer = 'cedente';
     this.classList.add('active');
@@ -838,11 +856,15 @@
     this.classList.add('active');
     document.getElementById('placeBtnCedente').classList.remove('active');
   });
-  document.getElementById('resetSigPosCessione').addEventListener('click', function() {
-    sigOverrides.cessione_ced = null;
-    sigOverrides.cessione_ces = null;
-    cessioneState = null;
-    ensureCessionePreview();
+  document.getElementById('undoLastMark').addEventListener('click', function() {
+    if (!cessionePreviewInfo) return;
+    cessioneMarks[activeCessionePlacer].pop();
+    redrawCessioneMarkers();
+  });
+  document.getElementById('clearAllMarks').addEventListener('click', function() {
+    cessioneMarks.cedente = [];
+    cessioneMarks.cessionario = [];
+    if (cessionePreviewInfo) redrawCessioneMarkers();
   });
 
   document.querySelectorAll('input[name=c_pagamento]').forEach(function(r) {
@@ -939,13 +961,14 @@
     { ids: ['indirizzo_citta', 'f_indirizzo_citta'] },
     { ids: ['provincia', 'f_provincia'] },
     { ids: ['cap', 'f_cap'] },
-    { ids: ['recapito_alternativo', 'f_recapito_alternativo'] }
+    { ids: ['recapito_alternativo', 'f_recapito_alternativo'] },
+    { ids: ['data', 'c_data'] }
   ];
   SYNC_GROUPS.forEach(function(group) {
     group.ids.forEach(function(id) {
       var el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener('input', function() {
+      function propagate() {
         var val = el.value;
         if (!val) return;
         group.ids.forEach(function(otherId) {
@@ -953,7 +976,10 @@
           var other = document.getElementById(otherId);
           if (other && !other.value) other.value = val;
         });
-      });
+      }
+      el.addEventListener('input', propagate);
+      el.addEventListener('change', propagate);
+      el.addEventListener('blur', propagate);
     });
   });
   // Nome/Cognome: Mobile & Fisso use one combined field, Cessione (Cedente) splits it in two
@@ -965,7 +991,7 @@
   ['nome_cognome', 'f_nome_cognome'].forEach(function(id) {
     var el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', function() {
+    function propagateName() {
       var val = el.value;
       if (!val) return;
       ['nome_cognome', 'f_nome_cognome'].forEach(function(otherId) {
@@ -980,7 +1006,10 @@
         if (cedNome && !cedNome.value) cedNome.value = parts.nome;
         if (cedCognome && !cedCognome.value) cedCognome.value = parts.cognome;
       }
-    });
+    }
+    el.addEventListener('input', propagateName);
+    el.addEventListener('change', propagateName);
+    el.addEventListener('blur', propagateName);
   });
   (function() {
     var cedNome = document.getElementById('c_ced_nome');
@@ -995,8 +1024,45 @@
       });
     }
     cedNome.addEventListener('input', syncToCombined);
+    cedNome.addEventListener('change', syncToCombined);
+    cedNome.addEventListener('blur', syncToCombined);
     cedCognome.addEventListener('input', syncToCombined);
+    cedCognome.addEventListener('change', syncToCombined);
+    cedCognome.addEventListener('blur', syncToCombined);
   })();
+
+  function syncAllFieldsNow() {
+    SYNC_GROUPS.forEach(function(group) {
+      var value = '';
+      group.ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && el.value && !value) value = el.value;
+      });
+      if (!value) return;
+      group.ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && !el.value) el.value = value;
+      });
+    });
+    var cedNome = document.getElementById('c_ced_nome');
+    var cedCognome = document.getElementById('c_ced_cognome');
+    var combined = document.getElementById('nome_cognome');
+    var combinedFisso = document.getElementById('f_nome_cognome');
+    var combinedVal = (combined && combined.value) || (combinedFisso && combinedFisso.value) || '';
+    if (combinedVal) {
+      if (combined && !combined.value) combined.value = combinedVal;
+      if (combinedFisso && !combinedFisso.value) combinedFisso.value = combinedVal;
+      if (cedNome && !cedNome.value && cedCognome && !cedCognome.value) {
+        var parts = splitName(combinedVal);
+        cedNome.value = parts.nome;
+        cedCognome.value = parts.cognome;
+      }
+    } else if (cedNome && cedCognome && (cedNome.value || cedCognome.value)) {
+      var full = (cedNome.value + ' ' + cedCognome.value).trim();
+      if (combined && !combined.value) combined.value = full;
+      if (combinedFisso && !combinedFisso.value) combinedFisso.value = full;
+    }
+  }
 
   // ---- mode tabs (mobile / fisso / cessione) ----
   var currentMode = 'mobile';
@@ -1015,7 +1081,17 @@
     }
   };
   function switchMode(mode) {
+    if (mode !== currentMode) {
+      standardFilledBytes = null;
+      standardMarks = [];
+      standardPreviewInfo = null;
+      var fs = document.getElementById('standardSignFieldset');
+      if (fs) fs.style.display = 'none';
+      var genBtn = document.getElementById('generate');
+      if (genBtn) genBtn.disabled = true;
+    }
     currentMode = mode;
+    syncAllFieldsNow();
     document.getElementById('tabBtnMobile').classList.toggle('active', mode === 'mobile');
     document.getElementById('tabBtnFisso').classList.toggle('active', mode === 'fisso');
     document.getElementById('tabBtnCessione').classList.toggle('active', mode === 'cessione');
@@ -1029,15 +1105,14 @@
     // canvases inside a panel that starts hidden get a 0x0 drawing buffer;
     // re-run their resize once the panel becomes visible so drawing/export works
     if (mode === 'cessione') {
-      setTimeout(function() { cedentePad.resize(); cessionarioPad.resize(); ensureCessionePreview(); }, 0);
+      setTimeout(function() { cedentePad.resize(); cessionarioPad.resize(); }, 0);
     } else {
-      setTimeout(function() { mainPad.resize(); refreshMobileFissoPreview(); }, 0);
+      setTimeout(function() { mainPad.resize(); }, 0);
     }
   }
   document.getElementById('tabBtnMobile').addEventListener('click', function() { switchMode('mobile'); });
   document.getElementById('tabBtnFisso').addEventListener('click', function() { switchMode('fisso'); });
   document.getElementById('tabBtnCessione').addEventListener('click', function() { switchMode('cessione'); });
-  setTimeout(function() { refreshMobileFissoPreview(); }, 0);
 
   function b64ToBytes(b64) {
     var bin = atob(b64);
@@ -1171,6 +1246,7 @@
     docState.pages = [];
     setDocStatus('Caricamento pagine...', '');
     document.getElementById('docActions').style.display = 'none';
+    document.getElementById('docSizeControls').style.display = 'none';
     try {
       var buf = await file.arrayBuffer();
       docState.bytes = new Uint8Array(buf);
@@ -1228,6 +1304,7 @@
         docState.pages.push(pageInfo);
       }
       document.getElementById('docActions').style.display = 'flex';
+      document.getElementById('docSizeControls').style.display = 'flex';
       setDocStatus(pdf.numPages + ' pagina/e caricate.', 'ok');
     } catch (err) {
       console.error(err);
@@ -1244,6 +1321,13 @@
     setDocStatus('Posizioni cancellate.', '');
   });
 
+  document.getElementById('docSigSize').addEventListener('input', function() {
+    document.getElementById('docSigSizeVal').textContent = this.value;
+  });
+  document.getElementById('docDateSize').addEventListener('input', function() {
+    document.getElementById('docDateSizeVal').textContent = this.value;
+  });
+
   document.getElementById('generateDocs').addEventListener('click', async function() {
     if (!docState.bytes) { setDocStatus('Carica prima un PDF.', 'err'); return; }
     if (!mainPad.hasSig()) { setDocStatus('Manca la firma: disegnala o caricala qui sopra.', 'err'); return; }
@@ -1256,11 +1340,13 @@
     try {
       var PDFLib = window.PDFLib;
       var pdfDoc = await PDFLib.PDFDocument.load(docState.bytes);
-      var font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      var handFont = await embedHandFont(pdfDoc);
       var trimmed = trimCanvas(canvas);
       var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
       var sigImage = await pdfDoc.embedPng(sigBytes);
       var dateStr = fmtDate(document.getElementById('data').value) || fmtDate(new Date().toISOString().slice(0,10));
+      var sigTargetH = parseInt(document.getElementById('docSigSize').value, 10);
+      var dateSize = parseInt(document.getElementById('docDateSize').value, 10);
 
       var pages = pdfDoc.getPages();
       for (var i = 0; i < docState.pages.length; i++) {
@@ -1270,17 +1356,16 @@
         var pdfX = info.clickRatio.x * info.ptW;
         var pdfY = info.ptH - info.clickRatio.y * info.ptH;
 
-        var targetH = 18;
-        var scale = Math.min(targetH / trimmed.height, 140 / trimmed.width);
+        var scale = Math.min(sigTargetH / trimmed.height, 220 / trimmed.width);
         var drawW = trimmed.width * scale;
         var drawH = trimmed.height * scale;
 
         page.drawImage(sigImage, { x: pdfX, y: pdfY, width: drawW, height: drawH });
         page.drawText(dateStr, {
           x: pdfX,
-          y: pdfY - 11,
-          size: 9,
-          font: font
+          y: pdfY - dateSize - 2,
+          size: dateSize,
+          font: handFont
         });
       }
 
@@ -1378,15 +1463,47 @@
   var LOGICAL_IDS = ['nome_cognome', 'codice_fiscale', 'doc_tipo', 'doc_numero', 'numero_titolare',
     'indirizzo_via', 'indirizzo_numero', 'indirizzo_citta', 'provincia', 'cap', 'recapito_alternativo', 'utenza'];
 
-  document.getElementById('generate').addEventListener('click', async function() {
-    var btn = this;
-    var cfg = MODES[currentMode];
+  function setStatusStandardFinal(msg, cls) {
+    var el = document.getElementById('statusStandardFinal');
+    el.textContent = msg;
+    el.className = 'status' + (cls ? ' ' + cls : '');
+  }
 
+  async function buildFilledStandardBytes(cfg) {
     var values = {};
     LOGICAL_IDS.forEach(function(id) {
       var el = document.getElementById(cfg.fieldPrefix + id);
       values[id] = el ? el.value.trim() : '';
     });
+
+    var PDFLib = window.PDFLib;
+    var pdfDoc = await PDFLib.PDFDocument.load(b64ToBytes(cfg.pdfBase64));
+    var page = pdfDoc.getPage(0);
+    var pageHeight = page.getHeight();
+    var font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    var fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+
+    LOGICAL_IDS.forEach(function(id) {
+      if (cfg.fields[id]) drawVal(page, font, pageHeight, cfg.fields[id], values[id]);
+    });
+    if (cfg.fields.data) drawVal(page, font, pageHeight, cfg.fields.data, fmtDate(document.getElementById('data').value));
+
+    var motivo = document.querySelector('input[name=' + cfg.motivoRadioName + ']:checked');
+    var pagamento = document.querySelector('input[name=' + cfg.pagamentoRadioName + ']:checked');
+    var modalita = cfg.modalitaRadioName ? document.querySelector('input[name=' + cfg.modalitaRadioName + ']:checked') : null;
+    [motivo, pagamento, modalita].forEach(function(sel) {
+      if (!sel) return;
+      var spec = cfg.checkboxes[sel.value];
+      if (spec) drawCheck(page, fontBold, pageHeight, spec);
+    });
+
+    stripFormFields(pdfDoc);
+    return pdfDoc.save();
+  }
+
+  document.getElementById('previewStandard').addEventListener('click', async function() {
+    var btn = this;
+    var cfg = MODES[currentMode];
 
     var missing = cfg.requiredIds.some(function(fullId) {
       var el = document.getElementById(fullId);
@@ -1406,54 +1523,64 @@
     }
 
     btn.disabled = true;
-    setStatus('Generazione PDF in corso...', '');
+    setStatus('Compilazione in corso...', '');
+    try {
+      standardFilledBytes = await buildFilledStandardBytes(cfg);
+      standardMarks = [];
+      var container = document.getElementById('sigPreviewMobileFisso');
+      standardPreviewInfo = await renderPdfPreviewFromBytes(standardFilledBytes, container);
+      redrawStandardMarkers();
+      standardPreviewInfo.wrap.onclick = function(ev) {
+        var rect = standardPreviewInfo.wrap.getBoundingClientRect();
+        var xr = (ev.clientX - rect.left) / rect.width;
+        var yr = (ev.clientY - rect.top) / rect.height;
+        standardMarks.push({ x: xr, y: yr });
+        redrawStandardMarkers();
+      };
+      document.getElementById('standardSignFieldset').style.display = 'block';
+      document.getElementById('generate').disabled = false;
+      document.getElementById('standardSignFieldset').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setStatus('Anteprima pronta.', 'ok');
+      setStatusStandardFinal('', '');
+    } catch (err) {
+      console.error(err);
+      setStatus('Errore nella compilazione: ' + err.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
+  document.getElementById('generate').addEventListener('click', async function() {
+    var btn = this;
+    if (!standardFilledBytes) { setStatusStandardFinal('Genera prima l\'anteprima.', 'err'); return; }
+    if (!standardMarks.length) { setStatusStandardFinal('Clicca almeno un punto per la firma.', 'err'); return; }
+
+    btn.disabled = true;
+    setStatusStandardFinal('Generazione PDF in corso...', '');
     try {
       var PDFLib = window.PDFLib;
-      var pdfDoc = await PDFLib.PDFDocument.load(b64ToBytes(cfg.pdfBase64));
+      var pdfDoc = await PDFLib.PDFDocument.load(standardFilledBytes);
       var page = pdfDoc.getPage(0);
-      var pageHeight = page.getHeight();
-      var font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-      var fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-      var handFont = await embedHandFont(pdfDoc);
-
-      LOGICAL_IDS.forEach(function(id) {
-        if (cfg.fields[id]) drawVal(page, font, pageHeight, cfg.fields[id], values[id]);
-      });
-      if (cfg.fields.data) drawDate(page, handFont, pageHeight, cfg.fields.data, fmtDate(document.getElementById('data').value));
-
-      var motivo = document.querySelector('input[name=' + cfg.motivoRadioName + ']:checked');
-      var pagamento = document.querySelector('input[name=' + cfg.pagamentoRadioName + ']:checked');
-      var modalita = cfg.modalitaRadioName ? document.querySelector('input[name=' + cfg.modalitaRadioName + ']:checked') : null;
-      [motivo, pagamento, modalita].forEach(function(sel) {
-        if (!sel) return;
-        var spec = cfg.checkboxes[sel.value];
-        if (spec) drawCheck(page, fontBold, pageHeight, spec);
-      });
-
-      // draw signature image, trimmed to the actual ink so it doesn't float in a big blank box
+      var pw = page.getWidth(), ph = page.getHeight();
       var trimmed = trimCanvas(canvas);
       var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
       var sigImage = await pdfDoc.embedPng(sigBytes);
-      var sigPos = sigOverrides[currentMode] ? boxFromRatio(sigOverrides[currentMode], page.getWidth(), pageHeight) : cfg.sigBox;
-      var targetH = 20;
-      var scale = Math.min(targetH / trimmed.height, cfg.sigBox.w / trimmed.width);
-      var drawW = trimmed.width * scale;
-      var drawH = trimmed.height * scale;
-      page.drawImage(sigImage, {
-        x: sigPos.x + 6,
-        y: sigPos.y + 1,
-        width: drawW,
-        height: drawH
-      });
 
-      stripFormFields(pdfDoc);
+      for (var i = 0; i < standardMarks.length; i++) {
+        var scale = Math.min(20 / trimmed.height, 190 / trimmed.width);
+        var w = trimmed.width * scale, h = trimmed.height * scale;
+        var x = standardMarks[i].x * pw;
+        var y = ph - standardMarks[i].y * ph;
+        page.drawImage(sigImage, { x: x, y: y, width: w, height: h });
+      }
 
       var outBytes = await pdfDoc.save();
       var blob = new Blob([outBytes], { type: 'application/pdf' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
-      var safeName = (values.nome_cognome || 'modulo').replace(/[^a-zA-Z0-9]+/g, '_');
+      var cfg = MODES[currentMode];
+      var nomeEl = document.getElementById(cfg.fieldPrefix + 'nome_cognome');
+      var safeName = ((nomeEl && nomeEl.value.trim()) || 'modulo').replace(/[^a-zA-Z0-9]+/g, '_');
       a.href = url;
       a.download = cfg.filenamePrefix + safeName + '_' + document.getElementById('data').value + '.pdf';
       document.body.appendChild(a);
@@ -1461,10 +1588,10 @@
       document.body.removeChild(a);
       setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
 
-      setStatus('PDF generato e scaricato.', 'ok');
+      setStatusStandardFinal('PDF firmato generato e scaricato.', 'ok');
     } catch (err) {
       console.error(err);
-      setStatus('Errore nella generazione: ' + err.message, 'err');
+      setStatusStandardFinal('Errore nella generazione: ' + err.message, 'err');
     } finally {
       btn.disabled = false;
     }
@@ -1544,12 +1671,45 @@
     el.textContent = msg;
     el.className = 'status' + (cls ? ' ' + cls : '');
   }
-  document.getElementById('generateCessione').addEventListener('click', async function() {
-    var btn = this;
-    function v(id) { var el = document.getElementById('c_' + id); return el ? el.value.trim() : ''; }
+  function setDocStatusCessioneFinal(msg, cls) {
+    var el = document.getElementById('statusCessioneFinal');
+    el.textContent = msg;
+    el.className = 'status' + (cls ? ' ' + cls : '');
+  }
+  function cV(id) { var el = document.getElementById('c_' + id); return el ? el.value.trim() : ''; }
 
+  async function buildFilledCessioneBytes() {
+    var PDFLib = window.PDFLib;
+    var pdfDoc = await PDFLib.PDFDocument.load(b64ToBytes(PDF_BASE64_CESSIONE));
+    var page = pdfDoc.getPage(0);
+    var ph = page.getHeight();
+    var font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    var fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+
+    var pagamento = document.querySelector('input[name=c_pagamento]:checked').value;
+    var luogo = document.getElementById('c_luogo').value.trim();
+    var dataStr = fmtDate(document.getElementById('c_data').value);
+    var luogoData = (luogo ? luogo + ', ' : '') + dataStr;
+
+    CESSIONE_TEXT_IDS.forEach(function(id) { drawVal(page, font, ph, CESSIONE_FIELDS[id], cV(id)); });
+    drawVal(page, font, ph, CESSIONE_FIELDS.carta_luogo_data, luogoData);
+    drawVal(page, font, ph, CESSIONE_FIELDS.sepa_luogo_data, luogoData);
+    drawVal(page, font, ph, CESSIONE_FIELDS.consent_data, dataStr);
+    drawVal(page, font, ph, CESSIONE_FIELDS.firme1_data, dataStr);
+    drawVal(page, font, ph, CESSIONE_FIELDS.firme2_data, dataStr);
+
+    if (pagamento === 'carta') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_carta); }
+    if (pagamento === 'sepa') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_sepa); }
+    if (pagamento === 'bollettino') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_bollettino); }
+
+    stripFormFields(pdfDoc);
+    return pdfDoc.save();
+  }
+
+  document.getElementById('previewCessione').addEventListener('click', async function() {
+    var btn = this;
     var required = ['ced_nome', 'ced_cognome', 'ced_cf', 'ces_nome', 'ces_cognome', 'ces_cf', 'numeri_ceduti'];
-    var missing = required.some(function(id) { return !v(id); });
+    var missing = required.some(function(id) { return !cV(id); });
     if (missing) {
       setDocStatusCessione('Compila almeno Cedente, Cessionario e i numeri ceduti.', 'err');
       return;
@@ -1557,75 +1717,71 @@
     if (!cedentePad.hasSig()) { setDocStatusCessione('Manca la firma del Cedente.', 'err'); return; }
     if (!cessionarioPad.hasSig()) { setDocStatusCessione('Manca la firma del Cessionario.', 'err'); return; }
 
-    var pagamento = document.querySelector('input[name=c_pagamento]:checked').value;
-    var luogo = document.getElementById('c_luogo').value.trim();
-    var dataStr = fmtDate(document.getElementById('c_data').value);
-    var luogoData = (luogo ? luogo + ', ' : '') + dataStr;
+    btn.disabled = true;
+    setDocStatusCessione('Compilazione in corso...', '');
+    try {
+      cessioneFilledBytes = await buildFilledCessioneBytes();
+      cessioneMarks.cedente = [];
+      cessioneMarks.cessionario = [];
+      var container = document.getElementById('sigPreviewCessione');
+      cessionePreviewInfo = await renderPdfPreviewFromBytes(cessioneFilledBytes, container);
+      redrawCessioneMarkers();
+      cessionePreviewInfo.wrap.onclick = function(ev) {
+        var rect = cessionePreviewInfo.wrap.getBoundingClientRect();
+        var xr = (ev.clientX - rect.left) / rect.width;
+        var yr = (ev.clientY - rect.top) / rect.height;
+        cessioneMarks[activeCessionePlacer].push({ x: xr, y: yr });
+        redrawCessioneMarkers();
+      };
+      document.getElementById('cessioneSignFieldset').style.display = 'block';
+      document.getElementById('generateCessione').disabled = false;
+      document.getElementById('cessioneSignFieldset').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setDocStatusCessione('Anteprima pronta.', 'ok');
+      setDocStatusCessioneFinal('', '');
+    } catch (err) {
+      console.error(err);
+      setDocStatusCessione('Errore nella compilazione: ' + err.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('generateCessione').addEventListener('click', async function() {
+    var btn = this;
+    if (!cessioneFilledBytes) { setDocStatusCessioneFinal('Genera prima l\'anteprima.', 'err'); return; }
+    if (!cessioneMarks.cedente.length) { setDocStatusCessioneFinal('Clicca almeno un punto per la firma del Cedente.', 'err'); return; }
+    if (!cessioneMarks.cessionario.length) { setDocStatusCessioneFinal('Clicca almeno un punto per la firma del Cessionario.', 'err'); return; }
 
     btn.disabled = true;
-    setDocStatusCessione('Generazione PDF in corso...', '');
-
+    setDocStatusCessioneFinal('Generazione PDF in corso...', '');
     try {
       var PDFLib = window.PDFLib;
-      var pdfDoc = await PDFLib.PDFDocument.load(b64ToBytes(PDF_BASE64_CESSIONE));
+      var pdfDoc = await PDFLib.PDFDocument.load(cessioneFilledBytes);
       var page = pdfDoc.getPage(0);
-      var ph = page.getHeight();
-      var font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-      var fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-      var handFont = await embedHandFont(pdfDoc);
+      var pw = page.getWidth(), ph = page.getHeight();
 
-      CESSIONE_TEXT_IDS.forEach(function(id) { drawVal(page, font, ph, CESSIONE_FIELDS[id], v(id)); });
-      drawDate(page, handFont, ph, CESSIONE_FIELDS.carta_luogo_data, luogoData);
-      drawDate(page, handFont, ph, CESSIONE_FIELDS.sepa_luogo_data, luogoData);
-      drawDate(page, handFont, ph, CESSIONE_FIELDS.consent_data, dataStr);
-      drawDate(page, handFont, ph, CESSIONE_FIELDS.firme1_data, dataStr);
-      drawDate(page, handFont, ph, CESSIONE_FIELDS.firme2_data, dataStr);
-
-      if (pagamento === 'carta') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_carta); }
-      if (pagamento === 'sepa') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_sepa); }
-      if (pagamento === 'bollettino') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_bollettino); }
-
-      async function stampSig(pad, x, topEdge, bottomEdge, maxW) {
+      async function stampAt(pad, xr, yr, maxW, maxH) {
         var trimmed = trimCanvas(pad.canvas);
         var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
         var sigImage = await pdfDoc.embedPng(sigBytes);
-        var boxY = ph - bottomEdge;
-        var targetH = 16;
-        var scale = Math.min(targetH / trimmed.height, maxW / trimmed.width);
+        var scale = Math.min(maxH / trimmed.height, maxW / trimmed.width);
         var w = trimmed.width * scale, h = trimmed.height * scale;
-        page.drawImage(sigImage, { x: x, y: boxY + 1, width: w, height: h });
+        var x = xr * pw;
+        var y = ph - yr * ph;
+        page.drawImage(sigImage, { x: x, y: y, width: w, height: h });
       }
-      async function stampSigAtXY(pad, x, y, maxW) {
-        var trimmed = trimCanvas(pad.canvas);
-        var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
-        var sigImage = await pdfDoc.embedPng(sigBytes);
-        var targetH = 16;
-        var scale = Math.min(targetH / trimmed.height, maxW / trimmed.width);
-        var w = trimmed.width * scale, h = trimmed.height * scale;
-        page.drawImage(sigImage, { x: x, y: y + 1, width: w, height: h });
+      for (var i = 0; i < cessioneMarks.cedente.length; i++) {
+        await stampAt(cedentePad, cessioneMarks.cedente[i].x, cessioneMarks.cedente[i].y, 190, 20);
       }
-
-      // Cedente: only the main FIRME row (position chosen by the user, or default)
-      var cedBox = sigOverrides.cessione_ced ? boxFromRatio(sigOverrides.cessione_ced, page.getWidth(), ph) : CESSIONE_DEFAULT_CED_BOX;
-      await stampSigAtXY(cedentePad, cedBox.x, cedBox.y, 190);
-
-      // Cessionario: main FIRME row (position chosen by the user, or default)
-      var cesBox = sigOverrides.cessione_ces ? boxFromRatio(sigOverrides.cessione_ces, page.getWidth(), ph) : CESSIONE_DEFAULT_CES_BOX;
-      await stampSigAtXY(cessionarioPad, cesBox.x, cesBox.y, 190);
-
-      // Cessionario: repeated automatically on the secondary FIRME row, consenso, and payment method if applicable
-      await stampSig(cessionarioPad, 245, 731.4, 741.4, 190);
-      await stampSig(cessionarioPad, 300, 613.0, 623.0, 180);
-      if (pagamento === 'carta') { await stampSig(cessionarioPad, 300, 383.2, 393.2, 180); }
-      if (pagamento === 'sepa') { await stampSig(cessionarioPad, 300, 532.9, 542.9, 180); }
-
-      stripFormFields(pdfDoc);
+      for (var j = 0; j < cessioneMarks.cessionario.length; j++) {
+        await stampAt(cessionarioPad, cessioneMarks.cessionario[j].x, cessioneMarks.cessionario[j].y, 190, 20);
+      }
 
       var outBytes = await pdfDoc.save();
       var blob = new Blob([outBytes], { type: 'application/pdf' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
-      var safeName = (v('ces_cognome') || 'cessione').replace(/[^a-zA-Z0-9]+/g, '_');
+      var safeName = (cV('ces_cognome') || 'cessione').replace(/[^a-zA-Z0-9]+/g, '_');
       a.href = url;
       a.download = 'Cessione_Contratto_' + safeName + '_' + document.getElementById('c_data').value + '.pdf';
       document.body.appendChild(a);
@@ -1633,10 +1789,10 @@
       document.body.removeChild(a);
       setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
 
-      setDocStatusCessione('PDF generato e scaricato.', 'ok');
+      setDocStatusCessioneFinal('PDF firmato generato e scaricato.', 'ok');
     } catch (err) {
       console.error(err);
-      setDocStatusCessione('Errore nella generazione: ' + err.message, 'err');
+      setDocStatusCessioneFinal('Errore nella generazione: ' + err.message, 'err');
     } finally {
       btn.disabled = false;
     }
