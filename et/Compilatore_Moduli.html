@@ -851,7 +851,7 @@
   async function renderPdfPreviewFromBytes(bytes, containerEl) {
     containerEl.innerHTML = '<p class="sub" style="margin:4px 0">Carico l\'anteprima\u2026</p>';
     var pdfjsLib = ensurePdfWorker();
-    var pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    var pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
     var page = await pdf.getPage(1);
     var baseViewport = page.getViewport({ scale: 1 });
     var targetCssWidth = 420;
