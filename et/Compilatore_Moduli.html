@@ -69,12 +69,12 @@
   #app-root button#generate:hover, #app-root button#generateDocs:hover { background: var(--wt-orange-dark); transform: translateY(-1px); }
   #app-root button#generate:disabled, #app-root button#generateDocs:disabled { opacity: 0.55; cursor: default; transform:none; }
   #app-root button#generateDocs { padding: 11px 20px; font-size: 14px; }
-  #app-root canvas#sigpad {
+  #app-root canvas.sigpad-canvas {
     border: 1.5px dashed var(--line); border-radius: 8px; width: 100%; height: 150px;
     touch-action: none; background: #FDFCFA; cursor: crosshair;
     transition: border-color 0.15s ease;
   }
-  #app-root canvas#sigpad:hover { border-color: var(--wt-orange-light); }
+  #app-root canvas.sigpad-canvas:hover { border-color: var(--wt-orange-light); }
   #app-root .footer-note {
     text-align:center; font-size: 11.5px; color: var(--muted); margin-top: 28px; line-height:1.6;
   }
@@ -82,7 +82,7 @@
   #app-root .status.err { color: #C0392B; font-weight: 600; }
   #app-root .status.ok { color: #1E8449; font-weight: 600; }
   #app-root .req { color: var(--wt-orange-dark); }
-  #app-root .docpage { position: relative; display:inline-block; margin: 10px 10px 10px 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: crosshair; line-height:0; }
+  #app-root .docpage { position: relative; display:inline-block; margin: 10px 10px 10px 0; border: 1px solid var(--line); border-radius: 6px; overflow: visible; cursor: crosshair; line-height:0; }
   #app-root .docpage canvas { display:block; max-width: 100%; }
   #app-root .stamp-marker {
     position:absolute; pointer-events:none; border: 1.5px dashed var(--wt-orange);
@@ -412,7 +412,7 @@
       </div>
       <div class="field wide">
         <label>Firma <span class="req">*</span> &mdash; disegna qui con mouse o dito, oppure carica un'immagine</label>
-        <canvas id="sigpad"></canvas>
+        <canvas id="sigpad" class="sigpad-canvas"></canvas>
         <div class="sigrow">
           <div style="display:flex; gap:16px; align-items:center;">
             <button class="linkbtn" id="clearsig" type="button">Cancella firma</button>
@@ -619,7 +619,7 @@
       <div class="row">
         <div class="field wide">
           <label>Firma Cedente <span class="req">*</span></label>
-          <canvas id="sigpadCedente"></canvas>
+          <canvas id="sigpadCedente" class="sigpad-canvas"></canvas>
           <div class="sigrow">
             <div style="display:flex; gap:16px; align-items:center;">
               <button class="linkbtn" id="clearsigCedente" type="button">Cancella firma</button>
@@ -633,7 +633,7 @@
       <div class="row">
         <div class="field wide">
           <label>Firma Cessionario <span class="req">*</span></label>
-          <canvas id="sigpadCessionario"></canvas>
+          <canvas id="sigpadCessionario" class="sigpad-canvas"></canvas>
           <div class="sigrow">
             <div style="display:flex; gap:16px; align-items:center;">
               <button class="linkbtn" id="clearsigCessionario" type="button">Cancella firma</button>
@@ -781,7 +781,7 @@
       </div>
       <div class="field wide">
         <label>Firma &mdash; disegna qui con mouse o dito, oppure carica un'immagine</label>
-        <canvas id="sigpadFirmaDoc"></canvas>
+        <canvas id="sigpadFirmaDoc" class="sigpad-canvas"></canvas>
         <div class="sigrow">
           <div style="display:flex; gap:16px; align-items:center;">
             <button class="linkbtn" id="clearsigFirmaDoc" type="button">Cancella firma</button>
@@ -877,9 +877,16 @@
     function resizeCanvas() {
       var rect = canvas.getBoundingClientRect();
       var ratio = window.devicePixelRatio || 1;
+      var targetW = Math.round(rect.width * ratio);
+      var targetH = Math.round(rect.height * ratio);
+      if (targetW > 0 && targetH > 0 && canvas.width === targetW && canvas.height === targetH) {
+        // already correctly sized: skip, so we never clear+async-restore
+        // a canvas that's already fine (that race was hiding the signature preview)
+        return;
+      }
       var prevData = state.hasSig ? canvas.toDataURL() : null;
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
+      canvas.width = targetW;
+      canvas.height = targetH;
       ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(ratio, ratio);
       ctx.lineWidth = 2.2;
@@ -906,7 +913,10 @@
       }
       return {x: x, y: y};
     }
-    function start(e) { state.drawing = true; state.hasSig = true; state.last = pos(e); e.preventDefault(); }
+    function start(e) {
+      if (!canvas.width || !canvas.height) { resizeCanvas(); }
+      state.drawing = true; state.hasSig = true; state.last = pos(e); e.preventDefault();
+    }
     function move(e) {
       if (!state.drawing) return;
       var p = pos(e);
@@ -940,6 +950,7 @@
       reader.onload = function(evt) {
         var img = new Image();
         img.onload = function() {
+          if (!canvas.width || !canvas.height) { resizeCanvas(); }
           var rect = canvas.getBoundingClientRect();
           ctx.clearRect(0, 0, rect.width, rect.height);
           var pad = 10;
@@ -1040,6 +1051,63 @@
     return marker;
   }
 
+  // Shows a live preview of the ACTUAL signature image (trimmed from the pad)
+  // or the ACTUAL date text, sized to match the chosen pt size - not a generic
+  // "Firma qui" placeholder - so what you see is what will be stamped.
+  function placeStampPreview(wrap, xRatio, yRatio, kind, opts) {
+    var rect = wrap.getBoundingClientRect();
+    var pxPerPt = rect.height / opts.pagePtHeight;
+    var pxHeight = Math.max(6, opts.sizePt * pxPerPt);
+    var el;
+    if (kind === 'signature') {
+      var srcCanvas = opts.pad.canvas;
+      var cw = srcCanvas.width || 1, ch = srcCanvas.height || 1;
+      var aspect = cw / ch;
+      el = document.createElement('img');
+      el.style.width = (pxHeight * aspect) + 'px';
+      el.style.height = pxHeight + 'px';
+      el.style.outline = '1.5px dashed ' + opts.color;
+      el.style.background = 'rgba(255,255,255,0.6)';
+      el.style.zIndex = '5';
+      if (opts.pad.hasSig() && srcCanvas.width && srcCanvas.height) {
+        try { el.src = srcCanvas.toDataURL('image/png'); } catch (e) {}
+      }
+      if (!el.src) {
+        // no signature drawn yet, or canvas unreadable: show a clear hint instead of a blank box
+        el = document.createElement('div');
+        el.textContent = 'firma?';
+        el.style.width = (pxHeight * 3) + 'px';
+        el.style.height = pxHeight + 'px';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.fontSize = Math.max(9, pxHeight * 0.5) + 'px';
+        el.style.color = opts.color;
+        el.style.border = '1.5px dashed ' + opts.color;
+        el.style.background = 'rgba(255,255,255,0.7)';
+      }
+    } else {
+      el = document.createElement('div');
+      el.textContent = opts.text || '';
+      el.style.fontSize = pxHeight + 'px';
+      el.style.lineHeight = 1;
+      el.style.color = opts.color;
+      el.style.fontWeight = '600';
+      el.style.fontFamily = '"Segoe Script", "Bradley Hand", cursive';
+      el.style.whiteSpace = 'nowrap';
+      el.style.border = '1.5px dashed ' + opts.color;
+      el.style.padding = '1px 3px';
+      el.style.background = 'rgba(255,255,255,0.7)';
+    }
+    el.style.position = 'absolute';
+    el.style.left = (xRatio * rect.width) + 'px';
+    el.style.top = (yRatio * rect.height) + 'px';
+    el.style.transform = 'translate(0, -100%)';
+    el.style.pointerEvents = 'none';
+    wrap.appendChild(el);
+    return el;
+  }
+
   function ratioFromDefaultBox(box, pageW, pageH) {
     return { x: box.x / pageW, y: 1 - (box.y / pageH) };
   }
@@ -1058,10 +1126,16 @@
   var STANDARD_COLORS = { firma: '#EE6C1F', data: '#2E6FDB' };
 
   function redrawStandardMarkers() {
+    var sigSize = parseInt((document.getElementById('stdSigSize') || {}).value || 20, 10);
+    var dateSize = parseInt((document.getElementById('stdDateSize') || {}).value || 10, 10);
+    var dateText = fmtDate(document.getElementById('data').value);
     ['firma', 'data'].forEach(function(who) {
       standardMarkerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      standardMarkerEls[who] = standardMarks[who].map(function(m, i) {
-        return placeMarker(standardPreviewInfo.wrap, null, m.x, m.y, (who === 'firma' ? 'Firma' : 'Data') + ' ' + (i + 1), STANDARD_COLORS[who]);
+      standardMarkerEls[who] = standardMarks[who].map(function(m) {
+        if (who === 'firma') {
+          return placeStampPreview(standardPreviewInfo.wrap, m.x, m.y, 'signature', { pad: mainPad, sizePt: sigSize, pagePtHeight: standardPreviewInfo.pageHeightPt, color: STANDARD_COLORS.firma });
+        }
+        return placeStampPreview(standardPreviewInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: standardPreviewInfo.pageHeightPt, color: STANDARD_COLORS.data });
       });
     });
   }
@@ -1086,9 +1160,11 @@
   });
   document.getElementById('stdSigSize').addEventListener('input', function() {
     document.getElementById('stdSigSizeVal').textContent = this.value;
+    if (standardPreviewInfo) redrawStandardMarkers();
   });
   document.getElementById('stdDateSize').addEventListener('input', function() {
     document.getElementById('stdDateSizeVal').textContent = this.value;
+    if (standardPreviewInfo) redrawStandardMarkers();
   });
 
   // Cessione: preview of the FILLED document, with multiple click-to-place
@@ -1103,10 +1179,19 @@
   var CESSIONE_LABELS = { cedente: 'Firma Cedente', cessionario: 'Firma Cessionario', data: 'Data' };
 
   function redrawCessioneMarkers() {
+    var sigSize = parseInt((document.getElementById('cesSigSize') || {}).value || 16, 10);
+    var dateSize = parseInt((document.getElementById('cesDateSize') || {}).value || 9, 10);
+    var luogo = (document.getElementById('c_luogo') || {}).value || '';
+    var dataStr = fmtDate((document.getElementById('c_data') || {}).value);
+    var luogoData = (luogo.trim() ? luogo.trim() + ', ' : '') + dataStr;
+    var padByWho = { cedente: cedentePad, cessionario: cessionarioPad };
     ['cedente', 'cessionario', 'data'].forEach(function(who) {
       cessioneMarkerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      cessioneMarkerEls[who] = cessioneMarks[who].map(function(m, i) {
-        return placeMarker(cessionePreviewInfo.wrap, null, m.x, m.y, CESSIONE_LABELS[who] + ' ' + (i + 1), CESSIONE_COLORS[who]);
+      cessioneMarkerEls[who] = cessioneMarks[who].map(function(m) {
+        if (who === 'data') {
+          return placeStampPreview(cessionePreviewInfo.wrap, m.x, m.y, 'date', { text: luogoData, sizePt: dateSize, pagePtHeight: cessionePreviewInfo.pageHeightPt, color: CESSIONE_COLORS.data });
+        }
+        return placeStampPreview(cessionePreviewInfo.wrap, m.x, m.y, 'signature', { pad: padByWho[who], sizePt: sigSize, pagePtHeight: cessionePreviewInfo.pageHeightPt, color: CESSIONE_COLORS[who] });
       });
     });
   }
@@ -1142,9 +1227,11 @@
   });
   document.getElementById('cesSigSize').addEventListener('input', function() {
     document.getElementById('cesSigSizeVal').textContent = this.value;
+    if (cessionePreviewInfo) redrawCessioneMarkers();
   });
   document.getElementById('cesDateSize').addEventListener('input', function() {
     document.getElementById('cesDateSizeVal').textContent = this.value;
+    if (cessionePreviewInfo) redrawCessioneMarkers();
   });
 
   document.querySelectorAll('input[name=c_pagamento]').forEach(function(r) {
@@ -1538,10 +1625,16 @@
   }
 
   function redrawDocPageMarkers(pageInfo) {
+    var sigSize = parseInt((document.getElementById('docSigSize') || {}).value || 28, 10);
+    var dateSize = parseInt((document.getElementById('docDateSize') || {}).value || 16, 10);
+    var dateText = fmtDate(document.getElementById('data').value) || fmtDate(new Date().toISOString().slice(0,10));
     ['firma', 'data'].forEach(function(who) {
       pageInfo.markerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m, i) {
-        return placeMarker(pageInfo.wrap, null, m.x, m.y, (who === 'firma' ? 'Firma' : 'Data') + ' ' + (i + 1), STANDARD_COLORS[who]);
+      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m) {
+        if (who === 'firma') {
+          return placeStampPreview(pageInfo.wrap, m.x, m.y, 'signature', { pad: mainPad, sizePt: sigSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.firma });
+        }
+        return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
       });
     });
   }
@@ -1638,9 +1731,11 @@
 
   document.getElementById('docSigSize').addEventListener('input', function() {
     document.getElementById('docSigSizeVal').textContent = this.value;
+    docState.pages.forEach(redrawDocPageMarkers);
   });
   document.getElementById('docDateSize').addEventListener('input', function() {
     document.getElementById('docDateSizeVal').textContent = this.value;
+    docState.pages.forEach(redrawDocPageMarkers);
   });
 
   document.getElementById('generateDocs').addEventListener('click', async function() {
@@ -1709,10 +1804,16 @@
   var activeFdPlacer = 'firma';
 
   function redrawFdPageMarkers(pageInfo) {
+    var sigSize = parseInt((document.getElementById('fdSigSize') || {}).value || 28, 10);
+    var dateSize = parseInt((document.getElementById('fdDateSize') || {}).value || 14, 10);
+    var dateText = fmtDate(document.getElementById('fd_data').value) || fmtDate(new Date().toISOString().slice(0,10));
     ['firma', 'data'].forEach(function(who) {
       pageInfo.markerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m, i) {
-        return placeMarker(pageInfo.wrap, null, m.x, m.y, (who === 'firma' ? 'Firma' : 'Data') + ' ' + (i + 1), STANDARD_COLORS[who]);
+      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m) {
+        if (who === 'firma') {
+          return placeStampPreview(pageInfo.wrap, m.x, m.y, 'signature', { pad: firmaDocPad, sizePt: sigSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.firma });
+        }
+        return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
       });
     });
   }
@@ -1735,9 +1836,11 @@
   });
   document.getElementById('fdSigSize').addEventListener('input', function() {
     document.getElementById('fdSigSizeVal').textContent = this.value;
+    fdState.pages.forEach(redrawFdPageMarkers);
   });
   document.getElementById('fdDateSize').addEventListener('input', function() {
     document.getElementById('fdDateSizeVal').textContent = this.value;
+    fdState.pages.forEach(redrawFdPageMarkers);
   });
 
   function setFdStatus(msg, cls) {
@@ -2160,7 +2263,7 @@
       });
 
       var cfg = MODES[currentMode];
-      var dateFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      var dateFont = await embedHandFont(pdfDoc);
       var dateStr = fmtDate(document.getElementById('data').value);
       if (standardMarks.data.length) {
         standardMarks.data.forEach(function(m) {
@@ -2373,7 +2476,7 @@
       }
 
       if (cessioneMarks.data.length) {
-        var dateFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+        var dateFont = await embedHandFont(pdfDoc);
         var luogo = document.getElementById('c_luogo').value.trim();
         var dataStr = fmtDate(document.getElementById('c_data').value);
         var luogoData = (luogo ? luogo + ', ' : '') + dataStr;
