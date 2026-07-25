@@ -91,6 +91,21 @@
     transform: translate(0, -100%);
   }
   #app-root .pagelabel { font-size: 11.5px; color: var(--muted); margin: 4px 0 -2px; }
+  #app-root .sig-drag {
+    position: absolute; cursor: move; touch-action: none;
+    outline: 1.5px dashed var(--wt-orange); background: rgba(255,255,255,0.5);
+  }
+  #app-root .sig-drag img { width:100%; height:100%; display:block; pointer-events:none; user-select:none; }
+  #app-root .sig-drag .sig-resize-handle {
+    position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px;
+    background: var(--wt-orange); border: 2px solid #fff; border-radius: 50%;
+    cursor: nwse-resize; touch-action: none; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  #app-root .sig-drag .sig-remove {
+    position: absolute; left: -8px; top: -8px; width: 16px; height: 16px;
+    background: #C0392B; color:#fff; border-radius: 50%; font-size: 11px; line-height:16px;
+    text-align:center; cursor:pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
   #app-root .tabs { display:flex; gap:8px; margin-bottom: 20px; flex-wrap: wrap; }
   #app-root .tabs .tab-btn { flex: 1 1 150px; }
   #app-root .tab-btn {
@@ -431,23 +446,10 @@
     </div>
 
     <fieldset id="standardSignFieldset" style="display:none; margin-top:18px">
-      <legend>Posiziona firma e data sul documento</legend>
-      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato con i dati inseriti. Scegli cosa stai posizionando e clicca su <strong>ogni punto</strong> dove serve &mdash; puoi cliccare tante volte quante servono, firma e data sono indipendenti.</p>
+      <legend>Posiziona la firma sul documento</legend>
+      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato, data inclusa. Clicca dove vuoi mettere la firma: comparir&agrave; l&rsquo;immagine vera, che puoi <strong>trascinare</strong> per spostarla e ridimensionare tirando il puntino arancione. Puoi aggiungerne quante ne servono.</p>
       <div style="display:flex; gap:8px; margin:6px 0 8px; flex-wrap:wrap;">
-        <button type="button" class="tab-btn active" id="placeBtnStandardFirma" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Firma</button>
-        <button type="button" class="tab-btn" id="placeBtnStandardData" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Data</button>
-        <button type="button" class="linkbtn" id="undoLastMarkStandard">Annulla ultimo punto</button>
-        <button type="button" class="linkbtn" id="clearAllMarksStandard">Cancella tutti i punti</button>
-      </div>
-      <div class="row">
-        <div class="field narrow">
-          <label>Dimensione firma <span id="stdSigSizeVal">20</span>pt</label>
-          <input type="range" id="stdSigSize" min="10" max="60" value="20" style="width:100%">
-        </div>
-        <div class="field narrow">
-          <label>Dimensione data <span id="stdDateSizeVal">10</span>pt</label>
-          <input type="range" id="stdDateSize" min="6" max="24" value="10" style="width:100%">
-        </div>
+        <button type="button" class="linkbtn" id="clearAllMarksStandard">Cancella tutte le firme</button>
       </div>
       <div id="sigPreviewMobileFisso"></div>
       <div class="actions" style="margin-top:14px">
@@ -653,24 +655,12 @@
     </div>
 
     <fieldset id="cessioneSignFieldset" style="display:none; margin-top:18px">
-      <legend>Posiziona firme e date sul documento</legend>
-      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato con i dati inseriti. Scegli cosa stai posizionando e clicca su <strong>ogni punto</strong> dove serve &mdash; il modulo richiede pi&ugrave; firme e pi&ugrave; date, le metti tu, tutte manuali.</p>
+      <legend>Posiziona le firme sul documento</legend>
+      <p class="sub" style="margin:0 0 12px">Il modulo qui sotto &egrave; gi&agrave; compilato, date incluse. Scegli chi stai firmando e clicca dove serve: comparir&agrave; l&rsquo;immagine vera della firma, che puoi <strong>trascinare</strong> per spostarla e ridimensionare tirando il puntino arancione. Il modulo richiede pi&ugrave; firme a testa: aggiungine quante servono.</p>
       <div style="display:flex; gap:8px; margin:6px 0 8px; flex-wrap:wrap;">
-        <button type="button" class="tab-btn active" id="placeBtnCedente" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Firma Cedente</button>
-        <button type="button" class="tab-btn" id="placeBtnCessionario" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Firma Cessionario</button>
-        <button type="button" class="tab-btn" id="placeBtnCessioneData" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Data</button>
-        <button type="button" class="linkbtn" id="undoLastMark">Annulla ultimo punto</button>
-        <button type="button" class="linkbtn" id="clearAllMarks">Cancella tutti i punti</button>
-      </div>
-      <div class="row">
-        <div class="field narrow">
-          <label>Dimensione firme <span id="cesSigSizeVal">16</span>pt</label>
-          <input type="range" id="cesSigSize" min="10" max="60" value="16" style="width:100%">
-        </div>
-        <div class="field narrow">
-          <label>Dimensione date <span id="cesDateSizeVal">9</span>pt</label>
-          <input type="range" id="cesDateSize" min="6" max="24" value="9" style="width:100%">
-        </div>
+        <button type="button" class="tab-btn active" id="placeBtnCedente" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto firmando: Cedente</button>
+        <button type="button" class="tab-btn" id="placeBtnCessionario" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto firmando: Cessionario</button>
+        <button type="button" class="linkbtn" id="clearAllMarks">Cancella tutte le firme</button>
       </div>
       <div id="sigPreviewCessione"></div>
       <div class="actions" style="margin-top:14px">
@@ -796,17 +786,13 @@
 
     <fieldset id="fdSignFieldset" style="display:none">
       <legend>Posiziona firma e data</legend>
-      <p class="sub" style="margin:0 0 12px">Scegli cosa stai posizionando e clicca su ogni pagina dove serve &mdash; puoi cliccare tante volte quante vuoi, su qualsiasi pagina.</p>
+      <p class="sub" style="margin:0 0 12px">Scegli cosa stai posizionando e clicca su ogni pagina. La firma comparir&agrave; come immagine vera: trascinala per spostarla e tira il puntino arancione per ridimensionarla. La data resta un testo da posizionare col click (regola qui sotto la dimensione).</p>
       <div style="display:flex; gap:8px; margin:6px 0 8px; flex-wrap:wrap;">
         <button type="button" class="tab-btn active" id="placeBtnFdFirma" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Firma</button>
         <button type="button" class="tab-btn" id="placeBtnFdData" style="flex:0 0 auto; padding:8px 14px; font-size:12.5px;">Sto posizionando: Data</button>
         <button type="button" class="linkbtn" id="clearFdPositions">Cancella tutti i punti</button>
       </div>
       <div class="row">
-        <div class="field narrow">
-          <label>Dimensione firma <span id="fdSigSizeVal">28</span>pt</label>
-          <input type="range" id="fdSigSize" min="10" max="60" value="28" style="width:100%">
-        </div>
         <div class="field narrow">
           <label>Dimensione data <span id="fdDateSizeVal">14</span>pt</label>
           <input type="range" id="fdDateSize" min="6" max="30" value="14" style="width:100%">
@@ -943,10 +929,6 @@
     </div>
     <div id="docPages"></div>
     <div class="row" id="docSizeControls" style="display:none">
-      <div class="field narrow">
-        <label>Dimensione firma <span id="docSigSizeVal">28</span>pt</label>
-        <input type="range" id="docSigSize" min="14" max="60" value="28" style="width:100%">
-      </div>
       <div class="field narrow">
         <label>Dimensione data <span id="docDateSizeVal">16</span>pt</label>
         <input type="range" id="docDateSize" min="8" max="30" value="16" style="width:100%">
@@ -1257,6 +1239,110 @@
     return el;
   }
 
+  // Creates a live, draggable & resizable signature preview on the page:
+  // - drag anywhere on it to move
+  // - drag the orange handle (bottom-right) to resize
+  // - click the red x to remove
+  // mark: {x, y, sizePt, page} - x/y are the ratio of the BOTTOM-LEFT anchor,
+  // mutated in place as the user drags/resizes so it always reflects the truth.
+  function makeDraggableSignature(wrap, mark, pad, pagePtHeight, onRemove) {
+    var srcCanvas = pad.canvas;
+    var aspect = (srcCanvas.width || 1) / (srcCanvas.height || 1);
+    var el = document.createElement('div');
+    el.className = 'sig-drag';
+    var img = document.createElement('img');
+    if (pad.hasSig()) {
+      try { img.src = srcCanvas.toDataURL('image/png'); } catch (e) {}
+    }
+    el.appendChild(img);
+    var handle = document.createElement('div');
+    handle.className = 'sig-resize-handle';
+    el.appendChild(handle);
+    var removeBtn = document.createElement('div');
+    removeBtn.className = 'sig-remove';
+    removeBtn.textContent = '\u00d7';
+    el.appendChild(removeBtn);
+
+    function layout() {
+      var r = wrap.getBoundingClientRect();
+      var ppp = r.height / pagePtHeight;
+      var hPx = mark.sizePt * ppp;
+      var wPx = hPx * aspect;
+      el.style.width = wPx + 'px';
+      el.style.height = hPx + 'px';
+      el.style.left = (mark.x * r.width) + 'px';
+      el.style.top = (mark.y * r.height - hPx) + 'px';
+    }
+    layout();
+
+    function dragMove(getPoint) {
+      return function(ev) {
+        var p = getPoint(ev);
+        var r = wrap.getBoundingClientRect();
+        mark.x = (p.clientX - r.left) / r.width;
+        mark.y = (p.clientY - r.top) / r.height;
+        layout();
+      };
+    }
+    function pt(ev) { return ev.touches && ev.touches.length ? ev.touches[0] : ev; }
+
+    el.addEventListener('mousedown', function(ev) {
+      if (ev.target === handle || ev.target === removeBtn) return;
+      ev.preventDefault();
+      var move = dragMove(pt);
+      function up() { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+    el.addEventListener('touchstart', function(ev) {
+      if (ev.target === handle || ev.target === removeBtn) return;
+      var move = dragMove(pt);
+      function up() { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); }
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: true });
+
+    function resizeMove(getPoint) {
+      return function(ev) {
+        if (ev.cancelable) ev.preventDefault();
+        var p = getPoint(ev);
+        var r = wrap.getBoundingClientRect();
+        var ppp = r.height / pagePtHeight;
+        var leftPx = mark.x * r.width;
+        var bottomPx = mark.y * r.height;
+        var wCandidate = (p.clientX - r.left) - leftPx;
+        var hFromWidth = wCandidate / aspect;
+        var hCandidate = bottomPx - (p.clientY - r.top);
+        var hPx = Math.max(8, hFromWidth, hCandidate);
+        mark.sizePt = hPx / ppp;
+        layout();
+      };
+    }
+    handle.addEventListener('mousedown', function(ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var move = resizeMove(pt);
+      function up() { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+    handle.addEventListener('touchstart', function(ev) {
+      ev.stopPropagation();
+      var move = resizeMove(pt);
+      function up() { document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); }
+      document.addEventListener('touchmove', move, { passive: false });
+      document.addEventListener('touchend', up);
+    }, { passive: true });
+
+    removeBtn.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (onRemove) onRemove();
+    });
+
+    wrap.appendChild(el);
+    return el;
+  }
+
   function ratioFromDefaultBox(box, pageW, pageH) {
     return { x: box.x / pageW, y: 1 - (box.y / pageH) };
   }
@@ -1265,124 +1351,46 @@
   }
 
   // Standard system (mobile / micro / fisso / morte / decesso): preview of the
-  // FILLED document, with independent, multiple click-to-place marks for both
-  // the signature and the date - never auto-stacked, you place each yourself.
+  // FILLED document (date already printed automatically), with draggable,
+  // resizable signature stamps you place, move and resize yourself.
   // Marks carry a "page" index so multi-page modules (signature on a later page) work too.
-  var standardMarks = { firma: [], data: [] };
-  var standardMarkerEls = { firma: [], data: [] };
+  var standardMarks = { firma: [] };
+  var STANDARD_COLORS = { firma: '#EE6C1F', data: '#2E6FDB' };
   var standardPreviewPages = []; // one entry per rendered page: {wrap, canvas, pageWidthPt, pageHeightPt, page}
   var standardFilledBytes = null;
-  var activeStandardPlacer = 'firma';
-  var STANDARD_COLORS = { firma: '#EE6C1F', data: '#2E6FDB' };
 
-  function redrawStandardMarkers() {
-    var sigSize = parseInt((document.getElementById('stdSigSize') || {}).value || 20, 10);
-    var dateSize = parseInt((document.getElementById('stdDateSize') || {}).value || 10, 10);
-    var dateText = fmtDate(document.getElementById('data').value);
-    ['firma', 'data'].forEach(function(who) {
-      standardMarkerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      standardMarkerEls[who] = standardMarks[who].map(function(m) {
-        var pageInfo = standardPreviewPages[m.page] || standardPreviewPages[0];
-        if (who === 'firma') {
-          return placeStampPreview(pageInfo.wrap, m.x, m.y, 'signature', { pad: mainPad, sizePt: sigSize, pagePtHeight: pageInfo.pageHeightPt, color: STANDARD_COLORS.firma });
-        }
-        return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.pageHeightPt, color: STANDARD_COLORS.data });
-      });
-    });
-  }
-  document.getElementById('placeBtnStandardFirma').addEventListener('click', function() {
-    activeStandardPlacer = 'firma';
-    this.classList.add('active');
-    document.getElementById('placeBtnStandardData').classList.remove('active');
-  });
-  document.getElementById('placeBtnStandardData').addEventListener('click', function() {
-    activeStandardPlacer = 'data';
-    this.classList.add('active');
-    document.getElementById('placeBtnStandardFirma').classList.remove('active');
-  });
-  document.getElementById('undoLastMarkStandard').addEventListener('click', function() {
-    if (!standardPreviewPages.length) return;
-    standardMarks[activeStandardPlacer].pop();
-    redrawStandardMarkers();
-  });
   document.getElementById('clearAllMarksStandard').addEventListener('click', function() {
-    standardMarks = { firma: [], data: [] };
-    if (standardPreviewPages.length) redrawStandardMarkers();
-  });
-  document.getElementById('stdSigSize').addEventListener('input', function() {
-    document.getElementById('stdSigSizeVal').textContent = this.value;
-    if (standardPreviewPages.length) redrawStandardMarkers();
-  });
-  document.getElementById('stdDateSize').addEventListener('input', function() {
-    document.getElementById('stdDateSizeVal').textContent = this.value;
-    if (standardPreviewPages.length) redrawStandardMarkers();
+    standardPreviewPages.forEach(function(p) {
+      Array.prototype.slice.call(p.wrap.querySelectorAll('.sig-drag')).forEach(function(el) { el.parentNode.removeChild(el); });
+    });
+    standardMarks.firma = [];
   });
 
-  // Cessione: preview of the FILLED document, with multiple click-to-place
-  // signature marks per signer (the form needs the same signature more than once),
-  // plus independent, fully manual date marks (no auto-fixed positions at all)
-  var cessioneMarks = { cedente: [], cessionario: [], data: [] };
-  var cessioneMarkerEls = { cedente: [], cessionario: [], data: [] };
+  // Cessione: preview of the FILLED document (dates already printed
+  // automatically), with draggable, resizable signature stamps for both
+  // Cedente and Cessionario - the form needs each of them more than once.
+  var cessioneMarks = { cedente: [], cessionario: [] };
   var cessionePreviewInfo = null; // {wrap, canvas, pageWidthPt, pageHeightPt}
   var cessioneFilledBytes = null; // the filled-but-unsigned PDF, kept for the final signing step
   var activeCessionePlacer = 'cedente';
-  var CESSIONE_COLORS = { cedente: '#EE6C1F', cessionario: '#2E6FDB', data: '#5B8C3E' };
-  var CESSIONE_LABELS = { cedente: 'Firma Cedente', cessionario: 'Firma Cessionario', data: 'Data' };
-
-  function redrawCessioneMarkers() {
-    var sigSize = parseInt((document.getElementById('cesSigSize') || {}).value || 16, 10);
-    var dateSize = parseInt((document.getElementById('cesDateSize') || {}).value || 9, 10);
-    var luogo = (document.getElementById('c_luogo') || {}).value || '';
-    var dataStr = fmtDate((document.getElementById('c_data') || {}).value);
-    var luogoData = (luogo.trim() ? luogo.trim() + ', ' : '') + dataStr;
-    var padByWho = { cedente: cedentePad, cessionario: cessionarioPad };
-    ['cedente', 'cessionario', 'data'].forEach(function(who) {
-      cessioneMarkerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      cessioneMarkerEls[who] = cessioneMarks[who].map(function(m) {
-        if (who === 'data') {
-          return placeStampPreview(cessionePreviewInfo.wrap, m.x, m.y, 'date', { text: luogoData, sizePt: dateSize, pagePtHeight: cessionePreviewInfo.pageHeightPt, color: CESSIONE_COLORS.data });
-        }
-        return placeStampPreview(cessionePreviewInfo.wrap, m.x, m.y, 'signature', { pad: padByWho[who], sizePt: sigSize, pagePtHeight: cessionePreviewInfo.pageHeightPt, color: CESSIONE_COLORS[who] });
-      });
-    });
-  }
+  var CESSIONE_COLORS = { cedente: '#EE6C1F', cessionario: '#2E6FDB' };
 
   document.getElementById('placeBtnCedente').addEventListener('click', function() {
     activeCessionePlacer = 'cedente';
     this.classList.add('active');
     document.getElementById('placeBtnCessionario').classList.remove('active');
-    document.getElementById('placeBtnCessioneData').classList.remove('active');
   });
   document.getElementById('placeBtnCessionario').addEventListener('click', function() {
     activeCessionePlacer = 'cessionario';
     this.classList.add('active');
     document.getElementById('placeBtnCedente').classList.remove('active');
-    document.getElementById('placeBtnCessioneData').classList.remove('active');
-  });
-  document.getElementById('placeBtnCessioneData').addEventListener('click', function() {
-    activeCessionePlacer = 'data';
-    this.classList.add('active');
-    document.getElementById('placeBtnCedente').classList.remove('active');
-    document.getElementById('placeBtnCessionario').classList.remove('active');
-  });
-  document.getElementById('undoLastMark').addEventListener('click', function() {
-    if (!cessionePreviewInfo) return;
-    cessioneMarks[activeCessionePlacer].pop();
-    redrawCessioneMarkers();
   });
   document.getElementById('clearAllMarks').addEventListener('click', function() {
+    if (cessionePreviewInfo) {
+      Array.prototype.slice.call(cessionePreviewInfo.wrap.querySelectorAll('.sig-drag')).forEach(function(el) { el.parentNode.removeChild(el); });
+    }
     cessioneMarks.cedente = [];
     cessioneMarks.cessionario = [];
-    cessioneMarks.data = [];
-    if (cessionePreviewInfo) redrawCessioneMarkers();
-  });
-  document.getElementById('cesSigSize').addEventListener('input', function() {
-    document.getElementById('cesSigSizeVal').textContent = this.value;
-    if (cessionePreviewInfo) redrawCessioneMarkers();
-  });
-  document.getElementById('cesDateSize').addEventListener('input', function() {
-    document.getElementById('cesDateSizeVal').textContent = this.value;
-    if (cessionePreviewInfo) redrawCessioneMarkers();
   });
 
   document.querySelectorAll('input[name=c_pagamento]').forEach(function(r) {
@@ -1644,7 +1652,7 @@
   function switchMode(mode) {
     if (mode !== currentMode) {
       standardFilledBytes = null;
-      standardMarks = { firma: [], data: [] };
+      standardMarks = { firma: [] };
       standardPreviewPages = [];
       var fs = document.getElementById('standardSignFieldset');
       if (fs) fs.style.display = 'none';
@@ -1800,17 +1808,11 @@
   }
 
   function redrawDocPageMarkers(pageInfo) {
-    var sigSize = parseInt((document.getElementById('docSigSize') || {}).value || 28, 10);
     var dateSize = parseInt((document.getElementById('docDateSize') || {}).value || 16, 10);
     var dateText = fmtDate(document.getElementById('data').value) || fmtDate(new Date().toISOString().slice(0,10));
-    ['firma', 'data'].forEach(function(who) {
-      pageInfo.markerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m) {
-        if (who === 'firma') {
-          return placeStampPreview(pageInfo.wrap, m.x, m.y, 'signature', { pad: mainPad, sizePt: sigSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.firma });
-        }
-        return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
-      });
+    pageInfo.markerEls.data.forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
+    pageInfo.markerEls.data = pageInfo.marks.data.map(function(m) {
+      return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
     });
   }
 
@@ -1872,15 +1874,26 @@
           markerEls: { firma: [], data: [] },
           ptW: baseViewport.width,
           ptH: baseViewport.height,
-          wrap: wrap
+          wrap: wrap,
+          canvas: canvasEl
         };
         (function(pageInfo, wrap) {
           wrap.addEventListener('click', function(ev) {
+            if (ev.target !== pageInfo.canvas) return;
             var rect = wrap.getBoundingClientRect();
             var xr = (ev.clientX - rect.left) / rect.width;
             var yr = (ev.clientY - rect.top) / rect.height;
-            pageInfo.marks[activeDocPlacer].push({ x: xr, y: yr });
-            redrawDocPageMarkers(pageInfo);
+            if (activeDocPlacer === 'firma') {
+              var mark = { x: xr, y: yr, sizePt: 28 };
+              pageInfo.marks.firma.push(mark);
+              makeDraggableSignature(wrap, mark, mainPad, pageInfo.ptH, function() {
+                var idx = pageInfo.marks.firma.indexOf(mark);
+                if (idx > -1) pageInfo.marks.firma.splice(idx, 1);
+              });
+            } else {
+              pageInfo.marks.data.push({ x: xr, y: yr });
+              redrawDocPageMarkers(pageInfo);
+            }
           });
         })(pageInfo, wrap);
 
@@ -1898,16 +1911,13 @@
 
   document.getElementById('clearDocPositions').addEventListener('click', function() {
     docState.pages.forEach(function(p) {
+      Array.prototype.slice.call(p.wrap.querySelectorAll('.sig-drag')).forEach(function(el) { el.parentNode.removeChild(el); });
       p.marks = { firma: [], data: [] };
       redrawDocPageMarkers(p);
     });
     setDocStatus('Posizioni cancellate.', '');
   });
 
-  document.getElementById('docSigSize').addEventListener('input', function() {
-    document.getElementById('docSigSizeVal').textContent = this.value;
-    docState.pages.forEach(redrawDocPageMarkers);
-  });
   document.getElementById('docDateSize').addEventListener('input', function() {
     document.getElementById('docDateSizeVal').textContent = this.value;
     docState.pages.forEach(redrawDocPageMarkers);
@@ -1930,7 +1940,6 @@
       var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
       var sigImage = await pdfDoc.embedPng(sigBytes);
       var dateStr = fmtDate(document.getElementById('data').value) || fmtDate(new Date().toISOString().slice(0,10));
-      var sigTargetH = parseInt(document.getElementById('docSigSize').value, 10);
       var dateSize = parseInt(document.getElementById('docDateSize').value, 10);
 
       var pages = pdfDoc.getPages();
@@ -1942,7 +1951,7 @@
         info.marks.firma.forEach(function(m) {
           var pdfX = m.x * info.ptW;
           var pdfY = info.ptH - m.y * info.ptH;
-          var scale = Math.min(sigTargetH / trimmed.height, 220 / trimmed.width);
+          var scale = m.sizePt / trimmed.height;
           var drawW = trimmed.width * scale;
           var drawH = trimmed.height * scale;
           page.drawImage(sigImage, { x: pdfX, y: pdfY, width: drawW, height: drawH });
@@ -1979,17 +1988,11 @@
   var activeFdPlacer = 'firma';
 
   function redrawFdPageMarkers(pageInfo) {
-    var sigSize = parseInt((document.getElementById('fdSigSize') || {}).value || 28, 10);
     var dateSize = parseInt((document.getElementById('fdDateSize') || {}).value || 14, 10);
     var dateText = fmtDate(document.getElementById('fd_data').value) || fmtDate(new Date().toISOString().slice(0,10));
-    ['firma', 'data'].forEach(function(who) {
-      pageInfo.markerEls[who].forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
-      pageInfo.markerEls[who] = pageInfo.marks[who].map(function(m) {
-        if (who === 'firma') {
-          return placeStampPreview(pageInfo.wrap, m.x, m.y, 'signature', { pad: firmaDocPad, sizePt: sigSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.firma });
-        }
-        return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
-      });
+    pageInfo.markerEls.data.forEach(function(el) { if (el.parentNode) el.parentNode.removeChild(el); });
+    pageInfo.markerEls.data = pageInfo.marks.data.map(function(m) {
+      return placeStampPreview(pageInfo.wrap, m.x, m.y, 'date', { text: dateText, sizePt: dateSize, pagePtHeight: pageInfo.ptH, color: STANDARD_COLORS.data });
     });
   }
 
@@ -2005,13 +2008,10 @@
   });
   document.getElementById('clearFdPositions').addEventListener('click', function() {
     fdState.pages.forEach(function(p) {
+      Array.prototype.slice.call(p.wrap.querySelectorAll('.sig-drag')).forEach(function(el) { el.parentNode.removeChild(el); });
       p.marks = { firma: [], data: [] };
       redrawFdPageMarkers(p);
     });
-  });
-  document.getElementById('fdSigSize').addEventListener('input', function() {
-    document.getElementById('fdSigSizeVal').textContent = this.value;
-    fdState.pages.forEach(redrawFdPageMarkers);
   });
   document.getElementById('fdDateSize').addEventListener('input', function() {
     document.getElementById('fdDateSizeVal').textContent = this.value;
@@ -2069,15 +2069,26 @@
           markerEls: { firma: [], data: [] },
           ptW: baseViewport.width,
           ptH: baseViewport.height,
-          wrap: wrap
+          wrap: wrap,
+          canvas: canvasEl
         };
         (function(pageInfo, wrap) {
           wrap.addEventListener('click', function(ev) {
+            if (ev.target !== pageInfo.canvas) return;
             var rect = wrap.getBoundingClientRect();
             var xr = (ev.clientX - rect.left) / rect.width;
             var yr = (ev.clientY - rect.top) / rect.height;
-            pageInfo.marks[activeFdPlacer].push({ x: xr, y: yr });
-            redrawFdPageMarkers(pageInfo);
+            if (activeFdPlacer === 'firma') {
+              var mark = { x: xr, y: yr, sizePt: 28 };
+              pageInfo.marks.firma.push(mark);
+              makeDraggableSignature(wrap, mark, firmaDocPad, pageInfo.ptH, function() {
+                var idx = pageInfo.marks.firma.indexOf(mark);
+                if (idx > -1) pageInfo.marks.firma.splice(idx, 1);
+              });
+            } else {
+              pageInfo.marks.data.push({ x: xr, y: yr });
+              redrawFdPageMarkers(pageInfo);
+            }
           });
         })(pageInfo, wrap);
 
@@ -2108,7 +2119,6 @@
       var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
       var sigImage = await pdfDoc.embedPng(sigBytes);
       var dateStr = fmtDate(document.getElementById('fd_data').value) || fmtDate(new Date().toISOString().slice(0,10));
-      var sigTargetH = parseInt(document.getElementById('fdSigSize').value, 10);
       var dateSize = parseInt(document.getElementById('fdDateSize').value, 10);
 
       var pages = pdfDoc.getPages();
@@ -2120,7 +2130,7 @@
         info.marks.firma.forEach(function(m) {
           var pdfX = m.x * info.ptW;
           var pdfY = info.ptH - m.y * info.ptH;
-          var scale = Math.min(sigTargetH / trimmed.height, 220 / trimmed.width);
+          var scale = m.sizePt / trimmed.height;
           var drawW = trimmed.width * scale;
           var drawH = trimmed.height * scale;
           page.drawImage(sigImage, { x: pdfX, y: pdfY, width: drawW, height: drawH });
@@ -2412,6 +2422,9 @@
     ids.forEach(function(id) {
       if (cfg.fields[id]) drawVal(page, font, pageHeight, cfg.fields[id], values[id]);
     });
+    if (cfg.fields.data) {
+      drawVal(page, font, pageHeight, cfg.fields.data, fmtDate(document.getElementById('data').value));
+    }
 
     var motivo = document.querySelector('input[name=' + cfg.motivoRadioName + ']:checked');
     var pagamento = document.querySelector('input[name=' + cfg.pagamentoRadioName + ']:checked');
@@ -2468,19 +2481,23 @@
     setStatus('Compilazione in corso...', '');
     try {
       standardFilledBytes = await buildFilledStandardBytes(cfg);
-      standardMarks = { firma: [], data: [] };
+      standardMarks.firma = [];
       var container = document.getElementById('sigPreviewMobileFisso');
       standardPreviewPages = await renderPdfPreviewAllPages(standardFilledBytes, container);
       standardPreviewPages.forEach(function(pageInfo) {
-        pageInfo.wrap.onclick = function(ev) {
+        pageInfo.wrap.addEventListener('click', function(ev) {
+          if (ev.target !== pageInfo.canvas) return; // ignore clicks on an existing signature/handle
           var rect = pageInfo.wrap.getBoundingClientRect();
           var xr = (ev.clientX - rect.left) / rect.width;
           var yr = (ev.clientY - rect.top) / rect.height;
-          standardMarks[activeStandardPlacer].push({ x: xr, y: yr, page: pageInfo.page });
-          redrawStandardMarkers();
-        };
+          var mark = { x: xr, y: yr, page: pageInfo.page, sizePt: 20 };
+          standardMarks.firma.push(mark);
+          makeDraggableSignature(pageInfo.wrap, mark, mainPad, pageInfo.pageHeightPt, function() {
+            var idx = standardMarks.firma.indexOf(mark);
+            if (idx > -1) standardMarks.firma.splice(idx, 1);
+          });
+        });
       });
-      redrawStandardMarkers();
       document.getElementById('standardSignFieldset').style.display = 'block';
       document.getElementById('generate').disabled = false;
       document.getElementById('standardSignFieldset').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2509,30 +2526,15 @@
       var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
       var sigImage = await pdfDoc.embedPng(sigBytes);
 
-      var sigSize = parseInt(document.getElementById('stdSigSize').value, 10);
-      var dateSize = parseInt(document.getElementById('stdDateSize').value, 10);
-
       standardMarks.firma.forEach(function(m) {
         var pg = pages[m.page || 0];
         var pw = pg.getWidth(), ph = pg.getHeight();
-        var scale = Math.min(sigSize / trimmed.height, 220 / trimmed.width);
+        var scale = m.sizePt / trimmed.height;
         var w = trimmed.width * scale, h = trimmed.height * scale;
         pg.drawImage(sigImage, { x: m.x * pw, y: ph - m.y * ph, width: w, height: h });
       });
 
       var cfg = MODES[currentMode];
-      var dateFont = await embedHandFont(pdfDoc);
-      var dateStr = fmtDate(document.getElementById('data').value);
-      if (standardMarks.data.length) {
-        standardMarks.data.forEach(function(m) {
-          var pg = pages[m.page || 0];
-          var pw = pg.getWidth(), ph = pg.getHeight();
-          pg.drawText(dateStr, { x: m.x * pw, y: ph - m.y * ph, size: dateSize, font: dateFont });
-        });
-      } else if (cfg.fields.data) {
-        // no manual date placement: fall back to the form's own printed Data line
-        drawVal(pages[0], dateFont, pages[0].getHeight(), cfg.fields.data, dateStr);
-      }
 
       var outBytes = await pdfDoc.save();
       var blob = new Blob([outBytes], { type: 'application/pdf' });
@@ -2653,6 +2655,11 @@
     var luogoData = (luogo ? luogo + ', ' : '') + dataStr;
 
     CESSIONE_TEXT_IDS.forEach(function(id) { drawVal(page, font, ph, CESSIONE_FIELDS[id], cV(id)); });
+    drawVal(page, font, ph, CESSIONE_FIELDS.carta_luogo_data, luogoData);
+    drawVal(page, font, ph, CESSIONE_FIELDS.sepa_luogo_data, luogoData);
+    drawVal(page, font, ph, CESSIONE_FIELDS.consent_data, dataStr);
+    drawVal(page, font, ph, CESSIONE_FIELDS.firme1_data, dataStr);
+    drawVal(page, font, ph, CESSIONE_FIELDS.firme2_data, dataStr);
 
     if (pagamento === 'carta') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_carta); }
     if (pagamento === 'sepa') { drawCheck(page, fontBold, ph, CESSIONE_CHECKS.pay_sepa); }
@@ -2681,14 +2688,20 @@
       cessioneMarks.cessionario = [];
       var container = document.getElementById('sigPreviewCessione');
       cessionePreviewInfo = await renderPdfPreviewFromBytes(cessioneFilledBytes, container);
-      redrawCessioneMarkers();
-      cessionePreviewInfo.wrap.onclick = function(ev) {
+      var padByWho = { cedente: cedentePad, cessionario: cessionarioPad };
+      cessionePreviewInfo.wrap.addEventListener('click', function(ev) {
+        if (ev.target !== cessionePreviewInfo.canvas) return;
         var rect = cessionePreviewInfo.wrap.getBoundingClientRect();
         var xr = (ev.clientX - rect.left) / rect.width;
         var yr = (ev.clientY - rect.top) / rect.height;
-        cessioneMarks[activeCessionePlacer].push({ x: xr, y: yr });
-        redrawCessioneMarkers();
-      };
+        var who = activeCessionePlacer;
+        var mark = { x: xr, y: yr, sizePt: 16 };
+        cessioneMarks[who].push(mark);
+        makeDraggableSignature(cessionePreviewInfo.wrap, mark, padByWho[who], cessionePreviewInfo.pageHeightPt, function() {
+          var idx = cessioneMarks[who].indexOf(mark);
+          if (idx > -1) cessioneMarks[who].splice(idx, 1);
+        });
+      });
       document.getElementById('cessioneSignFieldset').style.display = 'block';
       document.getElementById('generateCessione').disabled = false;
       document.getElementById('cessioneSignFieldset').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2715,34 +2728,22 @@
       var pdfDoc = await PDFLib.PDFDocument.load(cessioneFilledBytes);
       var page = pdfDoc.getPage(0);
       var pw = page.getWidth(), ph = page.getHeight();
-      var sigSize = parseInt(document.getElementById('cesSigSize').value, 10);
-      var dateSize = parseInt(document.getElementById('cesDateSize').value, 10);
 
-      async function stampAt(pad, xr, yr, maxW, maxH) {
+      async function stampAt(pad, m) {
         var trimmed = trimCanvas(pad.canvas);
         var sigBytes = b64ToBytes(trimmed.dataUrl.split(',')[1]);
         var sigImage = await pdfDoc.embedPng(sigBytes);
-        var scale = Math.min(maxH / trimmed.height, maxW / trimmed.width);
+        var scale = m.sizePt / trimmed.height;
         var w = trimmed.width * scale, h = trimmed.height * scale;
-        var x = xr * pw;
-        var y = ph - yr * ph;
+        var x = m.x * pw;
+        var y = ph - m.y * ph;
         page.drawImage(sigImage, { x: x, y: y, width: w, height: h });
       }
       for (var i = 0; i < cessioneMarks.cedente.length; i++) {
-        await stampAt(cedentePad, cessioneMarks.cedente[i].x, cessioneMarks.cedente[i].y, 220, sigSize);
+        await stampAt(cedentePad, cessioneMarks.cedente[i]);
       }
       for (var j = 0; j < cessioneMarks.cessionario.length; j++) {
-        await stampAt(cessionarioPad, cessioneMarks.cessionario[j].x, cessioneMarks.cessionario[j].y, 220, sigSize);
-      }
-
-      if (cessioneMarks.data.length) {
-        var dateFont = await embedHandFont(pdfDoc);
-        var luogo = document.getElementById('c_luogo').value.trim();
-        var dataStr = fmtDate(document.getElementById('c_data').value);
-        var luogoData = (luogo ? luogo + ', ' : '') + dataStr;
-        cessioneMarks.data.forEach(function(m) {
-          page.drawText(luogoData, { x: m.x * pw, y: ph - m.y * ph, size: dateSize, font: dateFont });
-        });
+        await stampAt(cessionarioPad, cessioneMarks.cessionario[j]);
       }
 
       var outBytes = await pdfDoc.save();
