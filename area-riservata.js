@@ -1,4 +1,3 @@
-
 // -- SPLASH SCREEN --
 function avviaSplash() {
   var logo   = document.getElementById('splashLogo');
@@ -70,6 +69,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+const AGENTE_INT_URL = SUPA_URL + '/functions/v1/agente-intervento';
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -1991,6 +1991,12 @@ async function caricaInterventi() {
     btn.textContent = '+ Registra nuovo intervento';
     btn.onclick = () => apriFormIntervento(null);
     list.appendChild(btn);
+    const btnAi = document.createElement('button');
+    btnAi.className = 'int-ai-btn';
+    btnAi.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
+    btnAi.textContent = '🤖 Compila da messaggio';
+    btnAi.onclick = () => apriChatAgenteIntervento();
+    list.appendChild(btnAi);
     return;
   }
 
@@ -2315,7 +2321,7 @@ function chiudiDettaglioIntervento() {
   intCorrenteId = null;
 }
 
-function apriFormIntervento(id, macroIdPreset) {
+async function apriFormIntervento(id, macroIdPreset) {
   intCorrenteId = id;
   const panel = document.getElementById('intFormPanel');
   const body  = document.getElementById('intFormBody');
@@ -2394,8 +2400,8 @@ function apriFormIntervento(id, macroIdPreset) {
     var selMacro = document.getElementById('ifMacroId');
     if (selMacro) { selMacro.value = macroIdPreset; }
   }
-  caricaVolPicker();
-  if (id) caricaDatiFormIntervento(id);
+  await caricaVolPicker();
+  if (id) await caricaDatiFormIntervento(id);
 }
 
 function toggleMacroMode() {
@@ -2762,6 +2768,166 @@ async function eliminaIntervento() {
 
 function chiudiFormIntervento() {
   document.getElementById('intFormPanel').classList.remove('open');
+}
+
+
+// -- AGENTE INTERVENTO DA MESSAGGIO --
+let aicMessages  = [];   // conversazione formato Anthropic, mandata/ricevuta dalla edge function
+let aicLog       = [];   // { type:'user'|'ai'|'err'|'draft', text, draft?, _id? }
+let aicDrafts    = [];   // store delle bozze proposte, indicizzato per _id
+let aicDraftSeq  = 0;
+let aicLoading   = false;
+
+function apriChatAgenteIntervento() {
+  aicMessages = [];
+  aicLog = [];
+  aicDrafts = [];
+  aicLoading = false;
+  const panel = document.getElementById('aicPanel');
+  if (!panel) return;
+  panel.classList.add('open');
+  const inp = document.getElementById('aicInput');
+  if (inp) inp.value = '';
+  aicRender();
+  setTimeout(() => { if (inp) inp.focus(); }, 200);
+}
+
+function chiudiChatAgenteIntervento() {
+  const panel = document.getElementById('aicPanel');
+  if (panel) panel.classList.remove('open');
+}
+
+function aicKeydown(ev) {
+  if (ev.key === 'Enter' && !ev.shiftKey) {
+    ev.preventDefault();
+    aicInviaMessaggio();
+  }
+}
+
+function aicEscapeHtml(s) {
+  return (s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+function aicRender() {
+  const box = document.getElementById('aicMsgs');
+  if (!box) return;
+  if (!aicLog.length) {
+    box.innerHTML = '<div class="aic-intro">Incolla qui il messaggio del report intervento: leggo chi è intervenuto e le ore, e preparo la scheda. Ti chiedo solo quello che manca o non è chiaro.</div>';
+  } else {
+    box.innerHTML = aicLog.map(m => {
+      if (m.type === 'user')  return '<div class="aic-bubble user">' + aicEscapeHtml(m.text) + '</div>';
+      if (m.type === 'ai')    return '<div class="aic-bubble ai">' + aicEscapeHtml(m.text) + '</div>';
+      if (m.type === 'err')   return '<div class="aic-bubble err">' + aicEscapeHtml(m.text) + '</div>';
+      if (m.type === 'draft') return aicDraftHtml(m.draft, m._id);
+      return '';
+    }).join('');
+  }
+  if (aicLoading) box.innerHTML += '<div class="aic-typing">sto leggendo il messaggio...</div>';
+  box.scrollTop = box.scrollHeight;
+}
+
+function aicDraftHtml(draft, id) {
+  const vol = draft.volontari || [];
+  const nomiVol = vol.map(v => (v.cognome || '') + ' ' + (v.nome || '') + (v.ore ? ' (' + v.ore + 'h)' : ' (ore?)')).join(', ') || '—';
+  const oreTot = vol.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
+  return '<div class="aic-draft">'
+    + '<div class="aic-draft-title">Bozza scheda intervento</div>'
+    + (draft.messaggio_riepilogo ? '<div style="margin-bottom:0.6rem">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</div>' : '')
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Evento</span><span class="aic-draft-val">' + aicEscapeHtml(draft.evento || '—') + '</span></div>'
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Data</span><span class="aic-draft-val">' + aicEscapeHtml(draft.data || '—') + (draft.data_fine ? ' → ' + aicEscapeHtml(draft.data_fine) : '') + '</span></div>'
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Luogo</span><span class="aic-draft-val">' + aicEscapeHtml(draft.luogo || '—') + '</span></div>'
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Tipo</span><span class="aic-draft-val">' + aicEscapeHtml(draft.tipo_attivita || '—') + '</span></div>'
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Volontari (' + vol.length + ')</span><span class="aic-draft-val">' + aicEscapeHtml(nomiVol) + '</span></div>'
+    + '<div class="aic-draft-row"><span class="aic-draft-lbl">Ore totali</span><span class="aic-draft-val">' + (Math.round(oreTot * 10) / 10) + '</span></div>'
+    + (draft.note ? '<div class="aic-draft-row"><span class="aic-draft-lbl">Note</span><span class="aic-draft-val">' + aicEscapeHtml(draft.note) + '</span></div>' : '')
+    + '<div class="aic-draft-actions">'
+    +   '<button class="aic-btn-edit" onclick="document.getElementById(&quot;aicInput&quot;).focus()">✏️ correggi</button>'
+    +   '<button class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">✅ conferma e salva</button>'
+    + '</div></div>';
+}
+
+async function aicInviaMessaggio() {
+  const inp = document.getElementById('aicInput');
+  if (!inp) return;
+  const testo = (inp.value || '').trim();
+  if (!testo || aicLoading) return;
+  inp.value = '';
+  aicLog.push({ type: 'user', text: testo });
+  aicMessages.push({ role: 'user', content: testo });
+  aicLoading = true;
+  aicRender();
+  try {
+    const res = await fetch(AGENTE_INT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY },
+      body: JSON.stringify({ messages: aicMessages })
+    });
+    const data = await res.json();
+    aicLoading = false;
+    if (!res.ok || data.error) {
+      aicLog.push({ type: 'err', text: 'Errore: ' + (data.error || 'richiesta fallita, riprova.') });
+      aicRender();
+      return;
+    }
+    if (Array.isArray(data.messages)) aicMessages = data.messages;
+    if (data.status === 'draft') {
+      aicDraftSeq++;
+      aicDrafts[aicDraftSeq] = data.draft;
+      aicLog.push({ type: 'draft', draft: data.draft, _id: aicDraftSeq });
+    } else {
+      aicLog.push({ type: 'ai', text: data.text || 'Puoi darmi qualche dettaglio in più?' });
+    }
+    aicRender();
+  } catch (e) {
+    aicLoading = false;
+    aicLog.push({ type: 'err', text: 'Errore di connessione con l\'agente. Riprova.' });
+    aicRender();
+  }
+}
+
+async function aicConfermaBozza(id, btnEl) {
+  const draft = aicDrafts[id];
+  if (!draft) return;
+  const row = btnEl ? btnEl.closest('.aic-draft-actions') : null;
+  if (row) row.innerHTML = '<span style="font-size:0.78rem;color:var(--testo-3)">salvataggio in corso...</span>';
+  try {
+    await apriFormIntervento(null);
+    const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val; };
+    set('ifEvento', draft.evento || '');
+    set('ifData', draft.data || '');
+    set('ifDataFine', draft.data_fine || '');
+    set('ifLuogo', draft.luogo || '');
+    const tipoSel = document.getElementById('ifTipo');
+    if (tipoSel && draft.tipo_attivita && TIPO_ATTIVITA.includes(draft.tipo_attivita)) tipoSel.value = draft.tipo_attivita;
+    const radioCb = document.getElementById('ifRadio');
+    if (radioCb) radioCb.checked = !!draft.utilizzo_radio;
+    set('ifNote', (draft.note ? draft.note + '\n' : '') + '[creato dall\'agente da messaggio]');
+
+    intVolSelezionati = (draft.volontari || [])
+      .filter(v => v && v.volontario_id)
+      .map(v => ({
+        volontario_id: v.volontario_id,
+        cognome: v.cognome || '',
+        nome: v.nome || '',
+        art_39: !!v.art_39,
+        ore: (v.ore === null || v.ore === undefined) ? '' : v.ore,
+        data_inizio: draft.data || null,
+        data_fine: draft.data_fine || draft.data || null
+      }));
+    renderIntVolList();
+
+    await salvaIntervento();
+    // salvaIntervento() chiude intFormPanel solo se il salvataggio è andato a buon fine;
+    // se è ancora aperto vuol dire che una validazione ha bloccato il salvataggio (errore già mostrato nel form).
+    const formAncoraAperto = document.getElementById('intFormPanel').classList.contains('open');
+    if (formAncoraAperto) {
+      if (row) row.innerHTML = '<span style="font-size:0.78rem;color:#ff3b30">Dati incompleti: controlla il form aperto e salva da lì.</span>';
+      return;
+    }
+    chiudiChatAgenteIntervento();
+  } catch (e) {
+    alert('Errore durante il salvataggio. Controlla il form aperto (già precompilato) e salva manualmente da lì.');
+  }
 }
 
 
