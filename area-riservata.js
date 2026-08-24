@@ -2842,9 +2842,21 @@ function aicDraftHtml(draft, id) {
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Ore totali</span><span class="aic-draft-val">' + (Math.round(oreTot * 10) / 10) + '</span></div>'
     + (draft.note ? '<div class="aic-draft-row"><span class="aic-draft-lbl">Note</span><span class="aic-draft-val">' + aicEscapeHtml(draft.note) + '</span></div>' : '')
     + '<div class="aic-draft-actions">'
-    +   '<button class="aic-btn-edit" onclick="document.getElementById(&quot;aicInput&quot;).focus()">✏️ correggi</button>'
-    +   '<button class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">✅ conferma e salva</button>'
+    +   '<button type="button" class="aic-btn-edit" onclick="aicCorreggi()">✏️ correggi</button>'
+    +   '<button type="button" class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">✅ conferma e salva</button>'
     + '</div></div>';
+}
+
+function aicCorreggi() {
+  const bar = document.querySelector('.aic-inputbar');
+  const inp = document.getElementById('aicInput');
+  if (bar && bar.scrollIntoView) bar.scrollIntoView({ block: 'nearest' });
+  if (!inp) return;
+  inp.focus();
+  inp.placeholder = 'Scrivi qui la correzione (es. "le ore di Mario sono 4")...';
+  inp.style.transition = 'box-shadow 0.15s ease';
+  inp.style.boxShadow = '0 0 0 2px var(--green)';
+  setTimeout(() => { inp.style.boxShadow = ''; }, 1000);
 }
 
 async function aicInviaMessaggio() {
