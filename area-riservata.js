@@ -1,3 +1,4 @@
+
 // -- SPLASH SCREEN --
 function avviaSplash() {
   var logo   = document.getElementById('splashLogo');
@@ -69,7 +70,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
-const AGENTE_INT_URL = SUPA_URL + '/functions/v1/agente-intervento';
+const AGENTE_INT_URL = SUPA_URL + '/functions/v1/Agente-Interventi';
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
