@@ -6086,13 +6086,14 @@ function getRevisioneStatus(dataStr) {
 }
 
 // ==================== DOTAZIONI ====================
-var dotMagazzini = [];         // tab A/B/C (tabella dotazioni_magazzini)
+var dotMagazzini = [];         // magazzini/tab (tabella dotazioni_magazzini)
 var dotCategorieAlbero = [];   // categorie/sottocategorie (tabella dotazioni_categorie)
 var dotAll = [];               // tutti gli articoli
 var dotMagazzinoAttivo = null; // null = tutti
+var dotCategoriaAttiva = null; // id categoria principale, null = tutte
 var dotEditId = null;
-var dotExpandedId = null;
-var dotExpandedTab = 'dettagli';
+var dotCorrenteId = null;      // articolo aperto nel pannello dettaglio
+var dotDetailTab = 'dettagli';
 var dotManCache = {};
 
 async function caricaDotazioni() {
@@ -6111,14 +6112,36 @@ async function caricaDotazioni() {
     lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento dotazioni.</div>';
     return;
   }
+  dotRenderCategoriaTabs();
   dotRenderMagazziniTabs();
   dotRenderCategoriaSelect();
   dotRenderMagazzinoSelect();
   dotRenderLista();
 }
 
+function dotRenderCategoriaTabs() {
+  const el = document.getElementById('dotCategoriaTabs');
+  if (!el) return;
+  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
+  if (!principali.length) { el.innerHTML = ''; return; }
+  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
+  html += '<button class="btn-sm' + (dotCategoriaAttiva === null ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
+  principali.forEach(c => {
+    const attiva = dotCategoriaAttiva === c.id;
+    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(' + c.id + ')">' + c.nome + '</button>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function dotSelezionaCategoria(id) {
+  dotCategoriaAttiva = id;
+  dotRenderCategoriaTabs();
+  dotRenderLista();
+}
+
 function dotRenderMagazziniTabs() {
-  const el = document.getElementById('dotCategorieTabs');
+  const el = document.getElementById('dotMagazzinoTabs');
   if (!el) return;
   let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
   html += '<button class="btn-sm' + (dotMagazzinoAttivo === null ? ' btn-primary' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
@@ -6189,16 +6212,11 @@ function dotSelezionaMagazzino(nome) {
 
 function dotFiltraLista() { dotRenderLista(); }
 
-function dotToggleCard(id) {
-  if (dotExpandedId === id) { dotExpandedId = null; }
-  else { dotExpandedId = id; dotExpandedTab = 'dettagli'; }
-  dotRenderLista();
-}
-
-function dotMostraTabArticolo(id, tab) {
-  dotExpandedTab = tab;
-  if (tab === 'manutenzione' && !dotManCache[id]) { dotCaricaManutenzioni(id); return; }
-  dotRenderLista();
+function _dotInCategoriaFiltro(r) {
+  if (dotCategoriaAttiva === null) return true;
+  if (r.categoria_id === dotCategoriaAttiva) return true;
+  const nodo = dotCategorieAlbero.find(c => c.id === r.categoria_id);
+  return !!(nodo && nodo.parent_id === dotCategoriaAttiva);
 }
 
 function dotRenderLista() {
@@ -6207,6 +6225,7 @@ function dotRenderLista() {
   const q = (document.getElementById('dotSearch').value || '').trim().toLowerCase();
   let righe = dotAll.slice();
   if (dotMagazzinoAttivo !== null) righe = righe.filter(r => r.magazzino === dotMagazzinoAttivo);
+  righe = righe.filter(_dotInCategoriaFiltro);
   if (q) {
     righe = righe.filter(r =>
       (r.codice||'').toLowerCase().includes(q) ||
@@ -6217,80 +6236,106 @@ function dotRenderLista() {
       _dotCategoriaPath(r.categoria_id).toLowerCase().includes(q)
     );
   }
-  if (!righe.length) { el.innerHTML = '<div class="loading-msg">nessun articolo trovato.</div>'; return; }
-  let html = '<div style="display:flex;flex-direction:column;gap:0.4rem">';
+  if (!righe.length) {
+    el.innerHTML = '<div class="loading-msg">' + (dotAll.length ? 'nessun articolo trovato.' : 'nessun articolo registrato.') + '</div>';
+    return;
+  }
+  let html = '<div class="dotazioni-grid">';
   righe.forEach(r => {
-    const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
+    const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
     const catPath = _dotCategoriaPath(r.categoria_id);
-    const espansa = dotExpandedId === r.id;
-    html += '<div class="vol-section" style="margin:0">'
-      + '<div class="vol-section-head" onclick="dotToggleCard(' + r.id + ')" style="gap:0.6rem">'
-      + '<h3 style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0">'
-      + (r.codice ? '<span style="color:var(--testo-3);font-weight:400">' + r.codice + ' · </span>' : '') + r.articolo
-      + '</h3>'
-      + '<div style="display:flex;gap:0.6rem;align-items:center;flex-shrink:0;font-size:0.8rem;color:var(--testo-2)">'
-      + '<span style="font-weight:600;color:var(--testo-1)">' + qtaLbl + '</span>'
-      + '<button class="btn-sm" onclick="event.stopPropagation();dotApriModifica(' + r.id + ')">✏️</button>'
-      + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();dotEliminaArticolo(' + r.id + ')">🗑️</button>'
-      + '<span>' + (espansa ? '▾' : '▸') + '</span>'
+    html += '<div class="dotazione-tile" onclick="apriDettaglioDotazione(' + r.id + ')">'
+      + '<div class="dotazione-tile-body">'
+      + '<div class="dotazione-tile-nome">' + r.articolo + '</div>'
+      + (catPath ? '<div class="dotazione-tile-cat">' + catPath + '</div>' : '')
+      + (qtaLbl !== null ? '<div class="dotazione-tile-qta">' + qtaLbl + '</div>' : '')
       + '</div></div>';
-
-    if (espansa) {
-      html += '<div style="padding:0.6rem 0.9rem;border-top:0.5px solid var(--border)">'
-        + '<div style="display:flex;gap:0.4rem;margin-bottom:0.6rem">'
-        + '<button class="btn-sm' + (dotExpandedTab==='dettagli'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(' + r.id + ',\'dettagli\')">Dettagli</button>'
-        + '<button class="btn-sm' + (dotExpandedTab==='manutenzione'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(' + r.id + ',\'manutenzione\')">🔧 Manutenzione</button>'
-        + '</div>';
-
-      if (dotExpandedTab === 'dettagli') {
-        html += '<div style="font-size:0.85rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.3rem">'
-          + '<div><b>Codice:</b> ' + (r.codice || '—') + '</div>'
-          + '<div><b>Magazzino:</b> ' + r.magazzino + '</div>'
-          + '<div><b>Categoria:</b> ' + (catPath || '—') + '</div>'
-          + '<div><b>Quantità:</b> ' + qtaLbl + '</div>'
-          + '<div><b>Descrizione:</b> ' + (r.descrizione || '—') + '</div>'
-          + '<div><b>Note:</b> ' + (r.note || '—') + '</div>'
-          + '</div>';
-      } else {
-        const entries = dotManCache[r.id];
-        if (!entries) {
-          html += '<div class="loading-msg">caricamento manutenzioni...</div>';
-        } else {
-          if (!entries.length) html += '<div class="loading-msg">nessun intervento registrato.</div>';
-          else {
-            html += '<div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem">';
-            entries.forEach(m => {
-              html += '<div style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;border-bottom:0.5px dashed var(--border);padding-bottom:0.3rem">'
-                + '<div style="white-space:nowrap;color:var(--testo-3)">' + (m.data ? new Date(m.data).toLocaleDateString('it-IT') : '') + '</div>'
-                + '<div style="flex:1"><b>' + (m.utente||'—') + '</b> — ' + (m.nota||'') + '</div>'
-                + '<button class="btn-sm btn-danger" style="padding:0.1rem 0.35rem" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
-                + '</div>';
-            });
-            html += '</div>';
-          }
-          html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
-            + '<input class="form-inp" type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '" style="max-width:150px">'
-            + '<input class="form-inp" id="dotManUtente' + r.id + '" placeholder="Utente" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '" style="max-width:160px">'
-            + '<input class="form-inp" id="dotManNota' + r.id + '" placeholder="Intervento effettuato..." style="flex:1;min-width:160px">'
-            + '<button class="btn-sm" onclick="dotAggiungiManutenzione(' + r.id + ')">+ aggiungi</button>'
-            + '</div>';
-        }
-      }
-      html += '</div>';
-    }
-    html += '</div>';
   });
   html += '</div>';
   el.innerHTML = html;
 }
 
+function apriDettaglioDotazione(id) {
+  dotCorrenteId = id;
+  dotDetailTab = 'dettagli';
+  const r = dotAll.find(x => x.id === id);
+  document.getElementById('dotDetailTitle').textContent = r ? r.articolo : '—';
+  const detail = document.getElementById('dotDetail');
+  detail.classList.add('open');
+  detail.scrollTop = 0;
+  dotRenderDettaglioBody();
+}
+
+function chiudiDettaglioDotazione() {
+  const detail = document.getElementById('dotDetail');
+  if (detail) detail.classList.remove('open');
+  dotCorrenteId = null;
+}
+
+function dotMostraTabArticolo(tab) {
+  dotDetailTab = tab;
+  if (tab === 'manutenzione' && !dotManCache[dotCorrenteId]) { dotCaricaManutenzioni(dotCorrenteId); return; }
+  dotRenderDettaglioBody();
+}
+
+function dotRenderDettaglioBody() {
+  const body = document.getElementById('dotDetailBody');
+  if (!body || !dotCorrenteId) return;
+  const r = dotAll.find(x => x.id === dotCorrenteId);
+  if (!r) return;
+  const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
+  const catPath = _dotCategoriaPath(r.categoria_id);
+
+  let html = '<div style="display:flex;gap:0.4rem;margin-bottom:0.8rem">'
+    + '<button class="btn-sm' + (dotDetailTab==='dettagli'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
+    + '<button class="btn-sm' + (dotDetailTab==='manutenzione'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">🔧 Manutenzione</button>'
+    + '</div>';
+
+  if (dotDetailTab === 'dettagli') {
+    html += '<div class="vol-section"><div class="vol-section-body">'
+      + '<div class="vol-field"><span class="vol-field-label">Codice</span><span class="vol-field-value' + (r.codice?'':' null') + '">' + (r.codice || '—') + '</span></div>'
+      + '<div class="vol-field"><span class="vol-field-label">Magazzino</span><span class="vol-field-value">' + r.magazzino + '</span></div>'
+      + '<div class="vol-field"><span class="vol-field-label">Categoria</span><span class="vol-field-value' + (catPath?'':' null') + '">' + (catPath || '—') + '</span></div>'
+      + '<div class="vol-field"><span class="vol-field-label">Quantità</span><span class="vol-field-value">' + qtaLbl + '</span></div>'
+      + '<div class="vol-field"><span class="vol-field-label">Descrizione</span><span class="vol-field-value' + (r.descrizione?'':' null') + '">' + (r.descrizione || '—') + '</span></div>'
+      + '<div class="vol-field"><span class="vol-field-label">Note</span><span class="vol-field-value' + (r.note?'':' null') + '">' + (r.note || '—') + '</span></div>'
+      + '</div></div>'
+      + '<button class="vol-delete-btn" onclick="dotEliminaArticolo(' + r.id + ')">elimina articolo</button>';
+  } else {
+    const entries = dotManCache[r.id];
+    if (!entries) {
+      html += '<div class="loading-msg">caricamento manutenzioni...</div>';
+    } else {
+      if (!entries.length) html += '<div class="loading-msg">nessun intervento registrato.</div>';
+      else {
+        html += '<div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem">';
+        entries.forEach(m => {
+          html += '<div style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;border-bottom:0.5px dashed var(--border);padding-bottom:0.3rem">'
+            + '<div style="white-space:nowrap;color:var(--testo-3)">' + (m.data ? new Date(m.data).toLocaleDateString('it-IT') : '') + '</div>'
+            + '<div style="flex:1"><b>' + (m.utente||'—') + '</b> — ' + (m.nota||'') + '</div>'
+            + '<button class="btn-sm btn-danger" style="padding:0.1rem 0.35rem" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
+            + '</div>';
+        });
+        html += '</div>';
+      }
+      html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
+        + '<input class="form-inp" type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '" style="max-width:150px">'
+        + '<input class="form-inp" id="dotManUtente' + r.id + '" placeholder="Utente" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '" style="max-width:160px">'
+        + '<input class="form-inp" id="dotManNota' + r.id + '" placeholder="Intervento effettuato..." style="flex:1;min-width:160px">'
+        + '<button class="btn-sm" onclick="dotAggiungiManutenzione(' + r.id + ')">+ aggiungi</button>'
+        + '</div>';
+    }
+  }
+  body.innerHTML = html;
+}
+
 async function dotCaricaManutenzioni(id) {
-  dotRenderLista(); // mostra "caricamento..."
+  dotRenderDettaglioBody(); // mostra "caricamento..."
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?select=*&dotazione_id=eq.' + id + '&order=data.desc', { headers: H });
     dotManCache[id] = await res.json();
   } catch(e) { dotManCache[id] = []; }
-  dotRenderLista();
+  dotRenderDettaglioBody();
 }
 
 async function dotAggiungiManutenzione(id) {
@@ -6340,6 +6385,7 @@ function dotResetForm() {
 function dotApriModifica(id) {
   const r = dotAll.find(x => x.id === id);
   if (!r) return;
+  chiudiDettaglioDotazione();
   dotEditId = id;
   document.getElementById('dotNuovaHead').querySelector('h3').textContent = '✏️ Modifica articolo';
   document.getElementById('dotNuovoCodice').value = r.codice || '';
@@ -6351,6 +6397,7 @@ function dotApriModifica(id) {
   document.getElementById('dotNuovoNote').value = r.note || '';
   document.getElementById('dotNuovaBody').style.display = 'flex';
   document.getElementById('dotNuovaChevron').textContent = '▾';
+  document.getElementById('dotNuovaHead').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function dotSalvaNuovo() {
@@ -6386,6 +6433,7 @@ async function dotEliminaArticolo(id) {
   if (!confirm('Eliminare questo articolo?')) return;
   try { await fetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + id, { method:'DELETE', headers: H }); }
   catch(e) { alert('Errore eliminazione.'); return; }
+  chiudiDettaglioDotazione();
   await caricaDotazioni();
 }
 

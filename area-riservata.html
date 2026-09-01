@@ -728,6 +728,16 @@ div:hover > .vista-edit-btn { display:flex; }
 .mezzo-tile-rev.scad { background:var(--red-pale); color:var(--red); }
 
 
+/* -- DOTAZIONI GRIGLIA -- */
+.dotazioni-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.7rem; }
+.dotazione-tile { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); border:0.5px solid var(--border); cursor:pointer; transition:transform 0.12s; }
+.dotazione-tile:active { transform:scale(0.97); }
+.dotazione-tile-body { padding:0.75rem 0.8rem; display:flex; flex-direction:column; gap:0.35rem; }
+.dotazione-tile-nome { font-size:0.85rem; font-weight:600; color:var(--testo); line-height:1.25; }
+.dotazione-tile-cat { font-size:0.68rem; color:var(--testo-3); background:var(--bg-2); border-radius:6px; padding:2px 7px; display:inline-block; align-self:flex-start; }
+.dotazione-tile-qta { font-size:0.68rem; font-weight:700; color:var(--green); }
+
+
 /* -- SPLASH SCREEN -- */
 #splashScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
 #splashScreen.fade-out { opacity:0; pointer-events:none; }
@@ -1419,11 +1429,12 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
       <div id="dotImportStatus" style="display:none;padding:0 0.9rem 0.6rem"></div>
 
-      <div style="padding:0 0.9rem 0.6rem" id="dotCategorieTabs"></div>
-
       <div style="padding:0 0.9rem 0.6rem">
         <input class="form-inp" id="dotSearch" placeholder="🔍 cerca articolo, ubicazione, note..." oninput="dotFiltraLista()">
       </div>
+
+      <div style="padding:0 0.9rem 0.6rem" id="dotCategoriaTabs"></div>
+      <div style="padding:0 0.9rem 0.6rem" id="dotMagazzinoTabs"></div>
 
       <div class="vol-section" style="margin:0 0.9rem 0.6rem">
         <div class="vol-section-head" onclick="dotToggleNuovaForm()" id="dotNuovaHead"><h3>+ Nuovo articolo</h3><span id="dotNuovaChevron" style="font-size:0.8rem">▸</span></div>
@@ -1442,6 +1453,16 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
 
       <div id="dotLista" style="padding:0 0.9rem 1rem"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
+    <!-- SCHEDA DOTAZIONE -->
+    <div class="vol-detail" id="dotDetail">
+      <div class="vol-detail-top">
+        <button class="vol-detail-back" onclick="chiudiDettaglioDotazione()">← indietro</button>
+        <span class="vol-detail-title" id="dotDetailTitle">—</span>
+        <button class="vol-detail-edit" onclick="dotApriModifica(dotCorrenteId)">modifica</button>
+      </div>
+      <div class="vol-detail-body" id="dotDetailBody"></div>
     </div>
 
     <!-- PIANI DI CARICO -->
@@ -1759,6 +1780,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=136"></script>
+<script src="area-riservata.js?v=137"></script>
 </body>
 </html>
