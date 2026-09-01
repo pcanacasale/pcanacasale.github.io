@@ -6361,18 +6361,9 @@ async function dotEliminaManutenzione(manId, dotazioneId) {
   await dotCaricaManutenzioni(dotazioneId);
 }
 
-function dotToggleNuovaForm() {
-  const body = document.getElementById('dotNuovaBody');
-  const chev = document.getElementById('dotNuovaChevron');
-  const apri = body.style.display === 'none';
-  body.style.display = apri ? 'flex' : 'none';
-  chev.textContent = apri ? '▾' : '▸';
-  if (apri && !dotEditId) dotResetForm();
-}
-
 function dotResetForm() {
   dotEditId = null;
-  document.getElementById('dotNuovaHead').querySelector('h3').textContent = '+ Nuovo articolo';
+  document.getElementById('dotNuovoTitolo').textContent = 'Nuovo articolo';
   document.getElementById('dotNuovoCodice').value = '';
   if (dotMagazzinoAttivo) document.getElementById('dotNuovoMagazzino').value = dotMagazzinoAttivo;
   document.getElementById('dotNuovoArticolo').value = '';
@@ -6382,12 +6373,21 @@ function dotResetForm() {
   document.getElementById('dotNuovoNote').value = '';
 }
 
+function dotApriNuovo() {
+  dotResetForm();
+  document.getElementById('dotNuovoOverlay').classList.add('open');
+}
+
+function dotChiudiNuovo() {
+  document.getElementById('dotNuovoOverlay').classList.remove('open');
+}
+
 function dotApriModifica(id) {
   const r = dotAll.find(x => x.id === id);
   if (!r) return;
   chiudiDettaglioDotazione();
   dotEditId = id;
-  document.getElementById('dotNuovaHead').querySelector('h3').textContent = '✏️ Modifica articolo';
+  document.getElementById('dotNuovoTitolo').textContent = '✏️ Modifica articolo';
   document.getElementById('dotNuovoCodice').value = r.codice || '';
   document.getElementById('dotNuovoMagazzino').value = r.magazzino;
   document.getElementById('dotNuovoArticolo').value = r.articolo || '';
@@ -6395,9 +6395,7 @@ function dotApriModifica(id) {
   document.getElementById('dotNuovoCategoria').value = r.categoria_id || '';
   document.getElementById('dotNuovoQuantita').value = (r.quantita === null || r.quantita === undefined) ? '' : r.quantita;
   document.getElementById('dotNuovoNote').value = r.note || '';
-  document.getElementById('dotNuovaBody').style.display = 'flex';
-  document.getElementById('dotNuovaChevron').textContent = '▾';
-  document.getElementById('dotNuovaHead').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('dotNuovoOverlay').classList.add('open');
 }
 
 async function dotSalvaNuovo() {
@@ -6424,8 +6422,7 @@ async function dotSalvaNuovo() {
     }
   } catch(e) { alert('Errore salvataggio articolo.'); return; }
   dotResetForm();
-  document.getElementById('dotNuovaBody').style.display = 'none';
-  document.getElementById('dotNuovaChevron').textContent = '▸';
+  dotChiudiNuovo();
   await caricaDotazioni();
 }
 
