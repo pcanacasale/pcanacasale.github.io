@@ -734,8 +734,22 @@ div:hover > .vista-edit-btn { display:flex; }
 .dotazione-tile:active { transform:scale(0.97); }
 .dotazione-tile-body { padding:0.75rem 0.8rem; display:flex; flex-direction:column; gap:0.35rem; }
 .dotazione-tile-nome { font-size:0.85rem; font-weight:600; color:var(--testo); line-height:1.25; }
-.dotazione-tile-cat { font-size:0.68rem; color:var(--testo-3); background:var(--bg-2); border-radius:6px; padding:2px 7px; display:inline-block; align-self:flex-start; }
-.dotazione-tile-qta { font-size:0.68rem; font-weight:700; color:var(--green); }
+.dotazione-tile-cat { display:inline-flex; align-items:center; gap:4px; font-size:0.66rem; font-weight:600; border-radius:20px; padding:2px 8px; align-self:flex-start; }
+.dotazione-tile-cat-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.dotazione-tile-qta { font-size:0.7rem; font-weight:600; color:var(--testo); }
+
+/* -- DOTAZIONI LISTA -- */
+.dotazioni-list { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:var(--shadow); border:0.5px solid var(--border); overflow:hidden; }
+.dotazione-row { display:flex; align-items:center; gap:0.65rem; padding:0.65rem 0.9rem; cursor:pointer; border-bottom:0.5px solid var(--border); transition:background 0.1s; }
+.dotazione-row:last-child { border-bottom:none; }
+.dotazione-row:active { background:var(--bg-2); }
+.dotazione-row-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dotazione-row-info { flex:1; min-width:0; }
+.dotazione-row-nome { font-size:0.85rem; font-weight:600; color:var(--testo); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dotazione-row-cat { font-size:0.7rem; color:var(--testo-3); margin-top:1px; }
+.dotazione-row-qta { font-size:0.85rem; font-weight:600; color:var(--testo); flex-shrink:0; }
+
+.dot-vista-toggle { display:flex; gap:0.3rem; flex-shrink:0; }
 
 
 /* -- SPLASH SCREEN -- */
@@ -1434,7 +1448,10 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
 
       <div style="padding:0 0.9rem 0.6rem" id="dotCategoriaTabs"></div>
-      <div style="padding:0 0.9rem 0.6rem" id="dotMagazzinoTabs"></div>
+      <div style="padding:0 0.9rem 0.6rem;display:flex;align-items:center;gap:0.5rem">
+        <div id="dotMagazzinoTabs" style="flex:1;min-width:0"></div>
+        <div class="dot-vista-toggle" id="dotVistaToggle"></div>
+      </div>
 
       <div style="padding:0 0.9rem 0.6rem">
         <button class="btn-primary" onclick="dotApriNuovo()">+ nuovo articolo</button>
@@ -1788,6 +1805,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=138"></script>
+<script src="area-riservata.js?v=139"></script>
 </body>
 </html>

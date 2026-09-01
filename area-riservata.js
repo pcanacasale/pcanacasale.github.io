@@ -6095,6 +6095,61 @@ var dotEditId = null;
 var dotCorrenteId = null;      // articolo aperto nel pannello dettaglio
 var dotDetailTab = 'dettagli';
 var dotManCache = {};
+var dotVistaLista = false;     // false = card (griglia), true = lista
+
+// palette colori per categoria principale, ciclica per hue (oklch)
+var DOT_PALETTE = [
+  { dotL:55, dotC:0.16, h:75  },
+  { dotL:55, dotC:0.18, h:25  },
+  { dotL:55, dotC:0.15, h:250 },
+  { dotL:55, dotC:0.15, h:300 },
+  { dotL:50, dotC:0.10, h:190 },
+  { dotL:55, dotC:0.16, h:140 },
+  { dotL:55, dotC:0.16, h:340 },
+  { dotL:55, dotC:0.16, h:10  }
+];
+var DOT_COLORE_NEUTRO = { dot: 'var(--border)', bg: 'var(--bg-2)', text: 'var(--testo-3)' };
+
+function _dotCategoriaPrincipaleId(catId) {
+  if (!catId) return null;
+  const nodo = dotCategorieAlbero.find(c => c.id === catId);
+  if (!nodo) return null;
+  return nodo.parent_id || nodo.id;
+}
+
+function _dotCategoriaColore(catId) {
+  const principaleId = _dotCategoriaPrincipaleId(catId);
+  if (principaleId === null) return null;
+  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
+  const idx = principali.findIndex(c => c.id === principaleId);
+  if (idx < 0) return null;
+  const p = DOT_PALETTE[idx % DOT_PALETTE.length];
+  return {
+    dot:  'oklch(' + p.dotL + '% ' + p.dotC + ' ' + p.h + ')',
+    bg:   'oklch(96% 0.025 ' + p.h + ')',
+    text: 'oklch(45% 0.15 ' + p.h + ')'
+  };
+}
+
+function _dotCategoriaNomeBreve(catId) {
+  if (!catId) return '';
+  const nodo = dotCategorieAlbero.find(c => c.id === catId);
+  return nodo ? nodo.nome : '';
+}
+
+function dotRenderVistaToggle() {
+  const el = document.getElementById('dotVistaToggle');
+  if (!el) return;
+  el.innerHTML =
+    '<button class="btn-sm' + (!dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a card" onclick="dotImpostaVista(false)">▦</button>'
+    + '<button class="btn-sm' + (dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a lista" onclick="dotImpostaVista(true)">☰</button>';
+}
+
+function dotImpostaVista(lista) {
+  dotVistaLista = lista;
+  dotRenderVistaToggle();
+  dotRenderLista();
+}
 
 async function caricaDotazioni() {
   const lista = document.getElementById('dotLista');
@@ -6114,6 +6169,7 @@ async function caricaDotazioni() {
   }
   dotRenderCategoriaTabs();
   dotRenderMagazziniTabs();
+  dotRenderVistaToggle();
   dotRenderCategoriaSelect();
   dotRenderMagazzinoSelect();
   dotRenderLista();
@@ -6240,14 +6296,36 @@ function dotRenderLista() {
     el.innerHTML = '<div class="loading-msg">' + (dotAll.length ? 'nessun articolo trovato.' : 'nessun articolo registrato.') + '</div>';
     return;
   }
+
+  if (dotVistaLista) {
+    let html = '<div class="dotazioni-list">';
+    righe.forEach(r => {
+      const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
+      const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
+      const colore = _dotCategoriaColore(r.categoria_id) || DOT_COLORE_NEUTRO;
+      html += '<div class="dotazione-row" onclick="apriDettaglioDotazione(' + r.id + ')">'
+        + '<span class="dotazione-row-dot" style="background:' + colore.dot + '"></span>'
+        + '<div class="dotazione-row-info">'
+        + '<div class="dotazione-row-nome">' + r.articolo + '</div>'
+        + (nomeCat ? '<div class="dotazione-row-cat">' + nomeCat + '</div>' : '')
+        + '</div>'
+        + (qtaLbl !== null ? '<div class="dotazione-row-qta">' + qtaLbl + '</div>' : '')
+        + '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+    return;
+  }
+
   let html = '<div class="dotazioni-grid">';
   righe.forEach(r => {
     const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
-    const catPath = _dotCategoriaPath(r.categoria_id);
+    const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
+    const colore = _dotCategoriaColore(r.categoria_id);
     html += '<div class="dotazione-tile" onclick="apriDettaglioDotazione(' + r.id + ')">'
       + '<div class="dotazione-tile-body">'
       + '<div class="dotazione-tile-nome">' + r.articolo + '</div>'
-      + (catPath ? '<div class="dotazione-tile-cat">' + catPath + '</div>' : '')
+      + (colore ? '<div class="dotazione-tile-cat" style="background:' + colore.bg + ';color:' + colore.text + '"><span class="dotazione-tile-cat-dot" style="background:' + colore.dot + '"></span>' + nomeCat + '</div>' : '')
       + (qtaLbl !== null ? '<div class="dotazione-tile-qta">' + qtaLbl + '</div>' : '')
       + '</div></div>';
   });
