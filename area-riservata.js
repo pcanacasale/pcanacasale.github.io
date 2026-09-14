@@ -231,7 +231,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siEmergenze','siBot'
+      'siEmergenze','siBot','siPosizione'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -267,6 +267,7 @@ function avviaDashboard() {
     if (isMaster)                showSi('siSegnalazioni');
     if (isMaster)                showSi('siEmergenze');
     if (isMaster)                showSi('siBot');
+    if (isMaster)                showSi('siPosizione');
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (isMaster)                showSi('siImpostazioni');
   }
@@ -334,6 +335,7 @@ function showPanel(name, btn) {
   if (name === 'accessi') caricaAccessi();
   if (name === 'emergenze') caricaEmergenze();
   if (name === 'bot') caricaBot();
+  if (name === 'posizione') caricaPosizioni();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -7673,10 +7675,9 @@ async function caricaBadgeEmergenze() {
   } catch(e) {}
 }
 
-// -- BOT TELEGRAM (permessi + broadcast + posizioni live) --
+// -- BOT TELEGRAM (permessi + broadcast) --
 function caricaBot() {
   caricaBotPermessi();
-  caricaPosizioniLiveBot();
 }
 
 let botPermessiAll = [];
@@ -7806,30 +7807,49 @@ async function tgInviaBroadcast() {
   }
 }
 
-async function caricaPosizioniLiveBot() {
-  const list = document.getElementById('tgPosizioniList');
-  if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+// -- POSIZIONE (posizioni condivise via bot, con mappa incorporata) --
+async function caricaPosizioni() {
+  const content = document.getElementById('posizioneContent');
+  if (!content) return;
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/telegram_posizioni_live?select=lat,lon,aggiornato_il,scade_il,volontario:volontario_id(cognome,nome)&order=aggiornato_il.desc', { headers: H });
     const arr = await res.json();
-    if (!arr.length) { list.innerHTML = '<div class="loading-msg">nessuna posizione condivisa.</div>'; return; }
-    const now = Date.now();
-    let html = '';
-    arr.forEach(p => {
-      const v = p.volontario || {};
-      const scaduta = p.scade_il && new Date(p.scade_il).getTime() < now;
-      const minFa = Math.max(0, Math.round((now - new Date(p.aggiornato_il).getTime()) / 60000));
-      html += '<div class="impo-u-row"' + (scaduta ? ' style="opacity:0.5"' : '') + '>'
-        + '<div class="impo-u-info"><div class="impo-u-name">' + (v.cognome || '?') + ' ' + (v.nome || '') + '</div>'
-        + '<div class="impo-u-role">aggiornato ' + minFa + 'm fa' + (scaduta ? ' · scaduta' : '') + '</div></div>'
-        + '<div class="impo-u-actions"><a href="https://maps.google.com/?q=' + p.lat + ',' + p.lon + '" target="_blank" class="btn-sm" style="text-decoration:none">📍 mappa</a></div>'
-        + '</div>';
-    });
-    list.innerHTML = html;
+    renderPosizioni(arr || []);
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
   }
+}
+
+function renderPosizioni(list) {
+  const content = document.getElementById('posizioneContent');
+  if (!list.length) {
+    content.innerHTML = '<div class="loading-msg">nessuna posizione condivisa.</div>';
+    return;
+  }
+  const now = Date.now();
+  const arricchite = list.map(p => Object.assign({}, p, {
+    isLive: !!(p.scade_il && new Date(p.scade_il).getTime() > now)
+  }));
+  arricchite.sort((a, b) => {
+    if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+    return new Date(b.aggiornato_il) - new Date(a.aggiornato_il);
+  });
+  let html = '';
+  arricchite.forEach(p => {
+    const v = p.volontario || {};
+    const minFa = Math.max(0, Math.round((now - new Date(p.aggiornato_il).getTime()) / 60000));
+    const statoLbl = p.isLive
+      ? '<span style="color:var(--red);font-weight:700">🔴 LIVE</span>'
+      : '<span style="color:var(--testo-3);font-weight:600">📍 Posizione del momento</span>';
+    html += '<div class="seg-card">'
+      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
+      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.5rem">aggiornato ' + minFa + 'm fa</div>'
+      + '<iframe src="https://www.google.com/maps?q=' + p.lat + ',' + p.lon + '&output=embed" width="100%" height="220" style="border:0;border-radius:12px" loading="lazy"></iframe>'
+      + '<div style="margin-top:0.5rem"><a href="https://maps.google.com/?q=' + p.lat + ',' + p.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">🗺 Apri in Google Maps</a></div>'
+      + '</div>';
+  });
+  content.innerHTML = html;
 }
 
 

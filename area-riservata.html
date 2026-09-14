@@ -937,14 +937,18 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Segnalazioni</span>
         <span class="si-badge" id="siBadgeSegnalazioni"></span>
       </button>
+      <button class="sidebar-item" id="siBot" onclick="navTo('bot','Bot',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg></div>
+        <span class="si-label">Bot</span>
+      </button>
       <button class="sidebar-item" id="siEmergenze" onclick="navTo('emergenze','Emergenze',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <span class="si-label">Emergenze</span>
         <span class="si-badge" id="siBadgeEmergenze"></span>
       </button>
-      <button class="sidebar-item" id="siBot" onclick="navTo('bot','Bot',this)" style="display:none">
-        <div class="si-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg></div>
-        <span class="si-label">Bot</span>
+      <button class="sidebar-item" id="siPosizione" onclick="navTo('posizione','Posizione',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <span class="si-label">Posizione</span>
       </button>
       <button class="sidebar-item" id="siRichieste" onclick="navTo('richieste','Richieste',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></div>
@@ -1427,9 +1431,9 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="emergenzeContent"><div class="loading-msg">caricamento...</div></div>
     </div>
 
-    <!-- BOT (per master: permessi, messaggi broadcast, posizioni live) -->
+    <!-- BOT (per master: permessi e messaggi broadcast) -->
     <div class="panel" id="panelBot">
-      <div class="panel-hdr"><h2>Bot Telegram</h2><p>Permessi, messaggi e posizioni in tempo reale</p></div>
+      <div class="panel-hdr"><h2>Bot Telegram</h2><p>Permessi e messaggi broadcast</p></div>
 
       <div class="impo-section">
         <div class="sec-label">Permessi "registra interventi da bot"</div>
@@ -1453,14 +1457,12 @@ div:hover > .vista-edit-btn { display:flex; }
         <div class="form-err" id="tgBroadcastErr"></div>
         <button class="btn-primary" style="width:100%" onclick="tgInviaBroadcast()">📢 Invia a tutti</button>
       </div>
+    </div>
 
-      <div class="impo-section">
-        <div class="sec-label">Posizioni in tempo reale</div>
-        <div class="schema-toolbar">
-          <span style="font-size:0.65rem;color:var(--text-3)">Ultime posizioni condivise dai volontari via bot</span>
-        </div>
-        <div id="tgPosizioniList"><div class="loading-msg">caricamento...</div></div>
-      </div>
+    <!-- POSIZIONE (per master: posizioni condivise dai volontari via bot, con mappa) -->
+    <div class="panel" id="panelPosizione">
+      <div class="panel-hdr"><h2>Posizione</h2><p>Posizioni condivise dai volontari via bot Telegram</p></div>
+      <div id="posizioneContent"><div class="loading-msg">caricamento...</div></div>
     </div>
 
     <!-- GALLERIA -->
@@ -1856,6 +1858,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=141"></script>
+<script src="area-riservata.js?v=142"></script>
 </body>
 </html>
