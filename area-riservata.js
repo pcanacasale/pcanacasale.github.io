@@ -71,6 +71,7 @@ let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 const AGENTE_INT_URL = SUPA_URL + '/functions/v1/Agente-Interventi';
+const TELEGRAM_BROADCAST_SECRET = 'CAMBIAMI_BROADCAST_SECRET';
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -229,7 +230,8 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico'
+      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
+      'siEmergenze'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -263,6 +265,7 @@ function avviaDashboard() {
     if (hasPerm('db'))           showSi('siDb');
     if (isMaster)                showSi('siAccessi');
     if (isMaster)                showSi('siSegnalazioni');
+    if (isMaster)                showSi('siEmergenze');
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (isMaster)                showSi('siImpostazioni');
   }
@@ -273,6 +276,7 @@ function avviaDashboard() {
   // Badge richieste (solo per non-volontari)
   if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
   if (!isVol) caricaBadgeSegnalazioni();
+  if (isMaster) caricaBadgeEmergenze();
 
   // Compleanno
   verificaCompleanni();
@@ -327,6 +331,7 @@ function showPanel(name, btn) {
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
+  if (name === 'emergenze') caricaEmergenze();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -575,6 +580,7 @@ async function caricaImpostazioni() {
   caricaUtenti();
   caricaLog();
   renderSchemaList();
+  caricaPosizioniLiveBot();
 }
 
 async function caricaUtenti() {
@@ -1199,6 +1205,7 @@ function apriFormVolontario(id) {
         <label class="vol-form-check"><input type="checkbox" id="fIscrizione"> Iscrizione</label>
         <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
         <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
+        <label class="vol-form-check"><input type="checkbox" id="fBotRegistraInterventi"> Può registrare interventi da bot Telegram</label>
       </div>
       <div class="vol-form-grid" style="margin-top:0.5rem">
         <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
@@ -1269,6 +1276,7 @@ async function caricaDatiForm(id) {
     setChk('fCorsoCaposq', v.corso_caposq); setChk('fCdc1', v.cdc_1_step);
     setChk('fCdc2', v.cdc_2_step); setChk('fIscrizione', v.iscrizione);
     setChk('fTutela', v.tutela_legale_cap); setChk('fAttivo', v.attivo);
+    setChk('fBotRegistraInterventi', v.bot_registra_interventi);
     setVal('fScadDae', v.scad_dae); setVal('fDataVisita', v.data_visita);
     setVal('fStatoVisita', v.stato_visita); setVal('fCodEmercom', v.cod_emercom);
     setVal('fDispon', v.dispon); setVal('fVarchi', v.varchi); setVal('fNoteDispon', v.note_dispon);
@@ -1432,6 +1440,7 @@ async function salvaVolontario() {
     quattro_ore: b('f4Ore'), dodici_ore: b('f12Ore'),
     corso_caposq: b('fCorsoCaposq'), cdc_1_step: b('fCdc1'), cdc_2_step: b('fCdc2'),
     iscrizione: b('fIscrizione'), tutela_legale_cap: b('fTutela'), attivo: b('fAttivo'),
+    bot_registra_interventi: b('fBotRegistraInterventi'),
     scad_dae: d('fScadDae'), data_visita: d('fDataVisita'),
     stato_visita: g('fStatoVisita'), cod_emercom: g('fCodEmercom'),
     dispon: g('fDispon'), varchi: g('fVarchi'), note_dispon: g('fNoteDispon'),
@@ -7590,6 +7599,127 @@ async function caricaBadgeSegnalazioni() {
       else { b.classList.remove('show'); b.textContent = ''; }
     }
   } catch(e) {}
+}
+
+// -- EMERGENZE (segnalazioni di emergenza dal bot Telegram) --
+async function caricaEmergenze() {
+  const content = document.getElementById('emergenzeContent');
+  if (!content) return;
+  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome)&order=gestita.asc,creato_il.desc', { headers: H });
+    const arr = await res.json();
+    renderEmergenze(arr || []);
+  } catch(e) {
+    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function renderEmergenze(list) {
+  const content = document.getElementById('emergenzeContent');
+  if (!list.length) {
+    content.innerHTML = '<div class="loading-msg">nessuna segnalazione di emergenza.</div>';
+    return;
+  }
+  let html = '';
+  list.forEach(s => {
+    const v      = s.volontario || {};
+    const data   = new Date(s.creato_il).toLocaleString('it-IT');
+    const statoLbl = s.gestita
+      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
+      : '<span class="msb-off" style="padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.65rem;text-transform:uppercase">⚠ Da gestire</span>';
+    const mapLink = (s.lat != null && s.lon != null)
+      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">📍 vedi posizione</a>'
+      : '';
+    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : 'var(--red)') + '">'
+      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
+      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + '</div>'
+      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank"><img src="' + s.foto_url + '" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:0.5rem;cursor:pointer"></a>' : '')
+      + (s.descrizione ? '<div class="seg-card-text">' + s.descrizione + '</div>' : '')
+      + (mapLink ? '<div style="margin-top:0.5rem">' + mapLink + '</div>' : '')
+      + '<div style="margin-top:0.6rem">'
+      + (s.gestita
+          ? '<button class="btn-sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">↻ Riapri</button>'
+          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoEmergenza(' + s.id + ', true)">✓ Segna come gestita</button>')
+      + '</div>'
+      + '</div>';
+  });
+  content.innerHTML = html;
+}
+
+async function cambiaStatoEmergenza(id, gestita) {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ gestita: gestita })
+    });
+    if (!res.ok) throw new Error('errore');
+    caricaEmergenze();
+    caricaBadgeEmergenze();
+  } catch(e) { alert('Errore.'); }
+}
+
+async function caricaBadgeEmergenze() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?gestita=eq.false&select=id', {
+      headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
+    });
+    const cr = res.headers.get('Content-Range') || '';
+    const tot = parseInt(cr.split('/')[1] || '0');
+    const b = document.getElementById('siBadgeEmergenze');
+    if (b) {
+      if (tot > 0) { b.textContent = tot; b.classList.add('show'); }
+      else { b.classList.remove('show'); b.textContent = ''; }
+    }
+  } catch(e) {}
+}
+
+// -- BOT TELEGRAM (broadcast + posizioni live) --
+async function tgInviaBroadcast() {
+  const errEl = document.getElementById('tgBroadcastErr');
+  const txt = (document.getElementById('tgBroadcastTesto').value || '').trim();
+  if (errEl) errEl.style.display = 'none';
+  if (!txt) { if (errEl) { errEl.textContent = 'Scrivi un messaggio.'; errEl.style.display = 'block'; } return; }
+  if (!confirm('Inviare questo messaggio a tutti i volontari registrati sul bot Telegram?')) return;
+  try {
+    const res = await fetch(SUPA_URL + '/functions/v1/telegram-interventi', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'broadcast', secret: TELEGRAM_BROADCAST_SECRET, testo: txt })
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || 'errore invio');
+    document.getElementById('tgBroadcastTesto').value = '';
+    alert('Messaggio inviato a ' + (out.inviati != null ? out.inviati : '?') + ' destinatari.');
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'Errore invio: ' + (e.message || 'riprova.'); errEl.style.display = 'block'; }
+  }
+}
+
+async function caricaPosizioniLiveBot() {
+  const list = document.getElementById('tgPosizioniList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/telegram_posizioni_live?select=lat,lon,aggiornato_il,scade_il,volontario:volontario_id(cognome,nome)&order=aggiornato_il.desc', { headers: H });
+    const arr = await res.json();
+    if (!arr.length) { list.innerHTML = '<div class="loading-msg">nessuna posizione condivisa.</div>'; return; }
+    const now = Date.now();
+    let html = '';
+    arr.forEach(p => {
+      const v = p.volontario || {};
+      const scaduta = p.scade_il && new Date(p.scade_il).getTime() < now;
+      const minFa = Math.max(0, Math.round((now - new Date(p.aggiornato_il).getTime()) / 60000));
+      html += '<div class="impo-u-row"' + (scaduta ? ' style="opacity:0.5"' : '') + '>'
+        + '<div class="impo-u-info"><div class="impo-u-name">' + (v.cognome || '?') + ' ' + (v.nome || '') + '</div>'
+        + '<div class="impo-u-role">aggiornato ' + minFa + 'm fa' + (scaduta ? ' · scaduta' : '') + '</div></div>'
+        + '<div class="impo-u-actions"><a href="https://maps.google.com/?q=' + p.lat + ',' + p.lon + '" target="_blank" class="btn-sm" style="text-decoration:none">📍 mappa</a></div>'
+        + '</div>';
+    });
+    list.innerHTML = html;
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
 }
 
 

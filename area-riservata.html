@@ -937,6 +937,11 @@ div:hover > .vista-edit-btn { display:flex; }
         <span class="si-label">Segnalazioni</span>
         <span class="si-badge" id="siBadgeSegnalazioni"></span>
       </button>
+      <button class="sidebar-item" id="siEmergenze" onclick="navTo('emergenze','Emergenze',this)" style="display:none">
+        <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="si-label">Emergenze</span>
+        <span class="si-badge" id="siBadgeEmergenze"></span>
+      </button>
       <button class="sidebar-item" id="siRichieste" onclick="navTo('richieste','Richieste',this)" style="display:none">
         <div class="si-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg></div>
         <span class="si-label">Richieste</span>
@@ -1412,6 +1417,12 @@ div:hover > .vista-edit-btn { display:flex; }
       <div id="segnalazioniContent"><div class="loading-msg">caricamento...</div></div>
     </div>
 
+    <!-- EMERGENZE (per master: segnalazioni di emergenza dal bot Telegram) -->
+    <div class="panel" id="panelEmergenze">
+      <div class="panel-hdr"><h2>Emergenze</h2><p>Segnalazioni di emergenza inviate dai volontari via bot Telegram</p></div>
+      <div id="emergenzeContent"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
     <!-- GALLERIA -->
     <div class="panel" id="panelGalleria">
       <div class="panel-hdr">
@@ -1719,6 +1730,22 @@ div:hover > .vista-edit-btn { display:flex; }
           <button class="btn-sm" onclick="catDotAggiungiCategoria()">+ aggiungi</button>
         </div>
       </div>
+
+      <div class="impo-section">
+        <div class="sec-label">Bot Telegram</div>
+        <div class="schema-toolbar">
+          <span style="font-size:0.65rem;color:var(--text-3)">Messaggio a tutti i volontari registrati sul bot</span>
+        </div>
+        <textarea class="form-inp" id="tgBroadcastTesto" rows="4" placeholder="Scrivi il messaggio da inviare a tutti i volontari via Telegram..." style="margin-bottom:0.5rem"></textarea>
+        <div class="form-err" id="tgBroadcastErr"></div>
+        <button class="btn-primary" style="width:100%" onclick="tgInviaBroadcast()">📢 Invia a tutti</button>
+
+        <div class="sec-label" style="margin-top:1rem">Posizioni in tempo reale</div>
+        <div class="schema-toolbar">
+          <span style="font-size:0.65rem;color:var(--text-3)">Ultime posizioni condivise dai volontari via bot</span>
+        </div>
+        <div id="tgPosizioniList"><div class="loading-msg">caricamento...</div></div>
+      </div>
     </div>
 
   </div>
@@ -1805,6 +1832,6 @@ div:hover > .vista-edit-btn { display:flex; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=139"></script>
+<script src="area-riservata.js?v=140"></script>
 </body>
 </html>
