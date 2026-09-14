@@ -71,7 +71,7 @@ let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 const AGENTE_INT_URL = SUPA_URL + '/functions/v1/Agente-Interventi';
-const TELEGRAM_BROADCAST_SECRET = 'CAMBIAMI_BROADCAST_SECRET';
+const TELEGRAM_BROADCAST_SECRET = 'WDNIK0SQMiVz16Hi1AAdwhtEHSBtsUkY';
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
