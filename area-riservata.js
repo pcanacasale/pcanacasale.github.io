@@ -7607,7 +7607,7 @@ async function caricaEmergenze() {
   if (!content) return;
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome)&order=gestita.asc,creato_il.desc', { headers: H });
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome),intervento:intervento_id(evento,data)&order=gestita.asc,creato_il.desc', { headers: H });
     const arr = await res.json();
     renderEmergenze(arr || []);
   } catch(e) {
@@ -7631,9 +7631,11 @@ function renderEmergenze(list) {
     const mapLink = (s.lat != null && s.lon != null)
       ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">📍 vedi posizione</a>'
       : '';
+    const intervento = s.intervento || null;
     html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : 'var(--red)') + '">'
       + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
       + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + '</div>'
+      + (intervento ? '<div style="font-size:0.75rem;color:var(--testo-2);margin-bottom:0.4rem">Intervento: ' + (intervento.evento || '—') + '</div>' : '')
       + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank"><img src="' + s.foto_url + '" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:0.5rem;cursor:pointer"></a>' : '')
       + (s.descrizione ? '<div class="seg-card-text">' + s.descrizione + '</div>' : '')
       + (mapLink ? '<div style="margin-top:0.5rem">' + mapLink + '</div>' : '')
@@ -7675,12 +7677,74 @@ async function caricaBadgeEmergenze() {
   } catch(e) {}
 }
 
-// -- BOT TELEGRAM (permessi + broadcast) --
+// -- BOT TELEGRAM (permessi + broadcast + intervento attivo) --
 function caricaBot() {
   caricaBotPermessi();
+  caricaBotInterventoAttivo();
 }
 
 let botPermessiAll = [];
+let botInterventoAttivoId = null;
+
+async function caricaInterventiRecenti() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=id,evento,data&order=data.desc&limit=30', { headers: H });
+    return await res.json() || [];
+  } catch(e) { return []; }
+}
+
+async function caricaBotInterventoAttivo() {
+  const sel = document.getElementById('botInterventoAttivo');
+  if (!sel) return;
+  const interventi = await caricaInterventiRecenti();
+  let html = '<option value="">— nessuno —</option>';
+  interventi.forEach(i => {
+    const dataLbl = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '';
+    html += '<option value="' + i.id + '">' + (i.evento || '—') + (dataLbl ? ' (' + dataLbl + ')' : '') + '</option>';
+  });
+  sel.innerHTML = html;
+  // Best-effort: rileggi lo stato corrente da bot_config, se presente
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/bot_config?select=intervento_attivo_id&limit=1', { headers: H });
+    const arr = await res.json();
+    const row = (arr || [])[0];
+    if (row && row.intervento_attivo_id) {
+      botInterventoAttivoId = row.intervento_attivo_id;
+      sel.value = String(botInterventoAttivoId);
+    }
+  } catch(e) {}
+  botRenderInterventoAttivoLbl();
+}
+
+function botRenderInterventoAttivoLbl() {
+  const sel = document.getElementById('botInterventoAttivo');
+  const lbl = document.getElementById('botInterventoAttivoLbl');
+  if (!lbl) return;
+  if (botInterventoAttivoId && sel) {
+    const opt = sel.querySelector('option[value="' + botInterventoAttivoId + '"]');
+    lbl.textContent = 'Attivo: ' + (opt ? opt.textContent : botInterventoAttivoId);
+  } else {
+    lbl.textContent = 'Nessun intervento attivo';
+  }
+}
+
+async function botImpostaInterventoAttivo() {
+  const sel = document.getElementById('botInterventoAttivo');
+  if (!sel) return;
+  const val = sel.value || null;
+  try {
+    const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_intervento_attivo', secret: TELEGRAM_BROADCAST_SECRET, intervento_id: val })
+    });
+    if (!res.ok) throw new Error('errore');
+    botInterventoAttivoId = val;
+    botRenderInterventoAttivoLbl();
+    alert(val ? 'Intervento attivo impostato.' : 'Nessun intervento attivo impostato.');
+  } catch(e) {
+    alert('Errore impostazione intervento attivo.');
+  }
+}
 
 async function caricaBotPermessi() {
   const list = document.getElementById('botPermessiList');
@@ -7807,12 +7871,14 @@ async function tgInviaBroadcast() {
   }
 }
 
-// -- POSIZIONE (mappa unica con marker per volontario, via Leaflet/OSM) --
+// -- POSIZIONE (percorsi tracciati per volontario, via Leaflet/OSM) --
 let posizioneMapObj = null;
-let posizioneMarkers = [];
+let posizioneLayers = [];
 let posizioneRefreshTimer = null;
+const POSIZIONE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990','#dcbeff','#9a6324','#800000','#aaffc3','#808000'];
 
 function caricaPosizioni() {
+  caricaPosizioneFiltroInterventi();
   _posizioneCarica();
   if (posizioneRefreshTimer) clearInterval(posizioneRefreshTimer);
   posizioneRefreshTimer = setInterval(() => {
@@ -7826,10 +7892,27 @@ function caricaPosizioni() {
   }, 30000);
 }
 
+async function caricaPosizioneFiltroInterventi() {
+  const sel = document.getElementById('posFiltroIntervento');
+  if (!sel || sel.dataset.loaded) return;
+  const interventi = await caricaInterventiRecenti();
+  let html = '<option value="">Tutte le posizioni</option>';
+  interventi.forEach(i => {
+    const dataLbl = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '';
+    html += '<option value="' + i.id + '">' + (i.evento || '—') + (dataLbl ? ' (' + dataLbl + ')' : '') + '</option>';
+  });
+  sel.innerHTML = html;
+  sel.dataset.loaded = '1';
+}
+
 async function _posizioneCarica() {
   const lista = document.getElementById('posizioneLista');
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/telegram_posizioni_live?select=lat,lon,aggiornato_il,scade_il,volontario:volontario_id(cognome,nome)&order=aggiornato_il.desc', { headers: H });
+    const sel = document.getElementById('posFiltroIntervento');
+    const interventoId = sel && sel.value ? sel.value : null;
+    let url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc';
+    if (interventoId) url += '&intervento_id=eq.' + interventoId;
+    const res = await fetch(url, { headers: H });
     const arr = await res.json();
     renderPosizioni(arr || []);
   } catch(e) {
@@ -7848,8 +7931,8 @@ function renderPosizioni(list) {
       attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
     }).addTo(posizioneMapObj);
   }
-  posizioneMarkers.forEach(m => posizioneMapObj.removeLayer(m));
-  posizioneMarkers = [];
+  posizioneLayers.forEach(l => posizioneMapObj.removeLayer(l));
+  posizioneLayers = [];
   setTimeout(() => posizioneMapObj.invalidateSize(), 0);
 
   if (!list.length) {
@@ -7857,45 +7940,56 @@ function renderPosizioni(list) {
     return;
   }
 
-  const now = Date.now();
-  const arricchite = list.map(p => Object.assign({}, p, {
-    isLive: !!(p.scade_il && new Date(p.scade_il).getTime() > now)
-  }));
-  arricchite.sort((a, b) => {
-    if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
-    return new Date(b.aggiornato_il) - new Date(a.aggiornato_il);
+  // Raggruppa i punti per volontario
+  const gruppi = new Map();
+  list.forEach(p => {
+    const v = p.volontario || {};
+    const key = p.volontario_id != null ? p.volontario_id : ((v.cognome || '') + '|' + (v.nome || ''));
+    if (!gruppi.has(key)) gruppi.set(key, { nome: (v.cognome || '?') + ' ' + (v.nome || ''), punti: [] });
+    gruppi.get(key).punti.push(p);
   });
 
-  let html = '';
+  const now = Date.now();
   const bounds = [];
-  arricchite.forEach((p, idx) => {
-    const v = p.volontario || {};
-    const nomeCompleto = (v.cognome || '?') + ' ' + (v.nome || '');
-    const minFa = Math.max(0, Math.round((now - new Date(p.aggiornato_il).getTime()) / 60000));
-    const statoTxt = p.isLive ? '🔴 LIVE' : '📍 Posizione del momento';
-    const statoColor = p.isLive ? 'var(--red)' : 'var(--testo-3)';
+  let legendHtml = '';
+  let colorIdx = 0;
 
-    const marker = L.marker([p.lat, p.lon]).addTo(posizioneMapObj);
-    marker.bindPopup('<strong>' + nomeCompleto + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
-    posizioneMarkers.push(marker);
-    bounds.push([p.lat, p.lon]);
+  gruppi.forEach(g => {
+    const colore = POSIZIONE_PALETTE[colorIdx % POSIZIONE_PALETTE.length];
+    colorIdx++;
+    const latlngs = g.punti.map(p => [p.lat, p.lon]);
+    latlngs.forEach(ll => bounds.push(ll));
 
-    html += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSu(' + idx + ')">'
-      + '<div class="impo-u-info"><div class="impo-u-name">' + nomeCompleto + '</div>'
+    if (latlngs.length > 1) {
+      const poly = L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(posizioneMapObj);
+      posizioneLayers.push(poly);
+    }
+
+    const ultimo = g.punti[g.punti.length - 1];
+    const attiva = g.punti.some(p => p.scade_il && new Date(p.scade_il).getTime() > now);
+    const minFa = Math.max(0, Math.round((now - new Date(ultimo.creato_il).getTime()) / 60000));
+    const statoTxt = attiva ? '🟢 Attiva' : '⚪ Terminata';
+    const statoColor = attiva ? 'var(--green)' : 'var(--testo-3)';
+
+    const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(posizioneMapObj);
+    marker.bindPopup('<strong>' + g.nome + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
+    posizioneLayers.push(marker);
+
+    legendHtml += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ')">'
+      + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + colore + ';margin-right:0.6rem;flex-shrink:0"></span>'
+      + '<div class="impo-u-info"><div class="impo-u-name">' + g.nome + '</div>'
       + '<div class="impo-u-role"><span style="color:' + statoColor + ';font-weight:600">' + statoTxt + '</span> · aggiornato ' + minFa + 'm fa</div></div>'
       + '</div>';
   });
-  lista.innerHTML = html;
+  lista.innerHTML = legendHtml;
 
   if (bounds.length === 1) posizioneMapObj.setView(bounds[0], 15);
-  else posizioneMapObj.fitBounds(bounds, { padding: [30, 30] });
+  else if (bounds.length > 1) posizioneMapObj.fitBounds(bounds, { padding: [30, 30] });
 }
 
-function posizioneCentraSu(idx) {
-  const m = posizioneMarkers[idx];
-  if (!m || !posizioneMapObj) return;
-  posizioneMapObj.setView(m.getLatLng(), 16);
-  m.openPopup();
+function posizioneCentraSuLatLng(lat, lon) {
+  if (!posizioneMapObj) return;
+  posizioneMapObj.setView([lat, lon], 16);
 }
 
 
