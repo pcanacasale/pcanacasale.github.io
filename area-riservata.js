@@ -7794,7 +7794,7 @@ async function tgInviaBroadcast() {
   if (!txt) { if (errEl) { errEl.textContent = 'Scrivi un messaggio.'; errEl.style.display = 'block'; } return; }
   if (!confirm('Inviare questo messaggio a tutti i volontari registrati sul bot Telegram?')) return;
   try {
-    const res = await fetch(SUPA_URL + '/functions/v1/telegram-interventi', {
+    const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'broadcast', secret: TELEGRAM_BROADCAST_SECRET, testo: txt })
     });
