@@ -7807,26 +7807,56 @@ async function tgInviaBroadcast() {
   }
 }
 
-// -- POSIZIONE (posizioni condivise via bot, con mappa incorporata) --
-async function caricaPosizioni() {
-  const content = document.getElementById('posizioneContent');
-  if (!content) return;
-  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+// -- POSIZIONE (mappa unica con marker per volontario, via Leaflet/OSM) --
+let posizioneMapObj = null;
+let posizioneMarkers = [];
+let posizioneRefreshTimer = null;
+
+function caricaPosizioni() {
+  _posizioneCarica();
+  if (posizioneRefreshTimer) clearInterval(posizioneRefreshTimer);
+  posizioneRefreshTimer = setInterval(() => {
+    const panel = document.getElementById('panelPosizione');
+    if (panel && panel.classList.contains('active')) {
+      _posizioneCarica();
+    } else {
+      clearInterval(posizioneRefreshTimer);
+      posizioneRefreshTimer = null;
+    }
+  }, 30000);
+}
+
+async function _posizioneCarica() {
+  const lista = document.getElementById('posizioneLista');
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/telegram_posizioni_live?select=lat,lon,aggiornato_il,scade_il,volontario:volontario_id(cognome,nome)&order=aggiornato_il.desc', { headers: H });
     const arr = await res.json();
     renderPosizioni(arr || []);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    if (lista) lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
   }
 }
 
 function renderPosizioni(list) {
-  const content = document.getElementById('posizioneContent');
+  const mapEl = document.getElementById('posizioneMap');
+  const lista = document.getElementById('posizioneLista');
+  if (!mapEl || !lista || typeof L === 'undefined') return;
+
+  if (!posizioneMapObj) {
+    posizioneMapObj = L.map('posizioneMap').setView([45.13, 8.45], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    }).addTo(posizioneMapObj);
+  }
+  posizioneMarkers.forEach(m => posizioneMapObj.removeLayer(m));
+  posizioneMarkers = [];
+  setTimeout(() => posizioneMapObj.invalidateSize(), 0);
+
   if (!list.length) {
-    content.innerHTML = '<div class="loading-msg">nessuna posizione condivisa.</div>';
+    lista.innerHTML = '<div class="loading-msg">nessuna posizione condivisa al momento.</div>';
     return;
   }
+
   const now = Date.now();
   const arricchite = list.map(p => Object.assign({}, p, {
     isLive: !!(p.scade_il && new Date(p.scade_il).getTime() > now)
@@ -7835,21 +7865,37 @@ function renderPosizioni(list) {
     if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
     return new Date(b.aggiornato_il) - new Date(a.aggiornato_il);
   });
+
   let html = '';
-  arricchite.forEach(p => {
+  const bounds = [];
+  arricchite.forEach((p, idx) => {
     const v = p.volontario || {};
+    const nomeCompleto = (v.cognome || '?') + ' ' + (v.nome || '');
     const minFa = Math.max(0, Math.round((now - new Date(p.aggiornato_il).getTime()) / 60000));
-    const statoLbl = p.isLive
-      ? '<span style="color:var(--red);font-weight:700">🔴 LIVE</span>'
-      : '<span style="color:var(--testo-3);font-weight:600">📍 Posizione del momento</span>';
-    html += '<div class="seg-card">'
-      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
-      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.5rem">aggiornato ' + minFa + 'm fa</div>'
-      + '<iframe src="https://www.google.com/maps?q=' + p.lat + ',' + p.lon + '&output=embed" width="100%" height="220" style="border:0;border-radius:12px" loading="lazy"></iframe>'
-      + '<div style="margin-top:0.5rem"><a href="https://maps.google.com/?q=' + p.lat + ',' + p.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">🗺 Apri in Google Maps</a></div>'
+    const statoTxt = p.isLive ? '🔴 LIVE' : '📍 Posizione del momento';
+    const statoColor = p.isLive ? 'var(--red)' : 'var(--testo-3)';
+
+    const marker = L.marker([p.lat, p.lon]).addTo(posizioneMapObj);
+    marker.bindPopup('<strong>' + nomeCompleto + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
+    posizioneMarkers.push(marker);
+    bounds.push([p.lat, p.lon]);
+
+    html += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSu(' + idx + ')">'
+      + '<div class="impo-u-info"><div class="impo-u-name">' + nomeCompleto + '</div>'
+      + '<div class="impo-u-role"><span style="color:' + statoColor + ';font-weight:600">' + statoTxt + '</span> · aggiornato ' + minFa + 'm fa</div></div>'
       + '</div>';
   });
-  content.innerHTML = html;
+  lista.innerHTML = html;
+
+  if (bounds.length === 1) posizioneMapObj.setView(bounds[0], 15);
+  else posizioneMapObj.fitBounds(bounds, { padding: [30, 30] });
+}
+
+function posizioneCentraSu(idx) {
+  const m = posizioneMarkers[idx];
+  if (!m || !posizioneMapObj) return;
+  posizioneMapObj.setView(m.getLatLng(), 16);
+  m.openPopup();
 }
 
 

@@ -11,6 +11,7 @@
 <title>PC ANA Casale — Area Riservata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 /* ── DESIGN SYSTEM: iOS-INSPIRED, AUTO LIGHT/DARK, VERDE ANA ── */
 :root {
@@ -1462,7 +1463,8 @@ div:hover > .vista-edit-btn { display:flex; }
     <!-- POSIZIONE (per master: posizioni condivise dai volontari via bot, con mappa) -->
     <div class="panel" id="panelPosizione">
       <div class="panel-hdr"><h2>Posizione</h2><p>Posizioni condivise dai volontari via bot Telegram</p></div>
-      <div id="posizioneContent"><div class="loading-msg">caricamento...</div></div>
+      <div id="posizioneMap" style="height:60vh;min-height:400px;border-radius:12px;margin-bottom:0.8rem"></div>
+      <div id="posizioneLista"><div class="loading-msg">caricamento...</div></div>
     </div>
 
     <!-- GALLERIA -->
@@ -1857,7 +1859,8 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=142"></script>
+<script src="area-riservata.js?v=143"></script>
 </body>
 </html>
