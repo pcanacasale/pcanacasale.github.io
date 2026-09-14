@@ -231,7 +231,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siEmergenze'
+      'siEmergenze','siBot'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -266,6 +266,7 @@ function avviaDashboard() {
     if (isMaster)                showSi('siAccessi');
     if (isMaster)                showSi('siSegnalazioni');
     if (isMaster)                showSi('siEmergenze');
+    if (isMaster)                showSi('siBot');
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (isMaster)                showSi('siImpostazioni');
   }
@@ -332,6 +333,7 @@ function showPanel(name, btn) {
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
   if (name === 'emergenze') caricaEmergenze();
+  if (name === 'bot') caricaBot();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -580,7 +582,6 @@ async function caricaImpostazioni() {
   caricaUtenti();
   caricaLog();
   renderSchemaList();
-  caricaPosizioniLiveBot();
 }
 
 async function caricaUtenti() {
@@ -1205,7 +1206,6 @@ function apriFormVolontario(id) {
         <label class="vol-form-check"><input type="checkbox" id="fIscrizione"> Iscrizione</label>
         <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
         <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
-        <label class="vol-form-check"><input type="checkbox" id="fBotRegistraInterventi"> Può registrare interventi da bot Telegram</label>
       </div>
       <div class="vol-form-grid" style="margin-top:0.5rem">
         <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
@@ -1276,7 +1276,6 @@ async function caricaDatiForm(id) {
     setChk('fCorsoCaposq', v.corso_caposq); setChk('fCdc1', v.cdc_1_step);
     setChk('fCdc2', v.cdc_2_step); setChk('fIscrizione', v.iscrizione);
     setChk('fTutela', v.tutela_legale_cap); setChk('fAttivo', v.attivo);
-    setChk('fBotRegistraInterventi', v.bot_registra_interventi);
     setVal('fScadDae', v.scad_dae); setVal('fDataVisita', v.data_visita);
     setVal('fStatoVisita', v.stato_visita); setVal('fCodEmercom', v.cod_emercom);
     setVal('fDispon', v.dispon); setVal('fVarchi', v.varchi); setVal('fNoteDispon', v.note_dispon);
@@ -1440,7 +1439,6 @@ async function salvaVolontario() {
     quattro_ore: b('f4Ore'), dodici_ore: b('f12Ore'),
     corso_caposq: b('fCorsoCaposq'), cdc_1_step: b('fCdc1'), cdc_2_step: b('fCdc2'),
     iscrizione: b('fIscrizione'), tutela_legale_cap: b('fTutela'), attivo: b('fAttivo'),
-    bot_registra_interventi: b('fBotRegistraInterventi'),
     scad_dae: d('fScadDae'), data_visita: d('fDataVisita'),
     stato_visita: g('fStatoVisita'), cod_emercom: g('fCodEmercom'),
     dispon: g('fDispon'), varchi: g('fVarchi'), note_dispon: g('fNoteDispon'),
@@ -7675,7 +7673,119 @@ async function caricaBadgeEmergenze() {
   } catch(e) {}
 }
 
-// -- BOT TELEGRAM (broadcast + posizioni live) --
+// -- BOT TELEGRAM (permessi + broadcast + posizioni live) --
+function caricaBot() {
+  caricaBotPermessi();
+  caricaPosizioniLiveBot();
+}
+
+let botPermessiAll = [];
+
+async function caricaBotPermessi() {
+  const list = document.getElementById('botPermessiList');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  try {
+    const [resVol, resTg] = await Promise.all([
+      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,bot_registra_interventi&attivo=eq.true&order=cognome', { headers: H }),
+      fetch(SUPA_URL + '/rest/v1/telegram_volontari?select=volontario_id', { headers: H })
+    ]);
+    const volontari = await resVol.json();
+    const collegati = await resTg.json();
+    const collegatiIds = new Set((collegati || []).map(c => c.volontario_id));
+    botPermessiAll = (volontari || []).map(v => Object.assign({}, v, { collegato: collegatiIds.has(v.id) }));
+    botRenderPermessi();
+  } catch(e) {
+    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+function botFiltraPermessi() {
+  botRenderPermessi();
+}
+
+function botRenderPermessi() {
+  const list = document.getElementById('botPermessiList');
+  if (!list) return;
+  const q = (document.getElementById('botPermSearch').value || '').trim().toLowerCase();
+  let righe = botPermessiAll.slice();
+  if (q) {
+    righe = righe.filter(v =>
+      (v.cognome||'').toLowerCase().includes(q) ||
+      (v.nome||'').toLowerCase().includes(q) ||
+      (v.squadra||'').toLowerCase().includes(q)
+    );
+  }
+  if (!righe.length) {
+    list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
+    return;
+  }
+  let html = '';
+  righe.forEach(v => {
+    const collegatoLbl = v.collegato
+      ? '<span class="badge badge-std" style="font-size:0.6rem">collegato ✅</span>'
+      : '<span class="badge badge-off" style="font-size:0.6rem">non collegato</span>';
+    html += '<div class="impo-u-row">'
+      + '<div class="impo-u-info"><div class="impo-u-name">' + v.cognome + ' ' + v.nome + '</div>'
+      + '<div class="impo-u-role">' + (v.squadra || '—') + ' &nbsp; ' + collegatoLbl + '</div></div>'
+      + '<div class="impo-u-actions"><label class="vol-form-check" style="padding:0"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
+      + '</div>';
+  });
+  list.innerHTML = html;
+}
+
+async function botToggleRegistraInterventi(id, checked) {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ bot_registra_interventi: checked })
+    });
+    if (!res.ok) throw new Error('errore');
+    const v = botPermessiAll.find(x => x.id === id);
+    if (v) v.bot_registra_interventi = checked;
+  } catch(e) {
+    alert('Errore salvataggio.');
+    caricaBotPermessi();
+  }
+}
+
+async function botAbilitaTutti() {
+  await botImpostaTuttiVisibili(true);
+}
+
+async function botDisabilitaTutti() {
+  await botImpostaTuttiVisibili(false);
+}
+
+async function botImpostaTuttiVisibili(valore) {
+  const q = (document.getElementById('botPermSearch').value || '').trim().toLowerCase();
+  let righe = botPermessiAll.slice();
+  if (q) {
+    righe = righe.filter(v =>
+      (v.cognome||'').toLowerCase().includes(q) ||
+      (v.nome||'').toLowerCase().includes(q) ||
+      (v.squadra||'').toLowerCase().includes(q)
+    );
+  }
+  if (!righe.length) return;
+  if (!confirm((valore ? 'Abilitare' : 'Disabilitare') + ' "registra interventi da bot" per ' + righe.length + ' volontari?')) return;
+  try {
+    const ids = righe.map(v => v.id).join(',');
+    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids + ')', {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ bot_registra_interventi: valore })
+    });
+    if (!res.ok) throw new Error('errore');
+    righe.forEach(v => v.bot_registra_interventi = valore);
+    botRenderPermessi();
+  } catch(e) {
+    alert('Errore salvataggio.');
+    caricaBotPermessi();
+  }
+}
+
 async function tgInviaBroadcast() {
   const errEl = document.getElementById('tgBroadcastErr');
   const txt = (document.getElementById('tgBroadcastTesto').value || '').trim();
