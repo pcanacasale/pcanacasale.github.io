@@ -3,13 +3,18 @@
 // Bot Telegram multi-funzione, guidato da un menu a pulsanti (tastiera persistente):
 //  - "📋 Registra intervento": wizard (solo volontari con bot_registra_interventi=true)
 //  - "📍 Condividi posizione" (anche "in tempo reale"): storico in posizioni_tracciate
-//    (mai sovrascritto, così si vede il percorso), agganciato all'eventuale
-//    intervento attivo (bot_config.intervento_attivo_id). Per la condivisione a
-//    durata scelta dal menu, un job pg_cron chiama periodicamente l'azione
-//    "promemoria_posizione" per ricordare di rimandare la posizione (un bot non
-//    può avviare da solo una condivisione live continua, vedi setup4.sql)
+//    (mai sovrascritto, così si vede il percorso), agganciato all'intervento
+//    attivo (bot_config.intervento_attivo_id). Se non c'è nessun intervento
+//    attivo la posizione viene scartata (non salvata da nessuna parte): il
+//    percorso GPS ha senso solo dentro un intervento, a differenza delle
+//    segnalazioni. Per la condivisione a durata scelta dal menu, un job
+//    pg_cron chiama periodicamente l'azione "promemoria_posizione" per
+//    ricordare di rimandare la posizione (un bot non può avviare da solo una
+//    condivisione live continua, vedi setup4.sql)
 //  - "📸 Segnala emergenza": foto + testo + posizione -> segnalazioni_emergenza
-//    + Storage bucket "segnalazioni", anch'essa agganciata all'intervento attivo
+//    + Storage bucket "segnalazioni". Agganciata all'intervento attivo se
+//    presente, ma salvata comunque anche se nessun intervento è attivo
+//    (a differenza delle posizioni GPS)
 //  - messaggi massivi e impostazione dell'intervento attivo: chiamate interne
 //    dall'app (non da Telegram), vedi rami "broadcast" e "set_intervento_attivo"
 //
@@ -207,9 +212,14 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
   }
   // Registra un NUOVO punto (non sovrascrive): serve per poter vedere il percorso.
   // Ogni punto viene agganciato all'eventuale intervento attivo per le emergenze.
-  async function registraPosizione(volontario_id: number, lat: number, lon: number, minuti?: number, creaPromemoria = false) {
-    const scade_il = minuti ? new Date(Date.now() + minuti * 60000).toISOString() : null;
+  // Se non c'è nessun intervento attivo la posizione viene scartata (non ha senso
+  // tracciare un percorso che non sarà mai consultabile da nessuna parte
+  // dell'app): a differenza delle segnalazioni/foto, che restano indipendenti
+  // dall'intervento attivo, il tracciamento GPS vive solo dentro un intervento.
+  async function registraPosizione(volontario_id: number, lat: number, lon: number, minuti?: number, creaPromemoria = false): Promise<'saved' | 'discarded' | 'error'> {
     const intervento_id = await getInterventoAttivo();
+    if (!intervento_id) return 'discarded';
+    const scade_il = minuti ? new Date(Date.now() + minuti * 60000).toISOString() : null;
     const res = await fetch(`${SUPA_URL}/rest/v1/posizioni_tracciate`, {
       method: 'POST', headers: { ...HJ, Prefer: 'return=minimal' },
       body: JSON.stringify({ volontario_id, intervento_id, lat, lon, scade_il }),
@@ -230,7 +240,7 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
       // Nessuna durata (posizione "del momento"): niente da tracciare come sessione.
       await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?volontario_id=eq.${volontario_id}`, { method: 'DELETE', headers: H });
     }
-    return checkOk(res, 'registraPosizione');
+    return (await checkOk(res, 'registraPosizione')) ? 'saved' : 'error';
   }
   async function interrompiPosizione(volontario_id: number) {
     await setPausa(volontario_id, true); // i punti storici restano: si ferma solo la ricezione di nuovi aggiornamenti live
@@ -463,6 +473,8 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
       return jsonResponse({ ok: true });
     }
     if (text === '📍 Condividi posizione') {
+      const interventoAttivo = await getInterventoAttivo();
+      if (!interventoAttivo) { await sendMsg(chat_id, '⚠️ Nessuna emergenza attiva al momento: la condivisione posizione è disponibile solo durante un intervento attivo.'); return jsonResponse({ ok: true }); }
       await sendMsg(chat_id, 'Per quanto tempo vuoi condividere la posizione?', tastieraDurata());
       return jsonResponse({ ok: true });
     }
@@ -485,9 +497,12 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
       } else if (msg.location.live_period) {
         minuti = Math.round(msg.location.live_period / 60); // condivisione "in tempo reale" nativa di Telegram, avviata senza passare dal menu (già continua da sola)
       }
-      const ok = await registraPosizione(volontario.id, msg.location.latitude, msg.location.longitude, minuti, creaPromemoria);
+      const esito = await registraPosizione(volontario.id, msg.location.latitude, msg.location.longitude, minuti, creaPromemoria);
       const nota = creaPromemoria ? `\nTi ricorderò di rimandarla ogni ${INTERVALLO_PROMEMORIA_MIN} minuti finché non scade o premi "⏹ Interrompi posizione".` : '';
-      await sendMsg(chat_id, ok ? `📍 Posizione ricevuta, grazie.${nota}` : '⚠️ Errore nel salvataggio della posizione.');
+      const testoEsito = esito === 'saved' ? `📍 Posizione ricevuta, grazie.${nota}`
+        : esito === 'discarded' ? '⚠️ Nessuna emergenza attiva al momento: la posizione non è stata salvata.'
+        : '⚠️ Errore nel salvataggio della posizione.';
+      await sendMsg(chat_id, testoEsito);
       return jsonResponse({ ok: true });
     }
 

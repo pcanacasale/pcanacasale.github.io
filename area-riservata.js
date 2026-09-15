@@ -2319,6 +2319,18 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Note</div>
         <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
       </div>` : ''}
+      <div class="vol-section" id="intPosizioneSection" style="display:none">
+        <div class="vol-section-head">Percorso GPS condiviso</div>
+        <div class="vol-section-body">
+          <div id="intDetailMap" style="height:220px;border-radius:10px;overflow:hidden;position:relative;z-index:0;isolation:isolate"></div>
+        </div>
+      </div>
+      <div class="vol-section" id="intFotoSection" style="display:none">
+        <div class="vol-section-head">Foto segnalazioni</div>
+        <div class="vol-section-body">
+          <div class="gall-photos" id="intDetailGallery"></div>
+        </div>
+      </div>
       <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem">
         <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="stampaIntervento(${i.id})">📄 Esporta CF</button>
@@ -2326,7 +2338,60 @@ async function apriDettaglioIntervento(id) {
         <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem;background:var(--bg-2);border-color:#1a4a9a;color:#4a90d9" onclick="esportaModuloTerritoriale(${i.id})">📋 Territoriale</button>
       </div>
       <button class="vol-delete-btn" style="margin-top:0.8rem;font-size:0.72rem;opacity:0.6" onclick="eliminaIntervento()">elimina intervento</button>`;
+    caricaDettaglioPosizioniEFoto(i.id);
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+async function caricaDettaglioPosizioniEFoto(interventoId) {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId, { headers: H });
+    const arr = await res.json();
+    const sezione = document.getElementById('intPosizioneSection');
+    const mapEl = document.getElementById('intDetailMap');
+    if (sezione && mapEl && arr && arr.length && typeof L !== 'undefined') {
+      sezione.style.display = '';
+      const map = L.map('intDetailMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+      }).addTo(map);
+      const gruppi = new Map();
+      arr.forEach(p => {
+        const v = p.volontario || {};
+        const key = p.volontario_id != null ? p.volontario_id : ((v.cognome || '') + '|' + (v.nome || ''));
+        if (!gruppi.has(key)) gruppi.set(key, []);
+        gruppi.get(key).push([p.lat, p.lon]);
+      });
+      const bounds = [];
+      let colorIdx = 0;
+      gruppi.forEach(latlngs => {
+        const colore = POSIZIONE_PALETTE[colorIdx % POSIZIONE_PALETTE.length];
+        colorIdx++;
+        latlngs.forEach(ll => bounds.push(ll));
+        if (latlngs.length > 1) L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(map);
+        L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(map);
+      });
+      setTimeout(() => {
+        map.invalidateSize();
+        if (bounds.length === 1) map.setView(bounds[0], 15);
+        else if (bounds.length > 1) map.fitBounds(bounds, { padding: [20, 20] });
+      }, 0);
+    }
+  } catch(e) {}
+
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=foto_url,descrizione,creato_il&intervento_id=eq.' + interventoId + '&foto_url=not.is.null&order=creato_il.desc', { headers: H });
+    const arr = await res.json();
+    const sezione = document.getElementById('intFotoSection');
+    const gall = document.getElementById('intDetailGallery');
+    if (sezione && gall && arr && arr.length) {
+      sezione.style.display = '';
+      gall.innerHTML = arr.map(f =>
+        '<div class="gall-photo" onclick="window.open(\'' + f.foto_url + '\',\'_blank\')">'
+        + '<img src="' + f.foto_url + '" loading="lazy" alt="' + (f.descrizione ? f.descrizione.replace(/"/g,'&quot;') : '') + '">'
+        + '</div>'
+      ).join('');
+    }
+  } catch(e) {}
 }
 
 function chiudiDettaglioIntervento() {
@@ -7749,6 +7814,11 @@ async function botImpostaInterventoAttivo() {
   }
 }
 
+async function botInterrompiInterventoAttivo() {
+  document.getElementById('botInterventoAttivo').value = '';
+  await botImpostaInterventoAttivo(); // scrive NULL nella stessa riga di configurazione
+}
+
 async function caricaBotPermessi() {
   const list = document.getElementById('botPermessiList');
   if (!list) return;
@@ -7881,7 +7951,6 @@ let posizioneRefreshTimer = null;
 const POSIZIONE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990','#dcbeff','#9a6324','#800000','#aaffc3','#808000'];
 
 function caricaPosizioni() {
-  caricaPosizioneFiltroInterventi();
   _posizioneCarica();
   if (posizioneRefreshTimer) clearInterval(posizioneRefreshTimer);
   posizioneRefreshTimer = setInterval(() => {
@@ -7895,26 +7964,35 @@ function caricaPosizioni() {
   }, 30000);
 }
 
-async function caricaPosizioneFiltroInterventi() {
-  const sel = document.getElementById('posFiltroIntervento');
-  if (!sel || sel.dataset.loaded) return;
-  const interventi = await caricaInterventiRecenti();
-  let html = '<option value="">Tutte le posizioni</option>';
-  interventi.forEach(i => {
-    const dataLbl = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '';
-    html += '<option value="' + i.id + '">' + (i.evento || '—') + (dataLbl ? ' (' + dataLbl + ')' : '') + '</option>';
-  });
-  sel.innerHTML = html;
-  sel.dataset.loaded = '1';
+async function _posizioneInterventoAttivoCorrente() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/bot_config?select=valore&chiave=eq.intervento_attivo_id&limit=1', { headers: H });
+    const arr = await res.json();
+    const v = (arr || [])[0] && (arr[0].valore || null);
+    return v || null;
+  } catch(e) { return null; }
 }
 
 async function _posizioneCarica() {
+  const vuoto = document.getElementById('posizioneStatoVuoto');
+  const attiva = document.getElementById('posizioneAttiva');
+  const lbl = document.getElementById('posizioneInterventoLbl');
   const lista = document.getElementById('posizioneLista');
+  const interventoId = await _posizioneInterventoAttivoCorrente();
+  if (!interventoId) {
+    if (vuoto) vuoto.style.display = 'block';
+    if (attiva) attiva.style.display = 'none';
+    return;
+  }
+  if (vuoto) vuoto.style.display = 'none';
+  if (attiva) attiva.style.display = 'block';
   try {
-    const sel = document.getElementById('posFiltroIntervento');
-    const interventoId = sel && sel.value ? sel.value : null;
-    let url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc';
-    if (interventoId) url += '&intervento_id=eq.' + interventoId;
+    if (lbl) {
+      const interventi = await caricaInterventiRecenti();
+      const i = (interventi || []).find(x => String(x.id) === String(interventoId));
+      lbl.textContent = i ? (i.evento || '—') : ('Intervento #' + interventoId);
+    }
+    const url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId;
     const res = await fetch(url, { headers: H });
     const arr = await res.json();
     renderPosizioni(arr || []);
