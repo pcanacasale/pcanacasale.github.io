@@ -2216,6 +2216,25 @@ async function apriDettaglioIntervento(id) {
       } catch(e) {}
     }
 
+    // Posizioni tracciate e segnalazioni di emergenza agganciate a questo intervento (sezione mostrata solo se presenti)
+    let posSegPosizioni = [], posSegSegnalazioni = [];
+    try {
+      const psr = await caricaPosizioniSegnalazioniIntervento(i.id);
+      posSegPosizioni = psr.posizioni;
+      posSegSegnalazioni = psr.segnalazioni;
+    } catch(e) {}
+    let posSegSection = '';
+    if (posSegPosizioni.length || posSegSegnalazioni.length) {
+      posSegSection = `<div class="vol-section">
+        <div class="vol-section-head">📍 Posizioni e segnalazioni</div>
+        <div class="vol-section-body">
+          ${posSegPosizioni.length ? `<div id="intDetailMap" style="height:280px;border-radius:12px;margin-bottom:0.6rem;position:relative;z-index:0;isolation:isolate"></div>
+          <div id="intDetailPosLista" style="margin-bottom:0.8rem"></div>` : ''}
+          ${posSegSegnalazioni.length ? `<div id="intDetailEmergContent"></div>` : ''}
+        </div>
+      </div>`;
+    }
+
     // Se è una macro, carica i figli
     let macroSection = '';
     if (i.is_macro) {
@@ -2311,6 +2330,7 @@ async function apriDettaglioIntervento(id) {
           <div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${volNomi}</div>
         </div>
       </div>
+      ${posSegSection}
       ${macroSection}
       ${i.note ? `<div class="vol-section">
         <div class="vol-section-head">Note</div>
@@ -2323,6 +2343,9 @@ async function apriDettaglioIntervento(id) {
         <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem;background:var(--bg-2);border-color:#1a4a9a;color:#4a90d9" onclick="esportaModuloTerritoriale(${i.id})">📋 Territoriale</button>
       </div>
       <button class="vol-delete-btn" style="margin-top:0.8rem;font-size:0.72rem;opacity:0.6" onclick="eliminaIntervento()">elimina intervento</button>`;
+
+    if (posSegPosizioni.length) renderPosizioni(posSegPosizioni, 'intDetail', 'intDetailMap', 'intDetailPosLista');
+    if (posSegSegnalazioni.length) renderEmergenze(posSegSegnalazioni, 'intDetailEmergContent', { azione: false });
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
 }
 
@@ -7615,8 +7638,11 @@ async function caricaEmergenze() {
   }
 }
 
-function renderEmergenze(list) {
-  const content = document.getElementById('emergenzeContent');
+function renderEmergenze(list, contentElId, opts) {
+  contentElId = contentElId || 'emergenzeContent';
+  const mostraAzione = !opts || opts.azione !== false;
+  const content = document.getElementById(contentElId);
+  if (!content) return;
   if (!list.length) {
     content.innerHTML = '<div class="loading-msg">nessuna segnalazione di emergenza.</div>';
     return;
@@ -7639,11 +7665,13 @@ function renderEmergenze(list) {
       + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank"><img src="' + s.foto_url + '" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:0.5rem;cursor:pointer"></a>' : '')
       + (s.descrizione ? '<div class="seg-card-text">' + s.descrizione + '</div>' : '')
       + (mapLink ? '<div style="margin-top:0.5rem">' + mapLink + '</div>' : '')
-      + '<div style="margin-top:0.6rem">'
-      + (s.gestita
-          ? '<button class="btn-sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">↻ Riapri</button>'
-          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoEmergenza(' + s.id + ', true)">✓ Segna come gestita</button>')
-      + '</div>'
+      + (mostraAzione
+        ? '<div style="margin-top:0.6rem">'
+          + (s.gestita
+              ? '<button class="btn-sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">↻ Riapri</button>'
+              : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoEmergenza(' + s.id + ', true)">✓ Segna come gestita</button>')
+          + '</div>'
+        : '')
       + '</div>';
   });
   content.innerHTML = html;
@@ -7872,10 +7900,17 @@ async function tgInviaBroadcast() {
 }
 
 // -- POSIZIONE (percorsi tracciati per volontario, via Leaflet/OSM) --
-let posizioneMapObj = null;
-let posizioneLayers = [];
+// posizioneContesti: una mappa Leaflet + i suoi layer per "namespace" (es. 'posizione' per la
+// pagina generale, 'intDetail' per la sezione dentro la scheda intervento), così renderPosizioni
+// è riusabile ovunque serva un mini-mappa dei percorsi senza mescolare le istanze Leaflet.
+const posizioneContesti = {};
 let posizioneRefreshTimer = null;
 const POSIZIONE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990','#dcbeff','#9a6324','#800000','#aaffc3','#808000'];
+
+function _posizioneGetCtx(ns) {
+  if (!posizioneContesti[ns]) posizioneContesti[ns] = { map: null, layers: [] };
+  return posizioneContesti[ns];
+}
 
 function caricaPosizioni() {
   caricaPosizioneFiltroInterventi();
@@ -7920,20 +7955,47 @@ async function _posizioneCarica() {
   }
 }
 
-function renderPosizioni(list) {
-  const mapEl = document.getElementById('posizioneMap');
-  const lista = document.getElementById('posizioneLista');
+// Posizioni tracciate + segnalazioni di emergenza scoped a un singolo intervento, per la
+// sezione "📍 Posizioni e segnalazioni" nella scheda intervento (apriDettaglioIntervento).
+async function caricaPosizioniSegnalazioniIntervento(interventoId) {
+  let posizioni = [], segnalazioni = [];
+  try {
+    const rp = await fetch(SUPA_URL + '/rest/v1/posizioni_tracciate?intervento_id=eq.' + interventoId + '&select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc', { headers: H });
+    posizioni = await rp.json();
+  } catch(e) {}
+  try {
+    const rs = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?intervento_id=eq.' + interventoId + '&select=*,volontario:volontario_id(cognome,nome)&order=creato_il.desc', { headers: H });
+    segnalazioni = await rs.json();
+  } catch(e) {}
+  return { posizioni: posizioni || [], segnalazioni: segnalazioni || [] };
+}
+
+function renderPosizioni(list, ns, mapElId, listElId) {
+  ns = ns || 'posizione';
+  mapElId = mapElId || 'posizioneMap';
+  listElId = listElId || 'posizioneLista';
+  const mapEl = document.getElementById(mapElId);
+  const lista = document.getElementById(listElId);
   if (!mapEl || !lista || typeof L === 'undefined') return;
 
-  if (!posizioneMapObj) {
-    posizioneMapObj = L.map('posizioneMap').setView([45.13, 8.45], 12);
+  const ctx = _posizioneGetCtx(ns);
+  // Se il contenitore della mappa è stato ricreato (es. riapertura della scheda intervento,
+  // il cui HTML viene rigenerato ad ogni apertura), l'istanza Leaflet precedente punta a un
+  // nodo DOM non più agganciato: va smontata e ricreata sul nuovo nodo.
+  if (ctx.map && ctx.map.getContainer() !== mapEl) {
+    ctx.map.remove();
+    ctx.map = null;
+  }
+  if (!ctx.map) {
+    ctx.map = L.map(mapElId).setView([45.13, 8.45], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-    }).addTo(posizioneMapObj);
+    }).addTo(ctx.map);
+    ctx.layers = [];
   }
-  posizioneLayers.forEach(l => posizioneMapObj.removeLayer(l));
-  posizioneLayers = [];
-  setTimeout(() => posizioneMapObj.invalidateSize(), 0);
+  ctx.layers.forEach(l => ctx.map.removeLayer(l));
+  ctx.layers = [];
+  setTimeout(() => ctx.map.invalidateSize(), 0);
 
   if (!list.length) {
     lista.innerHTML = '<div class="loading-msg">nessuna posizione condivisa al momento.</div>';
@@ -7961,8 +8023,8 @@ function renderPosizioni(list) {
     latlngs.forEach(ll => bounds.push(ll));
 
     if (latlngs.length > 1) {
-      const poly = L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(posizioneMapObj);
-      posizioneLayers.push(poly);
+      const poly = L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(ctx.map);
+      ctx.layers.push(poly);
     }
 
     const ultimo = g.punti[g.punti.length - 1];
@@ -7971,11 +8033,11 @@ function renderPosizioni(list) {
     const statoTxt = attiva ? '🟢 Attiva' : '⚪ Terminata';
     const statoColor = attiva ? 'var(--green)' : 'var(--testo-3)';
 
-    const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(posizioneMapObj);
+    const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(ctx.map);
     marker.bindPopup('<strong>' + g.nome + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
-    posizioneLayers.push(marker);
+    ctx.layers.push(marker);
 
-    legendHtml += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ')">'
+    legendHtml += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
       + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + colore + ';margin-right:0.6rem;flex-shrink:0"></span>'
       + '<div class="impo-u-info"><div class="impo-u-name">' + g.nome + '</div>'
       + '<div class="impo-u-role"><span style="color:' + statoColor + ';font-weight:600">' + statoTxt + '</span> · aggiornato ' + minFa + 'm fa</div></div>'
@@ -7983,13 +8045,14 @@ function renderPosizioni(list) {
   });
   lista.innerHTML = legendHtml;
 
-  if (bounds.length === 1) posizioneMapObj.setView(bounds[0], 15);
-  else if (bounds.length > 1) posizioneMapObj.fitBounds(bounds, { padding: [30, 30] });
+  if (bounds.length === 1) ctx.map.setView(bounds[0], 15);
+  else if (bounds.length > 1) ctx.map.fitBounds(bounds, { padding: [30, 30] });
 }
 
-function posizioneCentraSuLatLng(lat, lon) {
-  if (!posizioneMapObj) return;
-  posizioneMapObj.setView([lat, lon], 16);
+function posizioneCentraSuLatLng(lat, lon, ns) {
+  const ctx = _posizioneGetCtx(ns || 'posizione');
+  if (!ctx.map) return;
+  ctx.map.setView([lat, lon], 16);
 }
 
 
