@@ -518,6 +518,12 @@ div:hover > .vista-edit-btn { display:flex; }
 .perm-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; background:var(--bg-2); border-radius:var(--r-sm); padding:0.7rem; margin-bottom:0.7rem; }
 .perm-check { display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:var(--testo-2); cursor:pointer; padding:0.2rem 0; }
 .perm-check input { accent-color:var(--green); width:15px; height:15px; }
+#matricePermessi th, #matricePermessi td { padding:6px 10px; border-bottom:0.5px solid var(--border); text-align:center; }
+#matricePermessi td:first-child, #matricePermessi th:first-child { position:sticky; left:0; background:var(--bg-card); text-align:left; font-weight:500; z-index:1; }
+#matricePermessi th { background:var(--bg-2); font-weight:600; font-size:0.72rem; }
+#matricePermessi input[type="checkbox"] { accent-color:var(--green); width:15px; height:15px; cursor:pointer; }
+@keyframes mp-flash { 0% { box-shadow:inset 0 0 0 2px var(--green); } 100% { box-shadow:inset 0 0 0 2px transparent; } }
+#matricePermessi td.mp-flash { animation:mp-flash 0.7s ease-out; }
 .nc-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.6rem; }
 .nc-full { grid-column:span 2; }
 .schema-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.6rem; }
@@ -1424,6 +1430,16 @@ div:hover > .vista-edit-btn { display:flex; }
         </select>
       </div>
 
+      <!-- Matrice permessi -->
+      <div class="impo-section" id="matricePermessiSection" style="display:none">
+        <div class="sec-label">Matrice permessi</div>
+        <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--r-lg)">
+          <table id="matricePermessi" style="border-collapse:collapse;font-size:0.78rem;white-space:nowrap">
+            <!-- popolata via JS -->
+          </table>
+        </div>
+      </div>
+
       <!-- Nuovo utente (spostato da Impostazioni) -->
       <div class="impo-section" id="accNuovoUtenteSection">
         <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
@@ -1446,6 +1462,16 @@ div:hover > .vista-edit-btn { display:flex; }
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
             <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
+            <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti</label>
+            <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
+            <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni</label>
+            <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
+            <label class="perm-check"><input type="checkbox" id="permAccessi"> Accessi</label>
+            <label class="perm-check"><input type="checkbox" id="permGestioneSegnalazioni"> Gestione Segnalazioni</label>
+            <label class="perm-check"><input type="checkbox" id="permBot"> Bot</label>
+            <label class="perm-check"><input type="checkbox" id="permEmergenze"> Emergenze</label>
+            <label class="perm-check"><input type="checkbox" id="permPosizione"> Posizione</label>
+            <label class="perm-check"><input type="checkbox" id="permImpostazioni"> Impostazioni</label>
           </div>
           <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
         </div>
@@ -1909,6 +1935,12 @@ div:hover > .vista-edit-btn { display:flex; }
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> 📨 Convocazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermAccessi"> 🔐 Accessi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermGestioneSegnalazioni"> 🚩 Gestione Segnalazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermBot"> 🤖 Bot</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEmergenze"> 🚨 Emergenze</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPosizione"> 📍 Posizione</label>
         </div>
       </div>
       <div style="display:flex;gap:0.5rem">
@@ -1921,6 +1953,6 @@ div:hover > .vista-edit-btn { display:flex; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=148"></script>
+<script src="area-riservata.js?v=149"></script>
 </body>
 </html>

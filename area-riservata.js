@@ -185,6 +185,19 @@ function canModificaVolontari() {
   return p.modifica_volontari === true;
 }
 
+// Regola: master ha accesso di default a tutte le pagine, MA un permesso
+// esplicitamente disattivato (false) nasconde la voce anche per i master.
+// Volontario: solo i permessi espliciti (true) danno accesso.
+function hasPerm(key) {
+  if (!currentUser) return false;
+  const isMaster = currentUser.tipo_accesso === 'master';
+  const isVol    = currentUser.tipo_accesso === 'volontario';
+  const p = currentUser.permessi || {};
+  if (isVol) return !!p[key];
+  if (p[key] === false) return false;
+  return isMaster || !!p[key];
+}
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
@@ -217,16 +230,8 @@ function avviaDashboard() {
   document.getElementById('homeWelcome').textContent = currentUser.nome;
   document.getElementById('homeUnit').textContent    = currentUser.ruolo;
 
-  // Sidebar voci visibilita
-  // Regola: master vede tutto di default, MA un permesso esplicitamente
-  // disattivato (false) nasconde la voce anche per i master.
-  // Impostazioni resta sempre visibile per i master.
+  // Sidebar voci visibilita (vedi hasPerm() a livello di modulo)
   var showSi  = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
-  var hasPerm = function(key) {
-    if (isVol) return !!p[key];                // volontario: solo permessi espliciti
-    if (p[key] === false) return false;        // disattivato esplicitamente
-    return isMaster || !!p[key];               // master di default, standard se concesso
-  };
 
   if (isVol) {
     // Reset esplicito di TUTTE le voci sidebar (per evitare residui)
@@ -264,15 +269,15 @@ function avviaDashboard() {
     if (hasPerm('documenti'))    showSi('siDocumenti');
     if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
-    showSi('siConvocazioni');
+    if (hasPerm('convocazioni')) showSi('siConvocazioni');
     if (hasPerm('db'))           showSi('siDb');
-    if (isMaster)                showSi('siAccessi');
-    if (isMaster)                showSi('siSegnalazioni');
-    if (isMaster)                showSi('siEmergenze');
-    if (isMaster)                showSi('siBot');
-    if (isMaster)                showSi('siPosizione');
+    if (hasPerm('accessi'))      showSi('siAccessi');
+    showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
+    if (hasPerm('emergenze'))    showSi('siEmergenze');
+    if (hasPerm('bot'))          showSi('siBot');
+    if (hasPerm('posizione'))    showSi('siPosizione');
     if (hasPerm('richieste'))    showSi('siRichieste');
-    if (isMaster)                showSi('siImpostazioni');
+    if (hasPerm('impostazioni')) showSi('siImpostazioni');
   }
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
@@ -280,8 +285,8 @@ function avviaDashboard() {
 
   // Badge richieste (solo per non-volontari)
   if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
-  if (!isVol) caricaBadgeSegnalazioni();
-  if (isMaster) caricaBadgeEmergenze();
+  if (!isVol && hasPerm('gestione_segnalazioni')) caricaBadgeSegnalazioni();
+  if (hasPerm('emergenze')) caricaBadgeEmergenze();
 
   // Compleanno
   verificaCompleanni();
@@ -651,6 +656,12 @@ async function salvaUtente() {
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
+    convocazioni: document.getElementById('permConvocazioni') ? document.getElementById('permConvocazioni').checked : false,
+    accessi:      document.getElementById('permAccessi') ? document.getElementById('permAccessi').checked : false,
+    gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
+    bot:          document.getElementById('permBot') ? document.getElementById('permBot').checked : false,
+    emergenze:    document.getElementById('permEmergenze') ? document.getElementById('permEmergenze').checked : false,
+    posizione:    document.getElementById('permPosizione') ? document.getElementById('permPosizione').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -686,7 +697,9 @@ function apriModificaUtente(u) {
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
-    'Impostazioni':'impostazioni','Statistiche':'statistiche'
+    'Impostazioni':'impostazioni','Statistiche':'statistiche',
+    'Convocazioni':'convocazioni','Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
+    'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione'
   };
   Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
@@ -725,6 +738,12 @@ async function salvaModificaUtente() {
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
+    convocazioni:   document.getElementById('modPermConvocazioni') ? document.getElementById('modPermConvocazioni').checked : false,
+    accessi:        document.getElementById('modPermAccessi') ? document.getElementById('modPermAccessi').checked : false,
+    gestione_segnalazioni: document.getElementById('modPermGestioneSegnalazioni') ? document.getElementById('modPermGestioneSegnalazioni').checked : false,
+    bot:            document.getElementById('modPermBot') ? document.getElementById('modPermBot').checked : false,
+    emergenze:      document.getElementById('modPermEmergenze') ? document.getElementById('modPermEmergenze').checked : false,
+    posizione:      document.getElementById('modPermPosizione') ? document.getElementById('modPermPosizione').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
@@ -7284,9 +7303,11 @@ async function caricaAccessi() {
   if (!content) return;
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
 
-  // Mostra/nascondi sezione nuovo utente solo per master
+  // Mostra/nascondi sezione nuovo utente e matrice permessi solo per master
   const nuovoSec = document.getElementById('accNuovoUtenteSection');
   if (nuovoSec) nuovoSec.style.display = isMasterUser ? 'block' : 'none';
+  const matriceSec = document.getElementById('matricePermessiSection');
+  if (matriceSec) matriceSec.style.display = isMasterUser ? 'block' : 'none';
 
   try {
     const [uRes, vRes, logRes, attRes] = await Promise.all([
@@ -7301,8 +7322,86 @@ async function caricaAccessi() {
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();
     renderAccessi();
+    if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
     content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+// -- MATRICE PERMESSI --
+const PERMESSI_PAGINE = [
+  { key: 'volontari',              label: 'Volontari' },
+  { key: 'modifica_volontari',     label: 'Modifica Volontari' },
+  { key: 'interventi',             label: 'Interventi' },
+  { key: 'postazioni',             label: 'Postazioni' },
+  { key: 'dotazioni',              label: 'Dotazioni' },
+  { key: 'pianicarico',            label: 'Piani di Carico' },
+  { key: 'mezzi',                  label: 'Mezzi' },
+  { key: 'tlc',                    label: 'TLC' },
+  { key: 'richieste',              label: 'Richieste' },
+  { key: 'visite',                 label: 'Visite Mediche' },
+  { key: 'galleria',               label: 'Galleria' },
+  { key: 'documenti',              label: 'Documenti' },
+  { key: 'statistiche',            label: 'Statistiche' },
+  { key: 'convocazioni',           label: 'Convocazioni' },
+  { key: 'db',                     label: 'DB Avanzato' },
+  { key: 'accessi',                label: 'Accessi' },
+  { key: 'gestione_segnalazioni',  label: 'Gestione Segnalazioni' },
+  { key: 'bot',                    label: 'Bot' },
+  { key: 'emergenze',              label: 'Emergenze' },
+  { key: 'posizione',              label: 'Posizione' },
+  { key: 'impostazioni',           label: 'Impostazioni' },
+];
+
+function caricaMatricePermessi() {
+  const tbl = document.getElementById('matricePermessi');
+  if (!tbl) return;
+  const utenti = accessiData.admin || [];
+  if (!utenti.length) { tbl.innerHTML = ''; return; }
+
+  let html = '<thead><tr><th></th>';
+  utenti.forEach(function(u) {
+    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' 🔑' : '') + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  PERMESSI_PAGINE.forEach(function(perm) {
+    html += '<tr><td>' + perm.label + '</td>';
+    utenti.forEach(function(u) {
+      const p = u.permessi || {};
+      const checked = u.tipo_accesso === 'master' ? (p[perm.key] !== false) : !!p[perm.key];
+      html += '<td id="mp-' + u.id + '-' + perm.key + '">'
+        + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePermessoMatrice(\'' + u.id + '\',\'' + perm.key + '\',this.checked)">'
+        + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+async function togglePermessoMatrice(userId, key, checked) {
+  const cell = document.getElementById('mp-' + userId + '-' + key);
+  const u = (accessiData.admin || []).find(function(x) { return String(x.id) === String(userId); });
+  if (!u) return;
+  const permessi = Object.assign({}, u.permessi || {});
+  permessi[key] = checked;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + userId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ permessi: permessi })
+    });
+    if (!res.ok) throw new Error('errore');
+    u.permessi = permessi;
+    if (cell) {
+      cell.classList.remove('mp-flash');
+      void cell.offsetWidth; // riavvia l'animazione anche su click ravvicinati
+      cell.classList.add('mp-flash');
+    }
+  } catch(e) {
+    alert('Errore salvataggio permesso.');
+    if (cell) { var cb = cell.querySelector('input[type=checkbox]'); if (cb) cb.checked = !checked; }
   }
 }
 
@@ -7541,6 +7640,9 @@ async function caricaSegnalazioni() {
     } catch(e) {
       content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
     }
+  } else if (!hasPerm('gestione_segnalazioni')) {
+    sub.textContent = 'Segnalazioni ricevute dai volontari';
+    content.innerHTML = '<div class="loading-msg">Non hai i permessi per gestire le segnalazioni.</div>';
   } else {
     // Admin: lista tutte le segnalazioni
     sub.textContent = 'Segnalazioni ricevute dai volontari';
