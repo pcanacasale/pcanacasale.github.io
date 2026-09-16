@@ -1412,6 +1412,8 @@ div:hover > .vista-edit-btn { display:flex; }
           <option value="COMPLETATA">Completata</option>
           <option value="VUOTO">Non impostato</option>
         </select>
+        <button class="btn-sm" onclick="esportaVisitePDF(false)">PDF tutti</button>
+        <button class="btn-sm" onclick="esportaVisitePDF(true)">PDF filtrati</button>
       </div>
       <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
     </div>
@@ -1951,8 +1953,9 @@ div:hover > .vista-edit-btn { display:flex; }
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=149"></script>
+<script src="area-riservata.js?v=150"></script>
 </body>
 </html>

@@ -8373,6 +8373,7 @@ document.addEventListener('keydown', function(e) {
 
 // -- VISITE MEDICHE --
 let visiteData = [];
+let visiteRendered = [];
 
 const VISITA_STATI = {
   'ESONERO':    { label: 'Esonero',    cls: 'vs-esonero' },
@@ -8438,6 +8439,7 @@ function filtraVisitePerStato(stato) {
 }
 
 function renderVisite(data) {
+  visiteRendered = data;
   const list = document.getElementById('visiteList');
   if (!data.length) {
     list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
@@ -8497,6 +8499,35 @@ function filtraVisite() {
     return true;
   });
   renderVisite(filtered);
+}
+
+function esportaVisitePDF(soloFiltrati) {
+  const dati = soloFiltrati ? visiteRendered : visiteData;
+  if (!dati.length) return;
+
+  const doc = new jspdf.jsPDF();
+  doc.setFontSize(14);
+  doc.text('Visite Mediche — PC ANA Casale', 14, 16);
+  doc.setFontSize(9);
+  doc.text('Generato il ' + new Date().toLocaleDateString('it-IT') + (soloFiltrati ? ' — elenco filtrato' : ' — elenco completo'), 14, 22);
+
+  doc.autoTable({
+    startY: 28,
+    head: [['Nominativo', 'Codice Fiscale', 'Stato', 'Data']],
+    body: dati.map(v => {
+      const statoInfo = VISITA_STATI[v.stato_visita || ''];
+      return [
+        ((v.cognome || '') + ' ' + (v.nome || '')).trim(),
+        v.codice_fiscale || '—',
+        statoInfo ? statoInfo.label : 'Non impostato',
+        v.data_visita ? new Date(v.data_visita).toLocaleDateString('it-IT') : '—'
+      ];
+    }),
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [26, 122, 74] }
+  });
+
+  doc.save(soloFiltrati ? 'visite-mediche-filtrate.pdf' : 'visite-mediche-tutte.pdf');
 }
 
 async function cambiaVisitaCampo(volId, campo, valore) {
