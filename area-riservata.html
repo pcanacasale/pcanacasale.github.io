@@ -1412,8 +1412,7 @@ div:hover > .vista-edit-btn { display:flex; }
           <option value="COMPLETATA">Completata</option>
           <option value="VUOTO">Non impostato</option>
         </select>
-        <button class="btn-sm" onclick="esportaVisitePDF(false)">PDF tutti</button>
-        <button class="btn-sm" onclick="esportaVisitePDF(true)">PDF filtrati</button>
+        <button class="btn-sm" onclick="apriExportVisite()">Esporta PDF</button>
       </div>
       <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
     </div>
@@ -1951,11 +1950,58 @@ div:hover > .vista-edit-btn { display:flex; }
       </div>
     </div>
   </div>
+  <!-- Export PDF visite mediche -->
+  <div class="vista-form-overlay" id="visiteExportOverlay">
+    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <h4>Esporta PDF — Visite Mediche</h4>
+
+      <div class="form-field" style="margin-bottom:0.6rem">
+        <label class="form-lbl">Stati da includere</label>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="ESONERO" checked> Esonero</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="DA_FARE" checked> Da Fare</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="VERIFICA" checked> Verifica</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="SOLO_ESAMI" checked> Solo Esami</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="COMPLETATA" checked> Completata</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-stato" value="VUOTO" checked> Non impostato</label>
+        </div>
+      </div>
+
+      <div class="form-field" style="margin-bottom:0.6rem">
+        <label class="form-lbl">Colonne da includere</label>
+        <div class="perm-grid">
+          <label class="perm-check"><input type="checkbox" class="vexp-col" value="nome" checked disabled> Nominativo</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-col" value="cf" checked> Codice Fiscale</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-col" value="stato" checked> Stato</label>
+          <label class="perm-check"><input type="checkbox" class="vexp-col" value="data" checked> Data</label>
+        </div>
+      </div>
+
+      <div class="form-field" style="margin-bottom:0.6rem">
+        <label class="form-lbl">Intervallo data (opzionale)</label>
+        <div class="form-row">
+          <input type="date" class="form-inp" id="vexpDataDa">
+          <input type="date" class="form-inp" id="vexpDataA">
+        </div>
+      </div>
+
+      <div class="form-field" style="margin-bottom:0.6rem">
+        <label class="perm-check"><input type="checkbox" id="vexpSoloTestoRicerca"> Applica anche la ricerca testuale corrente (<b id="vexpTestoCorrente"></b>)</label>
+      </div>
+
+      <div class="form-err" id="visiteExportErr"></div>
+
+      <div class="form-row" style="justify-content:flex-end;gap:0.5rem;margin-top:0.5rem">
+        <button class="btn-sm" onclick="chiudiExportVisite()">Annulla</button>
+        <button class="btn-primary" onclick="generaExportVisitePDF()">Genera PDF</button>
+      </div>
+    </div>
+  </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=150"></script>
+<script src="area-riservata.js?v=151"></script>
 </body>
 </html>

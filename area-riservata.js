@@ -8373,7 +8373,6 @@ document.addEventListener('keydown', function(e) {
 
 // -- VISITE MEDICHE --
 let visiteData = [];
-let visiteRendered = [];
 
 const VISITA_STATI = {
   'ESONERO':    { label: 'Esonero',    cls: 'vs-esonero' },
@@ -8439,7 +8438,6 @@ function filtraVisitePerStato(stato) {
 }
 
 function renderVisite(data) {
-  visiteRendered = data;
   const list = document.getElementById('visiteList');
   if (!data.length) {
     list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
@@ -8501,33 +8499,70 @@ function filtraVisite() {
   renderVisite(filtered);
 }
 
-function esportaVisitePDF(soloFiltrati) {
-  const dati = soloFiltrati ? visiteRendered : visiteData;
-  if (!dati.length) return;
+function apriExportVisite() {
+  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('visiteSearch').value || '(vuoto)';
+  document.getElementById('visiteExportErr').textContent = '';
+  document.getElementById('visiteExportOverlay').classList.add('open');
+}
+
+function chiudiExportVisite() {
+  document.getElementById('visiteExportOverlay').classList.remove('open');
+}
+
+function generaExportVisitePDF() {
+  const statiSel = Array.from(document.querySelectorAll('.vexp-stato:checked')).map(c => c.value);
+  const colSel = Array.from(document.querySelectorAll('.vexp-col:checked')).map(c => c.value);
+  const dataDa = document.getElementById('vexpDataDa').value;
+  const dataA = document.getElementById('vexpDataA').value;
+  const usaTesto = document.getElementById('vexpSoloTestoRicerca').checked;
+  const testo = usaTesto ? document.getElementById('visiteSearch').value.toLowerCase() : '';
+
+  let dati = visiteData.filter(v => {
+    if (!statiSel.includes(v.stato_visita || 'VUOTO')) return false;
+    if (dataDa && (!v.data_visita || v.data_visita < dataDa)) return false;
+    if (dataA && (!v.data_visita || v.data_visita > dataA)) return false;
+    if (usaTesto && testo) {
+      const hay = ((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '')).toLowerCase();
+      if (!hay.includes(testo)) return false;
+    }
+    return true;
+  });
+
+  if (dati.length === 0) {
+    document.getElementById('visiteExportErr').textContent = 'Nessun risultato con questi filtri.';
+    return;
+  }
+
+  const colonne = [];
+  if (colSel.includes('nome')) colonne.push('Nominativo');
+  if (colSel.includes('cf')) colonne.push('Codice Fiscale');
+  if (colSel.includes('stato')) colonne.push('Stato');
+  if (colSel.includes('data')) colonne.push('Data');
+
+  const righe = dati.map(v => {
+    const statoInfo = VISITA_STATI[v.stato_visita || ''];
+    const r = [];
+    if (colSel.includes('nome')) r.push(((v.cognome || '') + ' ' + (v.nome || '')).trim());
+    if (colSel.includes('cf')) r.push(v.codice_fiscale || '—');
+    if (colSel.includes('stato')) r.push(statoInfo ? statoInfo.label : 'Non impostato');
+    if (colSel.includes('data')) r.push(v.data_visita ? new Date(v.data_visita).toLocaleDateString('it-IT') : '—');
+    return r;
+  });
 
   const doc = new jspdf.jsPDF();
   doc.setFontSize(14);
   doc.text('Visite Mediche — PC ANA Casale', 14, 16);
   doc.setFontSize(9);
-  doc.text('Generato il ' + new Date().toLocaleDateString('it-IT') + (soloFiltrati ? ' — elenco filtrato' : ' — elenco completo'), 14, 22);
-
+  doc.text('Generato il ' + new Date().toLocaleDateString('it-IT') + ' — ' + dati.length + ' risultati', 14, 22);
   doc.autoTable({
     startY: 28,
-    head: [['Nominativo', 'Codice Fiscale', 'Stato', 'Data']],
-    body: dati.map(v => {
-      const statoInfo = VISITA_STATI[v.stato_visita || ''];
-      return [
-        ((v.cognome || '') + ' ' + (v.nome || '')).trim(),
-        v.codice_fiscale || '—',
-        statoInfo ? statoInfo.label : 'Non impostato',
-        v.data_visita ? new Date(v.data_visita).toLocaleDateString('it-IT') : '—'
-      ];
-    }),
+    head: [colonne],
+    body: righe,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [26, 122, 74] }
   });
-
-  doc.save(soloFiltrati ? 'visite-mediche-filtrate.pdf' : 'visite-mediche-tutte.pdf');
+  doc.save('visite-mediche-export.pdf');
+  chiudiExportVisite();
 }
 
 async function cambiaVisitaCampo(volId, campo, valore) {
