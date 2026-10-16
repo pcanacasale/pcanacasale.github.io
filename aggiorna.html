@@ -103,6 +103,12 @@ p { margin: 0 0 12px; color: var(--text-2); }
 .sum .k { color: var(--text-3); }
 .chk { display: flex; gap: 12px; align-items: flex-start; font-size: 0.98rem; padding: 14px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; }
 .chk input { width: 26px; height: 26px; flex-shrink: 0; accent-color: var(--green); margin: 0; }
+/* Riquadro firma: sempre "foglio bianco" con inchiostro scuro, anche in tema scuro */
+.firma-wrap { position: relative; background: #fff; border: 1.5px dashed #9a9aa1; border-radius: 12px; overflow: hidden; touch-action: none; margin-top: 10px; }
+.firma-wrap canvas { display: block; width: 100%; aspect-ratio: 3 / 1; cursor: crosshair; touch-action: none; }
+.firma-linea { position: absolute; left: 6%; right: 6%; bottom: 22%; border-bottom: 1px solid #c7c7cc; pointer-events: none; }
+.firma-ph { position: absolute; left: 0; right: 0; top: 38%; text-align: center; color: #b0b0b6; font-size: 0.95rem; pointer-events: none; }
+.firma-img { display: block; width: 100%; background: #fff; border: 1.5px solid var(--border); border-radius: 12px; margin-top: 10px; }
 details.priv { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-2); }
 details.priv summary { font-weight: 700; color: var(--text); cursor: pointer; }
 .center { text-align: center; }
@@ -197,6 +203,7 @@ const S = {
   attestati: [],           // [{ key, tipo, descrizione, scadenza, file, url }]
   caricati: new Set(),     // chiavi già caricate nell'invio in corso (per i "riprova")
   privacy: false,
+  firma: null,             // { blob, url } firma tracciata nel riquadro
   inviando: false,
 };
 
@@ -691,16 +698,95 @@ function renderRiepilogo(errore) {
   html += '<li><strong>Documenti:</strong> ' + (nuoviDoc ? nuoviDoc + ' nuovi file' : 'nessun nuovo file') + (S.esistenti.filter(d => d.tipo !== 'FOTO').length ? ', ' + S.esistenti.filter(d => d.tipo !== 'FOTO').length + ' già inviati' : '') + '</li>';
   html += '</ul></div>';
   html += '<h2>Informativa privacy</h2><details class="priv"><summary>Leggi l\'informativa</summary>' + INFORMATIVA_HTML + '</details>'
-    + '<label class="chk"><input type="checkbox" id="priv" ' + (S.privacy ? 'checked' : '') + ' onchange="S.privacy=this.checked;document.getElementById(\'btnInvia\').disabled=!this.checked"> <span>Ho letto l\'informativa sul trattamento dei dati personali.</span></label>'
+    + '<label class="chk"><input type="checkbox" id="priv" ' + (S.privacy ? 'checked' : '') + ' onchange="S.privacy=this.checked;aggiornaBtnInvia()"> <span>Ho letto l\'informativa e autorizzo il trattamento dei miei dati personali.</span></label>'
+    + '<h2>Firma</h2><p style="font-size:0.9rem">Firma con il dito qui sotto: la firma serve ad autorizzare il trattamento dei tuoi dati personali.</p>'
+    + '<div id="firmaBox"></div>'
     + '<div id="stato" style="margin-top:14px"></div>';
   $('app').innerHTML = html;
   const i = PASSI.findIndex(p => p.id === 'riepilogo');
   setNav('<button class="btn sec" onclick="vai(\'' + PASSI[i - 1].id + '\')">← Indietro</button>'
-    + '<button class="btn" id="btnInvia" onclick="invia()" ' + (S.privacy ? '' : 'disabled') + '>Invia</button>');
+    + '<button class="btn" id="btnInvia" onclick="invia()" disabled>Invia</button>');
+  renderFirma();
+}
+
+// ---------------- firma ----------------
+function firmaEsistente() { return S.esistenti.find(d => d.tipo === 'FIRMA'); }
+function firmaPresente() { return !!S.firma || !!firmaEsistente(); }
+function aggiornaBtnInvia() { const b = $('btnInvia'); if (b && !S.inviando) b.disabled = !(S.privacy && firmaPresente()); }
+
+function renderFirma() {
+  const box = $('firmaBox'); if (!box) return;
+  if (S.firma) {
+    box.innerHTML = '<img class="firma-img" src="' + S.firma.url + '" alt="la tua firma">'
+      + '<div class="slot-m ok" style="margin-top:6px">✓ Firma pronta</div>'
+      + '<button class="btn sec small" style="margin-top:8px" onclick="rifaiFirma()">Rifai la firma</button>';
+  } else if (firmaEsistente()) {
+    box.innerHTML = '<div class="msg ok">✓ Hai già firmato con l\'invio precedente.</div>'
+      + '<button class="btn sec small" onclick="rifaiFirma(true)">Firma di nuovo</button>';
+  } else {
+    box.innerHTML = '<div class="firma-wrap"><canvas id="firmaCanvas"></canvas><div class="firma-linea"></div><div class="firma-ph" id="firmaPh">firma qui</div></div>'
+      + '<div style="display:flex;gap:10px;margin-top:10px"><button class="btn sec" style="flex:1" onclick="pulisciFirma()">Cancella</button>'
+      + '<button class="btn" style="flex:1" onclick="confermaFirma()">Conferma firma</button></div>';
+    attivaFirma();
+  }
+  aggiornaBtnInvia();
+}
+
+const firmaPad = { punti: 0, ultimo: null };
+function attivaFirma() {
+  const cv = $('firmaCanvas');
+  cv.width = 900; cv.height = 300; // risoluzione interna fissa, proporzione 3:1 come il riquadro
+  const ctx = cv.getContext('2d');
+  ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111'; ctx.fillStyle = '#111';
+  firmaPad.punti = 0; firmaPad.ultimo = null;
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (cv.width / r.width), y: (e.clientY - r.top) * (cv.height / r.height) }; };
+  cv.addEventListener('pointerdown', e => {
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    firmaPad.ultimo = pos(e);
+    ctx.beginPath(); ctx.arc(firmaPad.ultimo.x, firmaPad.ultimo.y, 2, 0, Math.PI * 2); ctx.fill();
+    const ph = $('firmaPh'); if (ph) ph.style.display = 'none';
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!firmaPad.ultimo) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(firmaPad.ultimo.x, firmaPad.ultimo.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    firmaPad.ultimo = p; firmaPad.punti++;
+  });
+  const fine = () => { firmaPad.ultimo = null; };
+  cv.addEventListener('pointerup', fine); cv.addEventListener('pointercancel', fine);
+}
+function pulisciFirma() {
+  const cv = $('firmaCanvas'); if (!cv) return;
+  cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  firmaPad.punti = 0;
+  const ph = $('firmaPh'); if (ph) ph.style.display = '';
+}
+function confermaFirma() {
+  const cv = $('firmaCanvas'); if (!cv) return;
+  if (firmaPad.punti < 15) { alert('Firma nel riquadro prima di confermare.'); return; }
+  // PNG 600×200, sfondo bianco e inchiostro scuro
+  const out = document.createElement('canvas'); out.width = 600; out.height = 200;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 600, 200);
+  ctx.drawImage(cv, 0, 0, 600, 200);
+  out.toBlob(b => {
+    if (!b) { alert('Non è stato possibile salvare la firma, riprova.'); return; }
+    if (S.firma) URL.revokeObjectURL(S.firma.url);
+    S.firma = { blob: b, url: URL.createObjectURL(b) };
+    S.caricati.delete('FIRMA');
+    renderFirma();
+  }, 'image/png');
+}
+function rifaiFirma(daEsistente) {
+  if (S.firma) { URL.revokeObjectURL(S.firma.url); S.firma = null; }
+  // La firma già inviata verrà sostituita da quella nuova al prossimo invio
+  if (daEsistente) S.esistenti = S.esistenti.filter(d => d.tipo !== 'FIRMA');
+  renderFirma();
 }
 
 async function invia() {
   if (S.inviando || !S.privacy) return;
+  if (!firmaPresente()) { alert('Firma nel riquadro e premi "Conferma firma".'); return; }
   S.inviando = true;
   const btn = $('btnInvia'); btn.disabled = true; btn.textContent = 'Invio…';
   const stato = $('stato');
@@ -713,6 +799,7 @@ async function invia() {
     await chiama('invia', { dati, dpi, privacy: true });
 
     const coda = [];
+    if (S.firma) coda.push({ key: 'FIRMA', run: () => carica('FIRMA', S.firma.blob, 'firma.png') });
     if (S.foto) coda.push({ key: 'FOTO', run: () => carica('FOTO', S.foto.blob, 'foto.jpg') });
     Object.keys(S.slot).filter(k => S.slot[k]).forEach(k => {
       const [tipo, lato] = k.split('|');
@@ -749,7 +836,7 @@ function renderFatto() {
 async function ricomincia() {
   try {
     const info = await chiama('apri');
-    S.foto = null; S.slot = {}; S.attestati = []; S.caricati = new Set(); S.privacy = false;
+    S.foto = null; S.slot = {}; S.attestati = []; S.caricati = new Set(); S.privacy = false; S.firma = null;
     inizializza(info);
     vai('anagrafica');
   } catch (e) {

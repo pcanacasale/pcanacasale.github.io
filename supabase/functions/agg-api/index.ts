@@ -529,7 +529,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       });
       if (!ins.ok) return jsonResponse({ ok: false, error: 'errore creazione link: ' + await ins.text() }, 500);
       await logAttivita(master!.nome + ' ha generato il link di aggiornamento dati per ' + v.cognome + ' ' + v.nome);
-      return jsonResponse({ ok: true, url: LINK_BASE_URL + token, scade_il: scadeIl, telefono: v.telefono || null, nome: v.nome, cognome: v.cognome });
+      return jsonResponse({ ok: true, url: LINK_BASE_URL + token, scade_il: scadeIl, telefono: v.telefono || null, email: v.email || null, nome: v.nome, cognome: v.cognome });
     }
 
     if (action === 'link_revoca') {

@@ -28,6 +28,8 @@ const MAX_TENTATIVI = 5;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_FILE_PER_PROPOSTA = 15;
 const MAX_FOTO_BYTES = 50 * 1024;
+const MAX_FIRMA_BYTES = 300 * 1024;
+const DESCR_FIRMA = 'Firma per il consenso al trattamento dei dati personali';
 
 const MSG_LINK = 'Link non valido o scaduto. Chiedi alla segreteria un nuovo link.';
 
@@ -38,7 +40,9 @@ const CAMPI_PUB = [
   'titolo_studio', 'professione', 'patenti', 'tessera_ana',
 ];
 
-const TIPI_DOC_PUB = ['FOTO', 'CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE', 'ATTESTATO', 'ABILITAZIONE'];
+// FIRMA: firma autografa (PNG dal riquadro di firma) che autorizza il
+// trattamento dei dati personali; una sola per proposta, fuori dal limite file.
+const TIPI_DOC_PUB = ['FOTO', 'CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE', 'ATTESTATO', 'ABILITAZIONE', 'FIRMA'];
 // Tipi con uno "slot" per lato (descrizione FRONTE / RETRO): un nuovo file
 // nello stesso slot sostituisce il precedente della stessa proposta.
 const TIPI_DOC_SLOT = ['CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE'];
@@ -283,10 +287,14 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       if (tipo === 'FOTO' && (rilevato.mime !== 'image/jpeg' || bytes.length > MAX_FOTO_BYTES)) {
         return jsonResponse({ ok: false, error: 'Foto non valida (JPG sotto i 50 KB).' }, 400);
       }
+      if (tipo === 'FIRMA' && (rilevato.mime !== 'image/png' || bytes.length > MAX_FIRMA_BYTES)) {
+        return jsonResponse({ ok: false, error: 'Firma non valida, riprova.' }, 400);
+      }
 
       let descrizione = stringaPulita(campi.descrizione, 150);
       if (TIPI_DOC_SLOT.includes(tipo)) descrizione = descrizione === 'RETRO' ? 'RETRO' : 'FRONTE';
       if (tipo === 'FOTO') descrizione = null;
+      if (tipo === 'FIRMA') descrizione = DESCR_FIRMA;
       const scadenzaRaw = stringaPulita(campi.scadenza, 10);
       const scadenza = (tipo === 'ATTESTATO' || tipo === 'ABILITAZIONE') && scadenzaRaw && reData.test(scadenzaRaw) ? scadenzaRaw : null;
 
@@ -295,13 +303,17 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       const esistenti: any[] = await sostituireRes.json();
       const daSostituire = (Array.isArray(esistenti) ? esistenti : []).filter(d =>
         (tipo === 'FOTO' && d.tipo === 'FOTO') ||
+        (tipo === 'FIRMA' && d.tipo === 'FIRMA') ||
         (TIPI_DOC_SLOT.includes(tipo) && d.tipo === tipo && (d.descrizione || 'FRONTE') === descrizione));
-      const totaleDopo = (Array.isArray(esistenti) ? esistenti.length : 0) - daSostituire.length + 1;
-      if (totaleDopo > MAX_FILE_PER_PROPOSTA) return jsonResponse({ ok: false, error: `Puoi caricare al massimo ${MAX_FILE_PER_PROPOSTA} file.` }, 400);
+      const contati = (Array.isArray(esistenti) ? esistenti : []).filter(d => d.tipo !== 'FIRMA');
+      const totaleDopo = contati.length - daSostituire.filter(d => d.tipo !== 'FIRMA').length + 1;
+      if (tipo !== 'FIRMA' && totaleDopo > MAX_FILE_PER_PROPOSTA) return jsonResponse({ ok: false, error: `Puoi caricare al massimo ${MAX_FILE_PER_PROPOSTA} file.` }, 400);
 
       // Nome file deciso dal server, mai quello del client.
       const nomeFile = tipo === 'FOTO'
         ? nomeFotoPIA(v.cognome, v.nome)
+        : tipo === 'FIRMA'
+        ? nomeFotoPIA(v.cognome, v.nome).replace(/_PIA\.jpg$/, '_FIRMA_' + Date.now() + '.png')
         : `${tipo}_${descrizione && TIPI_DOC_SLOT.includes(tipo) ? descrizione + '_' : ''}${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${rilevato.ext}`;
       const storagePath = `${v.id}/${p.id}/${tipo === 'FOTO' ? 'foto_' + Date.now() + '_' : ''}${nomeFile}`;
 

@@ -30,7 +30,7 @@ const AGG_TIPI_DOC_SINGOLI = ['CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE'];
 const AGG_TIPI_DOC_MULTIPLI = ['ATTESTATO', 'ABILITAZIONE'];
 const AGG_DOC_LABEL = {
   CARTA_IDENTITA: '🪪 Carta d\'identità', CODICE_FISCALE: '📄 Codice fiscale', PATENTE: '🚗 Patente',
-  ATTESTATO: '📜 Attestato', ABILITAZIONE: '✅ Abilitazione', FOTO: '📷 Foto',
+  ATTESTATO: '📜 Attestato', ABILITAZIONE: '✅ Abilitazione', FOTO: '📷 Foto', FIRMA: '✍️ Firma consenso privacy',
 };
 const AGG_TAGLIE = {
   ABITO:  ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'],
@@ -323,6 +323,11 @@ function aggCostruisciOverlay() {
         <div style="display:flex;gap:0.5rem">
           <button class="btn-sm" style="flex:1" id="aggLinkCopiaBtn" onclick="aggLinkCopia()">📋 Copia</button>
           <button class="btn-sm btn-ok" style="flex:1" onclick="aggLinkWhatsApp()">💬 Invia su WhatsApp</button>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+          <button class="btn-sm" style="flex:1" onclick="aggLinkEmail()">✉️ Email</button>
+          <button class="btn-sm" style="flex:1" onclick="aggLinkSms()">📱 SMS</button>
+          <button class="btn-sm" style="flex:1" id="aggLinkShareBtn" onclick="aggLinkCondividi()">↗️ Condividi</button>
         </div>
       </div>
     </div>
@@ -627,12 +632,43 @@ function aggLinkMessaggio(l) {
     + 'Ti verrà chiesta la tua data di nascita. Il link è valido fino al ' + new Date(l.scade_il).toLocaleDateString('it-IT') + '. Non inoltrarlo ad altri.\nGrazie!';
 }
 
+// Numero in formato internazionale senza "+" (es. 393331234567), '' se non utilizzabile
+function aggLinkNumero() {
+  let num = String((aggLinkCorrente && aggLinkCorrente.telefono) || '').replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '');
+  if (/^3\d{8,9}$/.test(num)) num = '39' + num; // cellulare italiano senza prefisso
+  return num.length >= 10 ? num : '';
+}
+
 function aggLinkWhatsApp() {
   if (!aggLinkCorrente) return;
-  let num = String(aggLinkCorrente.telefono || '').replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '');
-  if (/^3\d{8,9}$/.test(num)) num = '39' + num; // cellulare italiano senza prefisso
   const testo = encodeURIComponent(aggLinkMessaggio(aggLinkCorrente));
-  window.open('https://wa.me/' + (num.length >= 10 ? num : '') + '?text=' + testo, '_blank');
+  window.open('https://wa.me/' + aggLinkNumero() + '?text=' + testo, '_blank');
+}
+
+function aggLinkEmail() {
+  if (!aggLinkCorrente) return;
+  const a = (aggLinkCorrente.email || '').trim();
+  const oggetto = encodeURIComponent('Aggiornamento dati volontario — Protezione Civile ANA Casale Monferrato');
+  const corpo = encodeURIComponent(aggLinkMessaggio(aggLinkCorrente));
+  if (!a) alert('Nel profilo non c\'è un\'email: scrivi tu il destinatario.');
+  window.location.href = 'mailto:' + encodeURIComponent(a).replace(/%40/g, '@') + '?subject=' + oggetto + '&body=' + corpo;
+}
+
+function aggLinkSms() {
+  if (!aggLinkCorrente) return;
+  const num = aggLinkNumero();
+  if (!num) alert('Nel profilo non c\'è un numero di cellulare valido: scegli tu il destinatario.');
+  // "?body=" funziona su Android e sulle versioni recenti di iOS
+  window.location.href = 'sms:' + (num ? '+' + num : '') + '?body=' + encodeURIComponent(aggLinkMessaggio(aggLinkCorrente));
+}
+
+async function aggLinkCondividi() {
+  if (!aggLinkCorrente) return;
+  if (!navigator.share) {
+    try { await navigator.clipboard.writeText(aggLinkMessaggio(aggLinkCorrente)); } catch (e) { await aggLinkCopia(); }
+    alert('Condivisione non disponibile su questo dispositivo: il messaggio è stato copiato, incollalo dove vuoi.'); return; }
+  try { await navigator.share({ title: 'Aggiornamento dati', text: aggLinkMessaggio(aggLinkCorrente) }); }
+  catch (e) { /* condivisione annullata */ }
 }
 
 async function aggLinkRevoca(id) {
@@ -694,6 +730,7 @@ function aggBloccoProposta(v) {
     html += '<div class="agg-doc-row">'
       + '<input type="checkbox" class="aggPropDoc" value="' + Number(d.id) + '" checked>'
       + (d.tipo === 'FOTO' ? '<img id="aggPropFoto_' + Number(d.id) + '" class="agg-photo-preview" style="width:49px;height:59px" alt="">' : '')
+      + (d.tipo === 'FIRMA' ? '<img id="aggPropFoto_' + Number(d.id) + '" style="width:105px;height:35px;background:#fff;border-radius:4px;border:0.5px solid var(--border);object-fit:contain" alt="">' : '')
       + '<div class="agg-doc-row-info"><div class="agg-doc-row-name">' + aggEsc(AGG_DOC_LABEL[d.tipo] || d.tipo) + '</div>'
       + '<div class="agg-doc-row-meta">' + (d.descrizione ? aggEsc(d.descrizione) + ' — ' : '') + aggEsc(d.nome_file || '') + scad + '</div></div>'
       + '<button class="btn-sm" onclick="aggApriDocumento(' + Number(d.id) + ')">apri</button></div>';
@@ -712,7 +749,7 @@ function aggBloccoProposta(v) {
 async function aggCaricaFotoProposta() {
   const p = aggPropCorrente && aggPropCorrente.proposta;
   if (!p) return;
-  for (const d of (p.documenti || []).filter(x => x.tipo === 'FOTO')) {
+  for (const d of (p.documenti || []).filter(x => x.tipo === 'FOTO' || x.tipo === 'FIRMA')) {
     const img = document.getElementById('aggPropFoto_' + d.id);
     if (!img) continue;
     try { img.src = (await aggCall('doc_signed_url', { id: d.id })).url; } catch (e) { /* anteprima non disponibile */ }
@@ -876,6 +913,8 @@ function aggBloccoDocumenti(v) {
     if (!docsTipo.length) html += aggDocRigaHtml(tipo, null);
     docsTipo.forEach(doc => { html += aggDocRigaHtml(tipo, doc); });
   });
+  // Firma per il consenso privacy (raccolta col link del volontario, non caricabile da qui)
+  docs.filter(d => d.tipo === 'FIRMA').forEach(d => { html += aggDocRigaHtml('FIRMA', d); });
   html += '<div style="margin:0.6rem 0 0.3rem;font-size:0.68rem;font-weight:600;color:var(--testo-3);text-transform:uppercase">Attestati e abilitazioni</div>';
   const multipli = docs.filter(d => AGG_TIPI_DOC_MULTIPLI.includes(d.tipo));
   if (!multipli.length) html += '<div style="font-size:0.72rem;color:var(--testo-4);margin-bottom:0.4rem">nessuno</div>';
