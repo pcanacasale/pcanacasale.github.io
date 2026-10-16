@@ -574,7 +574,7 @@ div:hover > .vista-edit-btn { display:flex; }
 /* -- SIDEBAR -- */
 .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:300; }
 .sidebar-overlay.open { display:block; }
-.sidebar { position:fixed; top:0; left:-180px; width:180px; height:100vh; height:100dvh;
+.sidebar { position:fixed; top:0; left:-210px; width:210px; height:100vh; height:100dvh;
   background:var(--bg-card); border-right:0.5px solid var(--border);
   z-index:400; transition:left 0.28s cubic-bezier(0.4,0,0.2,1);
   display:flex; flex-direction:column; overflow:hidden;
@@ -588,16 +588,17 @@ div:hover > .vista-edit-btn { display:flex; }
 .sidebar-user { font-size:0.75rem; opacity:0.85; margin-top:0.1rem; }
 .sidebar-role { font-size:0.68rem; opacity:0.7; }
 .sidebar-nav { flex:1; overflow-y:auto; padding:0.5rem 0; }
-.sidebar-section-label { font-size:0.65rem; font-weight:600; color:var(--testo-3);
-  text-transform:uppercase; letter-spacing:0.6px; padding:0.8rem 1.2rem 0.3rem; }
-.sidebar-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border:none; background:transparent; width:calc(100% - 12px); text-align:left; cursor:pointer; border-radius:6px; margin:1px 6px; }
+.sidebar-section-label { font-size:0.82rem; font-weight:700; color:var(--testo-3);
+  text-transform:uppercase; letter-spacing:0.4px; padding:0.9rem 1.2rem 0.35rem; }
+.sidebar-item { position:relative; display:flex; align-items:center; gap:8px; padding:9px 12px; border:none; background:transparent; width:calc(100% - 12px); text-align:left; cursor:pointer; border-radius:6px; margin:1px 6px; }
 .sidebar-item:active { background:var(--bg-2); }
 .sidebar-item.active { background:var(--green-pale); }
+.sidebar-item.active::before { content:''; position:absolute; left:0; top:5px; bottom:5px; width:3px; border-radius:0 3px 3px 0; background:var(--green); }
 .sidebar-item.active .si-label { color:var(--green); font-weight:600; }
 .sidebar-item.active .si-icon svg { color:var(--green); }
 .si-icon { width:20px; height:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.si-icon svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--testo-3); }
-.si-label { font-size:0.82rem; color:var(--testo-2); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.si-icon svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--testo-3); }
+.si-label { font-size:0.88rem; color:var(--testo-2); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .si-badge { background:var(--red); color:#fff; font-size:0.6rem; font-weight:700;
   min-width:18px; height:18px; border-radius:9px; display:none;
   align-items:center; justify-content:center; padding:0 4px; }
@@ -617,7 +618,7 @@ div:hover > .vista-edit-btn { display:flex; }
   cursor:pointer; display:flex; align-items:center; justify-content:space-between;
   width:calc(100% - 12px); margin:0 6px; background:none; border:none; font-family:var(--font);
 }
-.sg-chevron { width:11px; height:11px; stroke:var(--testo-3); stroke-width:2; transition:transform 0.18s; flex-shrink:0; }
+.sg-chevron { width:13px; height:13px; stroke:var(--testo-3); stroke-width:2; transition:transform 0.18s; flex-shrink:0; }
 .sidebar-group.collapsed .sg-chevron { transform:rotate(-90deg); }
 
 /* Topbar semplificata */
