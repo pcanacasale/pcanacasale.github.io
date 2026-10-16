@@ -68,7 +68,7 @@ let aggCatalogoCache  = [];
   const _origShowPanel = window.showPanel;
   window.showPanel = function (name, btn) {
     _origShowPanel.apply(this, arguments);
-    if (name === 'aggdati') aggApri();
+    if (name === 'aggDati') aggApri();
   };
 })();
 
