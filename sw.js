@@ -1,5 +1,5 @@
-const CACHE = 'pcana-v5';
-const ASSETS = ['/area-riservata.html', '/area-riservata.js', '/manifest.json'];
+const CACHE = 'pcana-v6';
+const ASSETS = ['/area-riservata.html', '/area-riservata.js', '/aggiornamento-dati.js', '/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
