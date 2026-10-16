@@ -1,5 +1,5 @@
 // ============================================================
-// AGGIORNAMENTO DATI — tab riservata ai master (vedi SPEC_aggiornamento_dati.md)
+// AGGIORNAMENTO DATI — tab riservata a chi ha il permesso "aggiornamento_dati" (vedi SPEC_aggiornamento_dati.md)
 // ============================================================
 // File nuovo e autonomo: non modifica nessuna funzione esistente di
 // area-riservata.js, si limita ad "agganciarsi" (wrapping) a showPanel /
@@ -10,7 +10,7 @@
 // Dati: agg_volontari, agg_dpi_catalogo, agg_dpi_volontario, agg_documenti
 // (RLS attiva senza policy: l'anon key non le legge). Ogni accesso passa
 // dalla Edge Function agg-api (service role), che riverifica server-side
-// che l'utente sia master — qui ci limitiamo a non mostrare la voce di
+// che l'utente abbia il permesso — qui ci limitiamo a non mostrare la voce di
 // menu, ma la vera porta è lì.
 //
 // Prefisso funzioni: agg*
@@ -74,7 +74,7 @@ const AGG_CAMPI_LABEL = {
     _origLogout.apply(this, arguments);
     const si = document.getElementById('siAggDati');
     if (si) si.style.display = 'none';
-    aggInizializzato = false; // forza reinizializzazione se un nuovo master effettua il login
+    aggInizializzato = false; // forza reinizializzazione se un altro utente effettua il login
   };
   const _origShowPanel = window.showPanel;
   window.showPanel = function (name, btn) {
@@ -86,7 +86,15 @@ const AGG_CAMPI_LABEL = {
 function aggAggiornaVisibilitaSidebar() {
   const si = document.getElementById('siAggDati');
   if (!si) return;
-  si.style.display = (currentUser && currentUser.tipo_accesso === 'master') ? 'flex' : 'none';
+  si.style.display = aggHaAccesso() ? 'flex' : 'none';
+}
+
+// Accesso alla pagina e a tutte le sue funzioni: permesso 'aggiornamento_dati'
+// (Matrice permessi / form utenti). Master di default sì, salvo permesso tolto;
+// standard solo se concesso; mai i volontari. La stessa regola è verificata
+// lato server in agg-api: questa serve solo a mostrare/nascondere l'interfaccia.
+function aggHaAccesso() {
+  return !!currentUser && currentUser.tipo_accesso !== 'volontario' && hasPerm('aggiornamento_dati');
 }
 
 // ============================================================
@@ -111,9 +119,9 @@ async function aggCall(action, payload) {
 // APERTURA PANNELLO
 // ============================================================
 function aggApri() {
-  if (!currentUser || currentUser.tipo_accesso !== 'master') {
+  if (!aggHaAccesso()) {
     const root = document.getElementById('aggRoot');
-    if (root) root.innerHTML = '<div class="loading-msg">Accesso riservato ai master.</div>';
+    if (root) root.innerHTML = '<div class="loading-msg">Non hai il permesso per accedere a questa pagina.</div>';
     return;
   }
   if (!aggInizializzato) { aggInitUI(); aggInizializzato = true; }
@@ -482,7 +490,7 @@ function aggCardEl(v) {
 // SINCRONIZZA NUOVI VOLONTARI (da volontari → agg_volontari, solo inserimenti)
 // ============================================================
 async function aggSincronizzaNuovi() {
-  if (!currentUser || currentUser.tipo_accesso !== 'master') return;
+  if (!aggHaAccesso()) return;
   if (!confirm('Aggiungere ad "Aggiornamento dati" i volontari non dimessi che non sono ancora presenti?\n\nLe schede già esistenti non vengono modificate.')) return;
   const btn = document.getElementById('aggSyncBtn');
   if (btn) { btn.disabled = true; btn.textContent = '🔄 sincronizzazione...'; }
@@ -894,7 +902,7 @@ async function aggSalvaAnagrafica() {
     aggAnagraficaDirty = {};
     aggRenderScheda();
     // Nota: niente logAttivita() qui — ogni scrittura è già registrata server-side
-    // dentro agg-api (verificata sull'utente master reale, non su currentUser.nome).
+    // dentro agg-api (verificata sull'utente reale, non su currentUser.nome).
   } catch (e) { alert('Errore salvataggio: ' + e.message); }
 }
 

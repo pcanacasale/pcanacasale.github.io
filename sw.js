@@ -1,4 +1,4 @@
-const CACHE = 'pcana-v12';
+const CACHE = 'pcana-v13';
 const ASSETS = ['/area-riservata.html', '/area-riservata.js', '/aggiornamento-dati.js', '/manifest.json'];
 
 self.addEventListener('install', e => {

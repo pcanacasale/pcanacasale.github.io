@@ -662,6 +662,7 @@ async function salvaUtente() {
     bot:          document.getElementById('permBot') ? document.getElementById('permBot').checked : false,
     emergenze:    document.getElementById('permEmergenze') ? document.getElementById('permEmergenze').checked : false,
     posizione:    document.getElementById('permPosizione') ? document.getElementById('permPosizione').checked : false,
+    aggiornamento_dati: document.getElementById('permAggDati') ? document.getElementById('permAggDati').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -699,11 +700,15 @@ function apriModificaUtente(u) {
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
     'Impostazioni':'impostazioni','Statistiche':'statistiche',
     'Convocazioni':'convocazioni','Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
-    'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione'
+    'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione','AggDati':'aggiornamento_dati'
   };
+  // Come nella Matrice permessi: un master ha accesso di default, quindi la
+  // casella è spuntata salvo permesso esplicitamente false (altrimenti salvando
+  // il form gli si toglierebbero tutte le pagine non salvate esplicitamente).
+  var isMasterU = u.tipo_accesso === 'master';
   Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
-    if (el) el.checked = !!(p[permMap[n]]);
+    if (el) el.checked = isMasterU ? (p[permMap[n]] !== false) : !!(p[permMap[n]]);
   });
   document.getElementById('modUtenteErr').style.display = 'none';
   document.getElementById('modUtenteOverlay').classList.add('open');
@@ -744,6 +749,7 @@ async function salvaModificaUtente() {
     bot:            document.getElementById('modPermBot') ? document.getElementById('modPermBot').checked : false,
     emergenze:      document.getElementById('modPermEmergenze') ? document.getElementById('modPermEmergenze').checked : false,
     posizione:      document.getElementById('modPermPosizione') ? document.getElementById('modPermPosizione').checked : false,
+    aggiornamento_dati: document.getElementById('modPermAggDati') ? document.getElementById('modPermAggDati').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
@@ -7373,6 +7379,7 @@ const PERMESSI_PAGINE = [
   { key: 'emergenze',              label: 'Emergenze' },
   { key: 'posizione',              label: 'Posizione' },
   { key: 'impostazioni',           label: 'Impostazioni' },
+  { key: 'aggiornamento_dati',     label: 'Aggiornamento dati' },
 ];
 
 function caricaMatricePermessi() {

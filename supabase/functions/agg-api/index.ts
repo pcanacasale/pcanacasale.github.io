@@ -8,7 +8,8 @@
 // legge in nessun modo. Questa function usa la service role key (iniettata
 // automaticamente da Supabase in ogni Edge Function come SUPABASE_SERVICE_ROLE_KEY,
 // nessun secret da configurare a mano) e la espone SOLO dopo aver verificato
-// server-side che chi chiama è un utente master, riautenticando username+password
+// server-side che chi chiama abbia il permesso "aggiornamento_dati" (master di
+// default, oppure concesso dalla Matrice permessi), riautenticando username+password
 // contro la tabella utenti esattamente come fa doLogin() in area-riservata.js.
 // Non ci si fida mai di un flag "tipo_accesso" mandato dal client.
 //
@@ -129,17 +130,26 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
   const { username, password, action, payload } = body || {};
   if (!username || !password) return jsonResponse({ ok: false, error: 'credenziali mancanti' }, 401);
 
-  // -- Verifica server-side che l'utente sia master, riusando lo stesso
-  // meccanismo di identificazione di doLogin() in area-riservata.js. --
+  // -- Verifica server-side che l'utente abbia il permesso "aggiornamento_dati",
+  // riusando lo stesso meccanismo di identificazione di doLogin() in
+  // area-riservata.js e la stessa regola di hasPerm(): master sì di default
+  // (salvo permesso esplicitamente false), standard solo se permesso true,
+  // volontari mai. (La variabile si chiama ancora "master" per storia: è
+  // l'utente autorizzato che esegue l'azione, usato in log e campi *_da.)
   let master: { id: number; nome: string } | null = null;
   try {
     const r = await fetch(
-      `${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&tipo_accesso=eq.master&select=id,nome`,
+      `${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&select=id,nome,tipo_accesso,permessi`,
       { headers: HSRV }
     );
     const arr = await r.json();
-    if (Array.isArray(arr) && arr.length) master = arr[0];
-  } catch (e) { console.error('verifica master fallita', e); }
+    const u = Array.isArray(arr) && arr.length ? arr[0] : null;
+    if (u && u.tipo_accesso !== 'volontario') {
+      const p = (u.permessi && typeof u.permessi === 'object') ? u.permessi : {};
+      const autorizzato = p.aggiornamento_dati === false ? false : (u.tipo_accesso === 'master' || p.aggiornamento_dati === true);
+      if (autorizzato) master = { id: u.id, nome: u.nome };
+    }
+  } catch (e) { console.error('verifica permesso fallita', e); }
   if (!master) return jsonResponse({ ok: false, error: 'non autorizzato' }, 403);
 
   const userAgent = req.headers.get('user-agent') || null;
