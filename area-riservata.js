@@ -185,6 +185,19 @@ function canModificaVolontari() {
   return p.modifica_volontari === true;
 }
 
+// Regola: master ha accesso di default a tutte le pagine, MA un permesso
+// esplicitamente disattivato (false) nasconde la voce anche per i master.
+// Volontario: solo i permessi espliciti (true) danno accesso.
+function hasPerm(key) {
+  if (!currentUser) return false;
+  const isMaster = currentUser.tipo_accesso === 'master';
+  const isVol    = currentUser.tipo_accesso === 'volontario';
+  const p = currentUser.permessi || {};
+  if (isVol) return !!p[key];
+  if (p[key] === false) return false;
+  return isMaster || !!p[key];
+}
+
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
@@ -192,6 +205,9 @@ function toggleSidebar() {
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('open');
+}
+function toggleSidebarGroup(btn) {
+  btn.closest('.sidebar-group').classList.toggle('collapsed');
 }
 
 function navTo(panel, title, btn) {
@@ -214,16 +230,8 @@ function avviaDashboard() {
   document.getElementById('homeWelcome').textContent = currentUser.nome;
   document.getElementById('homeUnit').textContent    = currentUser.ruolo;
 
-  // Sidebar voci visibilita
-  // Regola: master vede tutto di default, MA un permesso esplicitamente
-  // disattivato (false) nasconde la voce anche per i master.
-  // Impostazioni resta sempre visibile per i master.
+  // Sidebar voci visibilita (vedi hasPerm() a livello di modulo)
   var showSi  = function(id) { var el=document.getElementById(id); if(el) el.style.display='flex'; };
-  var hasPerm = function(key) {
-    if (isVol) return !!p[key];                // volontario: solo permessi espliciti
-    if (p[key] === false) return false;        // disattivato esplicitamente
-    return isMaster || !!p[key];               // master di default, standard se concesso
-  };
 
   if (isVol) {
     // Reset esplicito di TUTTE le voci sidebar (per evitare residui)
@@ -261,15 +269,15 @@ function avviaDashboard() {
     if (hasPerm('documenti'))    showSi('siDocumenti');
     if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
-    showSi('siConvocazioni');
+    if (hasPerm('convocazioni')) showSi('siConvocazioni');
     if (hasPerm('db'))           showSi('siDb');
-    if (isMaster)                showSi('siAccessi');
-    if (isMaster)                showSi('siSegnalazioni');
-    if (isMaster)                showSi('siEmergenze');
-    if (isMaster)                showSi('siBot');
-    if (isMaster)                showSi('siPosizione');
+    if (hasPerm('accessi'))      showSi('siAccessi');
+    showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
+    if (hasPerm('emergenze'))    showSi('siEmergenze');
+    if (hasPerm('bot'))          showSi('siBot');
+    if (hasPerm('posizione'))    showSi('siPosizione');
     if (hasPerm('richieste'))    showSi('siRichieste');
-    if (isMaster)                showSi('siImpostazioni');
+    if (hasPerm('impostazioni')) showSi('siImpostazioni');
   }
   // Nome utente in sidebar
   var su = document.getElementById('sidebarUser');
@@ -277,8 +285,8 @@ function avviaDashboard() {
 
   // Badge richieste (solo per non-volontari)
   if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
-  if (!isVol) caricaBadgeSegnalazioni();
-  if (isMaster) caricaBadgeEmergenze();
+  if (!isVol && hasPerm('gestione_segnalazioni')) caricaBadgeSegnalazioni();
+  if (hasPerm('emergenze')) caricaBadgeEmergenze();
 
   // Compleanno
   verificaCompleanni();
@@ -648,6 +656,12 @@ async function salvaUtente() {
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
+    convocazioni: document.getElementById('permConvocazioni') ? document.getElementById('permConvocazioni').checked : false,
+    accessi:      document.getElementById('permAccessi') ? document.getElementById('permAccessi').checked : false,
+    gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
+    bot:          document.getElementById('permBot') ? document.getElementById('permBot').checked : false,
+    emergenze:    document.getElementById('permEmergenze') ? document.getElementById('permEmergenze').checked : false,
+    posizione:    document.getElementById('permPosizione') ? document.getElementById('permPosizione').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
@@ -683,7 +697,9 @@ function apriModificaUtente(u) {
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
-    'Impostazioni':'impostazioni','Statistiche':'statistiche'
+    'Impostazioni':'impostazioni','Statistiche':'statistiche',
+    'Convocazioni':'convocazioni','Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
+    'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione'
   };
   Object.keys(permMap).forEach(function(n) {
     var el = document.getElementById('modPerm' + n);
@@ -722,6 +738,12 @@ async function salvaModificaUtente() {
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
+    convocazioni:   document.getElementById('modPermConvocazioni') ? document.getElementById('modPermConvocazioni').checked : false,
+    accessi:        document.getElementById('modPermAccessi') ? document.getElementById('modPermAccessi').checked : false,
+    gestione_segnalazioni: document.getElementById('modPermGestioneSegnalazioni') ? document.getElementById('modPermGestioneSegnalazioni').checked : false,
+    bot:            document.getElementById('modPermBot') ? document.getElementById('modPermBot').checked : false,
+    emergenze:      document.getElementById('modPermEmergenze') ? document.getElementById('modPermEmergenze').checked : false,
+    posizione:      document.getElementById('modPermPosizione') ? document.getElementById('modPermPosizione').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
@@ -2336,6 +2358,18 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Note</div>
         <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
       </div>` : ''}
+      <div class="vol-section" id="intPosizioneSection" style="display:none">
+        <div class="vol-section-head">Percorso GPS condiviso</div>
+        <div class="vol-section-body">
+          <div id="intDetailMap" style="height:220px;border-radius:10px;overflow:hidden;position:relative;z-index:0;isolation:isolate"></div>
+        </div>
+      </div>
+      <div class="vol-section" id="intFotoSection" style="display:none">
+        <div class="vol-section-head">Foto segnalazioni</div>
+        <div class="vol-section-body">
+          <div class="gall-photos" id="intDetailGallery"></div>
+        </div>
+      </div>
       <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem">
         <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="stampaIntervento(${i.id})">📄 Esporta CF</button>
@@ -2347,6 +2381,58 @@ async function apriDettaglioIntervento(id) {
     if (posSegPosizioni.length) renderPosizioni(posSegPosizioni, 'intDetail', 'intDetailMap', 'intDetailPosLista');
     if (posSegSegnalazioni.length) renderEmergenze(posSegSegnalazioni, 'intDetailEmergContent', { azione: false });
   } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+}
+
+async function caricaDettaglioPosizioniEFoto(interventoId) {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId, { headers: H });
+    const arr = await res.json();
+    const sezione = document.getElementById('intPosizioneSection');
+    const mapEl = document.getElementById('intDetailMap');
+    if (sezione && mapEl && arr && arr.length && typeof L !== 'undefined') {
+      sezione.style.display = '';
+      const map = L.map('intDetailMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+      }).addTo(map);
+      const gruppi = new Map();
+      arr.forEach(p => {
+        const v = p.volontario || {};
+        const key = p.volontario_id != null ? p.volontario_id : ((v.cognome || '') + '|' + (v.nome || ''));
+        if (!gruppi.has(key)) gruppi.set(key, []);
+        gruppi.get(key).push([p.lat, p.lon]);
+      });
+      const bounds = [];
+      let colorIdx = 0;
+      gruppi.forEach(latlngs => {
+        const colore = POSIZIONE_PALETTE[colorIdx % POSIZIONE_PALETTE.length];
+        colorIdx++;
+        latlngs.forEach(ll => bounds.push(ll));
+        if (latlngs.length > 1) L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(map);
+        L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(map);
+      });
+      setTimeout(() => {
+        map.invalidateSize();
+        if (bounds.length === 1) map.setView(bounds[0], 15);
+        else if (bounds.length > 1) map.fitBounds(bounds, { padding: [20, 20] });
+      }, 0);
+    }
+  } catch(e) {}
+
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=foto_url,descrizione,creato_il&intervento_id=eq.' + interventoId + '&foto_url=not.is.null&order=creato_il.desc', { headers: H });
+    const arr = await res.json();
+    const sezione = document.getElementById('intFotoSection');
+    const gall = document.getElementById('intDetailGallery');
+    if (sezione && gall && arr && arr.length) {
+      sezione.style.display = '';
+      gall.innerHTML = arr.map(f =>
+        '<div class="gall-photo" onclick="window.open(\'' + f.foto_url + '\',\'_blank\')">'
+        + '<img src="' + f.foto_url + '" loading="lazy" alt="' + (f.descrizione ? f.descrizione.replace(/"/g,'&quot;') : '') + '">'
+        + '</div>'
+      ).join('');
+    }
+  } catch(e) {}
 }
 
 function chiudiDettaglioIntervento() {
@@ -7239,9 +7325,11 @@ async function caricaAccessi() {
   if (!content) return;
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
 
-  // Mostra/nascondi sezione nuovo utente solo per master
+  // Mostra/nascondi sezione nuovo utente e matrice permessi solo per master
   const nuovoSec = document.getElementById('accNuovoUtenteSection');
   if (nuovoSec) nuovoSec.style.display = isMasterUser ? 'block' : 'none';
+  const matriceSec = document.getElementById('matricePermessiSection');
+  if (matriceSec) matriceSec.style.display = isMasterUser ? 'block' : 'none';
 
   try {
     const [uRes, vRes, logRes, attRes] = await Promise.all([
@@ -7256,8 +7344,86 @@ async function caricaAccessi() {
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();
     renderAccessi();
+    if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
     content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+  }
+}
+
+// -- MATRICE PERMESSI --
+const PERMESSI_PAGINE = [
+  { key: 'volontari',              label: 'Volontari' },
+  { key: 'modifica_volontari',     label: 'Modifica Volontari' },
+  { key: 'interventi',             label: 'Interventi' },
+  { key: 'postazioni',             label: 'Postazioni' },
+  { key: 'dotazioni',              label: 'Dotazioni' },
+  { key: 'pianicarico',            label: 'Piani di Carico' },
+  { key: 'mezzi',                  label: 'Mezzi' },
+  { key: 'tlc',                    label: 'TLC' },
+  { key: 'richieste',              label: 'Richieste' },
+  { key: 'visite',                 label: 'Visite Mediche' },
+  { key: 'galleria',               label: 'Galleria' },
+  { key: 'documenti',              label: 'Documenti' },
+  { key: 'statistiche',            label: 'Statistiche' },
+  { key: 'convocazioni',           label: 'Convocazioni' },
+  { key: 'db',                     label: 'DB Avanzato' },
+  { key: 'accessi',                label: 'Accessi' },
+  { key: 'gestione_segnalazioni',  label: 'Gestione Segnalazioni' },
+  { key: 'bot',                    label: 'Bot' },
+  { key: 'emergenze',              label: 'Emergenze' },
+  { key: 'posizione',              label: 'Posizione' },
+  { key: 'impostazioni',           label: 'Impostazioni' },
+];
+
+function caricaMatricePermessi() {
+  const tbl = document.getElementById('matricePermessi');
+  if (!tbl) return;
+  const utenti = accessiData.admin || [];
+  if (!utenti.length) { tbl.innerHTML = ''; return; }
+
+  let html = '<thead><tr><th></th>';
+  utenti.forEach(function(u) {
+    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' 🔑' : '') + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  PERMESSI_PAGINE.forEach(function(perm) {
+    html += '<tr><td>' + perm.label + '</td>';
+    utenti.forEach(function(u) {
+      const p = u.permessi || {};
+      const checked = u.tipo_accesso === 'master' ? (p[perm.key] !== false) : !!p[perm.key];
+      html += '<td id="mp-' + u.id + '-' + perm.key + '">'
+        + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePermessoMatrice(\'' + u.id + '\',\'' + perm.key + '\',this.checked)">'
+        + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+async function togglePermessoMatrice(userId, key, checked) {
+  const cell = document.getElementById('mp-' + userId + '-' + key);
+  const u = (accessiData.admin || []).find(function(x) { return String(x.id) === String(userId); });
+  if (!u) return;
+  const permessi = Object.assign({}, u.permessi || {});
+  permessi[key] = checked;
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + userId, {
+      method: 'PATCH',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ permessi: permessi })
+    });
+    if (!res.ok) throw new Error('errore');
+    u.permessi = permessi;
+    if (cell) {
+      cell.classList.remove('mp-flash');
+      void cell.offsetWidth; // riavvia l'animazione anche su click ravvicinati
+      cell.classList.add('mp-flash');
+    }
+  } catch(e) {
+    alert('Errore salvataggio permesso.');
+    if (cell) { var cb = cell.querySelector('input[type=checkbox]'); if (cb) cb.checked = !checked; }
   }
 }
 
@@ -7496,6 +7662,9 @@ async function caricaSegnalazioni() {
     } catch(e) {
       content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
     }
+  } else if (!hasPerm('gestione_segnalazioni')) {
+    sub.textContent = 'Segnalazioni ricevute dai volontari';
+    content.innerHTML = '<div class="loading-msg">Non hai i permessi per gestire le segnalazioni.</div>';
   } else {
     // Admin: lista tutte le segnalazioni
     sub.textContent = 'Segnalazioni ricevute dai volontari';
@@ -7774,6 +7943,11 @@ async function botImpostaInterventoAttivo() {
   }
 }
 
+async function botInterrompiInterventoAttivo() {
+  document.getElementById('botInterventoAttivo').value = '';
+  await botImpostaInterventoAttivo(); // scrive NULL nella stessa riga di configurazione
+}
+
 async function caricaBotPermessi() {
   const list = document.getElementById('botPermessiList');
   if (!list) return;
@@ -7913,7 +8087,6 @@ function _posizioneGetCtx(ns) {
 }
 
 function caricaPosizioni() {
-  caricaPosizioneFiltroInterventi();
   _posizioneCarica();
   if (posizioneRefreshTimer) clearInterval(posizioneRefreshTimer);
   posizioneRefreshTimer = setInterval(() => {
@@ -7927,26 +8100,35 @@ function caricaPosizioni() {
   }, 30000);
 }
 
-async function caricaPosizioneFiltroInterventi() {
-  const sel = document.getElementById('posFiltroIntervento');
-  if (!sel || sel.dataset.loaded) return;
-  const interventi = await caricaInterventiRecenti();
-  let html = '<option value="">Tutte le posizioni</option>';
-  interventi.forEach(i => {
-    const dataLbl = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '';
-    html += '<option value="' + i.id + '">' + (i.evento || '—') + (dataLbl ? ' (' + dataLbl + ')' : '') + '</option>';
-  });
-  sel.innerHTML = html;
-  sel.dataset.loaded = '1';
+async function _posizioneInterventoAttivoCorrente() {
+  try {
+    const res = await fetch(SUPA_URL + '/rest/v1/bot_config?select=valore&chiave=eq.intervento_attivo_id&limit=1', { headers: H });
+    const arr = await res.json();
+    const v = (arr || [])[0] && (arr[0].valore || null);
+    return v || null;
+  } catch(e) { return null; }
 }
 
 async function _posizioneCarica() {
+  const vuoto = document.getElementById('posizioneStatoVuoto');
+  const attiva = document.getElementById('posizioneAttiva');
+  const lbl = document.getElementById('posizioneInterventoLbl');
   const lista = document.getElementById('posizioneLista');
+  const interventoId = await _posizioneInterventoAttivoCorrente();
+  if (!interventoId) {
+    if (vuoto) vuoto.style.display = 'block';
+    if (attiva) attiva.style.display = 'none';
+    return;
+  }
+  if (vuoto) vuoto.style.display = 'none';
+  if (attiva) attiva.style.display = 'block';
   try {
-    const sel = document.getElementById('posFiltroIntervento');
-    const interventoId = sel && sel.value ? sel.value : null;
-    let url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc';
-    if (interventoId) url += '&intervento_id=eq.' + interventoId;
+    if (lbl) {
+      const interventi = await caricaInterventiRecenti();
+      const i = (interventi || []).find(x => String(x.id) === String(interventoId));
+      lbl.textContent = i ? (i.evento || '—') : ('Intervento #' + interventoId);
+    }
+    const url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId;
     const res = await fetch(url, { headers: H });
     const arr = await res.json();
     renderPosizioni(arr || []);
@@ -8377,6 +8559,72 @@ function filtraVisite() {
     return true;
   });
   renderVisite(filtered);
+}
+
+function apriExportVisite() {
+  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('visiteSearch').value || '(vuoto)';
+  document.getElementById('visiteExportErr').textContent = '';
+  document.getElementById('visiteExportOverlay').classList.add('open');
+}
+
+function chiudiExportVisite() {
+  document.getElementById('visiteExportOverlay').classList.remove('open');
+}
+
+function generaExportVisitePDF() {
+  const statiSel = Array.from(document.querySelectorAll('.vexp-stato:checked')).map(c => c.value);
+  const colSel = Array.from(document.querySelectorAll('.vexp-col:checked')).map(c => c.value);
+  const dataDa = document.getElementById('vexpDataDa').value;
+  const dataA = document.getElementById('vexpDataA').value;
+  const usaTesto = document.getElementById('vexpSoloTestoRicerca').checked;
+  const testo = usaTesto ? document.getElementById('visiteSearch').value.toLowerCase() : '';
+
+  let dati = visiteData.filter(v => {
+    if (!statiSel.includes(v.stato_visita || 'VUOTO')) return false;
+    if (dataDa && (!v.data_visita || v.data_visita < dataDa)) return false;
+    if (dataA && (!v.data_visita || v.data_visita > dataA)) return false;
+    if (usaTesto && testo) {
+      const hay = ((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '')).toLowerCase();
+      if (!hay.includes(testo)) return false;
+    }
+    return true;
+  });
+
+  if (dati.length === 0) {
+    document.getElementById('visiteExportErr').textContent = 'Nessun risultato con questi filtri.';
+    return;
+  }
+
+  const colonne = [];
+  if (colSel.includes('nome')) colonne.push('Nominativo');
+  if (colSel.includes('cf')) colonne.push('Codice Fiscale');
+  if (colSel.includes('stato')) colonne.push('Stato');
+  if (colSel.includes('data')) colonne.push('Data');
+
+  const righe = dati.map(v => {
+    const statoInfo = VISITA_STATI[v.stato_visita || ''];
+    const r = [];
+    if (colSel.includes('nome')) r.push(((v.cognome || '') + ' ' + (v.nome || '')).trim());
+    if (colSel.includes('cf')) r.push(v.codice_fiscale || '—');
+    if (colSel.includes('stato')) r.push(statoInfo ? statoInfo.label : 'Non impostato');
+    if (colSel.includes('data')) r.push(v.data_visita ? new Date(v.data_visita).toLocaleDateString('it-IT') : '—');
+    return r;
+  });
+
+  const doc = new jspdf.jsPDF();
+  doc.setFontSize(14);
+  doc.text('Visite Mediche — PC ANA Casale', 14, 16);
+  doc.setFontSize(9);
+  doc.text('Generato il ' + new Date().toLocaleDateString('it-IT') + ' — ' + dati.length + ' risultati', 14, 22);
+  doc.autoTable({
+    startY: 28,
+    head: [colonne],
+    body: righe,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [26, 122, 74] }
+  });
+  doc.save('visite-mediche-export.pdf');
+  chiudiExportVisite();
 }
 
 async function cambiaVisitaCampo(volId, campo, valore) {
