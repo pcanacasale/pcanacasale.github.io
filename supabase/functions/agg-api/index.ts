@@ -504,6 +504,48 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
     }
 
     // ============================================================
+    // SINCRONIZZA NUOVI — copia da volontari le righe non ancora presenti
+    // in agg_volontari. Solo inserimenti: le righe esistenti non si toccano mai.
+    // ============================================================
+    if (action === 'sincronizza_nuovi') {
+      const [volRes, aggRes] = await Promise.all([
+        fetch(`${SUPA_URL}/rest/v1/volontari?stato=neq.DIMESSO&select=*&order=cognome.asc,nome.asc`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_volontari?select=volontario_id&volontario_id=not.is.null`, { headers: HSRV }),
+      ]);
+      if (!volRes.ok) return jsonResponse({ ok: false, error: 'errore lettura volontari: ' + await volRes.text() }, 500);
+      if (!aggRes.ok) return jsonResponse({ ok: false, error: 'errore lettura agg_volontari: ' + await aggRes.text() }, 500);
+      const volontari: any[] = await volRes.json();
+      const presenti = new Set(((await aggRes.json()) || []).map((r: any) => Number(r.volontario_id)));
+
+      const testo = (x: unknown) => (x === null || x === undefined || String(x).trim() === '') ? null : String(x).trim();
+      const nuovi = (volontari || []).filter(v => !presenti.has(Number(v.id)));
+      if (!nuovi.length) return jsonResponse({ ok: true, aggiunti: [], numero: 0 });
+
+      const ora = new Date().toISOString();
+      const righe = nuovi.map(v => ({
+        volontario_id: v.id,
+        cognome: v.cognome ?? null, nome: v.nome ?? null, codice_fiscale: v.codice_fiscale ?? null,
+        data_nascita: v.data_nascita ?? null, luogo_nascita: v.luogo_nascita ?? null,
+        squadra: v.squadra ?? null, tipo_volontario: v.tipo_volontario ?? null, stato: v.stato ?? null,
+        indirizzo: v.indirizzo ?? null, cap: testo(v.cap), citta: v.citta ?? null, telefono: testo(v.telefono),
+        email: v.email ?? null, gruppo_alpini: v.gruppo_alpini ?? null, professione: v.professione ?? null,
+        patenti: v.patenti ?? null,
+        origine: v, // riga originale completa di volontari
+        creato_il: ora, aggiornato_il: ora,
+      }));
+      const ins = await fetch(`${SUPA_URL}/rest/v1/agg_volontari`, {
+        method: 'POST', headers: { ...HSRVJ, Prefer: 'return=representation' }, body: JSON.stringify(righe),
+      });
+      if (!ins.ok) return jsonResponse({ ok: false, error: 'errore inserimento: ' + await ins.text() }, 500);
+      const inseriti: any[] = await ins.json();
+      const aggiunti = (inseriti || []).map(r => ({ id: r.id, cognome: r.cognome, nome: r.nome }));
+
+      await logAttivita(master!.nome + ' ha sincronizzato ' + aggiunti.length + ' nuovi volontari in Aggiornamento dati: '
+        + aggiunti.map(a => (a.cognome || '') + ' ' + (a.nome || '')).join(', '));
+      return jsonResponse({ ok: true, aggiunti, numero: aggiunti.length });
+    }
+
+    // ============================================================
     // FASE 2 — LINK PERSONALE: genera (il token in chiaro esce una volta sola)
     // ============================================================
     if (action === 'link_genera') {

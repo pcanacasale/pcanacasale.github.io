@@ -223,6 +223,7 @@ function aggInitUI() {
       <button class="vol-filter-btn" id="aggFilterBtn" onclick="aggToggleFiltri()">filtri</button>
       <button class="btn-sm" onclick="aggApriCatalogo()">📋 Catalogo DPI</button>
       <button class="btn-sm" onclick="aggEsportaCSV()">⬇️ Export CSV</button>
+      <button class="btn-sm" id="aggSyncBtn" onclick="aggSincronizzaNuovi()">🔄 Sincronizza nuovi volontari</button>
     </div>
 
     <div class="agg-filtri" id="aggFiltriBox">
@@ -475,6 +476,26 @@ function aggCardEl(v) {
     + '<div class="agg-bar"><div class="agg-bar-fill" style="width:' + v.completezza + '%;background:' + aggColoreBarra(v.completezza) + '"></div></div>'
     + '<div class="agg-bar-label">' + v.completezza + '%</div>';
   return card;
+}
+
+// ============================================================
+// SINCRONIZZA NUOVI VOLONTARI (da volontari → agg_volontari, solo inserimenti)
+// ============================================================
+async function aggSincronizzaNuovi() {
+  if (!currentUser || currentUser.tipo_accesso !== 'master') return;
+  if (!confirm('Aggiungere ad "Aggiornamento dati" i volontari non dimessi che non sono ancora presenti?\n\nLe schede già esistenti non vengono modificate.')) return;
+  const btn = document.getElementById('aggSyncBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 sincronizzazione...'; }
+  try {
+    const data = await aggCall('sincronizza_nuovi', {});
+    const aggiunti = data.aggiunti || [];
+    alert(aggiunti.length
+      ? 'Aggiunti ' + aggiunti.length + (aggiunti.length === 1 ? ' volontario: ' : ' volontari: ')
+        + aggiunti.map(a => ((a.cognome || '') + ' ' + (a.nome || '')).trim().toUpperCase()).join(', ')
+      : 'Nessun nuovo volontario');
+    await aggCaricaLista();
+  } catch (e) { alert('Errore sincronizzazione: ' + e.message); }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizza nuovi volontari'; }
 }
 
 // ============================================================
