@@ -1,0 +1,2 @@
+[functions.agg-api]
+verify_jwt = false
