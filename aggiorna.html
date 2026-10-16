@@ -91,14 +91,16 @@ p { margin: 0 0 12px; color: var(--text-2); }
 .zoom { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
 .zoom input { flex: 1; accent-color: var(--green); height: 32px; }
 .foto-prev { width: 98px; height: 118px; border-radius: 8px; object-fit: cover; background: var(--bg-2); border: 1px solid var(--border); display: block; }
-.slot { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-2); border-radius: 12px; margin-bottom: 10px; }
+.slot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px; background: var(--bg-2); border-radius: 12px; margin-bottom: 10px; }
 .slot-i { flex: 1; min-width: 0; }
 .slot-t { font-weight: 600; font-size: 0.98rem; }
 .slot-m { font-size: 0.8rem; color: var(--text-3); word-break: break-word; }
 .slot-m.ok { color: var(--green); font-weight: 600; }
 .thumb { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; background: var(--card); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-.slot-b { display: flex; flex-direction: column; gap: 6px; }
-.slot-b .btn { min-height: 40px; font-size: 0.88rem; padding: 6px 12px; }
+.slot-b { display: flex; gap: 8px; width: 100%; }
+.slot-b .btn { flex: 1; min-height: 44px; font-size: 0.92rem; padding: 6px 10px; }
+.duo { display: flex; gap: 10px; }
+.duo .btn { flex: 1; }
 .sum li { margin-bottom: 6px; color: var(--text-2); }
 .sum .k { color: var(--text-3); }
 .chk { display: flex; gap: 12px; align-items: flex-start; font-size: 0.98rem; padding: 14px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; }
@@ -465,14 +467,17 @@ function renderFoto() {
   if (S.foto) {
     html += '<div class="card" style="display:flex;gap:14px;align-items:center"><img class="foto-prev" src="' + S.foto.url + '" alt="foto scelta">'
       + '<div><div class="slot-m ok">✓ Foto pronta</div><div class="slot-m">' + (S.foto.blob.size / 1024).toFixed(0) + ' KB</div>'
-      + '<button class="btn sec small" style="margin-top:8px" onclick="scegliFoto()">Cambia foto</button></div></div>';
+      + '<div class="slot-m" style="margin-top:6px">Puoi cambiarla qui sotto.</div></div></div>'
+      + bottoniFoto('sec');
   } else if (es) {
     html += '<div class="msg ok">✓ Hai già inviato una foto. Puoi sostituirla se vuoi.</div>'
-      + '<button class="btn sec" onclick="scegliFoto()">📷 Sostituisci foto</button>';
+      + bottoniFoto('sec');
   } else {
-    html += '<button class="btn" onclick="scegliFoto()">📷 Scatta o scegli una foto</button>';
+    html += bottoniFoto('');
   }
-  html += '<input type="file" accept="image/*" id="fotoInput" class="hidden" onchange="fotoScelta(this)">'
+  // Due input: fotocamera frontale diretta, oppure una foto/file già presente
+  html += '<input type="file" accept="image/*" capture="user" id="fotoCam" class="hidden" onchange="fotoScelta(this)">'
+    + '<input type="file" accept="image/*" id="fotoFile" class="hidden" onchange="fotoScelta(this)">'
     + '<div id="cropArea" class="hidden card" style="margin-top:14px">'
     + '<div style="font-size:0.9rem;color:var(--text-2);text-align:center">Trascina la foto e usa lo zoom per far stare il viso dentro l\'ovale.</div>'
     + '<div class="crop-wrap"><canvas id="cropCanvas" width="196" height="236"></canvas>'
@@ -483,7 +488,12 @@ function renderFoto() {
   $('app').innerHTML = html;
   navPasso('vai(\'documenti\')', (S.foto || es) ? 'Avanti →' : 'Salta per ora →');
 }
-function scegliFoto() { $('fotoInput').click(); }
+function bottoniFoto(cls) {
+  return '<div class="duo"><button class="btn ' + cls + '" onclick="scegliFoto(\'cam\')">📷 Scatta foto</button>'
+    + '<button class="btn sec" onclick="scegliFoto(\'file\')">📎 Allega file</button></div>'
+    + '<p style="font-size:0.82rem;color:var(--text-3);margin-top:8px">Con "Allega file" scegli una foto già presente sul telefono o sul computer.</p>';
+}
+function scegliFoto(modo) { $(modo === 'cam' ? 'fotoCam' : 'fotoFile').click(); }
 function fotoScelta(input) {
   const f = input.files[0]; if (!f) return;
   const img = new Image();
@@ -573,8 +583,10 @@ function renderDocumenti() {
     + '<div class="f"><label for="attTipo">Tipo</label><select id="attTipo"><option value="ATTESTATO">Attestato di un corso</option><option value="ABILITAZIONE">Abilitazione / patentino</option></select></div>'
     + '<div class="f"><label for="attDesc">Descrizione</label><input id="attDesc" placeholder="es. Corso antincendio rischio medio"></div>'
     + '<div class="f"><label for="attScad">Scadenza (se c\'è)</label><input id="attScad" type="date"></div>'
+    + '<input type="file" accept="image/*" capture="environment" id="attCam" class="hidden" onchange="aggiungiAttestato(this)">'
     + '<input type="file" accept="' + ACCEPT_DOC + '" id="attFile" class="hidden" onchange="aggiungiAttestato(this)">'
-    + '<button class="btn sec" onclick="if(!document.getElementById(\'attDesc\').value.trim()){alert(\'Scrivi prima una descrizione.\');return;}document.getElementById(\'attFile\').click()">+ Aggiungi attestato</button></div>'
+    + '<div class="duo"><button class="btn sec" onclick="scegliAttestato(\'cam\')">📷 Scatta foto</button>'
+    + '<button class="btn sec" onclick="scegliAttestato(\'file\')">📎 Allega file</button></div></div>'
     + '<p style="font-size:0.85rem;color:var(--text-3)">File in totale: ' + contaFile() + ' su ' + ((S.info.limiti && S.info.limiti.max_file) || 15) + '.</p>';
   $('app').innerHTML = html;
   navPasso('vai(\'riepilogo\')');
@@ -590,20 +602,27 @@ function htmlSlot(tipo, lato) {
   let stato, bottoni;
   if (nuovo) {
     stato = '<div class="slot-m">' + esc(nuovo.file.name) + ' — ' + (nuovo.file.size / 1024 / 1024).toFixed(1) + ' MB</div>';
-    bottoni = '<button class="btn sec" onclick="scegliSlot(\'' + key + '\')">Cambia</button><button class="btn danger" onclick="togliSlot(\'' + key + '\')">Rimuovi</button>';
+    bottoni = bottoniSlot(key, 'sec') + '<button class="btn danger" onclick="togliSlot(\'' + key + '\')">Rimuovi</button>';
   } else if (es) {
     stato = '<div class="slot-m ok">✓ già inviato</div>';
-    bottoni = '<button class="btn sec" onclick="scegliSlot(\'' + key + '\')">Sostituisci</button><button class="btn danger" onclick="rimuoviEsistente(' + Number(es.id) + ')">Rimuovi</button>';
+    bottoni = bottoniSlot(key, 'sec') + '<button class="btn danger" onclick="rimuoviEsistente(' + Number(es.id) + ')">Rimuovi</button>';
   } else {
     stato = '<div class="slot-m">' + (lato === 'RETRO' ? 'facoltativo' : 'non caricato') + '</div>';
-    bottoni = '<button class="btn" onclick="scegliSlot(\'' + key + '\')">Carica</button>';
+    bottoni = bottoniSlot(key, lato === 'RETRO' ? 'sec' : '');
   }
   return '<div class="slot">' + (nuovo ? thumbHtml(nuovo.file, nuovo.url) : '<div class="thumb">' + (es ? '✅' : '📄') + '</div>')
     + '<div class="slot-i"><div class="slot-t">' + titolo + '</div>' + stato + '</div>'
     + '<div class="slot-b">' + bottoni + '</div>'
+    + '<input type="file" accept="image/*" capture="environment" id="cam_' + key + '" class="hidden" onchange="slotScelto(\'' + key + '\', this)">'
     + '<input type="file" accept="' + ACCEPT_DOC + '" id="in_' + key + '" class="hidden" onchange="slotScelto(\'' + key + '\', this)"></div>';
 }
-function scegliSlot(key) { $('in_' + key).click(); }
+// "Scatta" apre direttamente la fotocamera posteriore; "Allega" sceglie un
+// file già presente (foto, scansione o PDF).
+function bottoniSlot(key, cls) {
+  return '<button class="btn ' + cls + '" onclick="scegliSlot(\'' + key + '\', \'cam\')">📷 Scatta</button>'
+    + '<button class="btn sec" onclick="scegliSlot(\'' + key + '\', \'file\')">📎 Allega</button>';
+}
+function scegliSlot(key, modo) { $((modo === 'cam' ? 'cam_' : 'in_') + key).click(); }
 
 // Le foto dei documenti scattate col telefono possono pesare molto: le
 // riduciamo (lato lungo max 2000 px, JPG) prima dell'invio.
@@ -661,6 +680,10 @@ async function aggiungiAttestato(input) {
     });
   } catch (e) { alert(e.message); }
   renderDocumenti();
+}
+function scegliAttestato(modo) {
+  if (!$('attDesc').value.trim()) { alert('Scrivi prima una descrizione.'); $('attDesc').focus(); return; }
+  $(modo === 'cam' ? 'attCam' : 'attFile').click();
 }
 function rimuoviAttestato(key) { S.attestati = S.attestati.filter(a => a.key !== key); renderDocumenti(); }
 async function rimuoviEsistente(id) {
