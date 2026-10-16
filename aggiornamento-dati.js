@@ -358,7 +358,7 @@ async function aggCaricaLista() {
   const grid = document.getElementById('aggGrid');
   if (grid) grid.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const [data, prop] = await Promise.all([aggCall('list', {}), aggCall('proposte_lista', {})]);
+    const [data, prop] = await Promise.all([aggCall('list', {}), aggCall('proposte_lista', {}).catch(aggErroreFase2)]);
     aggProposteAperte = {};
     (prop.proposte || []).forEach(p => { if (!aggProposteAperte[p.volontario_id]) aggProposteAperte[p.volontario_id] = p; });
     aggVolontari = (data.cards || []).map(c => Object.assign(c, { proposta_aperta: !!aggProposteAperte[c.id] }));
@@ -499,7 +499,7 @@ async function aggApriScheda(id) {
   aggFotoSignedUrl = null;
   aggPropCorrente = null;
   try {
-    const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id })]);
+    const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id }).catch(aggErroreFase2)]);
     aggCorrente = data;
     aggPropCorrente = prop;
     document.getElementById('aggDetailTitle').textContent = data.volontario.cognome + ' ' + data.volontario.nome;
@@ -552,8 +552,16 @@ function aggFmtDataOra(iso) {
   return d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Le funzioni della fase 2 non devono mai impedire l'uso della fase 1
+// (es. agg-api non ancora aggiornata sul server): in caso di errore
+// lista e scheda si aprono comunque, senza proposte.
+function aggErroreFase2(e) {
+  console.warn('Aggiornamento dati — funzioni link/proposte non disponibili:', e.message);
+  return { proposte: [], link: null, proposta: null };
+}
+
 async function aggRicaricaScheda(id) {
-  const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id })]);
+  const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id }).catch(aggErroreFase2)]);
   aggCorrente = data;
   aggPropCorrente = prop;
   aggRenderScheda();
