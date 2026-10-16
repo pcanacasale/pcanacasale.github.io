@@ -48,6 +48,17 @@ let aggFotoSignedUrl  = null;
 let aggFiltri         = { search: '', squadra: '', stato: '', missing: '' };
 let aggInizializzato  = false;
 let aggCatalogoCache  = [];
+// Fase 2 — link personale e proposte dei volontari
+let aggProposteAperte = {};   // volontario_id → { id, inviata_il }
+let aggPropCorrente   = null; // risposta di 'proposta_dettaglio' per la scheda aperta { link, proposta }
+let aggLinkCorrente   = null; // { url, scade_il, telefono, nome, cognome } — solo subito dopo 'link_genera'
+
+const AGG_CAMPI_LABEL = {
+  cognome: 'Cognome', nome: 'Nome', codice_fiscale: 'Codice fiscale', data_nascita: 'Data nascita',
+  luogo_nascita: 'Luogo nascita', provincia_nascita: 'Provincia nascita', indirizzo: 'Indirizzo',
+  civico: 'Civico', cap: 'CAP', citta: 'Città', provincia: 'Provincia', telefono: 'Telefono', email: 'Email',
+  titolo_studio: 'Titolo di studio', professione: 'Professione', patenti: 'Patenti', tessera_ana: 'Tessera ANA',
+};
 
 // ============================================================
 // AGGANCIO ALL'APP ESISTENTE (nessuna funzione esistente viene modificata)
@@ -172,6 +183,19 @@ function aggIniettaCSS() {
 .agg-crop-info.err { color:var(--red); font-weight:600; }
 .agg-cat-list-row { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.5rem; background:var(--bg-2); border-radius:6px; margin-bottom:0.3rem; }
 .agg-cat-list-row.inattivo { opacity:0.5; }
+.vb-prop { background:rgba(0,122,255,0.12); color:var(--blue); }
+.agg-prop-box { border:1.5px solid var(--blue); border-radius:var(--r-lg); padding:0.8rem; margin-bottom:0.8rem; background:var(--bg-card); }
+.agg-prop-title { font-weight:700; color:var(--blue); font-size:0.85rem; margin-bottom:0.2rem; }
+.agg-prop-meta { font-size:0.65rem; color:var(--testo-3); margin-bottom:0.6rem; }
+.agg-prop-sub { font-size:0.68rem; font-weight:700; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; margin:0.7rem 0 0.3rem; }
+.agg-prop-table { width:100%; border-collapse:collapse; font-size:0.74rem; }
+.agg-prop-table th { text-align:left; font-size:0.62rem; color:var(--testo-4); font-weight:600; padding:0.25rem 0.3rem; border-bottom:0.5px solid var(--border); }
+.agg-prop-table td { padding:0.35rem 0.3rem; border-bottom:0.5px solid var(--border); vertical-align:top; color:var(--testo-2); word-break:break-word; }
+.agg-prop-table td.att { color:var(--testo-4); text-decoration:line-through; }
+.agg-prop-table td.prop { color:var(--testo); font-weight:600; }
+.agg-prop-actions { display:flex; gap:0.5rem; margin-top:0.8rem; }
+.agg-prop-actions button { flex:1; }
+.agg-link-url { width:100%; padding:0.55rem 0.6rem; font-size:0.72rem; font-family:monospace; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); color:var(--testo); }
 `;
   document.head.appendChild(style);
 }
@@ -191,6 +215,7 @@ function aggInitUI() {
       <div class="agg-counter" id="aggCntDpi" onclick="aggImpostaMissing('dpi')"><div class="agg-counter-val" id="aggCDpi">0</div><div class="agg-counter-lbl">DPI da fare</div></div>
       <div class="agg-counter" id="aggCntDoc" onclick="aggImpostaMissing('doc')"><div class="agg-counter-val" id="aggCDoc">0</div><div class="agg-counter-lbl">Doc. mancanti</div></div>
       <div class="agg-counter" id="aggCntVer" onclick="aggImpostaMissing('verifica')"><div class="agg-counter-val" id="aggCVer">0</div><div class="agg-counter-lbl">Da verificare</div></div>
+      <div class="agg-counter" id="aggCntProp" onclick="aggImpostaMissing('proposte')"><div class="agg-counter-val" id="aggCProp" style="color:var(--blue)">0</div><div class="agg-counter-lbl">Proposte</div></div>
     </div>
 
     <div class="agg-toolbar-row">
@@ -286,6 +311,22 @@ function aggCostruisciOverlay() {
       </div>
     </div>
 
+    <div class="doc-upload-overlay" id="aggLinkOverlay">
+      <div class="login-card" style="max-width:400px;width:100%;margin:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+          <strong>Link personale</strong>
+          <button class="btn-sm" onclick="aggChiudiLinkOverlay()">chiudi</button>
+        </div>
+        <div style="font-size:0.72rem;color:var(--testo-2);margin-bottom:0.5rem" id="aggLinkInfo"></div>
+        <input class="agg-link-url" id="aggLinkUrl" readonly onclick="this.select()">
+        <div style="font-size:0.66rem;color:var(--red);margin:0.5rem 0 0.7rem">⚠️ Il link si vede solo adesso: copialo o invialo prima di chiudere. Se lo perdi, generane uno nuovo (il precedente smette di funzionare).</div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn-sm" style="flex:1" id="aggLinkCopiaBtn" onclick="aggLinkCopia()">📋 Copia</button>
+          <button class="btn-sm btn-ok" style="flex:1" onclick="aggLinkWhatsApp()">💬 Invia su WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
     <div class="doc-upload-overlay" id="aggDocOverlay">
       <div class="login-card" style="max-width:360px;width:100%;margin:1rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
@@ -317,9 +358,12 @@ async function aggCaricaLista() {
   const grid = document.getElementById('aggGrid');
   if (grid) grid.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const data = await aggCall('list', {});
-    aggVolontari = data.cards || [];
+    const [data, prop] = await Promise.all([aggCall('list', {}), aggCall('proposte_lista', {})]);
+    aggProposteAperte = {};
+    (prop.proposte || []).forEach(p => { if (!aggProposteAperte[p.volontario_id]) aggProposteAperte[p.volontario_id] = p; });
+    aggVolontari = (data.cards || []).map(c => Object.assign(c, { proposta_aperta: !!aggProposteAperte[c.id] }));
     aggContatori = data.contatori || {};
+    aggContatori.proposte = aggVolontari.filter(c => c.proposta_aperta).length;
     aggRenderContatori();
     aggPopolaFiltroSquadre();
     aggApplicaFiltri();
@@ -335,6 +379,7 @@ function aggRenderContatori() {
   set('aggCDpi', aggContatori.dpi_mancanti);
   set('aggCDoc', aggContatori.documenti_mancanti);
   set('aggCVer', aggContatori.da_verificare);
+  set('aggCProp', aggContatori.proposte);
 }
 
 function aggPopolaFiltroSquadre() {
@@ -356,7 +401,7 @@ function aggImpostaSearch(v) { aggFiltri.search = v; aggApplicaFiltri(); }
 function aggImpostaMissing(m) {
   aggFiltri.missing = (aggFiltri.missing === m) ? '' : m;
   document.querySelectorAll('.agg-counter').forEach(c => c.classList.remove('active'));
-  const map = { '': 'aggCntTot', foto: 'aggCntFoto', dpi: 'aggCntDpi', doc: 'aggCntDoc', verifica: 'aggCntVer' };
+  const map = { '': 'aggCntTot', foto: 'aggCntFoto', dpi: 'aggCntDpi', doc: 'aggCntDoc', verifica: 'aggCntVer', proposte: 'aggCntProp' };
   const el = document.getElementById(map[aggFiltri.missing] || 'aggCntTot');
   if (el && aggFiltri.missing) el.classList.add('active');
   aggApplicaFiltri();
@@ -380,6 +425,7 @@ function aggApplicaFiltri() {
     if (f.missing === 'dpi' && v.blocchi.dpi_valutati) return false;
     if (f.missing === 'doc' && !aggDocManca(v)) return false;
     if (f.missing === 'verifica' && v.stato_verifica === 'VERIFICATO') return false;
+    if (f.missing === 'proposte' && !v.proposta_aperta) return false;
     return true;
   });
   aggRenderGriglia(filtrati);
@@ -415,6 +461,7 @@ function aggCardEl(v) {
     + '<span class="agg-badge" style="background:' + verBg + ';color:' + verColor + '">' + (v.stato_verifica || 'DA_FARE').replace('_', ' ') + '</span>'
     + '</div>'
     + '<div class="agg-card-badges">'
+    + (v.proposta_aperta ? '<span class="vol-badge vb-prop">📝 Proposta da approvare</span>' : '')
     + '<span class="vol-badge ' + (v.blocchi.foto ? 'vb-ok' : 'vb-off') + '">' + (v.blocchi.foto ? '📷 foto' : '📷 no foto') + '</span>'
     + '<span class="vol-badge vb-tipo">PIA ' + (v.pia_matricola || '—') + '</span>'
     + (docManca ? '<span class="vol-badge vb-warn">doc. mancanti</span>' : '')
@@ -450,9 +497,11 @@ async function aggApriScheda(id) {
   detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">caricamento...</div>';
   aggFotoSignedUrl = null;
+  aggPropCorrente = null;
   try {
-    const data = await aggCall('get', { id });
+    const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id })]);
     aggCorrente = data;
+    aggPropCorrente = prop;
     document.getElementById('aggDetailTitle').textContent = data.volontario.cognome + ' ' + data.volontario.nome;
     aggRenderScheda();
   } catch (e) {
@@ -463,6 +512,7 @@ async function aggApriScheda(id) {
 function aggChiudiScheda() {
   document.getElementById('aggDetail').classList.remove('open');
   aggCorrente = null;
+  aggPropCorrente = null;
   // Riallinea le card (percentuali/badge potrebbero essere cambiati)
   aggCaricaLista();
 }
@@ -477,6 +527,8 @@ function aggRenderScheda() {
 
   body.innerHTML = '<div class="agg-bar" style="margin-bottom:0.3rem"><div class="agg-bar-fill" style="width:' + comp.percentuale + '%;background:' + aggColoreBarra(comp.percentuale) + '"></div></div>'
     + '<div class="agg-bar-label" style="text-align:left;margin-bottom:0.8rem">Completezza scheda: ' + comp.percentuale + '%</div>'
+    + aggBloccoProposta(v)
+    + aggBloccoLink(v)
     + aggBloccoAnagrafica(v)
     + aggBloccoFoto(v)
     + aggBloccoDocumenti(v)
@@ -485,6 +537,204 @@ function aggRenderScheda() {
 
   aggCaricaFotoAnteprima();
   aggVerificaCF();
+}
+
+// ============================================================
+// FASE 2 — LINK PERSONALE E PROPOSTE DEI VOLONTARI
+// ============================================================
+// I valori delle proposte arrivano da una pagina pubblica: sempre escapati.
+function aggEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function aggFmtDataOra(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function aggRicaricaScheda(id) {
+  const [data, prop] = await Promise.all([aggCall('get', { id }), aggCall('proposta_dettaglio', { volontario_id: id })]);
+  aggCorrente = data;
+  aggPropCorrente = prop;
+  aggRenderScheda();
+}
+
+// -- BLOCCO LINK --
+function aggBloccoLink(v) {
+  const l = aggPropCorrente && aggPropCorrente.link;
+  let stato = '<span style="color:var(--testo-4)">nessun link generato</span>';
+  if (l) {
+    if (l.attivo) stato = '<span style="color:var(--green);font-weight:600">attivo</span> fino al ' + new Date(l.scade_il).toLocaleDateString('it-IT');
+    else if (l.bloccato && !l.revocato) stato = '<span style="color:var(--red);font-weight:600">bloccato</span> (troppi tentativi errati)';
+    else if (l.revocato) stato = '<span style="color:var(--testo-3)">revocato / chiuso</span>';
+    else stato = '<span style="color:var(--amber)">scaduto</span> il ' + new Date(l.scade_il).toLocaleDateString('it-IT');
+  }
+  return '<div class="vol-section">'
+    + '<div class="vol-section-head" onclick="toggleVolSection(this)">Link per il volontario</div>'
+    + '<div class="vol-section-body" style="padding:0.8rem 1rem">'
+    + '<div class="vol-field"><span class="vol-field-label">Stato</span><span class="vol-field-value">' + stato + '</span></div>'
+    + (l ? '<div class="vol-field"><span class="vol-field-label">Generato</span><span class="vol-field-value">' + aggFmtDataOra(l.creato_il) + (l.creato_da ? ' — ' + aggEsc(l.creato_da) : '') + '</span></div>'
+         + '<div class="vol-field"><span class="vol-field-label">Ultimo accesso</span><span class="vol-field-value">' + aggFmtDataOra(l.ultimo_accesso) + ' (' + (l.usi || 0) + ' utilizzi)</span></div>'
+         + (l.tentativi_falliti ? '<div class="vol-field"><span class="vol-field-label">Tentativi errati</span><span class="vol-field-value">' + l.tentativi_falliti + ' / 5</span></div>' : '')
+       : '')
+    + (!v.data_nascita ? '<div class="agg-cf-msg err">Per generare il link serve la data di nascita in anagrafica.</div>' : '')
+    + '<div style="display:flex;gap:0.5rem;margin-top:0.6rem">'
+    + '<button class="btn-sm btn-ok" style="flex:1" onclick="aggLinkGenera(' + v.id + ')">🔗 ' + (l ? 'Genera nuovo link' : 'Genera link') + '</button>'
+    + (l && l.attivo ? '<button class="btn-sm btn-danger" onclick="aggLinkRevoca(' + v.id + ')">revoca</button>' : '')
+    + '</div></div></div>';
+}
+
+async function aggLinkGenera(id) {
+  const l = aggPropCorrente && aggPropCorrente.link;
+  if (l && l.attivo && !confirm('Esiste già un link attivo: generandone uno nuovo il precedente smette di funzionare. Continuare?')) return;
+  try {
+    aggLinkCorrente = await aggCall('link_genera', { volontario_id: id });
+    document.getElementById('aggLinkUrl').value = aggLinkCorrente.url;
+    document.getElementById('aggLinkInfo').textContent = 'Per ' + aggLinkCorrente.cognome + ' ' + aggLinkCorrente.nome
+      + ' — valido fino al ' + new Date(aggLinkCorrente.scade_il).toLocaleDateString('it-IT') + '.';
+    document.getElementById('aggLinkCopiaBtn').textContent = '📋 Copia';
+    document.getElementById('aggLinkOverlay').classList.add('open');
+    const prop = await aggCall('proposta_dettaglio', { volontario_id: id });
+    aggPropCorrente = prop;
+    aggRenderScheda();
+  } catch (e) { alert('Errore: ' + e.message); }
+}
+
+function aggChiudiLinkOverlay() {
+  document.getElementById('aggLinkOverlay').classList.remove('open');
+  document.getElementById('aggLinkUrl').value = '';
+  aggLinkCorrente = null; // il token in chiaro non resta in memoria
+}
+
+async function aggLinkCopia() {
+  const inp = document.getElementById('aggLinkUrl');
+  try { await navigator.clipboard.writeText(inp.value); }
+  catch (e) { inp.select(); document.execCommand('copy'); }
+  document.getElementById('aggLinkCopiaBtn').textContent = '✓ Copiato';
+}
+
+function aggLinkMessaggio(l) {
+  return 'Ciao ' + (l.nome || '') + ', ti chiediamo di controllare e aggiornare i tuoi dati di volontario della Protezione Civile ANA Casale Monferrato (anagrafica, taglie, foto e documenti).\n\n'
+    + 'Apri il tuo link personale:\n' + l.url + '\n\n'
+    + 'Ti verrà chiesta la tua data di nascita. Il link è valido fino al ' + new Date(l.scade_il).toLocaleDateString('it-IT') + '. Non inoltrarlo ad altri.\nGrazie!';
+}
+
+function aggLinkWhatsApp() {
+  if (!aggLinkCorrente) return;
+  let num = String(aggLinkCorrente.telefono || '').replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '');
+  if (/^3\d{8,9}$/.test(num)) num = '39' + num; // cellulare italiano senza prefisso
+  const testo = encodeURIComponent(aggLinkMessaggio(aggLinkCorrente));
+  window.open('https://wa.me/' + (num.length >= 10 ? num : '') + '?text=' + testo, '_blank');
+}
+
+async function aggLinkRevoca(id) {
+  if (!confirm('Revocare il link? Il volontario non potrà più usarlo.')) return;
+  try {
+    await aggCall('link_revoca', { volontario_id: id });
+    aggPropCorrente = await aggCall('proposta_dettaglio', { volontario_id: id });
+    aggRenderScheda();
+  } catch (e) { alert('Errore: ' + e.message); }
+}
+
+// -- BLOCCO PROPOSTA --
+function aggFmtValProp(campo, val) {
+  if (val === null || val === undefined || String(val).trim() === '') return '<span style="color:var(--testo-4)">—</span>';
+  if (campo === 'data_nascita' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) return new Date(String(val).slice(0, 10) + 'T00:00:00').toLocaleDateString('it-IT');
+  return aggEsc(val);
+}
+function aggFmtDpi(x) { return x.ha ? ('sì' + (x.taglia ? ' — ' + aggEsc(x.taglia) : '')) : 'no'; }
+
+function aggBloccoProposta(v) {
+  const p = aggPropCorrente && aggPropCorrente.proposta;
+  if (!p) return '';
+  let html = '<div class="agg-prop-box">'
+    + '<div class="agg-prop-title">📝 Proposta da approvare</div>'
+    + '<div class="agg-prop-meta">Inviata dal volontario il ' + aggFmtDataOra(p.inviata_il)
+    + (p.privacy_accettata_il ? ' — informativa privacy accettata' : '') + '. I dati attuali non cambiano finché non approvi.</div>';
+
+  html += '<div class="agg-prop-sub">Anagrafica</div>';
+  if (!p.campi.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessuna modifica</div>';
+  else {
+    html += '<table class="agg-prop-table"><tr><th></th><th>Campo</th><th>Attuale</th><th>Proposto</th></tr>';
+    p.campi.forEach(c => {
+      html += '<tr><td><input type="checkbox" class="aggPropCampo" value="' + aggEsc(c.campo) + '" checked></td>'
+        + '<td>' + aggEsc(AGG_CAMPI_LABEL[c.campo] || c.campo) + '</td>'
+        + '<td class="att">' + aggFmtValProp(c.campo, c.attuale) + '</td>'
+        + '<td class="prop">' + aggFmtValProp(c.campo, c.proposto) + '</td></tr>';
+    });
+    html += '</table>';
+  }
+
+  html += '<div class="agg-prop-sub">Taglie e DPI</div>';
+  if (!p.dpi.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessuna modifica</div>';
+  else {
+    html += '<table class="agg-prop-table"><tr><th></th><th>Capo</th><th>Attuale</th><th>Proposto</th></tr>';
+    p.dpi.forEach(d => {
+      html += '<tr><td><input type="checkbox" class="aggPropDpi" value="' + Number(d.dpi_id) + '" checked></td>'
+        + '<td>' + aggEsc(d.nome) + '<div style="font-size:0.6rem;color:var(--testo-4)">' + aggEsc(d.categoria) + '</div></td>'
+        + '<td class="att">' + aggFmtDpi(d.attuale) + '</td>'
+        + '<td class="prop">' + aggFmtDpi(d.proposto) + '</td></tr>';
+    });
+    html += '</table>';
+  }
+
+  html += '<div class="agg-prop-sub">Foto e documenti in attesa</div>';
+  const docs = p.documenti || [];
+  if (!docs.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessun file caricato</div>';
+  docs.forEach(d => {
+    const scad = d.scadenza ? ' — scade ' + new Date(d.scadenza).toLocaleDateString('it-IT') : '';
+    html += '<div class="agg-doc-row">'
+      + '<input type="checkbox" class="aggPropDoc" value="' + Number(d.id) + '" checked>'
+      + (d.tipo === 'FOTO' ? '<img id="aggPropFoto_' + Number(d.id) + '" class="agg-photo-preview" style="width:49px;height:59px" alt="">' : '')
+      + '<div class="agg-doc-row-info"><div class="agg-doc-row-name">' + aggEsc(AGG_DOC_LABEL[d.tipo] || d.tipo) + '</div>'
+      + '<div class="agg-doc-row-meta">' + (d.descrizione ? aggEsc(d.descrizione) + ' — ' : '') + aggEsc(d.nome_file || '') + scad + '</div></div>'
+      + '<button class="btn-sm" onclick="aggApriDocumento(' + Number(d.id) + ')">apri</button></div>';
+  });
+
+  html += '<div style="font-size:0.62rem;color:var(--testo-4);margin-top:0.5rem">Le righe non spuntate vengono scartate (i file non accettati sono eliminati). Dopo l\'approvazione il link del volontario viene chiuso.</div>'
+    + '<div class="agg-prop-actions">'
+    + '<button class="vol-form-save" onclick="aggPropostaApprova(' + Number(p.id) + ')">✓ Approva selezionati</button>'
+    + '<button class="btn-sm btn-danger" onclick="aggPropostaRifiuta(' + Number(p.id) + ')">Rifiuta</button>'
+    + '</div></div>';
+
+  setTimeout(aggCaricaFotoProposta, 0);
+  return html;
+}
+
+async function aggCaricaFotoProposta() {
+  const p = aggPropCorrente && aggPropCorrente.proposta;
+  if (!p) return;
+  for (const d of (p.documenti || []).filter(x => x.tipo === 'FOTO')) {
+    const img = document.getElementById('aggPropFoto_' + d.id);
+    if (!img) continue;
+    try { img.src = (await aggCall('doc_signed_url', { id: d.id })).url; } catch (e) { /* anteprima non disponibile */ }
+  }
+}
+
+function aggValoriSpuntati(cls) {
+  return Array.from(document.querySelectorAll('.' + cls)).filter(c => c.checked).map(c => c.value);
+}
+
+async function aggPropostaApprova(id) {
+  const campi = aggValoriSpuntati('aggPropCampo');
+  const dpi = aggValoriSpuntati('aggPropDpi').map(Number);
+  const documenti = aggValoriSpuntati('aggPropDoc').map(Number);
+  if (!confirm('Approvare la proposta?\n\n' + campi.length + ' campi, ' + dpi.length + ' DPI e ' + documenti.length + ' file verranno applicati; il resto verrà scartato.')) return;
+  const volId = aggCorrente.volontario.id;
+  try {
+    await aggCall('proposta_approva', { id, campi, dpi, documenti });
+  } catch (e) { alert('Errore: ' + e.message); }
+  try { await aggRicaricaScheda(volId); } catch (e) { alert('Errore: ' + e.message); }
+}
+
+async function aggPropostaRifiuta(id) {
+  const motivo = prompt('Rifiutare la proposta? I file caricati dal volontario verranno eliminati.\n\nMotivo (facoltativo):', '');
+  if (motivo === null) return;
+  const volId = aggCorrente.volontario.id;
+  try {
+    await aggCall('proposta_rifiuta', { id, note: motivo.trim() || null });
+  } catch (e) { alert('Errore: ' + e.message); }
+  try { await aggRicaricaScheda(volId); } catch (e) { alert('Errore: ' + e.message); }
 }
 
 // -- BLOCCO 1: ANAGRAFICA --
@@ -613,8 +863,10 @@ function aggBloccoDocumenti(v) {
 
   AGG_TIPI_DOC_SINGOLI.forEach(tipo => {
     if (tipo === 'PATENTE' && !v.patenti) return; // solo se patenti valorizzato
-    const doc = docs.find(d => d.tipo === tipo);
-    html += aggDocRigaHtml(tipo, doc);
+    // Più file per tipo possibili (es. fronte/retro caricati dal volontario col link)
+    const docsTipo = docs.filter(d => d.tipo === tipo);
+    if (!docsTipo.length) html += aggDocRigaHtml(tipo, null);
+    docsTipo.forEach(doc => { html += aggDocRigaHtml(tipo, doc); });
   });
   html += '<div style="margin:0.6rem 0 0.3rem;font-size:0.68rem;font-weight:600;color:var(--testo-3);text-transform:uppercase">Attestati e abilitazioni</div>';
   const multipli = docs.filter(d => AGG_TIPI_DOC_MULTIPLI.includes(d.tipo));

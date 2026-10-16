@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1a7a4a">
+<title>Aggiorna i tuoi dati</title>
+<!--
+  Pagina PUBBLICA per i volontari (fase 2 "Aggiornamento dati").
+  Autonoma: CSS e JS inline, nessuna dipendenza dall'area riservata, nessun
+  service worker. Parla solo con la Edge Function agg-pub, che verifica a
+  ogni chiamata token del link + data di nascita. Quello che il volontario
+  invia diventa una PROPOSTA: i dati reali cambiano solo quando un master
+  la approva dall'area riservata.
+-->
+<style>
+:root {
+  --green: #1a7a4a; --green-2: #25a863; --green-pale: #e8f5ee;
+  --red: #d92d20; --red-pale: #fdecea; --amber: #b25e00; --amber-pale: #fff4e5;
+  --blue: #0a6cdc; --blue-pale: #e8f1fc;
+  --bg: #f2f2f7; --card: #ffffff; --bg-2: #f2f2f7; --border: rgba(0,0,0,0.12);
+  --text: #111111; --text-2: #3c3c43; --text-3: #6b6b72;
+  --r: 14px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --green: #30b56c; --green-2: #3fd17f; --green-pale: rgba(48,181,108,0.15);
+    --red: #ff6b5e; --red-pale: rgba(255,107,94,0.15); --amber: #ffb340; --amber-pale: rgba(255,179,64,0.15);
+    --blue: #5aa7ff; --blue-pale: rgba(90,167,255,0.15);
+    --bg: #000000; --card: #1c1c1e; --bg-2: #2c2c2e; --border: rgba(255,255,255,0.14);
+    --text: #f2f2f7; --text-2: #d1d1d6; --text-3: #9a9aa1;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 17px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+.top { background: var(--green); color: #fff; padding: 14px 16px 12px; padding-top: max(14px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; }
+.top img { width: 40px; height: 40px; border-radius: 50%; background: #fff; object-fit: contain; flex-shrink: 0; }
+.top-t { font-weight: 700; font-size: 1rem; line-height: 1.2; }
+.top-s { font-size: 0.78rem; opacity: 0.85; }
+.prog { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; }
+.prog-bar { height: 8px; border-radius: 6px; background: var(--bg-2); overflow: hidden; }
+.prog-fill { height: 100%; background: var(--green); width: 0; transition: width 0.3s; }
+.prog-l { font-size: 0.8rem; color: var(--text-3); margin-top: 5px; display: flex; justify-content: space-between; }
+main { max-width: 560px; margin: 0 auto; padding: 16px 16px calc(110px + env(safe-area-inset-bottom)); }
+h1 { font-size: 1.45rem; margin: 6px 0 6px; line-height: 1.2; }
+h2 { font-size: 1.05rem; margin: 22px 0 8px; }
+p { margin: 0 0 12px; color: var(--text-2); }
+.card { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; border: 1px solid var(--border); }
+.f { margin-bottom: 14px; }
+.f label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
+.f input, .f select, .sel { width: 100%; font-size: 1.05rem; font-family: var(--font); padding: 13px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); -webkit-appearance: none; appearance: none; min-height: 50px; }
+.f input:focus, .f select:focus, .sel:focus { outline: none; border-color: var(--green); }
+.f.changed input { border-color: var(--blue); background: var(--blue-pale); }
+.f .was { font-size: 0.78rem; color: var(--blue); margin-top: 4px; }
+.f .hint { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; }
+.f .warn { font-size: 0.8rem; color: var(--amber); margin-top: 4px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; }
+.btn { display: block; width: 100%; min-height: 54px; font-size: 1.08rem; font-weight: 700; font-family: var(--font); border-radius: 12px; border: none; background: var(--green); color: #fff; cursor: pointer; padding: 12px 16px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.sec { background: var(--bg-2); color: var(--text); border: 1.5px solid var(--border); }
+.btn.small { min-height: 44px; font-size: 0.95rem; font-weight: 600; width: auto; display: inline-block; }
+.btn.danger { background: var(--red-pale); color: var(--red); }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom)); z-index: 10; }
+.nav-in { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; }
+.nav-in .btn.sec { flex: 0 0 34%; }
+.msg { padding: 12px 14px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 14px; }
+.msg.err { background: var(--red-pale); color: var(--red); }
+.msg.ok { background: var(--green-pale); color: var(--green); }
+.msg.info { background: var(--blue-pale); color: var(--blue); }
+.msg.warn { background: var(--amber-pale); color: var(--amber); }
+.dob { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 10px; }
+.dob input { text-align: center; font-size: 1.3rem; }
+.cat-h { font-size: 0.82rem; font-weight: 800; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 8px; }
+.capo { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+.capo-n { font-weight: 600; margin-bottom: 8px; }
+.yn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.yn button { min-height: 46px; font-size: 1rem; font-family: var(--font); font-weight: 600; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg-2); color: var(--text); cursor: pointer; }
+.yn button.on-si { background: var(--green); border-color: var(--green); color: #fff; }
+.yn button.on-no { background: var(--text-3); border-color: var(--text-3); color: #fff; }
+.capo .sel { margin-top: 8px; }
+.crop-wrap { position: relative; width: 245px; height: 295px; margin: 12px auto; border-radius: 10px; overflow: hidden; background: #000; touch-action: none; }
+.crop-wrap canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.crop-guide { position: absolute; inset: 0; pointer-events: none; }
+.crop-guide svg { width: 100%; height: 100%; }
+.zoom { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
+.zoom input { flex: 1; accent-color: var(--green); height: 32px; }
+.foto-prev { width: 98px; height: 118px; border-radius: 8px; object-fit: cover; background: var(--bg-2); border: 1px solid var(--border); display: block; }
+.slot { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-2); border-radius: 12px; margin-bottom: 10px; }
+.slot-i { flex: 1; min-width: 0; }
+.slot-t { font-weight: 600; font-size: 0.98rem; }
+.slot-m { font-size: 0.8rem; color: var(--text-3); word-break: break-word; }
+.slot-m.ok { color: var(--green); font-weight: 600; }
+.thumb { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; background: var(--card); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.slot-b { display: flex; flex-direction: column; gap: 6px; }
+.slot-b .btn { min-height: 40px; font-size: 0.88rem; padding: 6px 12px; }
+.sum li { margin-bottom: 6px; color: var(--text-2); }
+.sum .k { color: var(--text-3); }
+.chk { display: flex; gap: 12px; align-items: flex-start; font-size: 0.98rem; padding: 14px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; }
+.chk input { width: 26px; height: 26px; flex-shrink: 0; accent-color: var(--green); margin: 0; }
+details.priv { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-2); }
+details.priv summary { font-weight: 700; color: var(--text); cursor: pointer; }
+.center { text-align: center; }
+.big-ico { font-size: 3.2rem; margin: 20px 0 6px; }
+.link-btn { background: none; border: none; color: var(--blue); font-size: 0.98rem; font-family: var(--font); padding: 10px 0; cursor: pointer; text-decoration: underline; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <img src="images/logo-sezione.png" alt="">
+  <div><div class="top-t">Protezione Civile ANA</div><div class="top-s">Casale Monferrato — aggiornamento dati</div></div>
+</div>
+<div class="prog hidden" id="prog">
+  <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+  <div class="prog-l"><span id="progStep"></span><span id="progName"></span></div>
+</div>
+<main id="app"><p class="center" style="margin-top:40px">Caricamento…</p></main>
+<div class="nav hidden" id="nav"><div class="nav-in" id="navIn"></div></div>
+
+<script>
+'use strict';
+
+const PUB_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co/functions/v1/agg-pub';
+
+// Testo dell'informativa privacy: titolare e finalità li stabilisce la Sezione.
+// Sostituire questo testo provvisorio con quello ufficiale.
+const INFORMATIVA_HTML = `
+  <p><strong>Titolare del trattamento:</strong> Associazione Nazionale Alpini — Sezione di Casale Monferrato, Unità di Protezione Civile. <em>[da completare a cura della Sezione: indirizzo e contatti del titolare / referente privacy]</em></p>
+  <p><strong>Finalità:</strong> aggiornamento dell'anagrafica dei volontari, gestione di dotazioni e DPI (taglie), rilascio del tesserino e gestione dei documenti necessari all'attività di volontariato di protezione civile. <em>[da confermare a cura della Sezione]</em></p>
+  <p>I dati sono trattati solo dal personale incaricato della Sezione, conservati in archivi protetti e non sono diffusi. Quanto inviato con questo modulo viene controllato da un incaricato prima di sostituire i dati già presenti.</p>
+  <p>Puoi chiedere in ogni momento l'accesso, la rettifica o la cancellazione dei tuoi dati e gli altri diritti previsti dagli artt. 15–22 del Regolamento UE 2016/679, rivolgendoti alla Sezione.</p>`;
+
+const CAMPI = [
+  // [chiave, etichetta, tipo input, attributi extra]
+  ['cognome', 'Cognome', 'text', 'autocomplete="family-name"'],
+  ['nome', 'Nome', 'text', 'autocomplete="given-name"'],
+  ['codice_fiscale', 'Codice fiscale', 'text', 'autocapitalize="characters" maxlength="16" spellcheck="false"'],
+  ['data_nascita', 'Data di nascita', 'date', ''],
+  ['luogo_nascita', 'Comune di nascita', 'text', ''],
+  ['provincia_nascita', 'Provincia di nascita (sigla)', 'text', 'maxlength="2" autocapitalize="characters"'],
+  ['indirizzo', 'Via / Piazza', 'text', 'autocomplete="address-line1"'],
+  ['civico', 'Numero civico', 'text', ''],
+  ['cap', 'CAP', 'text', 'inputmode="numeric" maxlength="5" autocomplete="postal-code"'],
+  ['citta', 'Comune di residenza', 'text', 'autocomplete="address-level2"'],
+  ['provincia', 'Provincia (sigla)', 'text', 'maxlength="2" autocapitalize="characters"'],
+  ['telefono', 'Telefono / cellulare', 'tel', 'autocomplete="tel"'],
+  ['email', 'Email', 'email', 'autocomplete="email" autocapitalize="off"'],
+  ['titolo_studio', 'Titolo di studio', 'text', ''],
+  ['professione', 'Professione', 'text', ''],
+  ['patenti', 'Patenti di guida (es. B, C)', 'text', 'autocapitalize="characters"'],
+  ['tessera_ana', 'Numero tessera ANA', 'text', ''],
+];
+const LABEL = Object.fromEntries(CAMPI.map(c => [c[0], c[1]]));
+
+const TAGLIE = {
+  ABITO:  ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'],
+  SCARPA: Array.from({ length: 14 }, (_, i) => String(35 + i)),
+  GUANTO: ['S', 'M', 'L', 'XL', 'XXL'],
+  UNICA:  [],
+};
+const ORDINE_CATEGORIE = ['GENERICO', 'MOTOSEGHISTA', 'CUCINA', 'REGIONE PIEMONTE', 'CAPOSQUADRA'];
+
+const DOC_SEZIONI = [
+  { tipo: 'CARTA_IDENTITA', titolo: '🪪 Carta d\'identità' },
+  { tipo: 'CODICE_FISCALE', titolo: '💳 Codice fiscale (tessera sanitaria)' },
+  { tipo: 'PATENTE', titolo: '🚗 Patente di guida', soloSePatente: true },
+];
+const LATI = ['FRONTE', 'RETRO'];
+const ACCEPT_DOC = 'image/jpeg,image/png,application/pdf';
+const MAX_BYTES = 10 * 1024 * 1024;
+
+const PASSI = [
+  { id: 'anagrafica', nome: 'Dati personali' },
+  { id: 'dpi', nome: 'Taglie e DPI' },
+  { id: 'foto', nome: 'Foto tessera' },
+  { id: 'documenti', nome: 'Documenti' },
+  { id: 'riepilogo', nome: 'Riepilogo e invio' },
+];
+
+// ---------------- stato ----------------
+const S = {
+  token: null, dob: null, info: null,
+  passo: 'verifica',
+  orig: {}, dati: {},
+  dpi: {},                 // dpi_id → { ha: true|false|null, taglia }
+  catAperte: new Set(),
+  esistenti: [],           // documenti già inviati in attesa (proposta aperta)
+  foto: null,              // { blob, url } nuova foto pronta
+  slot: {},                // 'TIPO|LATO' → { file, url }
+  attestati: [],           // [{ key, tipo, descrizione, scadenza, file, url }]
+  caricati: new Set(),     // chiavi già caricate nell'invio in corso (per i "riprova")
+  privacy: false,
+  inviando: false,
+};
+
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmtData(iso) { if (!iso) return ''; const s = String(iso).slice(0, 10).split('-'); return s.length === 3 ? s[2] + '/' + s[1] + '/' + s[0] : iso; }
+function fmtDataOra(iso) { if (!iso) return ''; const d = new Date(iso); return d.toLocaleDateString('it-IT') + ' alle ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); }
+
+// ---------------- chiamate ----------------
+class ErroreLink extends Error {}
+async function chiama(action, extra) {
+  let res, data;
+  try {
+    res = await fetch(PUB_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ t: S.token, data_nascita: S.dob, action }, extra || {})),
+    });
+    data = await res.json();
+  } catch (e) { throw new Error('Connessione non riuscita. Controlla la rete e riprova.'); }
+  if (res.status === 404 || res.status === 403 && data.bloccato) throw new ErroreLink(data.error || 'Link non valido o scaduto.');
+  if (!res.ok || !data.ok) { const e = new Error(data.error || 'Errore, riprova.'); e.dati = data; throw e; }
+  return data;
+}
+async function carica(tipo, file, nomeFile, descrizione, scadenza) {
+  const fd = new FormData();
+  fd.append('t', S.token); fd.append('data_nascita', S.dob); fd.append('action', 'upload');
+  fd.append('tipo', tipo);
+  if (descrizione) fd.append('descrizione', descrizione);
+  if (scadenza) fd.append('scadenza', scadenza);
+  fd.append('file', file, nomeFile || 'file');
+  let res, data;
+  try { res = await fetch(PUB_URL, { method: 'POST', body: fd }); data = await res.json(); }
+  catch (e) { throw new Error('Connessione non riuscita durante il caricamento dei file.'); }
+  if (res.status === 404) throw new ErroreLink(data.error || 'Link non valido o scaduto.');
+  if (!res.ok || !data.ok) throw new Error(data.error || 'Caricamento non riuscito.');
+  return data.documento;
+}
+
+// ---------------- avvio ----------------
+(function avvio() {
+  const qs = new URLSearchParams(location.search);
+  let t = qs.get('t');
+  try {
+    if (t) sessionStorage.setItem('agg_t', t); else t = sessionStorage.getItem('agg_t');
+  } catch (e) { /* storage non disponibile */ }
+  // Toglie il token dalla barra degli indirizzi (resta solo in memoria/sessione)
+  if (qs.get('t')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+  S.token = t;
+  if (!t || !/^[A-Za-z0-9_-]{43}$/.test(t)) return schermataErroreLink('Link non valido o scaduto.');
+  renderVerifica();
+})();
+
+function setNav(html) { $('navIn').innerHTML = html; $('nav').classList.toggle('hidden', !html); }
+function setProg() {
+  const i = PASSI.findIndex(p => p.id === S.passo);
+  $('prog').classList.toggle('hidden', i < 0);
+  if (i < 0) return;
+  $('progFill').style.width = Math.round(((i + 1) / PASSI.length) * 100) + '%';
+  $('progStep').textContent = 'Passo ' + (i + 1) + ' di ' + PASSI.length;
+  $('progName').textContent = PASSI[i].nome;
+}
+function vai(passo) { S.passo = passo; setProg(); window.scrollTo(0, 0); ({ anagrafica: renderAnagrafica, dpi: renderDpi, foto: renderFoto, documenti: renderDocumenti, riepilogo: renderRiepilogo })[passo](); }
+function navPasso(avanti, etichetta) {
+  const i = PASSI.findIndex(p => p.id === S.passo);
+  setNav((i > 0 ? '<button class="btn sec" onclick="vai(\'' + PASSI[i - 1].id + '\')">← Indietro</button>' : '')
+    + '<button class="btn" onclick="' + avanti + '">' + (etichetta || 'Avanti →') + '</button>');
+}
+
+function schermataErroreLink(msg) {
+  S.passo = 'errore'; setProg(); setNav('');
+  $('app').innerHTML = '<div class="center"><div class="big-ico">🔒</div><h1>Link non utilizzabile</h1></div>'
+    + '<div class="msg err">' + esc(msg) + '</div>'
+    + '<p>Per motivi di sicurezza il link personale funziona solo per poco tempo e si blocca dopo troppi tentativi errati. Contatta la segreteria della Sezione per riceverne uno nuovo.</p>';
+}
+
+// ---------------- verifica identità ----------------
+function renderVerifica(errore) {
+  S.passo = 'verifica'; setProg();
+  $('app').innerHTML = '<h1>Ciao! 👋</h1>'
+    + '<p>Con questa pagina puoi controllare e aggiornare i tuoi dati di volontario: dati personali, taglie, foto per il tesserino e documenti.</p>'
+    + '<p>Per sicurezza, scrivi la tua <strong>data di nascita</strong>.</p>'
+    + (errore ? '<div class="msg err">' + esc(errore) + '</div>' : '')
+    + '<div class="card"><div class="dob">'
+    + '<div class="f"><label for="dG">Giorno</label><input id="dG" inputmode="numeric" maxlength="2" placeholder="GG" autocomplete="bday-day"></div>'
+    + '<div class="f"><label for="dM">Mese</label><input id="dM" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="bday-month"></div>'
+    + '<div class="f"><label for="dA">Anno</label><input id="dA" inputmode="numeric" maxlength="4" placeholder="AAAA" autocomplete="bday-year"></div>'
+    + '</div></div>'
+    + '<p style="font-size:0.85rem;color:var(--text-3)">Dopo 5 tentativi sbagliati il link si blocca.</p>';
+  setNav('<button class="btn" id="btnVerifica" onclick="verifica()">Continua</button>');
+  const g = $('dG'), m = $('dM'), a = $('dA');
+  g.addEventListener('input', () => { if (g.value.length === 2) m.focus(); });
+  m.addEventListener('input', () => { if (m.value.length === 2) a.focus(); });
+  a.addEventListener('keydown', e => { if (e.key === 'Enter') verifica(); });
+  g.focus();
+}
+
+async function verifica() {
+  const g = $('dG').value.trim(), m = $('dM').value.trim(), a = $('dA').value.trim();
+  if (!/^\d{1,2}$/.test(g) || !/^\d{1,2}$/.test(m) || !/^\d{4}$/.test(a)) return renderVerifica('Scrivi giorno, mese e anno (es. 07 03 1975).');
+  const iso = a + '-' + m.padStart(2, '0') + '-' + g.padStart(2, '0');
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d) || d.getDate() !== Number(g) || d.getMonth() + 1 !== Number(m)) return renderVerifica('Data non valida.');
+  const btn = $('btnVerifica'); btn.disabled = true; btn.textContent = 'Verifica…';
+  S.dob = iso;
+  try {
+    const info = await chiama('apri');
+    inizializza(info);
+    vai('anagrafica');
+  } catch (e) {
+    S.dob = null;
+    if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+    let msg = e.message;
+    if (e.dati && e.dati.tentativi_rimasti != null) msg += ' Tentativi rimasti: ' + e.dati.tentativi_rimasti + '.';
+    renderVerifica(msg);
+  }
+}
+
+function inizializza(info) {
+  S.info = info;
+  S.orig = Object.assign({}, info.volontario);
+  const p = info.proposta;
+  S.dati = {};
+  CAMPI.forEach(([k]) => {
+    const daProposta = p && p.dati && Object.prototype.hasOwnProperty.call(p.dati, k);
+    S.dati[k] = (daProposta ? p.dati[k] : S.orig[k]) ?? '';
+  });
+  S.dpi = {};
+  (info.dpi || []).forEach(r => { S.dpi[r.dpi_id] = { ha: true, taglia: r.taglia || '' }; });
+  if (p && Array.isArray(p.dpi)) p.dpi.forEach(r => { S.dpi[r.dpi_id] = { ha: r.ha, taglia: r.taglia || '' }; });
+  S.esistenti = (p && p.documenti) || [];
+  S.catAperte = new Set();
+}
+
+// ---------------- passo 1: anagrafica ----------------
+function renderAnagrafica() {
+  const p = S.info.proposta;
+  let html = '<h1>I tuoi dati</h1>';
+  if (p) html += '<div class="msg info">Hai già inviato i tuoi dati il ' + esc(fmtDataOra(p.inviata_il)) + '. Sono in attesa di controllo: puoi correggerli e inviarli di nuovo.</div>';
+  html += '<p>Controlla i dati e correggi quelli sbagliati o mancanti. I campi che modifichi diventano <span style="color:var(--blue);font-weight:600">blu</span>.</p>';
+  const gruppi = [
+    ['Chi sei', ['cognome', 'nome', 'codice_fiscale', 'data_nascita', 'luogo_nascita', 'provincia_nascita']],
+    ['Dove abiti', ['indirizzo', 'civico', 'cap', 'citta', 'provincia']],
+    ['Contatti', ['telefono', 'email']],
+    ['Altre informazioni', ['titolo_studio', 'professione', 'patenti', 'tessera_ana']],
+  ];
+  gruppi.forEach(([titolo, chiavi]) => {
+    html += '<h2>' + titolo + '</h2><div class="card">';
+    chiavi.forEach(k => {
+      const c = CAMPI.find(x => x[0] === k);
+      html += '<div class="f" id="f_' + k + '"><label for="i_' + k + '">' + esc(c[1]) + '</label>'
+        + '<input id="i_' + k + '" type="' + c[2] + '" ' + c[3] + ' value="' + esc(S.dati[k]) + '" oninput="campoCambiato(\'' + k + '\', this.value)">'
+        + '<div id="w_' + k + '"></div></div>';
+    });
+    html += '</div>';
+  });
+  $('app').innerHTML = html;
+  CAMPI.forEach(([k]) => evidenzia(k));
+  navPasso('daAnagrafica()');
+}
+
+function norm(v) { return v == null ? '' : String(v).trim(); }
+function campoCambiato(k, v) {
+  if (k === 'codice_fiscale' || k === 'provincia' || k === 'provincia_nascita') {
+    const up = v.toUpperCase();
+    if (up !== v) { const i = $('i_' + k); const pos = i.selectionStart; i.value = up; try { i.setSelectionRange(pos, pos); } catch (e) {} v = up; }
+  }
+  S.dati[k] = v;
+  evidenzia(k);
+}
+function evidenzia(k) {
+  const box = $('f_' + k), w = $('w_' + k);
+  if (!box) return;
+  const cambiato = norm(S.dati[k]) !== norm(S.orig[k]);
+  box.classList.toggle('changed', cambiato);
+  let html = '';
+  if (cambiato) html += '<div class="was">prima: ' + (norm(S.orig[k]) ? esc(k === 'data_nascita' ? fmtData(S.orig[k]) : S.orig[k]) : '<em>vuoto</em>') + '</div>';
+  if (k === 'codice_fiscale' && norm(S.dati[k]) && !cfValido(S.dati[k])) html += '<div class="warn">⚠️ Il codice fiscale non sembra corretto: controllalo.</div>';
+  if (k === 'cap' && norm(S.dati[k]) && !/^\d{5}$/.test(norm(S.dati[k]))) html += '<div class="warn">⚠️ Il CAP ha 5 cifre.</div>';
+  if (k === 'email' && norm(S.dati[k]) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(norm(S.dati[k]))) html += '<div class="warn">⚠️ Controlla l\'indirizzo email.</div>';
+  w.innerHTML = html;
+}
+function daAnagrafica() {
+  if (!norm(S.dati.cognome) || !norm(S.dati.nome)) { alert('Cognome e nome sono obbligatori.'); return; }
+  vai('dpi');
+}
+
+// Controllo formale del codice fiscale (carattere di controllo), solo avviso.
+function cfValido(cf) {
+  cf = String(cf).toUpperCase().replace(/\s/g, '');
+  if (!/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(cf)) return false;
+  const dispari = [1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23];
+  let somma = 0;
+  for (let i = 0; i < 15; i++) {
+    const c = cf.charCodeAt(i);
+    const n = c >= 65 ? c - 65 : c - 48;
+    somma += (i % 2 === 0) ? dispari[n] : n;
+  }
+  return String.fromCharCode(65 + somma % 26) === cf[15];
+}
+
+// ---------------- passo 2: taglie e DPI ----------------
+function categorieOrdinate() {
+  const tutte = Array.from(new Set((S.info.catalogo || []).map(c => c.categoria)));
+  return tutte.sort((a, b) => {
+    const ia = ORDINE_CATEGORIE.indexOf(a), ib = ORDINE_CATEGORIE.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+  });
+}
+function renderDpi() {
+  const cat = categorieOrdinate();
+  const pertinenti = new Set(S.info.categorie_suggerite || ['GENERICO']);
+  let html = '<h1>Taglie e DPI</h1><p>Per ogni capo indica se <strong>ce l\'hai già</strong> e la tua <strong>taglia</strong>.</p>';
+  if (!cat.length) html += '<div class="msg info">Nessun capo da indicare: puoi andare avanti.</div>';
+  const visibili = cat.filter(c => pertinenti.has(c) || S.catAperte.has(c));
+  const altre = cat.filter(c => !visibili.includes(c));
+  visibili.forEach(c => { html += htmlCategoria(c); });
+  if (altre.length) {
+    html += '<h2>Altre dotazioni</h2><p style="font-size:0.9rem">Se hai anche capi di queste categorie, aprile e compilale:</p>';
+    altre.forEach(c => { html += '<button class="btn sec" style="margin-bottom:8px" onclick="apriCategoria(\'' + esc(c) + '\')">+ ' + esc(c) + '</button>'; });
+  }
+  $('app').innerHTML = html;
+  navPasso('vai(\'foto\')');
+}
+function htmlCategoria(c) {
+  const capi = (S.info.catalogo || []).filter(x => x.categoria === c).sort((a, b) => (a.ordine || 0) - (b.ordine || 0));
+  let html = '<div class="cat-h">' + esc(c) + '</div>';
+  capi.forEach(capo => {
+    const st = S.dpi[capo.id] || { ha: null, taglia: '' };
+    const taglie = TAGLIE[capo.tipo_taglia] || [];
+    html += '<div class="capo" id="capo_' + capo.id + '"><div class="capo-n">' + esc(capo.nome) + '</div>'
+      + '<div class="yn"><button class="' + (st.ha === true ? 'on-si' : '') + '" onclick="setHa(' + capo.id + ', true)">Ce l\'ho</button>'
+      + '<button class="' + (st.ha === false ? 'on-no' : '') + '" onclick="setHa(' + capo.id + ', false)">Non ce l\'ho</button></div>';
+    if (st.ha === true && taglie.length) {
+      html += '<select class="sel" onchange="setTaglia(' + capo.id + ', this.value)" aria-label="Taglia ' + esc(capo.nome) + '">'
+        + '<option value="">Scegli la taglia…</option>'
+        + taglie.map(t => '<option value="' + t + '"' + (st.taglia === t ? ' selected' : '') + '>' + t + '</option>').join('')
+        + '</select>';
+    }
+    html += '</div>';
+  });
+  return html;
+}
+function apriCategoria(c) { S.catAperte.add(c); renderDpi(); const el = Array.from(document.querySelectorAll('.cat-h')).find(x => x.textContent === c); if (el) el.scrollIntoView({ block: 'start' }); }
+function setHa(id, ha) {
+  const st = S.dpi[id] || { ha: null, taglia: '' };
+  st.ha = (st.ha === ha) ? null : ha;
+  S.dpi[id] = st;
+  const y = window.scrollY; renderDpi(); window.scrollTo(0, y);
+}
+function setTaglia(id, t) { (S.dpi[id] = S.dpi[id] || { ha: true, taglia: '' }).taglia = t; }
+
+// ---------------- passo 3: foto ----------------
+const crop = { img: null, base: 1, zoom: 1, x: 0, y: 0, drag: null };
+function fotoEsistente() { return S.esistenti.find(d => d.tipo === 'FOTO'); }
+function renderFoto() {
+  const es = fotoEsistente();
+  let html = '<h1>Foto per il tesserino</h1>'
+    + '<p>Serve una foto recente, a colori, di <strong>viso e spalle</strong>, guardando dritto, su sfondo chiaro. Il viso deve riempire quasi tutta la foto (70–80%).</p>';
+  if (S.foto) {
+    html += '<div class="card" style="display:flex;gap:14px;align-items:center"><img class="foto-prev" src="' + S.foto.url + '" alt="foto scelta">'
+      + '<div><div class="slot-m ok">✓ Foto pronta</div><div class="slot-m">' + (S.foto.blob.size / 1024).toFixed(0) + ' KB</div>'
+      + '<button class="btn sec small" style="margin-top:8px" onclick="scegliFoto()">Cambia foto</button></div></div>';
+  } else if (es) {
+    html += '<div class="msg ok">✓ Hai già inviato una foto. Puoi sostituirla se vuoi.</div>'
+      + '<button class="btn sec" onclick="scegliFoto()">📷 Sostituisci foto</button>';
+  } else {
+    html += '<button class="btn" onclick="scegliFoto()">📷 Scatta o scegli una foto</button>';
+  }
+  html += '<input type="file" accept="image/*" id="fotoInput" class="hidden" onchange="fotoScelta(this)">'
+    + '<div id="cropArea" class="hidden card" style="margin-top:14px">'
+    + '<div style="font-size:0.9rem;color:var(--text-2);text-align:center">Trascina la foto e usa lo zoom per far stare il viso dentro l\'ovale.</div>'
+    + '<div class="crop-wrap"><canvas id="cropCanvas" width="196" height="236"></canvas>'
+    + '<div class="crop-guide"><svg viewBox="0 0 196 236" preserveAspectRatio="none"><ellipse cx="98" cy="100" rx="56" ry="68" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.5" stroke-dasharray="4 3"/></svg></div></div>'
+    + '<div class="zoom"><span>➖</span><input type="range" id="cropZoom" min="100" max="400" value="100" oninput="crop.zoom=this.value/100;ridisegna()" aria-label="Zoom"><span>➕</span></div>'
+    + '<div id="cropInfo" class="slot-m center" style="margin-bottom:10px"></div>'
+    + '<button class="btn" onclick="confermaFoto()">Usa questa foto</button></div>';
+  $('app').innerHTML = html;
+  navPasso('vai(\'documenti\')', (S.foto || es) ? 'Avanti →' : 'Salta per ora →');
+}
+function scegliFoto() { $('fotoInput').click(); }
+function fotoScelta(input) {
+  const f = input.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    crop.img = img; crop.base = Math.max(196 / img.naturalWidth, 236 / img.naturalHeight);
+    crop.zoom = 1; crop.x = 0; crop.y = 0;
+    $('cropZoom').value = 100; $('cropArea').classList.remove('hidden'); $('cropInfo').textContent = '';
+    ridisegna(); attivaDrag();
+    $('cropArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  img.onerror = () => alert('Non riesco a leggere questa immagine. Prova con un\'altra foto.');
+  img.src = URL.createObjectURL(f);
+}
+function ridisegna() {
+  const cv = $('cropCanvas'); if (!cv || !crop.img) return;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 196, 236);
+  const sc = crop.base * crop.zoom, w = crop.img.naturalWidth * sc, h = crop.img.naturalHeight * sc;
+  const mx = Math.max(0, (w - 196) / 2), my = Math.max(0, (h - 236) / 2);
+  crop.x = Math.max(-mx, Math.min(mx, crop.x)); crop.y = Math.max(-my, Math.min(my, crop.y));
+  ctx.drawImage(crop.img, 98 - w / 2 + crop.x, 118 - h / 2 + crop.y, w, h);
+}
+function attivaDrag() {
+  const cv = $('cropCanvas'); if (cv._b) return; cv._b = true;
+  cv.addEventListener('pointerdown', e => { crop.drag = { x: e.clientX, y: e.clientY, px: crop.x, py: crop.y }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointermove', e => {
+    if (!crop.drag) return;
+    const r = 196 / cv.getBoundingClientRect().width;
+    crop.x = crop.drag.px + (e.clientX - crop.drag.x) * r; crop.y = crop.drag.py + (e.clientY - crop.drag.y) * r; ridisegna();
+  });
+  const fine = () => { crop.drag = null; };
+  cv.addEventListener('pointerup', fine); cv.addEventListener('pointercancel', fine);
+}
+async function jpegSotto(canvas, max) {
+  for (let q = 0.92; q >= 0.4; q -= 0.08) {
+    const b = await new Promise(r => canvas.toBlob(r, 'image/jpeg', q));
+    if (b && b.size < max) return b;
+  }
+  return null;
+}
+async function confermaFoto() {
+  const info = $('cropInfo'); info.textContent = 'Elaborazione…';
+  const cv = $('cropCanvas');
+  let blob = await jpegSotto(cv, 50 * 1024);
+  if (!blob) {
+    const small = document.createElement('canvas'); small.width = 98; small.height = 118;
+    small.getContext('2d').drawImage(cv, 0, 0, 98, 118);
+    blob = await jpegSotto(small, 50 * 1024);
+  }
+  if (!blob) { info.textContent = 'Foto troppo pesante, prova con un\'altra.'; return; }
+  if (S.foto) URL.revokeObjectURL(S.foto.url);
+  S.foto = { blob, url: URL.createObjectURL(blob) };
+  S.caricati.delete('FOTO');
+  renderFoto();
+}
+
+// ---------------- passo 4: documenti ----------------
+function patenteIndicata() { return norm(S.dati.patenti) !== ''; }
+function esistenteSlot(tipo, lato) { return S.esistenti.find(d => d.tipo === tipo && (d.descrizione || 'FRONTE') === lato); }
+function contaFile() {
+  const nuoviSlot = Object.keys(S.slot).filter(k => S.slot[k]);
+  let n = S.esistenti.length + S.attestati.length + nuoviSlot.length + (S.foto ? 1 : 0);
+  nuoviSlot.forEach(k => { const [t, l] = k.split('|'); if (esistenteSlot(t, l)) n--; });
+  if (S.foto && fotoEsistente()) n--;
+  return n;
+}
+function renderDocumenti() {
+  let html = '<h1>Documenti</h1><p>Fotografa o carica i documenti (JPG, PNG o PDF, massimo 10 MB ciascuno). Il retro serve solo se il documento ne ha uno.</p>';
+  DOC_SEZIONI.forEach(sez => {
+    if (sez.soloSePatente && !patenteIndicata()) return;
+    html += '<h2>' + sez.titolo + '</h2>';
+    LATI.forEach(lato => { html += htmlSlot(sez.tipo, lato); });
+  });
+  html += '<h2>📜 Attestati e abilitazioni</h2>'
+    + '<p style="font-size:0.9rem">Ad esempio corsi di protezione civile, antincendio, primo soccorso, motosega, HACCP.</p>';
+  S.esistenti.filter(d => d.tipo === 'ATTESTATO' || d.tipo === 'ABILITAZIONE').forEach(d => {
+    html += '<div class="slot"><div class="thumb">📄</div><div class="slot-i"><div class="slot-t">' + esc(d.descrizione || (d.tipo === 'ATTESTATO' ? 'Attestato' : 'Abilitazione')) + '</div>'
+      + '<div class="slot-m ok">✓ già inviato' + (d.scadenza ? ' — scade il ' + esc(fmtData(d.scadenza)) : '') + '</div></div>'
+      + '<div class="slot-b"><button class="btn danger" onclick="rimuoviEsistente(' + Number(d.id) + ')">Rimuovi</button></div></div>';
+  });
+  S.attestati.forEach(a => {
+    html += '<div class="slot">' + thumbHtml(a.file, a.url) + '<div class="slot-i"><div class="slot-t">' + esc(a.descrizione) + '</div>'
+      + '<div class="slot-m">' + (a.tipo === 'ATTESTATO' ? 'Attestato' : 'Abilitazione') + (a.scadenza ? ' — scade il ' + esc(fmtData(a.scadenza)) : '') + '</div></div>'
+      + '<div class="slot-b"><button class="btn danger" onclick="rimuoviAttestato(\'' + a.key + '\')">Rimuovi</button></div></div>';
+  });
+  html += '<div class="card" id="nuovoAtt">'
+    + '<div class="f"><label for="attTipo">Tipo</label><select id="attTipo"><option value="ATTESTATO">Attestato di un corso</option><option value="ABILITAZIONE">Abilitazione / patentino</option></select></div>'
+    + '<div class="f"><label for="attDesc">Descrizione</label><input id="attDesc" placeholder="es. Corso antincendio rischio medio"></div>'
+    + '<div class="f"><label for="attScad">Scadenza (se c\'è)</label><input id="attScad" type="date"></div>'
+    + '<input type="file" accept="' + ACCEPT_DOC + '" id="attFile" class="hidden" onchange="aggiungiAttestato(this)">'
+    + '<button class="btn sec" onclick="if(!document.getElementById(\'attDesc\').value.trim()){alert(\'Scrivi prima una descrizione.\');return;}document.getElementById(\'attFile\').click()">+ Aggiungi attestato</button></div>'
+    + '<p style="font-size:0.85rem;color:var(--text-3)">File in totale: ' + contaFile() + ' su ' + ((S.info.limiti && S.info.limiti.max_file) || 15) + '.</p>';
+  $('app').innerHTML = html;
+  navPasso('vai(\'riepilogo\')');
+}
+function thumbHtml(file, url) {
+  return (file && file.type !== 'application/pdf' && url) ? '<img class="thumb" src="' + url + '" alt="">' : '<div class="thumb">📄</div>';
+}
+function htmlSlot(tipo, lato) {
+  const key = tipo + '|' + lato;
+  const nuovo = S.slot[key];
+  const es = esistenteSlot(tipo, lato);
+  const titolo = lato === 'FRONTE' ? 'Fronte' : 'Retro';
+  let stato, bottoni;
+  if (nuovo) {
+    stato = '<div class="slot-m">' + esc(nuovo.file.name) + ' — ' + (nuovo.file.size / 1024 / 1024).toFixed(1) + ' MB</div>';
+    bottoni = '<button class="btn sec" onclick="scegliSlot(\'' + key + '\')">Cambia</button><button class="btn danger" onclick="togliSlot(\'' + key + '\')">Rimuovi</button>';
+  } else if (es) {
+    stato = '<div class="slot-m ok">✓ già inviato</div>';
+    bottoni = '<button class="btn sec" onclick="scegliSlot(\'' + key + '\')">Sostituisci</button><button class="btn danger" onclick="rimuoviEsistente(' + Number(es.id) + ')">Rimuovi</button>';
+  } else {
+    stato = '<div class="slot-m">' + (lato === 'RETRO' ? 'facoltativo' : 'non caricato') + '</div>';
+    bottoni = '<button class="btn" onclick="scegliSlot(\'' + key + '\')">Carica</button>';
+  }
+  return '<div class="slot">' + (nuovo ? thumbHtml(nuovo.file, nuovo.url) : '<div class="thumb">' + (es ? '✅' : '📄') + '</div>')
+    + '<div class="slot-i"><div class="slot-t">' + titolo + '</div>' + stato + '</div>'
+    + '<div class="slot-b">' + bottoni + '</div>'
+    + '<input type="file" accept="' + ACCEPT_DOC + '" id="in_' + key + '" class="hidden" onchange="slotScelto(\'' + key + '\', this)"></div>';
+}
+function scegliSlot(key) { $('in_' + key).click(); }
+
+// Le foto dei documenti scattate col telefono possono pesare molto: le
+// riduciamo (lato lungo max 2000 px, JPG) prima dell'invio.
+async function preparaFile(file) {
+  const tipo = (file.type || '').toLowerCase();
+  if (!['image/jpeg', 'image/png', 'application/pdf'].includes(tipo)) {
+    if (tipo.startsWith('image/')) { const r = await riduciImmagine(file); if (r) return r; }
+    throw new Error('Formato non ammesso: usa JPG, PNG o PDF.');
+  }
+  if (tipo !== 'application/pdf' && file.size > 1.5 * 1024 * 1024) { const r = await riduciImmagine(file); if (r && r.size < file.size) return r; }
+  if (file.size > MAX_BYTES) throw new Error('Il file supera i 10 MB.');
+  return file;
+}
+function riduciImmagine(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(b => resolve(b ? new File([b], 'documento.jpg', { type: 'image/jpeg' }) : null), 'image/jpeg', 0.85);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => resolve(null);
+    img.src = URL.createObjectURL(file);
+  });
+}
+function limiteRaggiunto(sostituisce) {
+  const max = (S.info.limiti && S.info.limiti.max_file) || 15;
+  if (contaFile() + (sostituisce ? 0 : 1) > max) { alert('Puoi inviare al massimo ' + max + ' file.'); return true; }
+  return false;
+}
+async function slotScelto(key, input) {
+  const f = input.files[0]; if (!f) return;
+  const [t, l] = key.split('|');
+  if (limiteRaggiunto(!!S.slot[key] || !!esistenteSlot(t, l))) return;
+  try {
+    const file = await preparaFile(f);
+    if (S.slot[key] && S.slot[key].url) URL.revokeObjectURL(S.slot[key].url);
+    S.slot[key] = { file, url: file.type !== 'application/pdf' ? URL.createObjectURL(file) : null };
+    S.caricati.delete(key);
+  } catch (e) { alert(e.message); }
+  renderDocumenti();
+}
+function togliSlot(key) { if (S.slot[key] && S.slot[key].url) URL.revokeObjectURL(S.slot[key].url); delete S.slot[key]; renderDocumenti(); }
+async function aggiungiAttestato(input) {
+  const f = input.files[0]; if (!f) return;
+  if (limiteRaggiunto(false)) return;
+  try {
+    const file = await preparaFile(f);
+    S.attestati.push({
+      key: 'ATT' + Date.now(), tipo: $('attTipo').value, descrizione: $('attDesc').value.trim().slice(0, 150),
+      scadenza: $('attScad').value || null, file, url: file.type !== 'application/pdf' ? URL.createObjectURL(file) : null,
+    });
+  } catch (e) { alert(e.message); }
+  renderDocumenti();
+}
+function rimuoviAttestato(key) { S.attestati = S.attestati.filter(a => a.key !== key); renderDocumenti(); }
+async function rimuoviEsistente(id) {
+  if (!confirm('Rimuovere questo file già inviato?')) return;
+  try {
+    await chiama('doc_rimuovi', { id });
+    S.esistenti = S.esistenti.filter(d => d.id !== id);
+  } catch (e) {
+    if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+    alert(e.message);
+  }
+  if (S.passo === 'foto') renderFoto(); else renderDocumenti();
+}
+
+// ---------------- passo 5: riepilogo e invio ----------------
+function modifiche() { return CAMPI.filter(([k]) => norm(S.dati[k]) !== norm(S.orig[k])).map(([k]) => k); }
+function dpiCompilati() { return Object.keys(S.dpi).filter(id => S.dpi[id].ha !== null); }
+function renderRiepilogo(errore) {
+  const mod = modifiche();
+  const dpi = dpiCompilati();
+  const senzaTaglia = dpi.filter(id => {
+    const capo = (S.info.catalogo || []).find(c => String(c.id) === String(id));
+    return capo && S.dpi[id].ha && (TAGLIE[capo.tipo_taglia] || []).length && !S.dpi[id].taglia;
+  });
+  const nuoviDoc = Object.keys(S.slot).filter(k => S.slot[k]).length + S.attestati.length;
+  let html = '<h1>Riepilogo</h1><p>Controlla cosa stai per inviare. Un incaricato della Sezione verificherà i dati prima di aggiornarli.</p>';
+  if (errore) html += '<div class="msg err">' + esc(errore) + '</div>';
+  html += '<div class="card"><ul class="sum" style="padding-left:18px;margin:0">';
+  html += '<li><strong>Dati personali:</strong> ' + (mod.length ? mod.length + ' modifiche' : 'nessuna modifica') + '</li>';
+  if (mod.length) {
+    html += '<ul style="padding-left:16px;margin:4px 0 8px">' + mod.map(k => '<li><span class="k">' + esc(LABEL[k]) + ':</span> ' + esc(k === 'data_nascita' ? fmtData(S.dati[k]) : S.dati[k]) + '</li>').join('') + '</ul>';
+  }
+  html += '<li><strong>Taglie e DPI:</strong> ' + dpi.length + ' capi indicati' + (senzaTaglia.length ? ' <span style="color:var(--amber)">(' + senzaTaglia.length + ' senza taglia)</span>' : '') + '</li>';
+  html += '<li><strong>Foto:</strong> ' + (S.foto ? 'nuova foto pronta' : (fotoEsistente() ? 'già inviata' : '<span style="color:var(--amber)">non caricata</span>')) + '</li>';
+  html += '<li><strong>Documenti:</strong> ' + (nuoviDoc ? nuoviDoc + ' nuovi file' : 'nessun nuovo file') + (S.esistenti.filter(d => d.tipo !== 'FOTO').length ? ', ' + S.esistenti.filter(d => d.tipo !== 'FOTO').length + ' già inviati' : '') + '</li>';
+  html += '</ul></div>';
+  html += '<h2>Informativa privacy</h2><details class="priv"><summary>Leggi l\'informativa</summary>' + INFORMATIVA_HTML + '</details>'
+    + '<label class="chk"><input type="checkbox" id="priv" ' + (S.privacy ? 'checked' : '') + ' onchange="S.privacy=this.checked;document.getElementById(\'btnInvia\').disabled=!this.checked"> <span>Ho letto l\'informativa sul trattamento dei dati personali.</span></label>'
+    + '<div id="stato" style="margin-top:14px"></div>';
+  $('app').innerHTML = html;
+  const i = PASSI.findIndex(p => p.id === 'riepilogo');
+  setNav('<button class="btn sec" onclick="vai(\'' + PASSI[i - 1].id + '\')">← Indietro</button>'
+    + '<button class="btn" id="btnInvia" onclick="invia()" ' + (S.privacy ? '' : 'disabled') + '>Invia</button>');
+}
+
+async function invia() {
+  if (S.inviando || !S.privacy) return;
+  S.inviando = true;
+  const btn = $('btnInvia'); btn.disabled = true; btn.textContent = 'Invio…';
+  const stato = $('stato');
+  const mostra = t => { stato.innerHTML = '<div class="msg info">' + esc(t) + '</div>'; };
+  try {
+    mostra('Invio dei dati…');
+    const dati = {};
+    CAMPI.forEach(([k]) => { dati[k] = norm(S.dati[k]) || null; });
+    const dpi = dpiCompilati().map(id => ({ dpi_id: Number(id), ha: S.dpi[id].ha, taglia: S.dpi[id].ha ? (S.dpi[id].taglia || null) : null }));
+    await chiama('invia', { dati, dpi, privacy: true });
+
+    const coda = [];
+    if (S.foto) coda.push({ key: 'FOTO', run: () => carica('FOTO', S.foto.blob, 'foto.jpg') });
+    Object.keys(S.slot).filter(k => S.slot[k]).forEach(k => {
+      const [tipo, lato] = k.split('|');
+      if (tipo === 'PATENTE' && !patenteIndicata()) return;
+      coda.push({ key: k, run: () => carica(tipo, S.slot[k].file, S.slot[k].file.name, lato) });
+    });
+    S.attestati.forEach(a => coda.push({ key: a.key, run: () => carica(a.tipo, a.file, a.file.name, a.descrizione, a.scadenza) }));
+
+    const daFare = coda.filter(c => !S.caricati.has(c.key));
+    for (let n = 0; n < daFare.length; n++) {
+      mostra('Caricamento file ' + (n + 1) + ' di ' + daFare.length + '…');
+      await daFare[n].run();
+      S.caricati.add(daFare[n].key);
+    }
+    renderFatto();
+  } catch (e) {
+    S.inviando = false;
+    if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+    stato.innerHTML = '<div class="msg err">' + esc(e.message) + '<br>Premi di nuovo <strong>Invia</strong> per riprovare: i file già caricati non verranno ripetuti.</div>';
+    btn.disabled = false; btn.textContent = 'Riprova invio';
+    return;
+  }
+  S.inviando = false;
+}
+
+function renderFatto() {
+  S.passo = 'fatto'; setProg(); setNav('');
+  const scade = S.info.scade_il ? new Date(S.info.scade_il).toLocaleDateString('it-IT') : '';
+  $('app').innerHTML = '<div class="center"><div class="big-ico">✅</div><h1>Grazie, dati inviati!</h1></div>'
+    + '<div class="msg ok">Un incaricato della Sezione controllerà quello che hai inviato e aggiornerà la tua scheda.</div>'
+    + '<p>Se ti accorgi di un errore puoi riaprire questo stesso link e correggere' + (scade ? ', fino al <strong>' + esc(scade) + '</strong>' : '') + ', finché i dati non vengono approvati.</p>'
+    + '<button class="btn sec" onclick="ricomincia()">Correggi i dati inviati</button>';
+}
+async function ricomincia() {
+  try {
+    const info = await chiama('apri');
+    S.foto = null; S.slot = {}; S.attestati = []; S.caricati = new Set(); S.privacy = false;
+    inizializza(info);
+    vai('anagrafica');
+  } catch (e) {
+    if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+    alert(e.message);
+  }
+}
+</script>
+</body>
+</html>

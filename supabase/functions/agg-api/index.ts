@@ -26,6 +26,32 @@ const BUCKET = 'agg-privato';
 const TIPI_DOCUMENTO = ['FOTO', 'CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE', 'ATTESTATO', 'ABILITAZIONE'];
 const TIPI_TAGLIA = ['ABITO', 'SCARPA', 'GUANTO', 'UNICA'];
 
+// Documenti "effettivi" del volontario: esclude quelli caricati dal volontario
+// tramite link (fase 2) e ancora in attesa di approvazione (stato IN_ATTESA).
+const FILTRO_DOC_ATTIVI = 'or=(stato.is.null,stato.not.in.(IN_ATTESA,RIFIUTATO))';
+
+// Fase 2 — link personale per i volontari (vedi agg-pub).
+const LINK_BASE_URL = 'https://pcanacasale.com/aggiorna.html?t=';
+const LINK_DURATA_GIORNI = 14;
+const LINK_MAX_TENTATIVI = 5;
+
+// Campi che il volontario può proporre (devono coincidere con CAMPI_PUB in agg-pub).
+const CAMPI_PROPOSTA = [
+  'cognome', 'nome', 'codice_fiscale', 'data_nascita', 'luogo_nascita', 'provincia_nascita',
+  'indirizzo', 'civico', 'cap', 'citta', 'provincia', 'telefono', 'email',
+  'titolo_studio', 'professione', 'patenti', 'tessera_ana',
+];
+
+function bytesToBase64Url(b: Uint8Array): string {
+  let bin = '';
+  b.forEach(x => { bin += String.fromCharCode(x); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Campi di agg_volontari considerati "obbligatori" ai fini della barra di
 // completezza (blocco Anagrafica). Elenco regolabile: non è specificato nello
 // spec quali campi siano davvero obbligatori, questa è la lista di partenza.
@@ -173,7 +199,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       const [volRes, dpiRes, docRes, catRes] = await Promise.all([
         fetch(`${SUPA_URL}/rest/v1/agg_volontari?select=*&order=cognome.asc,nome.asc`, { headers: HSRV }),
         fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?select=*`, { headers: HSRV }),
-        fetch(`${SUPA_URL}/rest/v1/agg_documenti?select=id,volontario_id,tipo`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_documenti?select=id,volontario_id,tipo&${FILTRO_DOC_ATTIVI}`, { headers: HSRV }),
         fetch(`${SUPA_URL}/rest/v1/agg_dpi_catalogo?select=id,categoria`, { headers: HSRV }),
       ]);
       const vols = await volRes.json();
@@ -223,7 +249,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
 
       const [dpiRes, docRes, catRes] = await Promise.all([
         fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?volontario_id=eq.${id}&select=*`, { headers: HSRV }),
-        fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${id}&select=id,tipo,descrizione,scadenza,nome_file,caricato_il&order=caricato_il.desc`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${id}&${FILTRO_DOC_ATTIVI}&select=id,tipo,descrizione,scadenza,nome_file,caricato_il&order=caricato_il.desc`, { headers: HSRV }),
         fetch(`${SUPA_URL}/rest/v1/agg_dpi_catalogo?select=*&order=categoria.asc,ordine.asc`, { headers: HSRV }),
       ]);
       const dpiRows = await dpiRes.json();
@@ -383,7 +409,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         if (Array.isArray(omonimi) && omonimi.length) nomeFile = nomeFotoPIA(v.cognome, v.nome).replace(/\.jpg$/, '_' + volontarioId + '.jpg');
 
         // Una sola foto attiva: elimina l'eventuale documento FOTO precedente.
-        const vecchiRes = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${volontarioId}&tipo=eq.FOTO&select=id,storage_path`, { headers: HSRV });
+        const vecchiRes = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${volontarioId}&tipo=eq.FOTO&${FILTRO_DOC_ATTIVI}&select=id,storage_path`, { headers: HSRV });
         const vecchi = await vecchiRes.json();
         for (const d of (vecchi || [])) {
           await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${d.storage_path}`, { method: 'DELETE', headers: HSRV });
@@ -398,7 +424,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
 
         const insRes = await fetch(`${SUPA_URL}/rest/v1/agg_documenti`, {
           method: 'POST', headers: { ...HSRVJ, Prefer: 'return=representation' },
-          body: JSON.stringify({ volontario_id: volontarioId, tipo: 'FOTO', nome_file: nomeFile, storage_path: storagePath, caricato_il: new Date().toISOString() }),
+          body: JSON.stringify({ volontario_id: volontarioId, tipo: 'FOTO', nome_file: nomeFile, storage_path: storagePath, caricato_il: new Date().toISOString(), stato: 'OK' }),
         });
         if (!insRes.ok) return jsonResponse({ ok: false, error: 'errore salvataggio record: ' + await insRes.text() }, 500);
         const doc = (await insRes.json())[0];
@@ -423,7 +449,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         method: 'POST', headers: { ...HSRVJ, Prefer: 'return=representation' },
         body: JSON.stringify({
           volontario_id: volontarioId, tipo, descrizione: p.descrizione || null, scadenza: p.scadenza || null,
-          nome_file: p.nome_file || nomeOriginale, storage_path: storagePath, caricato_il: new Date().toISOString(),
+          nome_file: p.nome_file || nomeOriginale, storage_path: storagePath, caricato_il: new Date().toISOString(), stato: 'OK',
         }),
       });
       if (!insRes.ok) return jsonResponse({ ok: false, error: 'errore salvataggio record: ' + await insRes.text() }, 500);
@@ -475,6 +501,228 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
 
       await logAccesso(master!.nome + ' ha scaricato/visualizzato un documento (' + doc.tipo + ') del volontario #' + doc.volontario_id);
       return jsonResponse({ ok: true, url, expires_in: 60, nome_file: doc.nome_file });
+    }
+
+    // ============================================================
+    // FASE 2 — LINK PERSONALE: genera (il token in chiaro esce una volta sola)
+    // ============================================================
+    if (action === 'link_genera') {
+      const volontarioId = Number(payload?.volontario_id);
+      if (!volontarioId) return jsonResponse({ ok: false, error: 'id mancante' }, 400);
+      const v = await getVolontario(volontarioId);
+      if (!v) return jsonResponse({ ok: false, error: 'volontario non trovato' }, 404);
+      if (!v.data_nascita) return jsonResponse({ ok: false, error: 'serve la data di nascita in anagrafica: il volontario la usa per identificarsi' }, 400);
+
+      // Un solo link attivo per volontario: revoca gli eventuali precedenti.
+      await fetch(`${SUPA_URL}/rest/v1/agg_link?volontario_id=eq.${volontarioId}&revocato=not.is.true`, {
+        method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ revocato: true }),
+      });
+
+      const token = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+      const scadeIl = new Date(Date.now() + LINK_DURATA_GIORNI * 86400000).toISOString();
+      const ins = await fetch(`${SUPA_URL}/rest/v1/agg_link`, {
+        method: 'POST', headers: { ...HSRVJ, Prefer: 'return=representation' },
+        body: JSON.stringify({
+          volontario_id: volontarioId, token_hash: await sha256Hex(token), creato_il: new Date().toISOString(),
+          creato_da: master!.nome, scade_il: scadeIl, revocato: false, tentativi_falliti: 0, usi: 0,
+        }),
+      });
+      if (!ins.ok) return jsonResponse({ ok: false, error: 'errore creazione link: ' + await ins.text() }, 500);
+      await logAttivita(master!.nome + ' ha generato il link di aggiornamento dati per ' + v.cognome + ' ' + v.nome);
+      return jsonResponse({ ok: true, url: LINK_BASE_URL + token, scade_il: scadeIl, telefono: v.telefono || null, nome: v.nome, cognome: v.cognome });
+    }
+
+    if (action === 'link_revoca') {
+      const volontarioId = Number(payload?.volontario_id);
+      if (!volontarioId) return jsonResponse({ ok: false, error: 'id mancante' }, 400);
+      const r = await fetch(`${SUPA_URL}/rest/v1/agg_link?volontario_id=eq.${volontarioId}&revocato=not.is.true`, {
+        method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ revocato: true }),
+      });
+      if (!r.ok) return jsonResponse({ ok: false, error: 'errore revoca: ' + await r.text() }, 500);
+      await logAttivita(master!.nome + ' ha revocato il link di aggiornamento dati del volontario #' + volontarioId);
+      return jsonResponse({ ok: true });
+    }
+
+    // ============================================================
+    // FASE 2 — PROPOSTE dei volontari
+    // ============================================================
+    if (action === 'proposte_lista') {
+      const r = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?stato=eq.DA_APPROVARE&select=id,volontario_id,creato_il,inviata_il&order=inviata_il.desc`, { headers: HSRV });
+      const arr = await r.json();
+      return jsonResponse({ ok: true, proposte: Array.isArray(arr) ? arr : [] });
+    }
+
+    // Stato del link + eventuale proposta in attesa, con confronto campo per campo.
+    if (action === 'proposta_dettaglio') {
+      const volontarioId = Number(payload?.volontario_id);
+      if (!volontarioId) return jsonResponse({ ok: false, error: 'id mancante' }, 400);
+      const v = await getVolontario(volontarioId);
+      if (!v) return jsonResponse({ ok: false, error: 'volontario non trovato' }, 404);
+
+      const [linkRes, propRes] = await Promise.all([
+        fetch(`${SUPA_URL}/rest/v1/agg_link?volontario_id=eq.${volontarioId}&select=id,creato_il,creato_da,scade_il,revocato,tentativi_falliti,ultimo_accesso,usi&order=creato_il.desc&limit=1`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_proposte?volontario_id=eq.${volontarioId}&stato=eq.DA_APPROVARE&select=*&order=creato_il.desc&limit=1`, { headers: HSRV }),
+      ]);
+      const linkArr = await linkRes.json();
+      const propArr = await propRes.json();
+      const l = Array.isArray(linkArr) && linkArr.length ? linkArr[0] : null;
+      const link = l ? {
+        ...l,
+        bloccato: (l.tentativi_falliti || 0) >= LINK_MAX_TENTATIVI,
+        scaduto: new Date(l.scade_il).getTime() < Date.now(),
+        attivo: !l.revocato && (l.tentativi_falliti || 0) < LINK_MAX_TENTATIVI && new Date(l.scade_il).getTime() >= Date.now(),
+      } : null;
+
+      const p = Array.isArray(propArr) && propArr.length ? propArr[0] : null;
+      if (!p) return jsonResponse({ ok: true, link, proposta: null });
+
+      const norm = (x: unknown) => (x === null || x === undefined) ? '' : String(x).trim();
+      const datiProp = p.dati || {};
+      const campi = CAMPI_PROPOSTA
+        .filter(k => k in datiProp)
+        .map(k => ({
+          campo: k,
+          attuale: k === 'data_nascita' && v[k] ? String(v[k]).slice(0, 10) : (v[k] ?? null),
+          proposto: datiProp[k] ?? null,
+        }))
+        .filter(c => norm(c.attuale) !== norm(c.proposto));
+
+      const [catRes, dpiRes, docRes] = await Promise.all([
+        fetch(`${SUPA_URL}/rest/v1/agg_dpi_catalogo?select=id,categoria,nome,tipo_taglia`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?volontario_id=eq.${volontarioId}&select=dpi_id,taglia,consegnato`, { headers: HSRV }),
+        fetch(`${SUPA_URL}/rest/v1/agg_documenti?proposta_id=eq.${p.id}&stato=eq.IN_ATTESA&select=id,tipo,descrizione,scadenza,nome_file,caricato_il&order=caricato_il.asc`, { headers: HSRV }),
+      ]);
+      const catalogo = await catRes.json();
+      const dpiAttuali = await dpiRes.json();
+      const catById: Record<number, any> = {};
+      (catalogo || []).forEach((c: any) => { catById[c.id] = c; });
+      const dpi = (Array.isArray(p.dpi) ? p.dpi : [])
+        .map((r: any) => {
+          const att = (dpiAttuali || []).find((d: any) => d.dpi_id === r.dpi_id);
+          return {
+            dpi_id: r.dpi_id, nome: catById[r.dpi_id]?.nome || ('capo #' + r.dpi_id), categoria: catById[r.dpi_id]?.categoria || '',
+            attuale: att ? { ha: true, taglia: att.taglia || null } : { ha: false, taglia: null },
+            proposto: { ha: !!r.ha, taglia: r.taglia || null },
+          };
+        })
+        .filter((r: any) => r.attuale.ha !== r.proposto.ha || (r.proposto.ha && norm(r.attuale.taglia) !== norm(r.proposto.taglia)));
+
+      await logAccesso(master!.nome + ' ha consultato la proposta di aggiornamento di ' + v.cognome + ' ' + v.nome);
+      return jsonResponse({
+        ok: true, link,
+        proposta: {
+          id: p.id, creato_il: p.creato_il, inviata_il: p.inviata_il || p.creato_il,
+          privacy_accettata_il: datiProp._privacy_accettata_il || null,
+          campi, dpi, documenti: await docRes.json(),
+        },
+      });
+    }
+
+    if (action === 'proposta_approva' || action === 'proposta_rifiuta') {
+      const id = Number(payload?.id);
+      if (!id) return jsonResponse({ ok: false, error: 'id mancante' }, 400);
+      const pr = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?id=eq.${id}&stato=eq.DA_APPROVARE&select=*`, { headers: HSRV });
+      const prArr = await pr.json();
+      const p = Array.isArray(prArr) && prArr.length ? prArr[0] : null;
+      if (!p) return jsonResponse({ ok: false, error: 'proposta non trovata o già gestita' }, 404);
+      const v = await getVolontario(p.volontario_id);
+      if (!v) return jsonResponse({ ok: false, error: 'volontario non trovato' }, 404);
+      const ora = new Date().toISOString();
+      const approva = action === 'proposta_approva';
+
+      // Prima chiude la proposta (il filtro su DA_APPROVARE evita doppie approvazioni concorrenti).
+      const chiudi = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?id=eq.${id}&stato=eq.DA_APPROVARE`, {
+        method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=representation' },
+        body: JSON.stringify({
+          stato: approva ? 'APPROVATA' : 'RIFIUTATA', gestita_il: ora, gestita_da: master!.nome,
+          note: payload?.note ? String(payload.note).slice(0, 1000) : (p.note ?? null),
+        }),
+      });
+      if (!chiudi.ok) return jsonResponse({ ok: false, error: 'errore aggiornamento proposta: ' + await chiudi.text() }, 500);
+      if (!(await chiudi.json()).length) return jsonResponse({ ok: false, error: 'proposta già gestita' }, 409);
+
+      const docRes = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?proposta_id=eq.${id}&stato=eq.IN_ATTESA&select=*`, { headers: HSRV });
+      const docInAttesa: any[] = (await docRes.json()) || [];
+      const docAccettati = approva ? new Set((payload?.documenti || []).map(Number)) : new Set<number>();
+      const errori: string[] = [];
+
+      if (approva) {
+        // 1) Anagrafica: solo i campi spuntati, solo tra quelli proponibili.
+        const datiProp = p.dati || {};
+        const patch: Record<string, unknown> = {};
+        for (const k of (payload?.campi || [])) {
+          if (CAMPI_PROPOSTA.includes(k) && k in datiProp) patch[k] = datiProp[k] === '' ? null : datiProp[k];
+        }
+        if (Object.keys(patch).length) {
+          patch.aggiornato_il = ora;
+          const r = await fetch(`${SUPA_URL}/rest/v1/agg_volontari?id=eq.${v.id}`, {
+            method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
+          });
+          if (!r.ok) errori.push('anagrafica: ' + await r.text());
+        }
+
+        // 2) DPI: righe spuntate → agg_dpi_volontario (ha = upsert taglia, non ha = rimozione).
+        const dpiScelti = new Set((payload?.dpi || []).map(Number));
+        for (const r of (Array.isArray(p.dpi) ? p.dpi : [])) {
+          if (!dpiScelti.has(Number(r.dpi_id))) continue;
+          const esRes = await fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?volontario_id=eq.${v.id}&dpi_id=eq.${Number(r.dpi_id)}&select=id`, { headers: HSRV });
+          const es = await esRes.json();
+          const rigaId = Array.isArray(es) && es.length ? es[0].id : null;
+          let res: Response | null = null;
+          if (!r.ha) {
+            if (rigaId) res = await fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?id=eq.${rigaId}`, { method: 'DELETE', headers: HSRV });
+          } else if (rigaId) {
+            res = await fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario?id=eq.${rigaId}`, {
+              method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ taglia: r.taglia ?? null, aggiornato_il: ora }),
+            });
+          } else {
+            res = await fetch(`${SUPA_URL}/rest/v1/agg_dpi_volontario`, {
+              method: 'POST', headers: { ...HSRVJ, Prefer: 'return=minimal' },
+              body: JSON.stringify({ volontario_id: v.id, dpi_id: Number(r.dpi_id), taglia: r.taglia ?? null, consegnato: false, aggiornato_il: ora }),
+            });
+          }
+          if (res && !res.ok) errori.push('DPI #' + r.dpi_id + ': ' + await res.text());
+        }
+
+        // 3) Documenti accettati → OK. La foto approvata sostituisce quella attuale.
+        for (const d of docInAttesa.filter(d => docAccettati.has(d.id))) {
+          if (d.tipo === 'FOTO') {
+            const vecchiRes = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${v.id}&tipo=eq.FOTO&${FILTRO_DOC_ATTIVI}&select=id,storage_path`, { headers: HSRV });
+            for (const old of ((await vecchiRes.json()) || [])) {
+              await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${old.storage_path}`, { method: 'DELETE', headers: HSRV });
+              await fetch(`${SUPA_URL}/rest/v1/agg_documenti?id=eq.${old.id}`, { method: 'DELETE', headers: HSRV });
+            }
+          }
+          const r = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?id=eq.${d.id}`, {
+            method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ stato: 'OK' }),
+          });
+          if (!r.ok) { errori.push('documento ' + d.tipo + ': ' + await r.text()); continue; }
+          if (d.tipo === 'FOTO') {
+            await fetch(`${SUPA_URL}/rest/v1/agg_volontari?id=eq.${v.id}`, {
+              method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ pia_foto: true }),
+            });
+          }
+        }
+
+        // Proposta chiusa: il link non serve più (il master può generarne uno nuovo).
+        await fetch(`${SUPA_URL}/rest/v1/agg_link?volontario_id=eq.${v.id}&revocato=not.is.true`, {
+          method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ revocato: true }),
+        });
+      }
+
+      // Documenti non accettati (o proposta rifiutata): file e record eliminati.
+      for (const d of docInAttesa.filter(d => !docAccettati.has(d.id))) {
+        await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${d.storage_path}`, { method: 'DELETE', headers: HSRV });
+        await fetch(`${SUPA_URL}/rest/v1/agg_documenti?id=eq.${d.id}`, { method: 'DELETE', headers: HSRV });
+      }
+
+      await logAttivita(master!.nome + (approva ? ' ha approvato' : ' ha rifiutato') + ' la proposta di aggiornamento dati di ' + v.cognome + ' ' + v.nome
+        + (approva ? ' (' + (payload?.campi || []).length + ' campi, ' + (payload?.dpi || []).length + ' DPI, ' + docAccettati.size + ' documenti)' : ''));
+      if (errori.length) {
+        console.error('proposta ' + id + ' applicata con errori', errori);
+        return jsonResponse({ ok: false, error: 'proposta chiusa ma alcune modifiche non sono state applicate: ' + errori.join(' | ') }, 500);
+      }
+      return jsonResponse({ ok: true });
     }
 
     return jsonResponse({ ok: false, error: 'azione sconosciuta' }, 400);

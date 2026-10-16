@@ -1,4 +1,4 @@
-const CACHE = 'pcana-v7';
+const CACHE = 'pcana-v8';
 const ASSETS = ['/area-riservata.html', '/area-riservata.js', '/aggiornamento-dati.js', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -16,7 +16,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
   // Lascia passare tutto tranne i file statici locali
-  if (url.includes('supabase.co') ||
+  if (url.includes('/aggiorna.html') || // pagina pubblica dei volontari: mai gestita dal service worker
+      url.includes('supabase.co') ||
       url.includes('teable.ai') ||
       url.includes('fonts.googleapis') ||
       url.includes('fonts.gstatic') ||

@@ -1,2 +1,5 @@
 [functions.agg-api]
 verify_jwt = false
+
+[functions.agg-pub]
+verify_jwt = false
