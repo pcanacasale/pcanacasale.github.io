@@ -344,26 +344,65 @@
   }
 </style>
 <script>
-// ── AUTH GUARD: solo master ──────────────────────────────────────────────────
+// ── AUTH GUARD: stessa regola di hasPerm('convocazioni') in area-riservata.js ──
 (async function() {
   const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
+
+  // Mostra il motivo nell'overlay invece di fare redirect, così si capisce cosa fallisce
+  function mostraErrore(motivo) {
+    console.log('[AUTH GUARD] accesso negato:', motivo);
+    const render = function() {
+      const g = document.getElementById('authGuard');
+      if (!g) return;
+      g.style.flexDirection = 'column';
+      g.style.textAlign = 'center';
+      g.style.padding = '16px';
+      g.innerHTML = '<div style="font-size:1.2rem;font-weight:700;">Accesso non consentito</div>' +
+        '<div style="max-width:480px;opacity:.9;"></div>' +
+        '<a href="area-riservata.html" style="color:white;background:rgba(255,255,255,0.15);padding:8px 16px;border-radius:6px;text-decoration:none;">← Torna all\'area riservata</a>';
+      g.children[1].textContent = motivo;
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
+    else render();
+  }
+
   const username = sessionStorage.getItem('ar_user');
   const password = sessionStorage.getItem('ar_pass');
-  if (!username || !password) { window.location.replace('area-riservata.html'); return; }
+  if (!username || !password) {
+    mostraErrore('Credenziali mancanti: effettua il login nell\'area riservata (account amministrativo) e apri il generatore dalla stessa scheda.');
+    return;
+  }
+  let data;
   try {
     const res = await fetch(
       SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(username) +
       '&password=eq.' + encodeURIComponent(password) +
-      '&attivo=eq.true&select=tipo_accesso',
+      '&attivo=eq.true&select=tipo_accesso,permessi',
       { headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY } }
     );
-    const data = await res.json();
-    if (!data || !data.length || data[0].tipo_accesso !== 'master') {
-      window.location.replace('area-riservata.html'); return;
-    }
-    document.getElementById('authGuard').style.display = 'none';
-  } catch(e) { window.location.replace('area-riservata.html'); }
+    if (!res.ok) { mostraErrore('Errore del server durante la verifica (HTTP ' + res.status + ').'); return; }
+    data = await res.json();
+  } catch(e) {
+    mostraErrore('Errore di rete durante la verifica dell\'accesso: ' + (e && e.message ? e.message : e));
+    return;
+  }
+  if (!Array.isArray(data) || !data.length) {
+    mostraErrore('Utente non trovato, disattivato o password cambiata: rifai il login nell\'area riservata.');
+    return;
+  }
+  const u = data[0];
+  const p = u.permessi || {};
+  const ok = u.tipo_accesso === 'master' ? p.convocazioni !== false
+           : u.tipo_accesso === 'standard' ? p.convocazioni === true
+           : false;
+  if (!ok) {
+    mostraErrore('Permesso negato: il tuo utente (' + u.tipo_accesso + ') non ha il permesso "Convocazioni".');
+    return;
+  }
+  const g = document.getElementById('authGuard');
+  if (g) g.style.display = 'none';
+  else document.addEventListener('DOMContentLoaded', function() { document.getElementById('authGuard').style.display = 'none'; });
 })();
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
