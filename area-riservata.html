@@ -384,11 +384,8 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .int-vol-field{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 .int-vol-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600}
 /* chat agente (registra da messaggio) */
-.aic-panel{display:none;position:fixed;inset:0;z-index:720;background:rgba(5,15,35,.55);align-items:center;justify-content:center;padding:16px}
-.aic-panel.open{display:flex}
-.aic-sheet{width:min(640px,100%);height:min(760px,calc(100% - 8px));display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);overflow:hidden}
-.aic-sheet .shead{position:static}
-.aic-msgs{flex:1;overflow-y:auto;padding:6px 20px;display:flex;flex-direction:column;gap:10px}
+.aic-msgs{display:flex;flex-direction:column;gap:10px}
+.aic-msgs:not(:empty){margin-top:14px}
 .aic-bubble{max-width:88%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.45;white-space:pre-wrap}
 .aic-bubble.user{align-self:flex-end;background:var(--accent-bg);color:var(--accent-fg);border-bottom-right-radius:6px}
 .aic-bubble.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:6px}
@@ -403,9 +400,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .aic-draft-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
 .aic-btn-confirm{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--yellow);background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:14px}
 .aic-btn-edit{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px}
-.aic-inputbar{padding:12px 20px calc(16px + var(--safe-b));border-top:1px solid var(--line)}
-.aic-input{min-height:84px}
-@media (max-width:860px){.aic-panel{align-items:flex-end;padding:0}.aic-sheet{border-radius:24px 24px 0 0;height:92%}}
 
 /* ── piani di carico ── */
 .pdc-nuovo{margin-bottom:18px}
@@ -480,6 +474,18 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .btn-login:hover{filter:brightness(.96)}
 .btn-login:disabled{opacity:.5}
 .login-error{display:none;margin-top:12px;background:var(--red-soft);color:var(--red);padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600}
+
+/* ── utilità condivise (al posto degli stili inline) ── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.m0{margin:0}.mb0{margin-bottom:0}.mb6{margin-bottom:6px}.mb10{margin-bottom:10px}.mb12{margin-bottom:12px}.mb18{margin-bottom:18px}
+.mt6{margin-top:6px}.mt10{margin-top:10px}.mt12{margin-top:12px}.mt14{margin-top:14px}.mt18{margin-top:18px}
+.grow{flex:1;min-width:0}.minw0{min-width:0}.maxw-none{max-width:none}.nowrap{white-space:nowrap}
+.go{color:var(--accent);font-weight:700}
+.note-intro{margin:4px 0 12px}
+.is-off{opacity:.4;pointer-events:none}
+.flash-ok{box-shadow:0 0 0 2px var(--accent);transition:box-shadow .15s ease}
+.macro-arrow.open{transform:rotate(90deg)}
+.empty.sm{padding:16px}
 
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -908,15 +914,18 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       </div>
       <div class="cols">
         <div class="stack">
-          <div class="bar" id="intToolbar" style="margin-bottom:0">
-            <label class="search" for="intSearch" style="max-width:none"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="intSearch" placeholder="Cerca evento, luogo o tipo" autocomplete="off" oninput="filtraInterventi()"></label>
+          <div class="bar mb0" id="intToolbar">
+            <label class="search maxw-none" for="intSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="intSearch" placeholder="Cerca evento, luogo o tipo" autocomplete="off" oninput="filtraInterventi()"></label>
           </div>
           <div id="intList"><div class="loading-msg">Caricamento…</div></div>
         </div>
-        <div class="card">
+        <div class="card aic-panel" id="aicPanel">
           <h2>Registra da messaggio</h2>
-          <p class="note" style="margin:4px 0 12px">Incolla il report WhatsApp: l'assistente prepara la bozza e salva solo dopo la tua conferma.</p>
-          <div class="actions" style="justify-content:flex-start"><button class="btn pri" onclick="apriChatAgenteIntervento()">Compila da messaggio</button></div>
+          <p class="note note-intro">Incolla il report WhatsApp. Controlla la bozza: salvo solo dopo la tua conferma.</p>
+          <label for="aicInput" class="sr-only">Messaggio</label>
+          <textarea class="msg" id="aicInput" placeholder="Incolla qui il messaggio del report…" onkeydown="aicKeydown(event)"></textarea>
+          <div class="actions"><button class="btn" onclick="apriChatAgenteIntervento()">Ricomincia</button><button class="btn pri" id="aicSendBtn" onclick="aicInviaMessaggio()">Analizza messaggio</button></div>
+          <div class="aic-msgs" id="aicMsgs"></div>
         </div>
       </div>
     </div>
@@ -1084,18 +1093,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       </div>
       <div class="vol-form-body" id="intFormBody"></div>
       <div class="vol-form-foot"><button class="btn" onclick="chiudiFormIntervento()">Annulla</button><button class="btn pri" onclick="salvaIntervento()">Salva</button></div>
-    </div>
-
-    <!-- AGENTE INTERVENTO DA MESSAGGIO -->
-    <div class="aic-panel" id="aicPanel">
-      <div class="aic-sheet">
-        <div class="shead"><h2>Registra da messaggio</h2><button class="x" onclick="chiudiChatAgenteIntervento()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-        <div class="aic-msgs" id="aicMsgs"></div>
-        <div class="aic-inputbar">
-          <textarea class="msg aic-input" id="aicInput" rows="3" placeholder="Incolla qui il messaggio del report…" onkeydown="aicKeydown(event)"></textarea>
-          <div class="actions"><button class="btn pri" id="aicSendBtn" onclick="aicInviaMessaggio()">Analizza messaggio</button></div>
-        </div>
-      </div>
     </div>
 
     <!-- DOCUMENTI -->
@@ -1813,7 +1810,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=169"></script>
+<script src="area-riservata.js?v=170"></script>
 <script src="aggiornamento-dati.js?v=9"></script>
 </body>
 </html>

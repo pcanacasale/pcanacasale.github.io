@@ -2201,7 +2201,7 @@ function _renderIntCard(i, isChild) {
   const haOreMancanti = intOreMancantiSet.has(i.id);
   if (haOreMancanti)    pills.push('<span class="pill p-red">Ore mancanti</span>');
   card.innerHTML = _intDataCella(i.data)
-    + '<div style="min-width:0"><b>' + (isChild ? '↳ ' : '') + (i.evento || '—') + '</b>'
+    + '<div class="minw0"><b>' + (isChild ? '↳ ' : '') + (i.evento || '—') + '</b>'
     + (i.luogo ? '<span class="sub">' + i.luogo + '</span>' : '')
     + (pills.length ? '<span class="int-pills">' + pills.join('') + '</span>' : '') + '</div>'
     + '<b>' + (i.n_volontari || 0) + '</b>'
@@ -2222,7 +2222,7 @@ function _renderMacroCard(m, figliMacro) {
   const header = document.createElement('div');
   header.className = 'irow clk macro';
   header.innerHTML = _intDataCella(m.data)
-    + '<div style="min-width:0"><b><span id="macro-arrow-' + m.id + '" class="macro-arrow">▶</span> ' + (m.evento || '—') + '</b>'
+    + '<div class="minw0"><b><span id="macro-arrow-' + m.id + '" class="macro-arrow">▶</span> ' + (m.evento || '—') + '</b>'
     + '<span class="sub">' + (m.luogo ? m.luogo + ' · ' : '') + dateRange + '</span>'
     + '<span class="int-pills"><span class="pill p-sand">Macro · ' + (figliMacro.length ? figliMacro.length + ' interventi' : 'vuota') + '</span>'
     + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="pill p-grey">Programmato</span>' : '')
@@ -2249,7 +2249,7 @@ function _renderMacroCard(m, figliMacro) {
     const isOpen = childrenWrap.style.display !== 'none';
     childrenWrap.style.display = isOpen ? 'none' : 'block';
     const arrow = document.getElementById('macro-arrow-' + m.id);
-    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+    if (arrow) arrow.classList.toggle('open', !isOpen);
   };
 
   wrap.appendChild(header);
@@ -2311,7 +2311,7 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Posizioni e segnalazioni</div>
         <div class="vol-section-body">
           ${posSegPosizioni.length ? `<div id="intDetailMap" class="mini-map tall"></div>
-          <div id="intDetailPosLista" style="margin-bottom:12px"></div>` : ''}
+          <div id="intDetailPosLista" class="mb12"></div>` : ''}
           ${posSegSegnalazioni.length ? `<div id="intDetailEmergContent"></div>` : ''}
         </div>
       </div>`;
@@ -2328,13 +2328,13 @@ async function apriDettaglioIntervento(id) {
         return '<div class="lr clk" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
           + getTipoAttivitaAvatar(f.tipo_attivita, 40)
           + '<div class="mid"><b>' + (f.evento||'—') + '</b><span class="sub">' + fd + '</span></div>'
-          + '<span style="color:var(--accent);font-weight:700">→</span>'
+          + '<span class="go">→</span>'
           + '</div>';
       }).join('');
       macroSection = `<div class="vol-section">
         <div class="vol-section-head">Interventi inclusi</div>
         <div class="vol-section-body">
-          <div class="bar" style="margin-bottom:6px"><span class="sub" style="flex:1">${figliMacro.length} interventi · ${nVol} vol. tot. · ${Math.round(nOre*10)/10} h tot.</span>
+          <div class="bar mb6"><span class="sub grow">${figliMacro.length} interventi · ${nVol} vol. tot. · ${Math.round(nOre*10)/10} h tot.</span>
           <button class="btn sm" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button></div>
           ${figliHtml || '<p class="note">Nessun intervento associato.</p>'}
         </div>
@@ -2349,8 +2349,8 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Parte di macro-attività</div>
         <div class="vol-section-body">
           <button class="todo" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(${i.macro_id})">
-            <span style="flex:1"><b>${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</b></span>
-            <span style="color:var(--accent);font-weight:700">→</span>
+            <span class="grow"><b>${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</b></span>
+            <span class="go">→</span>
           </button>
         </div>
       </div>`;
@@ -2369,14 +2369,14 @@ async function apriDettaglioIntervento(id) {
       ${i.stato_calcolato === 'PROGRAMMATO'
         ? `<div class="stato-box sand">
             <span class="pill p-grey">Programmato</span>
-            <div style="flex:1"><span class="sub">Le ore non vengono conteggiate fino al passaggio in svolto.${i.stato_manuale === 'PROGRAMMATO' ? ' Stato forzato manualmente.' : ''}</span></div>
+            <div class="grow"><span class="sub">Le ore non vengono conteggiate fino al passaggio in svolto.${i.stato_manuale === 'PROGRAMMATO' ? ' Stato forzato manualmente.' : ''}</span></div>
             ${i.stato_manuale === 'PROGRAMMATO'
               ? `<button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
               : ''}
           </div>`
         : `<div class="stato-box">
             <span class="pill p-blue">Svolto</span>
-            <div style="flex:1"><span class="sub">Le ore vengono conteggiate nelle statistiche.</span></div>
+            <div class="grow"><span class="sub">Le ore vengono conteggiate nelle statistiche.</span></div>
             <button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
           </div>`
       }
@@ -2537,8 +2537,8 @@ async function apriFormIntervento(id, macroIdPreset) {
       <div class="vol-form-section-title">Volontari intervenuti</div>
       <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario per aggiungerlo..." oninput="filtraVolPickerDropdown(this.value)">
       <div id="volPickerDropdown" class="vol-picker-dropdown" style="display:none"></div>
-      <div id="intVolList" style="margin-top:10px"></div>
-      <div class="kv" style="margin-top:6px">
+      <div id="intVolList" class="mt10"></div>
+      <div class="kv mt6">
         <span>Volontari: <strong id="intVolCount">0</strong></span>
         <span>Somma ore: <strong id="intVolOreSum">0</strong></span>
       </div>
@@ -2549,7 +2549,7 @@ async function apriFormIntervento(id, macroIdPreset) {
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Raggruppamento</div>
-      <label class="vol-form-check" style="margin-bottom:12px">
+      <label class="vol-form-check mb12">
         <input type="checkbox" id="ifIsMacro" onchange="toggleMacroMode()">
         Questo è una macro-attività
       </label>
@@ -2581,12 +2581,10 @@ function toggleMacroMode() {
   var selMacro   = document.getElementById('ifMacroId');
   if (isMacro) {
     // È una macro: nasconde il select padre e lo svuota
-    parentWrap.style.opacity = '0.4';
-    parentWrap.style.pointerEvents = 'none';
+    parentWrap.classList.add('is-off');
     selMacro.value = '';
   } else {
-    parentWrap.style.opacity = '';
-    parentWrap.style.pointerEvents = '';
+    parentWrap.classList.remove('is-off');
   }
 }
 
@@ -2687,7 +2685,7 @@ function renderIntVolList() {
   const list = document.getElementById('intVolList');
   if (!list) return;
   if (!intVolSelezionati.length) {
-    list.innerHTML = '<div class="empty" style="padding:16px">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
+    list.innerHTML = '<div class="empty sm">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
     aggiornaContatoriVolontari();
     return;
   }
@@ -2698,7 +2696,7 @@ function renderIntVolList() {
     return (a.nome || '').localeCompare(b.nome || '', 'it');
   });
   const applicaTuttiBtn = intVolSelezionati.length > 1
-    ? '<button type="button" class="btn sm full" style="margin-bottom:10px" onclick="applicaOreATutti()">Applica le stesse ore a tutti</button>'
+    ? '<button type="button" class="btn sm full mb10" onclick="applicaOreATutti()">Applica le stesse ore a tutti</button>'
     : '';
   list.innerHTML = applicaTuttiBtn + intVolSelezionati.map(v =>
     '<div class="int-vol-card">'
@@ -2712,7 +2710,7 @@ function renderIntVolList() {
     +   '<label class="int-vol-field"><span>Data fine</span><input type="date" value="' + (v.data_fine || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'data_fine\', this.value||null)"></label>'
     +   '<label class="int-vol-check"><input type="checkbox"' + (v.art_39 ? ' checked' : '') + ' onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'art_39\', this.checked)"> Art. 39</label>'
     + '</div>'
-    + (v.art_39 ? ('<button type="button" class="btn sm full" style="margin-top:10px" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">Lettera di attivazione</button>') : '')
+    + (v.art_39 ? ('<button type="button" class="btn sm full mt10" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">Lettera di attivazione</button>') : '')
     + '</div>'
   ).join('');
   aggiornaContatoriVolontari();
@@ -2740,14 +2738,12 @@ function toggleNOreOverride() {
   if (cb.checked) {
     // Manuale
     nore.readOnly = false;
-    nore.style.background = '';
-    nore.style.color = '';
+
     nore.title = 'Valore manuale (override)';
   } else {
     // Auto
     nore.readOnly = true;
-    nore.style.background = 'var(--bg-2)';
-    nore.style.color = 'var(--testo-3)';
+
     nore.title = 'Somma automatica dalle ore dei volontari';
     aggiornaContatoriVolontari();
   }
@@ -2963,9 +2959,16 @@ function apriChatAgenteIntervento() {
   setTimeout(() => { if (inp) inp.focus(); }, 200);
 }
 
+// L'interfaccia dell'assistente sta nella pagina Interventi: "chiudere" significa
+// ripartire da una conversazione vuota (come quando si riapriva la finestra).
 function chiudiChatAgenteIntervento() {
-  const panel = document.getElementById('aicPanel');
-  if (panel) panel.classList.remove('open');
+  aicMessages = [];
+  aicLog = [];
+  aicDrafts = [];
+  aicLoading = false;
+  const inp = document.getElementById('aicInput');
+  if (inp) inp.value = '';
+  aicRender();
 }
 
 function aicKeydown(ev) {
@@ -2983,7 +2986,7 @@ function aicRender() {
   const box = document.getElementById('aicMsgs');
   if (!box) return;
   if (!aicLog.length) {
-    box.innerHTML = '<div class="aic-intro">Incolla qui il messaggio del report intervento: leggo chi è intervenuto e le ore, e preparo la scheda. Ti chiedo solo quello che manca o non è chiaro.</div>';
+    box.innerHTML = '';
   } else {
     box.innerHTML = aicLog.map(m => {
       if (m.type === 'user')  return '<div class="aic-bubble user">' + aicEscapeHtml(m.text) + '</div>';
@@ -3024,9 +3027,8 @@ function aicCorreggi() {
   if (!inp) return;
   inp.focus();
   inp.placeholder = 'Scrivi qui la correzione (es. "le ore di Mario sono 4")...';
-  inp.style.transition = 'box-shadow 0.15s ease';
-  inp.style.boxShadow = '0 0 0 2px var(--green)';
-  setTimeout(() => { inp.style.boxShadow = ''; }, 1000);
+  inp.classList.add('flash-ok');
+  setTimeout(() => { inp.classList.remove('flash-ok'); }, 1000);
 }
 
 async function aicInviaMessaggio() {
