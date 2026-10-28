@@ -893,21 +893,21 @@ function avatarColor(str) {
 async function caricaVolontari() {
   const list = document.getElementById('volList');
   if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<p class="note">Caricamento…</p>';
   if (!visteCache.length) caricaViste();
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty" style="grid-column:1/-1">Errore nel caricamento.</div>'; }
 }
 
 function renderVolontari(data) {
   const list = document.getElementById('volList');
   if (!list) return;
   document.getElementById('volMostrati').textContent = data.length;
-  if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun risultato.</div>'; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty" style="grid-column:1/-1">Nessun volontario trovato.</div>'; return; }
 
   // Separa attivi+sospesi da dimessi
   const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
@@ -918,46 +918,52 @@ function renderVolontari(data) {
 
   if (dimessi.length) {
     const sep = document.createElement('div');
-    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border);grid-column:1 / -1';
+    sep.className = 'grp';
     sep.textContent = 'Dimessi (' + dimessi.length + ')';
     list.appendChild(sep);
     dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
   }
 }
 
-function _renderVolCard(v) {
+// Pillole di stato come nel riferimento: Attivo blu chiaro, Sospeso/Dimesso grigio
+const VOL_STATO_PILL = { ATTIVO:['Attivo','p-blue'], SOSPESO:['Sospeso','p-grey'], DIMESSO:['Dimesso','p-grey'] };
+function _volAvatar(v) {
   const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-  const [bg, fg] = avatarColor(v.cognome);
+  return v.foto_url ? '<img src="' + v.foto_url + '" class="av" alt="">' : '<span class="av">' + initials + '</span>';
+}
+function _volCardHtml(v, statoHtml, tags) {
+  return '<div class="vc">' + _volAvatar(v)
+    + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + (v.tipo_volontario||'—') + (v.mansione ? ' · ' + v.mansione : '') + '</span></div>'
+    + statoHtml + '</div>'
+    + '<div class="cfoot"><span class="vol-tags">' + (tags.length ? tags.join('') : '<span>' + (v.squadra || 'Nessuna squadra') + '</span>') + '</span>'
+    + '<b style="color:var(--accent)">Apri scheda →</b></div>';
+}
+
+function _renderVolCard(v) {
   const stato = v.stato || 'ATTIVO';
   const card = document.createElement('div');
-  card.className = 'vol-card';
-  if (stato === 'DIMESSO') card.style.opacity = '0.55';
+  card.className = 'card clk vcard' + (stato === 'DIMESSO' ? ' off' : '');
   card.onclick = (e) => { if (!e.target.closest('.vol-stato-sel')) apriDettaglio(v.id); };
 
   const badges = [];
-  if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
-  if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
-  if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+  if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
+  if (v.dae) badges.push('<span class="pill p-blue">DAE</span>');
+  if (v.pronto_impiego) badges.push('<span class="pill p-blue">PI</span>');
 
-  // Dropdown stato inline (se può modificare) o badge readonly
-  const statoCls = 'st-pill st-' + stato.toLowerCase();
+  // Dropdown stato inline (se può modificare) o pillola readonly
+  const statoCls = 'pill ' + (VOL_STATO_PILL[stato] || VOL_STATO_PILL.ATTIVO)[1];
   let statoSel;
   if (canModificaVolontari()) {
-    statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)">'
-      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
-      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
-      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
+    statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" aria-label="Stato">'
+      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>Attivo</option>'
+      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>Sospeso</option>'
+      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>Dimesso</option>'
       + '</select>';
   } else {
-    statoSel = '<span class="' + statoCls + '">' + stato + '</span>';
+    statoSel = '<span class="' + statoCls + '">' + (VOL_STATO_PILL[stato] || [stato])[0] + '</span>';
   }
 
-  card.innerHTML = (v.foto_url
-      ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-      : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-    + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-    + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
-    + '<div class="vol-card-badges" style="align-items:center;gap:4px">' + statoSel + badges.join('') + '</div>';
+  card.innerHTML = _volCardHtml(v, statoSel, badges);
   return card;
 }
 
@@ -1036,14 +1042,13 @@ async function apriDettaglio(id) {
   if (btnMod) btnMod.style.display = canModificaVolontari() ? '' : 'none';
   detail.classList.add('open');
   detail.scrollTop = 0;
-  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const v    = data[0];
-    if (!v) { body.innerHTML = '<div class="loading-msg">volontario non trovato.</div>'; return; }
+    if (!v) { body.innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
     document.getElementById('volDetailTitle').textContent = v.cognome + ' ' + v.nome;
-    const [bg, fg] = avatarColor(v.cognome);
     const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
 
     const fmt = (val) => val ? '<span class="vol-field-value">' + val + '</span>' : '<span class="vol-field-value null">—</span>';
@@ -1056,11 +1061,11 @@ async function apriDettaglio(id) {
     body.innerHTML = `
       <div class="vol-detail-hero">
         ${v.foto_url
-          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" style="object-fit:cover">'
-          : '<div class="vol-detail-avatar" style="background:'+bg+';color:'+fg+'">'+initials+'</div>'}
+          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" alt="">'
+          : '<div class="vol-detail-avatar">'+initials+'</div>'}
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} | ${v.squadra||'—'}</div>
+          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
         </div>
       </div>
 
@@ -1090,8 +1095,8 @@ async function apriDettaglio(id) {
       <div class="vol-section">
         <div class="vol-section-head" onclick="toggleVolSection(this)">Contatti</div>
         <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
-          <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
+          <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
+          <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
         </div>
       </div>
 
@@ -1124,14 +1129,14 @@ async function apriDettaglio(id) {
 
       <div class="vol-section" id="volInterventiSection">
         <div class="vol-section-head collapsed" onclick="toggleVolInterventi(${v.id})">
-          Interventi <span id="volInterventiCount" style="font-size:0.6rem;color:var(--green);margin-left:4px">caricamento...</span>
+          <span>Interventi <span class="sec-count" id="volInterventiCount"></span></span>
         </div>
         <div class="vol-section-body" id="volInterventiBody" style="display:none"></div>
       </div>
 
       <div class="vol-section">
         <div class="vol-section-head collapsed" onclick="toggleVolDoc(${v.id})">
-          Documenti <span id="volDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>
+          <span>Documenti <span class="sec-count" id="volDocCount"></span></span>
         </div>
         <div class="vol-section-body" id="volDocBody" style="display:none"></div>
       </div>
@@ -1157,7 +1162,7 @@ async function apriDettaglio(id) {
           <div class="vol-field"><span class="vol-field-label">Città ditta</span>${fmt(v.citta_lavoro)}</div>
         </div>
       </div>`;
-  } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { body.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 function toggleVolSection(headEl) {
@@ -1222,19 +1227,19 @@ async function toggleVolInterventi(volId) {
     const interventi = await res.json();
     if (count) count.textContent = '(' + interventi.length + ')';
     if (!interventi.length) {
-      body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun intervento registrato.</div>';
+      body.innerHTML = '<p class="note">Nessun intervento registrato.</p>';
       return;
     }
     body.innerHTML = interventi.map(i => {
       const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
       const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
-      return '<div class="vol-field" style="cursor:pointer" onclick="' + onclick + '">'
-        + '<span class="vol-field-label">' + dataFmt + '</span>'
-        + '<span class="vol-field-value" style="color:var(--text-1)">' + (i.evento||'—') + (i.tipo_attivita ? ' <span style="color:var(--green);font-size:0.6rem">&middot; ' + i.tipo_attivita + '</span>' : '') + '</span>'
+      return '<div class="lr clk" onclick="' + onclick + '">'
+        + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + dataFmt + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + '</span></div>'
+        + '<span style="color:var(--accent);font-weight:700">→</span>'
         + '</div>';
     }).join('');
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 
@@ -1347,7 +1352,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     ${renderCampiCustomForm()}
-    ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">elimina volontario</button>' : ''}`;
+    ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">Elimina volontario</button>' : ''}`;
 
   // Se modifica, carica i dati
   // Precarica schema se vuoto
@@ -1786,9 +1791,9 @@ function renderVisteBar() {
   bar.innerHTML = '';
   visteCache.forEach(v => {
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-flex;flex-shrink:0;';
+    wrap.className = 'vista-wrap';
     const btn = document.createElement('button');
-    btn.className = 'vista-btn' + (vistaAttiva === v.id ? ' active' : '');
+    btn.className = 'chip' + (vistaAttiva === v.id ? ' on' : '');
     btn.textContent = v.nome;
     btn.onclick = () => applicaVista(v);
     wrap.appendChild(btn);
@@ -1808,8 +1813,8 @@ function renderVisteBar() {
   const isMaster = currentUser && currentUser.tipo_accesso === 'master';
   if (isMaster) {
     const addBtn = document.createElement('button');
-    addBtn.className = 'vista-btn vista-add';
-    addBtn.textContent = '+ vista';
+    addBtn.className = 'chip chip-add';
+    addBtn.textContent = '+ Vista';
     addBtn.onclick = () => apriFormVista();
     bar.appendChild(addBtn);
   }
@@ -1861,13 +1866,13 @@ function applicaVista(v) {
   renderVolontari(dati);
 }
 
-// Colori per stato visita
-const STATO_VISITA_COLORS = {
-  'COMPLETATA':  ['#e8f5ee','#1a7a4a'],
-  'DA FARE':     ['#fde8e8','#b91c1c'],
-  'SOLO ESAMI':  ['#fef3e8','#b45309'],
-  'VERIFICA':    ['#e8f0fb','#1a4a9a'],
-  'ESONERO':     ['#f2f2f7','#6b7280'],
+// Pillola per stato visita (raggruppamento viste)
+const STATO_VISITA_PILL = {
+  'COMPLETATA':  'p-blue',
+  'DA FARE':     'p-red',
+  'SOLO ESAMI':  'p-sand',
+  'VERIFICA':    'p-yellow',
+  'ESONERO':     'p-grey',
 };
 
 function renderVolontariGrouped(tipo, campo, boolLabel) {
@@ -1910,23 +1915,20 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
   chiavi.forEach((chiave, idx) => {
     const items = gruppi[chiave] || [];
 
-    // Determina etichetta e colore header
-    let headerLabel, headerBg, headerFg;
+    // Etichetta e colore della pillola conteggio
+    let headerLabel, pillCls = 'p-blue';
     if (tipo === 'squadra') {
       headerLabel = chiave;
-      headerBg = '#1c2a3a'; headerFg = '#58a6ff';
     } else if (tipo === '_boolean') {
       if (chiave === 'si') {
-        headerLabel = '✓ ' + (boolLabel || 'Completato');
-        headerBg = '#0d2014'; headerFg = '#3fb950';
+        headerLabel = (boolLabel || 'Completato');
       } else {
-        headerLabel = '— Non ' + (boolLabel ? boolLabel.toLowerCase() : 'completato');
-        headerBg = '#21262d'; headerFg = '#8b949e';
+        headerLabel = 'Non ' + (boolLabel ? boolLabel.toLowerCase() : 'completato');
+        pillCls = 'p-grey';
       }
     } else if (tipo === '_field') {
       headerLabel = chiave;
-      const colors = STATO_VISITA_COLORS[chiave] || ['#1c2a3a','#58a6ff'];
-      headerBg = colors[0]; headerFg = colors[1];
+      pillCls = STATO_VISITA_PILL[chiave] || 'p-blue';
     }
 
     // Collassa di default i gruppi "negativi"
@@ -1935,23 +1937,21 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
 
     const header = document.createElement('div');
     header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
-    header.style.cssText = 'background:' + headerBg + ';border-color:' + headerFg + '30;';
-    header.innerHTML = '<span class="vgh-label" style="color:' + headerFg + '">' + headerLabel + '</span>'
-      + '<span class="vgh-count" style="background:' + headerBg + ';color:' + headerFg + ';border:1px solid ' + headerFg + '50">' + items.length + '</span>'
-      + '<span class="vgh-arrow" style="color:' + headerFg + '">' + (isCollapsed ? '▶' : '▼') + '</span>';
+    header.innerHTML = '<span class="grp" style="margin:0">' + headerLabel + '</span>'
+      + '<span class="pill ' + pillCls + '">' + items.length + '</span>'
+      + '<span class="vgh-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
 
     const bodyId = 'gb' + idx;
     header.onclick = () => {
       header.classList.toggle('collapsed');
       const arrow = header.querySelector('.vgh-arrow');
       const body  = document.getElementById(bodyId);
-      const col   = isCollapsed ? headerFg : headerFg;
       if (header.classList.contains('collapsed')) {
         arrow.textContent = '▶';
         if (body) body.style.display = 'none';
       } else {
         arrow.textContent = '▼';
-        if (body) body.style.display = 'flex';
+        if (body) body.style.display = '';
       }
     };
     list.appendChild(header);
@@ -1962,23 +1962,13 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
     if (isCollapsed) body.style.display = 'none';
 
     items.forEach(v => {
-      const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-      const [bg, fg] = avatarColor(v.cognome);
       const card = document.createElement('div');
-      card.className = 'vol-card';
+      card.className = 'card clk vcard';
       card.onclick = () => apriDettaglio(v.id);
       const badges = [];
-      if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-      if (v.dae)     badges.push('<span class="vol-badge vb-ok">DAE</span>');
-      var avatarEl = v.foto_url
-        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>';
-      card.innerHTML = avatarEl
-        + '<div class="vol-card-info">'
-        + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div>'
-        + '</div>'
-        + '<div class="vol-card-badges">' + badges.join('') + '</div>';
+      if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
+      if (v.dae)     badges.push('<span class="pill p-blue">DAE</span>');
+      card.innerHTML = _volCardHtml(v, v.attivo ? '' : '<span class="pill p-grey">Non attivo</span>', badges);
       body.appendChild(card);
     });
 

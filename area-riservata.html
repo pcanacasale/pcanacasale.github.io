@@ -49,7 +49,7 @@ h2{font-size:18px;font-weight:800}
 .btn.full{width:100%}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
 .search{display:flex;align-items:center;gap:8px;height:44px;flex:1;min-width:220px;max-width:360px;padding:0 16px;border:1px solid var(--line2);border-radius:999px;background:var(--surface);color:var(--muted)}
-.search input{flex:1;min-width:0;height:auto;padding:0;border:0;background:none;outline:0;color:var(--fg);font-size:15px}
+.search input,.search input[type]{flex:1;min-width:0;height:auto;padding:0;border:0;border-radius:0;background:none;outline:0;color:var(--fg);font-size:15px}
 .search:focus-within{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--fg);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -206,6 +206,82 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .bday{display:flex;align-items:center;gap:12px;margin-bottom:18px;background:var(--yellow-soft);border-color:var(--yellow-soft);font-weight:600}
 .card h2+.lr,.card h2+.todo{margin-top:6px}
 
+/* ── schede e form a tutto schermo → finestre come nel riferimento (.ov/.sheet) ── */
+.vol-detail,.vol-form{display:none;position:fixed;inset:0;z-index:700;background:rgba(5,15,35,.55);overflow-y:auto;overscroll-behavior:contain;padding:max(24px,var(--safe-t)) 16px 24px}
+.vol-detail.open,.vol-form.open{display:block}
+.vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot{width:min(720px,100%);margin:0 auto;background:var(--surface);border:1px solid var(--line)}
+.vol-detail-top,.vol-form-top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:18px 20px 10px;border-bottom:0;border-radius:24px 24px 0 0}
+.vol-detail-title,.vol-form-title{flex:1;min-width:0;font-size:18px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vol-detail-body,.vol-form-body{padding:6px 20px 20px;border-top:0;border-bottom:0}
+.vol-detail-body{border-bottom:1px solid var(--line);border-radius:0 0 24px 24px}
+.vol-form-foot{position:sticky;bottom:0;display:flex;gap:10px;justify-content:flex-end;padding:12px 20px calc(16px + var(--safe-b));border-top:1px solid var(--line);border-radius:0 0 24px 24px}
+/* finestre storiche (vista-form-overlay) → .ov/.sheet */
+.vista-form-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(5,15,35,.55);align-items:center;justify-content:center;padding:16px}
+.vista-form-overlay.open{display:flex}
+.vista-form-card{width:min(560px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px 20px 20px}
+.vista-form-card h4{font-size:18px;font-weight:800;margin:0 0 14px}
+@media (max-width:860px){.vista-form-overlay{align-items:flex-end;padding:0}.vista-form-card{border-radius:24px 24px 0 0;max-height:92%;padding-bottom:calc(20px + var(--safe-b))}}
+/* pulsanti storici delle barre non ancora convertite */
+.vol-detail-back{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px}
+.vol-detail-edit{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px}
+.vol-form-save{height:38px;padding:0 14px;border-radius:12px;border:0;background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:14px}
+@media (max-width:860px){
+ .vol-detail,.vol-form{padding:calc(24px + var(--safe-t)) 0 0}
+ .vol-detail-body,.vol-form-foot{border-radius:0}
+ .vol-detail-body{min-height:calc(100vh - 120px)}
+}
+/* contenuto scheda: intestazione + sezioni a righe chiave/valore */
+.vol-detail-hero{display:flex;align-items:center;gap:14px;padding:8px 0 14px}
+.vol-detail-avatar{width:64px;height:64px;border-radius:50%;background:var(--yellow-soft);color:var(--fg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;flex-shrink:0;object-fit:cover}
+.vol-detail-name{font-size:20px;font-weight:800}
+.vol-detail-role{font-size:13px;color:var(--muted);margin-top:2px}
+.vol-section{border-top:1px solid var(--line);padding:4px 0}
+.vol-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none}
+.vol-section-head::after{content:'▾';font-size:12px;transition:transform .15s}
+.vol-section-head.collapsed::after{transform:rotate(-90deg)}
+.vol-section-head.collapsed + .acc-collapsible-body{display:none}
+.vol-section-body{padding:0 0 8px}
+.vol-field{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;font-size:14px}
+.vol-field-label{color:var(--muted);flex-shrink:0}
+.vol-field-value{text-align:right;font-weight:600;word-break:break-word}
+.vol-field-value.null{color:var(--muted);font-weight:500}
+.vol-field a{color:var(--accent);font-weight:600;text-decoration:none}
+.vol-bool-yes{color:var(--accent)}
+.vol-bool-no{color:var(--muted)}
+.sec-count{margin-left:6px;color:var(--accent);text-transform:none;letter-spacing:0}
+/* form */
+.vol-form-section{border-top:1px solid var(--line);padding:4px 0 14px}
+.vol-form-section:first-of-type{border-top:0}
+.vol-form-section-title{display:flex;align-items:center;justify-content:space-between;min-height:44px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none}
+.vol-form-section-title::after{content:'▾';font-size:12px;transition:transform .15s}
+.vol-form-section-title.collapsed::after{transform:rotate(-90deg)}
+.vol-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vol-form-field.full{grid-column:1 / -1}
+.vol-form-lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.vol-form-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.vol-form-check{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:14px;font-weight:600;cursor:pointer}
+.vol-form-err,.form-err{display:none;background:var(--red-soft);color:var(--red);padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600;margin-bottom:12px}
+.vol-delete-btn{width:100%;height:46px;margin-top:8px;border-radius:14px;border:1px solid var(--line2);background:var(--surface);color:var(--red);font-weight:700;font-size:15px}
+@media (max-width:420px){.vol-form-grid{grid-template-columns:1fr}}
+
+/* ── volontari ── */
+.vol-filters{display:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.vol-filters.open{display:grid}
+.vol-filters label{font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.chip.active{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-fg)}
+.vista-wrap{position:relative;display:inline-flex}
+.vista-edit-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:2px solid var(--bg);background:var(--red);color:#fff;font-size:10px;line-height:1;padding:0;display:none;align-items:center;justify-content:center}
+.vista-wrap:hover .vista-edit-btn{display:flex}
+.chip-add{border-style:dashed;color:var(--accent)}
+.vcard.off{opacity:.55}
+.vcard .cfoot{flex-wrap:wrap}
+.vol-tags{display:flex;gap:6px;flex-wrap:wrap}
+select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:0;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none;appearance:none}
+.grid>.grp{grid-column:1 / -1;margin:10px 2px 0}
+.vol-group-header{grid-column:1 / -1;display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;user-select:none}
+.vol-group-header .vgh-arrow{color:var(--muted);font-size:12px}
+.vol-group-body{display:contents}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -252,21 +328,11 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* COMING SOON */
 
 /* ── VOLONTARI ── */
-.vol-toolbar { display:flex; gap:0.5rem; margin-bottom:0.7rem; }
+
 .vol-search { flex:1; min-width:0; padding:0.65rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; box-shadow:none; }
 .vol-search:focus { border-color:var(--green); }
 .vol-filter-btn { padding:0.65rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.78rem; color:var(--testo-3); cursor:pointer; box-shadow:none; white-space:nowrap; }
 .vol-filter-btn.active { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
-.vol-add-btn { padding:0.65rem 1rem; background:var(--green); border:none; border-radius:20px; font-family:var(--font); font-size:0.78rem; font-weight:600; color:#fff; cursor:pointer; white-space:nowrap; }
-.vol-filters { display:none; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r); padding:0.8rem; margin-bottom:0.7rem; box-shadow:none; }
-.vol-filters.open { display:block; }
-.vol-filter-row { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem; }
-.vol-filter-row:last-child { margin-bottom:0; }
-.vol-filter-sel { width:100%; padding:0.55rem 0.7rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.78rem; color:var(--testo); outline:none; }
-.vol-stats { display:flex; gap:0.5rem; margin-bottom:0.7rem; }
-.vol-stat-pill { background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; padding:0.3rem 0.9rem; font-size:0.7rem; color:var(--testo-3); box-shadow:none; }
-.vol-stat-pill span { color:var(--green); font-weight:600; }
-.vol-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; overflow:hidden; }
 
 /* Accessi */
 .accessi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:0.7rem; }
@@ -374,12 +440,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-card:active { background:var(--bg-2); }
 
 /* Desktop ≥800px: lista volontari a griglia 2 colonne */
-@media (min-width:800px) {
-  #volList.vol-list { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:transparent; box-shadow:none; border-radius:0; overflow:visible; }
-  #volList.vol-list .vol-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); box-shadow:none; }
-  #volList.vol-list .vol-card:hover { background:var(--bg-2); }
-  #volList.vol-list > .loading-msg { grid-column:1 / -1; }
-}
+
 .vol-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
 .vol-card-info { flex:1; min-width:0; }
 .vol-card-name { font-size:0.9rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -393,83 +454,12 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vb-tipo { background:var(--bg-2); color:var(--testo-3); }
 
 /* VISTE */
-.viste-bar { display:flex; gap:0.4rem; overflow-x:auto; scrollbar-width:none; padding-bottom:0.4rem; margin-bottom:0.6rem; -webkit-overflow-scrolling:touch; touch-action:pan-x; }
-.viste-bar::-webkit-scrollbar { display:none; }
-.vista-btn { padding:0.35rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.72rem; color:var(--testo-3); cursor:pointer; white-space:nowrap; flex-shrink:0; box-shadow:none; }
-.vista-btn.active { background:var(--green); border-color:var(--green); color:#fff; }
-.vista-btn.vista-add { border-style:dashed; }
-.vista-edit-btn { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--red); border:none; color:#fff; font-size:0.55rem; cursor:pointer; display:none; align-items:center; justify-content:center; padding:0; line-height:1; z-index:10; }
-div:hover > .vista-edit-btn { display:flex; }
-.vista-form-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:600; align-items:flex-end; justify-content:center; }
-.vista-form-overlay.open { display:flex; }
-.vista-form-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-width:480px; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); padding-top:calc(1.2rem + var(--safe-t)); }
-.vista-form-card h4 { font-size:1rem; font-weight:700; color:var(--testo); margin-bottom:1rem; }
-.vf-filtri { background:var(--bg-2); border-radius:var(--r-sm); padding:0.7rem; display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; }
-.vf-check { display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; color:var(--testo-2); cursor:pointer; padding:0.2rem 0; }
-.vf-check input { accent-color:var(--green); width:15px; height:15px; }
 
 /* GRUPPI COLLASSABILI */
-.vol-group-header { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 1rem; cursor:pointer; user-select:none; background:var(--bg-2); border-bottom:0.5px solid var(--border); }
-.vol-group-header:first-child { border-radius:var(--r-lg) var(--r-lg) 0 0; }
-.vgh-label { font-size:0.75rem; font-weight:600; color:var(--testo-2); flex:1; }
-.vgh-count { font-size:0.68rem; background:var(--bg-3); color:var(--testo-3); padding:1px 8px; border-radius:10px; }
-.vgh-arrow { font-size:0.6rem; color:var(--testo-4); }
-.vol-group-body { display:flex; flex-direction:column; background:var(--bg-card); border-bottom:0.5px solid var(--border); }
-.vol-group-body:last-child { border-bottom:none; border-radius:0 0 var(--r-lg) var(--r-lg); }
 
 /* SCHEDA DETTAGLIO */
-.vol-detail { display:none; position:fixed; top:calc(var(--top-h) + var(--safe-t)); left:0; right:0; bottom:0; background:var(--bg); z-index:400; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
-.vol-detail.open { display:block; animation:fadeIn 0.18s ease; }
-.vol-detail-top { position:sticky; top:0; background:var(--bg-card); border-bottom:0.5px solid var(--border); padding:0.75rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; }
-.vol-detail-back { background:none; border:none; color:var(--green); cursor:pointer; font-family:var(--font); font-size:0.9rem; font-weight:500; padding:8px 12px 8px 0; display:flex; align-items:center; gap:3px; min-width:60px; -webkit-tap-highlight-color:transparent; }
-.vol-detail-title { flex:1; font-size:0.9rem; font-weight:600; color:var(--testo); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.vol-detail-edit { background:var(--green-pale); color:var(--green); border:none; border-radius:20px; padding:0.3rem 0.85rem; font-family:var(--font); font-size:0.78rem; font-weight:600; cursor:pointer; }
-.vol-detail-body { padding:1rem; }
-.vol-detail-hero { background:var(--bg-card); border-radius:var(--r-lg); padding:1rem; margin-bottom:0.8rem; display:flex; align-items:center; gap:0.9rem; box-shadow:none; }
-.vol-detail-avatar { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.1rem; font-weight:600; flex-shrink:0; }
-.vol-detail-name { font-size:1rem; font-weight:700; color:var(--testo); }
-.vol-detail-role { font-size:0.75rem; color:var(--green); margin-top:0.2rem; font-weight:500; }
-.vol-section { background:var(--bg-card); border-radius:var(--r); margin-bottom:0.6rem; overflow:hidden; box-shadow:none; }
-.vol-section-head { padding:0.7rem 1rem; font-size:0.72rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; background:var(--bg-2); border-bottom:0.5px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; }
-.vol-section-head::after { content:'▾'; font-size:0.65rem; transition:transform 0.15s; }
-.vol-section-head.collapsed::after { transform:rotate(-90deg); }
-.vol-section-head.collapsed { border-bottom:none; }
-.vol-section-body { padding:0.4rem 0; }
-.vol-field { display:flex; justify-content:space-between; align-items:center; padding:0.55rem 1rem; border-bottom:0.5px solid var(--border); gap:1rem; }
-.vol-field:last-child { border-bottom:none; }
-.vol-field-label { font-size:0.78rem; color:var(--testo-3); flex-shrink:0; }
-.vol-field-value { font-size:0.82rem; color:var(--testo); text-align:right; word-break:break-word; }
-.vol-field-value.null { color:var(--testo-4); font-style:italic; }
-.vol-bool-yes { color:var(--green); font-weight:600; }
-.vol-bool-no { color:var(--testo-4); }
 
 /* FORM */
-.vol-form { display:none; position:fixed; top:calc(var(--top-h) + var(--safe-t)); left:0; right:0; bottom:0; background:var(--bg); z-index:500; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding-bottom:2rem; }
-.vol-form.open { display:block; animation:fadeIn 0.18s ease; }
-.vol-form-top { position:sticky; top:0; background:var(--bg-card); border-bottom:0.5px solid var(--border); padding:0.75rem 1rem; display:flex; align-items:center; gap:0.8rem; z-index:10; padding-top:calc(0.75rem + var(--safe-t)); }
-.vol-form-title { flex:1; font-size:0.9rem; font-weight:600; color:var(--testo); }
-.vol-form-save { background:var(--green); color:#fff; border:none; border-radius:20px; padding:0.35rem 1rem; font-family:var(--font); font-size:0.82rem; font-weight:600; cursor:pointer; }
-.vol-form-body { padding:1rem; }
-.vol-form-section { margin-bottom:1.2rem; }
-.vol-form-section-title { font-size:0.72rem; font-weight:600; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.5rem; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; }
-.vol-form-section-title::after { content:'▾'; font-size:0.65rem; color:var(--testo-3); transition:transform 0.15s; }
-.vol-form-section-title.collapsed::after { transform:rotate(-90deg); }
-.vol-form-section-title.collapsed { margin-bottom:0; }
-.vol-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
-.acc-collapsible-body { overflow:hidden; }
-.vol-section-head.collapsed + .acc-collapsible-body { display:none; }
-.vol-form-field { margin-bottom:0; }
-.vol-form-field.full { grid-column:span 2; }
-.vol-form-lbl { display:block; font-size:0.72rem; color:var(--testo-3); margin-bottom:0.25rem; font-weight:500; }
-.vol-form-inp { width:100%; padding:0.65rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; transition:border-color 0.2s; box-shadow:none; }
-.vol-form-inp:focus { border-color:var(--green); }
-.vol-form-check { display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:var(--testo-2); cursor:pointer; padding:0.45rem 0; }
-.vol-form-check input { accent-color:var(--green); width:16px; height:16px; }
-.vol-form-checks { display:grid; grid-template-columns:1fr 1fr; gap:0.1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); padding:0.5rem 0.7rem; box-shadow:none; }
-.vol-form-checks .vol-form-check { padding:0.35rem 0; border-bottom:0.5px solid var(--border); }
-.vol-form-checks .vol-form-check:nth-last-child(-n+2) { border-bottom:none; }
-.form-err { display:none; background:var(--red-pale); color:var(--red); padding:0.6rem 0.9rem; border-radius:var(--r-sm); font-size:0.8rem; margin-bottom:0.7rem; border:0.5px solid var(--red); }
-.vol-delete-btn { width:100%; padding:0.75rem; margin-top:1.2rem; background:var(--red-pale); border:0.5px solid var(--red); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--red); cursor:pointer; font-weight:500; }
 
 /* ── INTERVENTI ── */
 .int-toolbar { display:flex; gap:0.5rem; margin-bottom:0.7rem; }
@@ -811,32 +801,28 @@ body { font-family:var(--font); }
 .panel-hdr h2 { font-size:1.5rem; font-weight:800; letter-spacing:-0.3px; }
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .vol-list, .int-list, .vol-section, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .mezzo-list, .mezzo-tile, .dotazione-tile, .dotazioni-list, .db-wrap, .vol-filters, .vol-detail-hero, .int-stat, .impo-perm-row, .int-vol-card {
+.login-card, .int-list, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .mezzo-list, .mezzo-tile, .dotazione-tile, .dotazioni-list, .db-wrap, .int-stat, .impo-perm-row, .int-vol-card {
   border-radius:20px; border:1px solid var(--line);
 }
-.vista-form-card, .doc-upload-card, .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
+.doc-upload-card, .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
 .vd-card.vd-active { background:var(--soft); border-color:var(--accent); }
 
 /* Campi: 44px, raggio 12px */
-.login-input, .vol-form-inp, .form-inp, .db-record-inp, .vol-filter-sel, .vol-search,
-.int-search, .doc-search, .db-search, .vol-picker-search {
+.login-input, .form-inp, .db-record-inp, .vol-search, .int-search, .doc-search, .db-search, .vol-picker-search {
   min-height:var(--field-h); border-radius:12px; border:1px solid var(--line2);
   background:var(--surface); box-shadow:none; font-family:var(--font);
 }
-.login-input:focus, .vol-form-inp:focus, .form-inp:focus, .db-record-inp:focus, .vol-filter-sel:focus,
-.vol-search:focus, .int-search:focus, .doc-search:focus, .db-search:focus, .vol-picker-search:focus {
+.login-input:focus, .form-inp:focus, .db-record-inp:focus, .vol-search:focus, .int-search:focus, .doc-search:focus, .db-search:focus, .vol-picker-search:focus {
   border-color:var(--accent); box-shadow:0 0 0 3px var(--soft);
 }
 
 /* Pulsanti: raggio 14px */
-.btn-login, .btn-primary, .mezzi-add-btn, .btn-export, .vol-delete-btn, .vol-add-btn, .int-add-btn,
-.vol-form-save, .db-btn, .btn-sm, .vol-filter-btn, .aic-draft-actions button, .doc-add-btn, .vol-detail-edit {
+.btn-login, .btn-primary, .mezzi-add-btn, .btn-export, .int-add-btn, .db-btn, .btn-sm, .vol-filter-btn, .aic-draft-actions button, .doc-add-btn {
   border-radius:var(--r-btn); font-family:var(--font);
 }
-.vol-add-btn, .int-add-btn, .vol-filter-btn, .db-btn { min-height:var(--field-h); }
+.int-add-btn, .vol-filter-btn, .db-btn { min-height:var(--field-h); }
 /* Principale: giallo con testo blu scuro */
-.btn-login, .btn-primary, .mezzi-add-btn, .vol-add-btn, .int-add-btn, .vol-form-save,
-.db-btn.green, .aic-btn-confirm, .aic-send {
+.btn-login, .btn-primary, .mezzi-add-btn, .int-add-btn, .db-btn.green, .aic-btn-confirm, .aic-send {
   background:var(--yellow); color:var(--on-yellow); border:none; font-weight:700;
 }
 /* Secondario: bianco con bordo */
@@ -845,28 +831,27 @@ body { font-family:var(--font); }
 }
 .btn-ok { background:var(--soft); color:var(--accent); border-color:var(--line2); }
 .btn-warn { background:var(--yellow-soft); color:var(--on-yellow); border-color:var(--yellow); }
-.btn-danger, .vol-delete-btn { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
+.btn-danger { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
 
 /* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.vista-btn, .vol-stat-pill, .int-pill, .vol-badge, .badge, .perm-badge, .acc-badge, .visite-stato, .mezzo-stato-badge, .mezzo-tile-stato, .schema-tipo-pill, .badge-nuova, .dotazione-tile-cat, .vgh-count, .db-pag-btn, .login-tab {
+.int-pill, .vol-badge, .badge, .perm-badge, .acc-badge, .visite-stato, .mezzo-stato-badge, .mezzo-tile-stato, .schema-tipo-pill, .badge-nuova, .dotazione-tile-cat, .db-pag-btn, .login-tab {
   border-radius:var(--r-pill);
 }
 .login-tabs { border-radius:var(--r-pill); }
-.vista-btn { background:var(--surface); border:1px solid var(--line2); color:var(--fg); box-shadow:none; font-weight:600; }
-.vista-btn.active, .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active {
+
+.vol-filter-btn.active, .db-pag-btn.active, .login-tab.active {
   background:var(--accent); border-color:var(--accent); color:#fff;
 }
 @media (prefers-color-scheme: dark) {
-  .vista-btn.active, .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active { color:#072F63; }
+  .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active { color:#072F63; }
 }
 
 /* Stati: Attivo = blu chiaro, In intervento = giallo, Sospeso = grigio */
-.st-pill { display:inline-block; font-family:var(--font); font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:var(--r-pill); border:none; letter-spacing:0.3px; line-height:1.4; }
-select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
-.st-attivo, .acc-active, .vb-ok, .msb-ok { background:var(--soft); color:var(--accent); }
-.st-intervento, .int-pill.prog { background:var(--yellow); color:var(--on-yellow); }
-.st-sospeso, .acc-sosp, .acc-inactive { background:var(--grey-soft); color:var(--grey-fg); }
-.st-dimesso { background:transparent; color:var(--muted); border:1px solid var(--line2); }
+
+.acc-active, .vb-ok, .msb-ok { background:var(--soft); color:var(--accent); }
+.int-pill.prog { background:var(--yellow); color:var(--on-yellow); }
+.acc-sosp, .acc-inactive { background:var(--grey-soft); color:var(--grey-fg); }
+
 .int-card-prog { border-left-color:var(--yellow); }
 
 </style>
@@ -980,50 +965,53 @@ select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-
 
     <!-- VOLONTARI -->
     <div class="panel" id="panelVolontari">
-      <div class="panel-hdr"><h2>Volontari</h2><p>Database unità</p></div>
-      <div class="viste-bar" id="visteBar"></div>
-      <div class="vol-toolbar">
-        <input class="vol-search" type="search" id="volSearch" placeholder="cerca nome, squadra..." oninput="filtraVolontari()">
-        <button class="vol-filter-btn" id="volFilterBtn" onclick="toggleVolFiltri()">⚙ filtri</button>
-        <button class="vol-add-btn" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none">+ nuovo</button>
+      <div class="phead">
+        <div><h1>Volontari</h1><span class="sub"><span id="volMostrati">—</span> mostrati su <span id="volTot">—</span></span></div>
+        <div class="pact"><button class="btn pri" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo volontario</button></div>
       </div>
-      <div class="vol-filters" id="volFiltri">
-        <div class="vol-filter-row">
-          <select class="vol-filter-sel" id="filtroSquadra" onchange="filtraVolontari()">
+      <div class="bar">
+        <div class="chips" id="visteBar"></div>
+        <span style="flex:1"></span>
+        <label class="search" for="volSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="volSearch" placeholder="Cerca per nome o squadra" autocomplete="off" oninput="filtraVolontari()"></label>
+        <button class="chip" id="volFilterBtn" onclick="toggleVolFiltri()">Filtri</button>
+      </div>
+      <div class="card vol-filters" id="volFiltri">
+        <label>Squadra
+          <select id="filtroSquadra" onchange="filtraVolontari()">
             <option value="">Tutte le squadre</option>
             <option>ALFA</option><option>CASALE</option><option>COLLINA</option>
             <option>SEZIONE</option><option>TORINO</option>
           </select>
-          <select class="vol-filter-sel" id="filtroTipo" onchange="filtraVolontari()">
+        </label>
+        <label>Tipo
+          <select id="filtroTipo" onchange="filtraVolontari()">
             <option value="">Tutti i tipi</option>
             <option>VOLONTARIO</option><option>CAPO SQUADRA</option><option>PRESIDENTE</option>
           </select>
-        </div>
-        <div class="vol-filter-row">
-          <select class="vol-filter-sel" id="filtroMansione" onchange="filtraVolontari()">
+        </label>
+        <label>Mansione
+          <select id="filtroMansione" onchange="filtraVolontari()">
             <option value="">Tutte le mansioni</option>
             <option>GENERICO</option><option>LOGISTICA</option><option>MAGAZZINIERE</option>
           </select>
-          <select class="vol-filter-sel" id="filtroAttivo" onchange="filtraVolontari()">
+        </label>
+        <label>Stato
+          <select id="filtroAttivo" onchange="filtraVolontari()">
             <option value="">Tutti</option>
             <option value="true">Attivi</option>
             <option value="false">Non attivi</option>
           </select>
-        </div>
+        </label>
       </div>
-      <div class="vol-stats">
-        <div class="vol-stat-pill">Totale: <span id="volTot">—</span></div>
-        <div class="vol-stat-pill">Mostrati: <span id="volMostrati">—</span></div>
-      </div>
-      <div class="vol-list" id="volList"><div class="loading-msg">caricamento...</div></div>
+      <div class="grid g3" id="volList"><p class="note">Caricamento…</p></div>
     </div>
 
     <!-- SCHEDA VOLONTARIO -->
     <div class="vol-detail" id="volDetail">
       <div class="vol-detail-top">
-        <button class="vol-detail-back" onclick="chiudiDettaglio()">← indietro</button>
-        <span class="vol-detail-title" id="volDetailTitle">—</span>
-        <button class="vol-detail-edit" id="btnModificaVolontario" onclick="apriFormVolontario(volCorrenteId)" style="display:none">modifica</button>
+        <h2 class="vol-detail-title" id="volDetailTitle">—</h2>
+        <button class="btn sm" id="btnModificaVolontario" onclick="apriFormVolontario(volCorrenteId)" style="display:none">Modifica</button>
+        <button class="x" onclick="chiudiDettaglio()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-detail-body" id="volDetailBody"></div>
     </div>
@@ -1031,11 +1019,11 @@ select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-
     <!-- FORM VOLONTARIO -->
     <div class="vol-form" id="volFormPanel">
       <div class="vol-form-top">
-        <button class="vol-detail-back" onclick="chiudiForm()">← annulla</button>
-        <span class="vol-form-title" id="volFormTitle">Nuovo volontario</span>
-        <button class="vol-form-save" onclick="salvaVolontario()">salva</button>
+        <h2 class="vol-form-title" id="volFormTitle">Nuovo volontario</h2>
+        <button class="x" onclick="chiudiForm()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-form-body" id="volFormBody"></div>
+      <div class="vol-form-foot"><button class="btn" onclick="chiudiForm()">Annulla</button><button class="btn pri" onclick="salvaVolontario()">Salva</button></div>
     </div>
 
     <!-- INTERVENTI -->
@@ -1950,7 +1938,7 @@ select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=158"></script>
+<script src="area-riservata.js?v=159"></script>
 <script src="aggiornamento-dati.js?v=7"></script>
 </body>
 </html>
