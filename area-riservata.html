@@ -467,28 +467,24 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .cat-row.sub{padding-left:22px}
 .cat-row.sub span{flex:1;color:var(--muted)}
 
+/* ── login ── */
+#loginScreen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:16px}
+.login-card{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px 20px}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.login-logo h1{font-size:26px}
+.login-tabs{display:flex;width:100%;margin-bottom:6px}
+.login-tabs .login-tab{flex:1}
+.seg button.active{background:var(--accent-bg);color:var(--accent-fg)}
+.login-label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 4px}
+.btn-login{width:100%;height:46px;margin-top:18px;border-radius:14px;border:1px solid var(--yellow);background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:15px}
+.btn-login:hover{filter:brightness(.96)}
+.btn-login:disabled{opacity:.5}
+.login-error{display:none;margin-top:12px;background:var(--red-soft);color:var(--red);padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
 
 /* ── LOGIN ── */
-#loginScreen { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; background:var(--bg); padding:1.5rem; }
-.login-card { background:var(--bg-card); border-radius:var(--r-lg); padding:2rem 1.5rem; width:100%; max-width:360px; box-shadow:none; }
-.login-tabs { display:flex; gap:0.3rem; margin:1rem 0 1.2rem; background:var(--bg-2); padding:3px; border-radius:8px; }
-.login-tab { flex:1; padding:0.55rem; background:transparent; border:none; font-family:var(--font); font-size:0.82rem; font-weight:600; color:var(--testo-3); cursor:pointer; border-radius:6px; transition:all 0.15s; }
-.login-tab.active { background:var(--bg-card); color:var(--green); box-shadow:none; }
-.login-logo { text-align:center; margin-bottom:1.8rem; }
-.login-logo img { height:56px; margin-bottom:0.8rem; }
-.login-logo h1 { font-size:1.1rem; font-weight:700; color:var(--testo); }
-.login-logo p { font-size:0.78rem; color:var(--testo-3); margin-top:0.2rem; }
-.login-label { display:block; font-size:0.72rem; font-weight:600; color:var(--testo-3); margin:0.9rem 0 0.3rem; }
-.login-input { width:100%; padding:0.75rem 1rem; background:var(--bg-2); border:1px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:1rem; color:var(--testo); outline:none; transition:border-color 0.2s; }
-.login-input:focus { border-color:var(--green); }
-.btn-login { width:100%; margin-top:1.3rem; padding:0.85rem; background:var(--green); border:none; border-radius:var(--r-sm); font-family:var(--font); font-size:1rem; font-weight:600; color:#fff; cursor:pointer; transition:opacity 0.2s; }
-.btn-login:hover { opacity:0.88; }
-.btn-login:disabled { opacity:0.4; }
-.login-error { display:none; margin-top:0.7rem; background:var(--red-pale); color:var(--red); padding:0.6rem 0.9rem; border-radius:var(--r-sm); font-size:0.82rem; }
-.back-link { display:block; text-align:center; margin-top:1rem; font-size:0.78rem; color:var(--testo-3); text-decoration:none; }
 
 /* ── APP SHELL ── */
 #app { display:none; flex-direction:column; min-height:100vh; min-height:100dvh; }
@@ -509,11 +505,6 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* COMING SOON */
 
 /* ── VOLONTARI ── */
-
-.vol-search { flex:1; min-width:0; padding:0.65rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; box-shadow:none; }
-.vol-search:focus { border-color:var(--green); }
-.vol-filter-btn { padding:0.65rem 1rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.78rem; color:var(--testo-3); cursor:pointer; box-shadow:none; white-space:nowrap; }
-.vol-filter-btn.active { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
 
 /* Accessi */
 
@@ -560,7 +551,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .visite-dashboard { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem; margin-bottom:0.9rem; }
 .vd-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.7rem 0.9rem; cursor:pointer; transition:all 0.15s; box-shadow:none; }
 .vd-card:hover { transform:translateY(-1px); border-color:var(--green); }
-.vd-card.vd-active { border-color:var(--green); background:rgba(34,139,82,0.06); }
+.vd-card.vd-active { border-color:var(--accent); background:var(--soft); }
 .vd-card-num { font-size:1.55rem; font-weight:700; line-height:1; color:var(--testo); }
 .vd-card-lbl { font-size:0.62rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.3rem; }
 .vd-card-bar { height:3px; border-radius:2px; margin-top:0.45rem; background:var(--bg-2); overflow:hidden; }
@@ -578,30 +569,15 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .visite-tbl .vt-date { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 6px; font-size:0.72rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; min-width:110px; }
 .visite-tbl .vt-chk { width:18px; height:18px; cursor:pointer; accent-color:var(--green); margin:0 auto; display:block; }
 .visite-stato { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; }
-.vs-completata { background:rgba(34,139,82,0.15); color:var(--green); }
-.vs-da_fare    { background:rgba(217,164,0,0.15); color:#d9a400; }
-.vs-verifica   { background:rgba(255,140,0,0.15); color:#ff8c00; }
-.vs-solo_esami { background:rgba(76,141,255,0.15); color:#4c8dff; }
-.vs-esonero    { background:rgba(120,120,120,0.15); color:var(--testo-3); }
-.vs-vuoto      { background:rgba(220,53,69,0.12); color:#dc3545; }
+.vs-completata { background:var(--soft); color:var(--accent); }
+.vs-da_fare    { background:var(--red-soft); color:var(--red); }
+.vs-verifica   { background:var(--yellow); color:var(--on-yellow); }
+.vs-solo_esami { background:var(--yellow-soft); color:var(--fg); }
+.vs-esonero    { background:var(--grey-bg); color:var(--muted); }
+.vs-vuoto      { background:var(--red-soft); color:var(--red); }
 .visite-saving { opacity:0.5; pointer-events:none; }
-.vol-card { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-bottom:0.5px solid var(--border); cursor:pointer; transition:background 0.12s; }
-.vol-card:last-child { border-bottom:none; }
-.vol-card:active { background:var(--bg-2); }
 
 /* Desktop ≥800px: lista volontari a griglia 2 colonne */
-
-.vol-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:600; flex-shrink:0; }
-.vol-card-info { flex:1; min-width:0; }
-.vol-card-name { font-size:0.9rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.vol-card-sub { font-size:0.72rem; color:var(--testo-3); margin-top:0.1rem; display:flex; gap:0.4rem; flex-wrap:wrap; }
-.vol-card-badges { display:flex; gap:0.3rem; flex-shrink:0; }
-.vol-badge { font-size:0.62rem; padding:2px 7px; border-radius:10px; font-weight:600; }
-.vb-squadra { background:var(--green-pale); color:var(--green); }
-.vb-ok { background:var(--green-pale); color:var(--green); }
-.vb-warn { background:var(--amber-pale); color:var(--amber); }
-.vb-off { background:var(--red-pale); color:var(--red); }
-.vb-tipo { background:var(--bg-2); color:var(--testo-3); }
 
 /* VISTE */
 
@@ -643,15 +619,6 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 
 /* ── IMPOSTAZIONI ── */
 
-.perm-badge { display:inline-block; font-size:0.6rem; font-weight:600; background:var(--green-pale); color:var(--green); padding:2px 7px; border-radius:10px; margin:2px 2px 0 0; }
-
-.log-list { background:var(--bg-card); border-radius:var(--r-lg); overflow:hidden; box-shadow:none; }
-.log-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.65rem 1rem; border-bottom:0.5px solid var(--border); }
-.log-row:last-child { border-bottom:none; }
-.log-time { font-size:0.68rem; color:var(--testo-4); white-space:nowrap; flex-shrink:0; margin-top:1px; }
-.log-text { font-size:0.78rem; color:var(--testo-2); line-height:1.4; }
-.log-user { color:var(--green); font-weight:500; }
-
 /* FORM UTENTE */
 
 .form-inp { width:100%; padding:0.65rem 0.9rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; transition:border-color 0.2s; }
@@ -665,12 +632,6 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 
 @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-.inv-del-btn { background:none; border:none; color:var(--testo-4); font-size:1.1rem; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
-.inv-del-btn:hover { color:var(--red); }
-
-.inv-edit-btn { background:none; border:none; color:var(--testo-4); font-size:0.85rem; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
-.inv-edit-btn:hover { color:var(--blue); }
-
 /* -- SIDEBAR -- */
 
 /* Topbar semplificata */
@@ -680,7 +641,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .db-search { flex:1; min-width:140px; padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
 .db-search:focus { border-color:var(--green); }
 .db-btn { padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.75rem; color:var(--testo-2); cursor:pointer; white-space:nowrap; }
-.db-btn.green { background:var(--green); color:#fff; border-color:var(--green); }
+.db-btn.green { background:var(--yellow); color:var(--on-yellow); border-color:var(--yellow); }
 .db-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:0.5px solid var(--border); background:var(--bg-card); }
 .db-table { border-collapse:collapse; min-width:100%; font-size:0.8rem; }
 .db-table th { background:var(--bg-2); padding:0.5rem 0.8rem; text-align:left; font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; border-bottom:0.5px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
@@ -694,15 +655,9 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .db-loading { text-align:center; padding:2rem; color:var(--testo-3); }
 .db-add-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.8rem; cursor:pointer; color:var(--green); font-size:0.78rem; border-top:0.5px solid var(--border); background:var(--bg-card); }
 .db-add-row:hover { background:var(--green-pale); }
-.db-pagination { display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.8rem; border-top:0.5px solid var(--border); background:var(--bg-card); border-radius:0 0 var(--r) var(--r); }
-.db-pag-info { font-size:0.72rem; color:var(--testo-3); }
-.db-pag-btns { display:flex; gap:0.4rem; }
-.db-pag-btn { padding:0.3rem 0.7rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:8px; font-family:var(--font); font-size:0.72rem; color:var(--testo-2); cursor:pointer; }
-.db-pag-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.db-pag-btn.active { background:var(--green); color:#fff; border-color:var(--green); }
 
 /* Colonne overlay */
-.db-cols-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:600; align-items:flex-end; }
+.db-cols-overlay { display:none; position:fixed; inset:0; background:rgba(5,15,35,.55); z-index:600; align-items:flex-end; }
 .db-cols-overlay.open { display:flex; }
 .db-cols-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:70vh; overflow-y:auto; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
 .db-cols-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:0.8rem; }
@@ -713,7 +668,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .db-col-item label { font-size:0.78rem; color:var(--testo-2); cursor:pointer; }
 
 /* Form nuovo/modifica record */
-.db-record-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:700; align-items:flex-end; }
+.db-record-overlay { display:none; position:fixed; inset:0; background:rgba(5,15,35,.55); z-index:700; align-items:flex-end; }
 .db-record-overlay.open { display:flex; }
 .db-record-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:85vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
 .db-record-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:1rem; }
@@ -737,7 +692,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* -- DOTAZIONI LISTA -- */
 
 /* -- SPLASH SCREEN -- */
-#splashScreen { position:fixed; inset:0; background:#0A4C9E; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
+#splashScreen { position:fixed; inset:0; background:var(--head); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
 #splashScreen.fade-out { opacity:0; pointer-events:none; }
 .splash-logo-wrap { width:120px; height:120px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 24px rgba(0,0,0,0.2); opacity:0; transform:scale(0.82); transition:opacity 0.7s ease,transform 0.7s ease; }
 .splash-logo-wrap.show { opacity:1; transform:scale(1); }
@@ -752,7 +707,7 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .splash-dot.lit { background:white; }
 
 /* -- WELCOME SCREEN -- */
-#welcomeScreen { position:fixed; inset:0; background:#0A4C9E; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
+#welcomeScreen { position:fixed; inset:0; background:var(--head); z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
 #welcomeScreen.visible { display:flex; }
 #welcomeScreen.fade-out { opacity:0; pointer-events:none; }
 .welcome-avatar { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.82); transition:opacity 0.6s ease,transform 0.6s ease; }
@@ -764,60 +719,14 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .welcome-text .wt-nome { color:white; font-size:1.4rem; font-weight:700; margin-top:0.2rem; }
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
-.inv-extra-list { padding:0.4rem 0.8rem 0.5rem; border-top:0.5px solid var(--border); background:var(--bg-2); border-radius:0 0 var(--r) var(--r); }
-.inv-extra-row { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem; }
-
-/* ── RESTYLE BLOCCO 1: forme, pulsanti, chip, stati, intestazione ── */
-body { font-family:var(--font); }
-
-/* Intestazione: barra blu con logo + titolo */
-
-/* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .doc-vol-card, .richiesta-card, .log-list, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap {
-  border-radius:20px; border:1px solid var(--line);
-}
-.db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
-.vd-card.vd-active { background:var(--soft); border-color:var(--accent); }
-
-/* Campi: 44px, raggio 12px */
-.login-input, .form-inp, .db-record-inp, .vol-search, .doc-search, .db-search {
-  min-height:var(--field-h); border-radius:12px; border:1px solid var(--line2);
-  background:var(--surface); box-shadow:none; font-family:var(--font);
-}
-.login-input:focus, .form-inp:focus, .db-record-inp:focus, .vol-search:focus, .doc-search:focus, .db-search:focus {
-  border-color:var(--accent); box-shadow:0 0 0 3px var(--soft);
-}
-
-/* Pulsanti: raggio 14px */
-.btn-login, .db-btn, .vol-filter-btn {
-  border-radius:var(--r-btn); font-family:var(--font);
-}
-.vol-filter-btn, .db-btn { min-height:var(--field-h); }
-/* Principale: giallo con testo blu scuro */
-.btn-login, .db-btn.green {
-  background:var(--yellow); color:var(--on-yellow); border:none; font-weight:700;
-}
-/* Secondario: bianco con bordo */
-.db-btn, .vol-filter-btn, .db-pag-btn {
-  background:var(--surface); color:var(--fg); border:1px solid var(--line2); box-shadow:none;
-}
-
-/* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.vol-badge, .perm-badge, .visite-stato, .db-pag-btn, .login-tab {
-  border-radius:var(--r-pill);
-}
-.login-tabs { border-radius:var(--r-pill); }
-
-.vol-filter-btn.active, .db-pag-btn.active, .login-tab.active {
-  background:var(--accent); border-color:var(--accent); color:#fff;
-}
-@media (prefers-color-scheme: dark) {
-  .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active { color:#072F63; }
-}
-
-/* Stati: Attivo = blu chiaro, In intervento = giallo, Sospeso = grigio */
-
-.vb-ok { background:var(--soft); color:var(--accent); }
+/* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
+.doc-vol-card,.richiesta-card,.schedapers-hero,.schedapers-sec,.gall-album,.vd-card,.visite-table-wrap,.db-wrap{border-radius:20px;border:1px solid var(--line)}
+.db-cols-card,.db-record-card{border-radius:24px 24px 0 0}
+.form-inp,.db-record-inp,.doc-search,.db-search{min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
+.form-inp:focus,.db-record-inp:focus,.doc-search:focus,.db-search:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+.db-btn{min-height:44px;border-radius:14px;background:var(--surface);color:var(--accent);border:1px solid var(--line2);font-weight:700;box-shadow:none}
+.db-btn.green{background:var(--yellow);color:var(--on-yellow);border-color:var(--yellow);font-weight:800}
+.visite-stato{border-radius:999px}
 
 </style>
 </head>
@@ -836,11 +745,11 @@ body { font-family:var(--font); }
 <div id="loginScreen" style="display:flex">
   <div class="login-card">
     <div class="login-logo">
-      <img src="images/logo-ana.gif" alt="PC ANA" onerror="this.style.display='none'">
-      <h1>PC ANA Casale Monferrato</h1>
+      <img class="brand-logo" src="images/logo-ana.gif" alt="" onerror="this.style.display='none'">
+      <h1>PC ANA Casale</h1>
     </div>
 
-    <div class="login-tabs">
+    <div class="seg login-tabs" role="group" aria-label="Tipo di accesso">
       <button class="login-tab active" id="ltabAdmin" onclick="switchLoginTab('admin')">Amministratori</button>
       <button class="login-tab" id="ltabVol" onclick="switchLoginTab('vol')">Volontari</button>
     </div>
@@ -1904,7 +1813,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=168"></script>
+<script src="area-riservata.js?v=169"></script>
 <script src="aggiornamento-dati.js?v=9"></script>
 </body>
 </html>

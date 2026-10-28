@@ -880,9 +880,9 @@ async function caricaLog() {
 let volontariData = [];
 let volCorrenteId = null;
 
+// Avatar come nel riferimento: giallo chiaro o azzurro, testo blu
 const AVATAR_COLORS = [
-  ['#e8f5ee','#1a7a4a'], ['#e8f0fb','#1a4a9a'], ['#fef3e8','#b45309'],
-  ['#f3e8ff','#7c3aed'], ['#fde8e8','#b91c1c'], ['#e8faf5','#0f766e']
+  ['var(--yellow-soft)','var(--fg)'], ['var(--soft)','var(--fg)']
 ];
 
 function avatarColor(str) {
@@ -3104,7 +3104,7 @@ async function aicConfermaBozza(id, btnEl) {
     // se è ancora aperto vuol dire che una validazione ha bloccato il salvataggio (errore già mostrato nel form).
     const formAncoraAperto = document.getElementById('intFormPanel').classList.contains('open');
     if (formAncoraAperto) {
-      if (row) row.innerHTML = '<span style="font-size:0.78rem;color:#ff3b30">Dati incompleti: controlla il form aperto e salva da lì.</span>';
+      if (row) row.innerHTML = '<span class="bad">Dati incompleti: controlla il form aperto e salva da lì.</span>';
       return;
     }
     chiudiChatAgenteIntervento();
@@ -3979,8 +3979,8 @@ async function eseguiVerificaCF() {
   let out = '<div class="panel" style="padding:0.8rem">'
     + '<div style="font-size:0.8rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center">'
     + '<span><strong>' + vols.length + '</strong> volontari verificati — '
-    + '<span style="color:var(--green,#2e7d32)">✔ ' + ok + ' coerenti</span> · '
-    + '<span style="color:var(--red,#c62828)">⚠ ' + errori.length + ' discrepanze</span>'
+    + '<span class="pill p-blue">' + ok + ' coerenti</span> '
+    + '<span class="pill p-red">' + errori.length + ' discrepanze</span>'
     + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '') + '</span>'
     + '<button class="db-btn" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">✕ chiudi</button>'
     + '</div>';
@@ -4160,14 +4160,14 @@ function pstRenderLista() {
     const infoRighe = [];
     infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
     infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span style="color:var(--testo-3)">nessun vigile</span>');
-    infoRighe.push(p.assegnata_ana === false ? '🏳️ <span style="color:#e08000">non assegnata a noi</span>' : '🏳️ ANA');
+    infoRighe.push(p.assegnata_ana === false ? '🏳️ <span class="pill p-sand">non assegnata a noi</span>' : '🏳️ ANA');
     infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
 
     const righeVol = p.volontari.length
       ? p.volontari.map(a => {
           const v = a.volontari || {};
           const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.indirizzo));
-          const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;display:block">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
+          const warnAltrove = altrove.length ? '<span class="pill p-sand" style="margin-top:4px">anche a: ' + altrove.join(', ') + '</span>' : '';
           const tr = a.trasporto || 'piedi';
           const opt = (val, label) => '<option value="' + val + '"' + (tr === val ? ' selected' : '') + '>' + label + '</option>';
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem;gap:0.4rem">'
@@ -5440,7 +5440,7 @@ function pstRenderListePosizionamento() {
 
   boxDa.innerHTML = daPosizionare.length ? daPosizionare.map(p => {
     const attivo = pstMapArmedPostazioneId === p.id;
-    return '<button class="btn-sm" style="text-align:left' + (attivo ? ';background:var(--green);color:#fff' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
+    return '<button class="chip' + (attivo ? ' on' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
   }).join('') : '<div class="loading-msg sm">tutte posizionate</div>';
 
   boxOk.innerHTML = posizionate.length ? posizionate.map(p => {
@@ -5785,11 +5785,10 @@ function renderTlc(data) {
     gruppi[k].push(t);
   });
 
-  html += '<div class="vol-list">';
+  html += '<div class="grid g3">';
   Object.keys(gruppi).forEach(k => {
     const info = TLC_TIPOLOGIE[k] || { label: k, icon: '📡' };
-    html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.7rem 1rem 0.4rem;border-top:0.5px solid var(--border)">'
-      + info.icon + ' ' + info.label + ' (' + gruppi[k].length + ')</div>';
+    html += '<div class="grp">' + info.label + ' (' + gruppi[k].length + ')</div>';
     gruppi[k].forEach(t => {
       const titolo  = [t.marca, t.modello].filter(Boolean).join(' ') || '—';
       const sub     = [];
@@ -5797,16 +5796,13 @@ function renderTlc(data) {
       if (t.selettiva)    sub.push('SEL ' + t.selettiva);
       if (t.frequenza)    sub.push(t.frequenza === 'DIGITALE' ? 'Digitale' : 'Analogica');
       const badge = t.assegnazione
-        ? '<span class="vol-badge vb-squadra">' + t.assegnazione + '</span>'
-        : '<span class="vol-badge vb-off">non assegnato</span>';
-      html += '<div class="vol-card" onclick="apriDettaglioTlc(' + t.id + ')">'
-        + '<div class="vol-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.1rem">' + info.icon + '</div>'
-        + '<div class="vol-card-info">'
-        + '<div class="vol-card-name">' + titolo + '</div>'
-        + '<div class="vol-card-sub"><span>' + (sub.join(' | ') || '—') + '</span></div>'
-        + '</div>'
-        + '<div class="vol-card-badges">' + badge + '</div>'
-        + '</div>';
+        ? '<span class="pill p-blue">' + t.assegnazione + '</span>'
+        : '<span class="pill p-grey">Non assegnato</span>';
+      html += '<button class="card vc tlc-card" onclick="apriDettaglioTlc(' + t.id + ')">'
+        + '<span class="av">' + info.icon + '</span>'
+        + '<span class="mid"><b>' + titolo + '</b><span class="sub">' + (sub.join(' · ') || '—') + '</span></span>'
+        + badge
+        + '</button>';
     });
   });
   html += '</div>';
@@ -5898,7 +5894,7 @@ function apriDettaglioTlc(id) {
 
   const body = document.getElementById('tlcDetailBody');
   let html = '<div class="vol-detail-hero">'
-    + '<div class="vol-detail-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.6rem">' + info.icon + '</div>'
+    + '<div class="vol-detail-avatar">' + info.icon + '</div>'
     + '<div><div class="vol-detail-name">' + ([t.marca, t.modello].filter(Boolean).join(' ') || '—') + '</div>'
     + '<div class="vol-detail-role">' + info.label + (t.assegnazione ? ' | ' + t.assegnazione : '') + '</div></div>'
     + '</div>';
@@ -8458,13 +8454,13 @@ function renderDashboardVisite() {
   });
   const currentFilter = document.getElementById('visiteFiltroStato') ? document.getElementById('visiteFiltroStato').value : '';
   const cards = [
-    { key: '',           label: 'Totale',     n: cnt.TOT,        color: '#222' },
-    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--green)' },
-    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: '#ff8c00' },
-    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: '#d9a400' },
-    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: '#4c8dff' },
-    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: '#9aa0a6' },
-    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: '#dc3545' },
+    { key: '',           label: 'Totale',     n: cnt.TOT,        color: 'var(--fg)' },
+    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--accent)' },
+    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: 'var(--yellow)' },
+    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: 'var(--red)' },
+    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: 'var(--accent-bg)' },
+    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: 'var(--muted)' },
+    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: 'var(--red)' },
   ];
   dash.innerHTML = cards.map(c => {
     const pct = tot > 0 ? Math.round((c.n / tot) * 100) : 0;
