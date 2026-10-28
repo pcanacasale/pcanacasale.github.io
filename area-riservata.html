@@ -407,6 +407,20 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .aic-input{min-height:84px}
 @media (max-width:860px){.aic-panel{align-items:flex-end;padding:0}.aic-sheet{border-radius:24px 24px 0 0;height:92%}}
 
+/* ── piani di carico ── */
+.pdc-nuovo{margin-bottom:18px}
+.pdc-sel{max-width:420px;flex:1}
+.pdc-chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.pdc-mezzo .frow{margin-bottom:12px}
+.pdc-mezzo .frow>select,.pdc-mezzo .frow>input{flex:2;min-width:180px;width:auto}
+.pdc-mezzo .frow>input.pdc-autista{flex:1;min-width:140px}
+.pdc-mezzo .frow>input.pdc-ord{flex:none;width:64px;min-width:0}
+.pdc-voce{cursor:default}
+.pdc-voce.ok .mid b{text-decoration:line-through;color:var(--muted)}
+.pdc-voce input[type=number]{width:84px;flex:none}
+.pdc-add{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.pdc-add input{flex:1;min-width:160px;width:auto}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -1519,35 +1533,38 @@ body { font-family:var(--font); }
 
     <!-- PIANI DI CARICO -->
     <div class="panel" id="panelPianiCarico">
-      <div class="panel-hdr"><h2>Piani di Carico</h2><p>Checklist materiale caricato per mezzo</p></div>
-
-      <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <label class="form-lbl">Piano</label>
-          <select class="form-inp" id="pdcPiano" onchange="pdcSelezionaPiano(this.value)">
-            <option value="">— seleziona un piano —</option>
-          </select>
-        </div>
-        <button class="btn-sm" onclick="pdcApriNuovoPiano()">+ Nuovo piano</button>
-        <button class="btn-sm btn-danger" id="pdcBtnElimina" style="display:none" onclick="pdcEliminaPianoCorrente()">🗑️ Elimina piano</button>
+      <div class="phead">
+        <div><h1>Piani di carico</h1></div>
+        <div class="pact"><button class="btn pri" onclick="pdcApriNuovoPiano()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo piano</button></div>
       </div>
 
-      <div id="pdcNuovoBody" style="display:none;padding:0 0.9rem 0.6rem;flex-direction:column;gap:0.5rem">
-        <input class="form-inp" id="pdcNuovoNome" placeholder="Nome piano (es. Piano di carico per ES Mirabello 2026)">
-        <input class="form-inp" id="pdcNuovoData" type="date">
-        <button class="btn-primary" onclick="pdcSalvaNuovoPiano()">crea piano</button>
+      <div class="card form pdc-nuovo" id="pdcNuovoBody" style="display:none">
+        <h2>Nuovo piano di carico</h2>
+        <div class="row2">
+          <label>Nome del piano<input id="pdcNuovoNome" placeholder="Es. Piano di carico ES Mirabello 2026"></label>
+          <label>Data<input id="pdcNuovoData" type="date"></label>
+        </div>
+        <div class="actions"><button class="btn" onclick="pdcApriNuovoPiano()">Annulla</button><button class="btn pri" onclick="pdcSalvaNuovoPiano()">Crea piano</button></div>
+      </div>
+
+      <div class="bar">
+        <span class="fl">Piano</span>
+        <select id="pdcPiano" class="pdc-sel" onchange="pdcSelezionaPiano(this.value)">
+          <option value="">— seleziona un piano —</option>
+        </select>
+        <button class="btn danger" id="pdcBtnElimina" style="display:none" onclick="pdcEliminaPianoCorrente()">Elimina piano</button>
       </div>
 
       <div id="pdcBody" style="display:none">
-        <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">
-          <button class="btn-sm" onclick="pdcAggiungiMezzo()">+ Aggiungi mezzo</button>
-          <button class="btn-sm" onclick="pdcEsportaPDF()">📄 Scarica PDF</button>
-          <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--testo-2);margin-left:0.4rem">
+        <div class="bar">
+          <button class="btn" onclick="pdcAggiungiMezzo()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Aggiungi mezzo</button>
+          <button class="btn" onclick="pdcEsportaPDF()">Scarica PDF</button>
+          <label class="pdc-chk">
             <input type="checkbox" id="pdcMostraComposizione" onchange="pdcToggleComposizione(this.checked)">
             Includi pagina "Composizione colonna" (abilita l'ordine dei mezzi)
           </label>
         </div>
-        <div id="pdcMezziList" style="padding:0 0.9rem 1rem"></div>
+        <div id="pdcMezziList"></div>
       </div>
     </div>
 
@@ -1894,7 +1911,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=162"></script>
+<script src="area-riservata.js?v=163"></script>
 <script src="aggiornamento-dati.js?v=8"></script>
 </body>
 </html>

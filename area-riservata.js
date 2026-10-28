@@ -6895,7 +6895,7 @@ async function pdcToggleComposizione(checked) {
 
 async function pdcCaricaMezzi() {
   const list = document.getElementById('pdcMezziList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   if (!mezziData || !mezziData.length) {
     try { const r = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
   }
@@ -6915,47 +6915,51 @@ function _pdcLabelMezzo(m) {
 
 function pdcRenderMezzi() {
   const list = document.getElementById('pdcMezziList');
-  if (!pdcMezzi.length) { list.innerHTML = '<div class="loading-msg">nessun mezzo aggiunto. Usa "+ Aggiungi mezzo".</div>'; return; }
+  if (!pdcMezzi.length) { list.innerHTML = '<div class="empty">Nessun mezzo aggiunto. Usa "Aggiungi mezzo".</div>'; return; }
   const etichetteMezzi = (mezziData || []).map(m => _pdcLabelMezzo(m));
   const datalistArticoli = '<datalist id="pdcDotazioniList">' +
     dotAll.map(d => '<option value="' + (d.articolo + (d.magazzino ? ' — ' + d.magazzino : '')).replace(/"/g,'&quot;') + '">').join('') +
     '</datalist>';
   const mostraOrdine = pdcPianoCorrente && pdcPianoCorrente.mostra_composizione;
-  let html = datalistArticoli;
+  let html = datalistArticoli + '<div class="grid g3" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">';
   pdcMezzi.forEach(m => {
     const isAltro = m.descrizione_mezzo && etichetteMezzi.indexOf(m.descrizione_mezzo) === -1;
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div style="padding:0.6rem 0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
-      + (mostraOrdine ? '<input class="form-inp" type="number" style="width:56px;flex:none" title="Ordine in colonna" value="' + (m.ordine||0) + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'ordine\',parseInt(this.value)||0)">' : '')
-      + '<select class="form-inp" style="flex:2;min-width:180px" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
+    const caricati = m.voci.filter(v => v.spuntato).length;
+    html += '<div class="card pdc-mezzo">'
+      + '<div class="frow">'
+      + (mostraOrdine ? '<input class="pdc-ord" type="number" title="Ordine in colonna" aria-label="Ordine in colonna" value="' + (m.ordine||0) + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'ordine\',parseInt(this.value)||0)">' : '')
+      + '<select aria-label="Mezzo" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
       + '<option value="">— seleziona mezzo —</option>'
       + etichetteMezzi.map(l => '<option value="' + l.replace(/"/g,'&quot;') + '"' + (m.descrizione_mezzo===l?' selected':'') + '>' + l + '</option>').join('')
-      + '<option value="__altro__"' + (isAltro?' selected':'') + '>✏️ Altro (testo libero)</option>'
+      + '<option value="__altro__"' + (isAltro?' selected':'') + '>Altro (testo libero)</option>'
       + '</select>'
-      + '<input class="form-inp" style="flex:2;min-width:180px' + (isAltro?'':';display:none') + '" id="pdcMezzoLibero' + m.id + '" placeholder="Descrizione mezzo (es. CARRELLO BIANCO)" value="' + (isAltro?(m.descrizione_mezzo||'').replace(/"/g,'&quot;'):'') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
-      + '<input class="form-inp" style="flex:1;min-width:140px" placeholder="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
-      + '<button class="btn-sm btn-danger" onclick="pdcEliminaMezzo(' + m.id + ')">🗑️ mezzo</button>'
+      + '<input id="pdcMezzoLibero' + m.id + '" placeholder="Descrizione mezzo (es. CARRELLO BIANCO)" value="' + (isAltro?(m.descrizione_mezzo||'').replace(/"/g,'&quot;'):'') + '"' + (isAltro?'':' style="display:none"') + ' onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
+      + '<input class="pdc-autista" placeholder="Autista" aria-label="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
       + '</div>'
-      + '<div style="padding:0 0.8rem 0.6rem">';
+      + '<div class="progbar"><i style="width:' + Math.round(caricati / Math.max(1, m.voci.length) * 100) + '%"></i></div>'
+      + '<div class="cfoot flat"><span>Caricati</span><b>' + caricati + ' / ' + m.voci.length + '</b></div>';
 
     m.voci.forEach(v => {
-      html += '<div style="display:flex;gap:0.4rem;align-items:center;padding:0.25rem 0">'
-        + '<input type="checkbox" ' + (v.spuntato ? 'checked' : '') + ' onchange="pdcAggiornaVoce(' + v.id + ',\'spuntato\',this.checked)">'
-        + '<div style="flex:1' + (v.spuntato ? ';text-decoration:line-through;color:var(--testo-3)' : '') + '">' + v.descrizione + '</div>'
-        + '<input class="form-inp" type="number" step="0.01" style="width:80px" placeholder="Qta" value="' + (v.quantita===null||v.quantita===undefined?'':v.quantita) + '" onchange="pdcAggiornaVoce(' + v.id + ',\'quantita\',this.value===\'\'?null:parseFloat(this.value))">'
-        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="pdcEliminaVoce(' + v.id + ')">✕</button>'
+      html += '<div class="lr pdc-voce' + (v.spuntato ? ' ok' : '') + '">'
+        + '<input type="checkbox" aria-label="Caricato" ' + (v.spuntato ? 'checked' : '') + ' onchange="pdcAggiornaVoce(' + v.id + ',\'spuntato\',this.checked)">'
+        + '<span class="mid"><b>' + v.descrizione + '</b></span>'
+        + '<input type="number" step="0.01" placeholder="Qtà" aria-label="Quantità" value="' + (v.quantita===null||v.quantita===undefined?'':v.quantita) + '" onchange="pdcAggiornaVoce(' + v.id + ',\'quantita\',this.value===\'\'?null:parseFloat(this.value))">'
+        + '<button class="btn sm danger" aria-label="Elimina voce" onclick="pdcEliminaVoce(' + v.id + ')">✕</button>'
         + '</div>';
     });
 
-    html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">'
-      + '<input class="form-inp" style="flex:1;min-width:160px" list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="🔍 cerca articolo per nome...">'
-      + '<button class="btn-sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">+ aggiungi</button>'
-      + '<input class="form-inp" style="flex:1;min-width:160px" placeholder="oppure voce libera..." id="pdcLiberaVoce' + m.id + '">'
-      + '<button class="btn-sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">+ aggiungi</button>'
-      + '</div>';
+    html += '<div class="pdc-add">'
+      + '<input list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="Cerca articolo per nome">'
+      + '<button class="btn sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">Aggiungi</button>'
+      + '</div><div class="pdc-add" style="border:0;padding-top:0;margin-top:8px">'
+      + '<input placeholder="Oppure voce libera" id="pdcLiberaVoce' + m.id + '">'
+      + '<button class="btn sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">Aggiungi</button>'
+      + '</div>'
+      + '<button class="btn danger full" style="margin-top:14px" onclick="pdcEliminaMezzo(' + m.id + ')">Elimina mezzo</button>';
 
-    html += '</div></div>';
+    html += '</div>';
   });
+  html += '</div>';
   list.innerHTML = html;
 }
 
