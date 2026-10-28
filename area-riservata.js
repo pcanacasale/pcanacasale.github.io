@@ -8235,7 +8235,7 @@ async function caricaGalleria() {
     return;
   }
 
-  content.innerHTML = '<div class="loading-msg">caricamento album...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento album…</div>';
   try {
     // Lista sottocartelle (album) nella cartella principale
     const q = "'" + GALLERIA_FOLDER_ID + "' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
@@ -8283,7 +8283,7 @@ async function caricaGalleria() {
 function renderAlbums(albums) {
   const content = document.getElementById('gallContent');
   if (!albums.length) {
-    content.innerHTML = '<div class="loading-msg">nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
+    content.innerHTML = '<div class="empty">Nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
     return;
   }
   let html = '<div class="gall-albums">';
@@ -8292,12 +8292,10 @@ function renderAlbums(albums) {
     const cover = alb.coverId
       ? '<img src="https://lh3.googleusercontent.com/d/' + alb.coverId + '=w600" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=&quot;gall-folder-icon&quot;>📁</span>\'">'
       : '<span class="gall-folder-icon">📁</span>';
-    html += '<div class="gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
+    html += '<div class="card gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
       + '<div class="gall-album-cover">' + cover + '</div>'
-      + '<div class="gall-album-info">'
-      + '<div class="gall-album-name">' + alb.name + '</div>'
-      + (dateStr ? '<div class="gall-album-meta">' + dateStr + '</div>' : '')
-      + '</div>'
+      + '<b class="gall-album-name">' + alb.name + '</b>'
+      + (dateStr ? '<span class="sub">' + dateStr + '</span>' : '')
       + '</div>';
   });
   html += '</div>';

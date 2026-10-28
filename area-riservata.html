@@ -675,6 +675,29 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .pos-dot{display:inline-block;width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .pos-map{height:60vh;min-height:400px;border-radius:20px;border:1px solid var(--line);margin-bottom:18px;position:relative;z-index:0;isolation:isolate}
 
+/* ── galleria ── */
+:root{--photo-scrim:rgba(0,0,0,.92);--photo-ctrl:rgba(255,255,255,.14);--photo-fg:#fff}
+.gall-albums{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.gall-album{cursor:pointer}
+.gall-album:hover{border-color:var(--accent)}
+.gall-album-cover{height:150px;border-radius:14px;margin-bottom:14px;overflow:hidden;background:var(--soft);display:flex;align-items:center;justify-content:center}
+.gall-album-cover img{width:100%;height:100%;object-fit:cover}
+.gall-folder-icon{font-size:40px;opacity:.5}
+.gall-album-name{display:block;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gall-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.gall-photo{aspect-ratio:1;border-radius:14px;overflow:hidden;background:var(--bg);cursor:pointer;position:relative}
+.gall-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.gall-photo:hover img{transform:scale(1.05)}
+.gall-lightbox{position:fixed;inset:0;background:var(--photo-scrim);z-index:9999;display:none;align-items:center;justify-content:center;padding:32px}
+.gall-lightbox.open{display:flex}
+.gall-lightbox img{max-width:90vw;max-height:80vh;object-fit:contain;border-radius:14px}
+.gall-lb-close,.gall-lb-prev,.gall-lb-next{position:absolute;border:0;border-radius:50%;background:var(--photo-ctrl);color:var(--photo-fg);display:flex;align-items:center;justify-content:center}
+.gall-lb-close{top:16px;right:16px;width:44px;height:44px;font-size:20px}
+.gall-lb-prev,.gall-lb-next{top:50%;transform:translateY(-50%);width:52px;height:52px;font-size:30px;line-height:1}
+.gall-lb-prev{left:16px}
+.gall-lb-next{right:16px}
+.gall-lb-caption{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:var(--photo-fg);font-size:14px;background:var(--photo-scrim);padding:6px 14px;border-radius:999px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -709,27 +732,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* Volontari picker NUOVO per intervento */
 
 /* Galleria */
-.gall-albums { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.8rem; }
-.gall-album { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); overflow:hidden; cursor:pointer; box-shadow:none; transition:transform 0.15s; }
-.gall-album:hover { transform:translateY(-2px); }
-.gall-album-cover { width:100%; aspect-ratio:4/3; background:var(--bg-2); display:flex; align-items:center; justify-content:center; overflow:hidden; }
-.gall-album-cover img { width:100%; height:100%; object-fit:cover; display:block; }
-.gall-album-cover .gall-folder-icon { font-size:3rem; opacity:0.3; }
-.gall-album-info { padding:0.6rem 0.8rem; }
-.gall-album-name { font-size:0.88rem; font-weight:600; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gall-album-meta { font-size:0.7rem; color:var(--testo-3); margin-top:0.2rem; }
-.gall-photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:0.5rem; }
-.gall-photo { aspect-ratio:1; background:var(--bg-2); border-radius:var(--r-sm); overflow:hidden; cursor:pointer; box-shadow:none; position:relative; }
-.gall-photo img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.2s; }
-.gall-photo:hover img { transform:scale(1.05); }
-.gall-lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9999; display:none; align-items:center; justify-content:center; padding:2rem; }
-.gall-lightbox.open { display:flex; }
-.gall-lightbox img { max-width:90vw; max-height:80vh; object-fit:contain; border-radius:4px; }
-.gall-lb-close { position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.1); border:none; color:white; width:42px; height:42px; border-radius:50%; font-size:1.3rem; cursor:pointer; }
-.gall-lb-prev, .gall-lb-next { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.1); border:none; color:white; width:48px; height:48px; border-radius:50%; font-size:2rem; cursor:pointer; line-height:1; }
-.gall-lb-prev { left:1rem; }
-.gall-lb-next { right:1rem; }
-.gall-lb-caption { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); color:white; font-size:0.85rem; background:rgba(0,0,0,0.6); padding:0.4rem 0.9rem; border-radius:14px; }
 
 /* Visite Mediche */
 
@@ -815,7 +817,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
 /* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
-.gall-album {border-radius:20px;border:1px solid var(--line)}
 
 .form-inp {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
 .form-inp:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
@@ -1440,12 +1441,11 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- GALLERIA -->
     <div class="panel" id="panelGalleria">
-      <div class="panel-hdr">
-        <h2 id="gallTitle">Galleria</h2>
-        <p id="gallSub">Album fotografici degli eventi</p>
+      <div class="phead">
+        <div><h1 id="gallTitle">Galleria</h1><span class="sub" id="gallSub">Album fotografici degli eventi</span></div>
+        <div class="pact"><button class="btn" id="gallBackBtn" onclick="galleriaBack()" style="display:none">← Tutti gli album</button></div>
       </div>
-      <button class="btn-sm" id="gallBackBtn" onclick="galleriaBack()" style="display:none;margin-bottom:0.8rem">← tutti gli album</button>
-      <div id="gallContent"><div class="loading-msg">caricamento...</div></div>
+      <div id="gallContent"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- Lightbox -->
@@ -1865,7 +1865,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=180"></script>
+<script src="area-riservata.js?v=181"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>
