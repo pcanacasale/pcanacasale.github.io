@@ -545,6 +545,14 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .dragging{cursor:grabbing!important}
 @media (max-width:860px){.pst-card .pst-head{flex-wrap:wrap}.pst-card .pst-head h3{flex-basis:100%;white-space:normal}}
 
+/* ── TLC ── */
+.tlc-card{display:flex;align-items:center;gap:14px}
+.tlc-card .av{font-size:22px}
+.tlc-docs{margin-bottom:18px}
+.tlc-docs-head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.tlc-docs-body{margin-top:12px}
+.doc-item .go{text-decoration:none}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -1565,30 +1573,33 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- TLC (Telecomunicazioni) -->
     <div class="panel" id="panelTlc">
-      <div class="panel-hdr">
-        <h2>TLC</h2>
-        <p>Apparati di telecomunicazione</p>
+      <div class="phead">
+        <div><h1>TLC</h1></div>
+        <div class="pact"><button class="btn pri" onclick="apriFormTlc(null)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo apparato</button></div>
       </div>
-      <div class="form-row" style="margin-bottom:0.8rem">
-        <input type="text" id="tlcSearch" class="form-inp" placeholder="cerca marca, modello, seriale..." oninput="filtraTlc()" style="flex:1">
-        <select id="tlcFiltroTipo" class="form-inp" onchange="filtraTlc()" style="max-width:180px">
-          <option value="">tutti i tipi</option>
-          <option value="PORTATILE">Portatile</option>
-          <option value="VEICOLARE">Veicolare</option>
-          <option value="STAZIONE_FISSA">Stazione fissa</option>
-          <option value="PONTE_RADIO">Ponte radio</option>
+      <div class="bar">
+        <div class="chips" id="tlcChips">
+          <button class="chip on" onclick="tlcScegliTipo(this,'')">Tutti</button>
+          <button class="chip" onclick="tlcScegliTipo(this,'PORTATILE')">Portatili</button>
+          <button class="chip" onclick="tlcScegliTipo(this,'VEICOLARE')">Veicolari</button>
+          <button class="chip" onclick="tlcScegliTipo(this,'STAZIONE_FISSA')">Stazioni fisse</button>
+          <button class="chip" onclick="tlcScegliTipo(this,'PONTE_RADIO')">Ponti radio</button>
+        </div>
+        <select id="tlcFiltroTipo" hidden onchange="filtraTlc()" aria-hidden="true">
+          <option value=""></option><option value="PORTATILE"></option><option value="VEICOLARE"></option><option value="STAZIONE_FISSA"></option><option value="PONTE_RADIO"></option>
         </select>
-        <button class="btn-primary" style="padding:0.5rem 1rem" onclick="apriFormTlc(null)">+ nuovo</button>
+        <span class="grow"></span>
+        <label class="search" for="tlcSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="tlcSearch" placeholder="Cerca marca, modello, seriale" autocomplete="off" oninput="filtraTlc()"></label>
       </div>
-      <div id="tlcList"><div class="loading-msg">caricamento...</div></div>
+      <div id="tlcList"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- SCHEDA TLC -->
     <div class="vol-detail" id="tlcDetail">
       <div class="vol-detail-top">
-        <button class="vol-detail-back" onclick="chiudiDettaglioTlc()">← indietro</button>
-        <span class="vol-detail-title" id="tlcDetailTitle">—</span>
-        <button class="vol-detail-edit" onclick="apriFormTlc(tlcCorrenteId)">modifica</button>
+        <h2 class="vol-detail-title" id="tlcDetailTitle">—</h2>
+        <button class="btn sm" onclick="apriFormTlc(tlcCorrenteId)">Modifica</button>
+        <button class="x" onclick="chiudiDettaglioTlc()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-detail-body" id="tlcDetailBody"></div>
     </div>
@@ -1596,34 +1607,22 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- FORM TLC -->
     <div class="vol-form" id="tlcFormPanel">
       <div class="vol-form-top">
-        <button class="vol-detail-back" onclick="chiudiFormTlc()">← annulla</button>
-        <span class="vol-form-title" id="tlcFormTitle">Nuovo apparato TLC</span>
-        <button class="vol-form-save" onclick="salvaTlc()">salva</button>
+        <h2 class="vol-form-title" id="tlcFormTitle">Nuovo apparato TLC</h2>
+        <button class="x" onclick="chiudiFormTlc()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-form-body" id="tlcFormBody"></div>
+      <div class="vol-form-foot"><button class="btn" onclick="chiudiFormTlc()">Annulla</button><button class="btn pri" onclick="salvaTlc()">Salva</button></div>
     </div>
 
     <!-- UPLOAD DOC TLC GENERALE -->
     <div class="vista-form-overlay" id="tlcDocGenUploadOverlay">
       <div class="vista-form-card">
-        <h4>Carica documento generale TLC</h4>
+        <div class="shead sheet-h"><h2>Carica documento generale TLC</h2><button class="x" onclick="chiudiTlcDocUploadGenerale()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="form-err" id="tlcDocGenUploadErr"></div>
-        <div class="form-field" style="margin-bottom:0.5rem">
-          <label class="form-lbl">Tipo</label>
-          <select class="form-inp" id="tlcDocGenTipo">
-            <option value="MANUALE">📚 Manuale / Normativa</option>
-            <option value="FREQUENZE">📡 Piano frequenze / Selettive</option>
-            <option value="AMMINISTRATIVO">📋 Amministrativo / Concessione</option>
-            <option value="ALTRO">📁 Altro</option>
-          </select>
-        </div>
-        <div class="form-field" style="margin-bottom:0.5rem">
-          <label class="form-lbl">File</label>
-          <input type="file" id="tlcDocGenFile" accept="image/*,application/pdf">
-        </div>
-        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
-          <button class="btn-sm" onclick="chiudiTlcDocUploadGenerale()">annulla</button>
-          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlcGenerale()">carica</button>
+        <div class="form">
+          <label>Tipo<select id="tlcDocGenTipo"><option value="MANUALE">Manuale / Normativa</option><option value="FREQUENZE">Piano frequenze / Selettive</option><option value="AMMINISTRATIVO">Amministrativo / Concessione</option><option value="ALTRO">Altro</option></select></label>
+          <label>File<input type="file" id="tlcDocGenFile" accept="image/*,application/pdf"></label>
+          <div class="actions"><button class="btn" onclick="chiudiTlcDocUploadGenerale()">Annulla</button><button class="btn pri" onclick="eseguiUploadDocTlcGenerale()">Carica</button></div>
         </div>
       </div>
     </div>
@@ -1631,24 +1630,12 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- UPLOAD DOC TLC -->
     <div class="vista-form-overlay" id="tlcDocUploadOverlay">
       <div class="vista-form-card">
-        <h4>Carica documento</h4>
+        <div class="shead sheet-h"><h2>Carica documento</h2><button class="x" onclick="chiudiTlcDocUpload()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="form-err" id="tlcDocUploadErr"></div>
-        <div class="form-field" style="margin-bottom:0.5rem">
-          <label class="form-lbl">Tipo</label>
-          <select class="form-inp" id="tlcDocTipo">
-            <option value="SCHEDA">📄 Scheda tecnica</option>
-            <option value="FOTO">📷 Foto</option>
-            <option value="LICENZA">📜 Licenza</option>
-            <option value="ALTRO">📁 Altro</option>
-          </select>
-        </div>
-        <div class="form-field" style="margin-bottom:0.5rem">
-          <label class="form-lbl">File</label>
-          <input type="file" id="tlcDocFile" accept="image/*,application/pdf">
-        </div>
-        <div style="display:flex;gap:0.4rem;justify-content:flex-end">
-          <button class="btn-sm" onclick="chiudiTlcDocUpload()">annulla</button>
-          <button class="btn-primary" style="padding:0.5rem 1rem" onclick="eseguiUploadDocTlc()">carica</button>
+        <div class="form">
+          <label>Tipo<select id="tlcDocTipo"><option value="SCHEDA">Scheda tecnica</option><option value="FOTO">Foto</option><option value="LICENZA">Licenza</option><option value="ALTRO">Altro</option></select></label>
+          <label>File<input type="file" id="tlcDocFile" accept="image/*,application/pdf"></label>
+          <div class="actions"><button class="btn" onclick="chiudiTlcDocUpload()">Annulla</button><button class="btn pri" onclick="eseguiUploadDocTlc()">Carica</button></div>
         </div>
       </div>
     </div>
@@ -1871,7 +1858,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=171"></script>
+<script src="area-riservata.js?v=172"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

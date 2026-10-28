@@ -3809,7 +3809,7 @@ async function eliminaDoc(docId, volId) {
 async function caricaDocVolontario(volId) {
   const body = document.getElementById('volDocBody');
   if (!body) return;
-  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
     if (!res.ok) {
@@ -5761,6 +5761,14 @@ async function caricaTlc() {
   }
 }
 
+// Chip del filtro tipo: scrivono nel select nascosto letto da filtraTlc()
+function tlcScegliTipo(btn, val) {
+  document.querySelectorAll('#tlcChips .chip').forEach(c => c.classList.toggle('on', c === btn));
+  const sel = document.getElementById('tlcFiltroTipo');
+  sel.value = val;
+  filtraTlc();
+}
+
 function renderTlc(data) {
   const list = document.getElementById('tlcList');
 
@@ -5768,7 +5776,7 @@ function renderTlc(data) {
   let html = _renderTlcDocsGenerali();
 
   if (!data.length) {
-    html += '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    html += '<div class="empty">Nessun apparato. Usa "Nuovo apparato" per aggiungerne uno.</div>';
     list.innerHTML = html;
     return;
   }
@@ -5808,12 +5816,12 @@ function _renderTlcDocsGenerali() {
   const count = tlcDocsGenerali.length;
   const expanded = window._tlcDocsGenAperto === true;
 
-  let html = '<div class="vol-section" style="margin-bottom:0.8rem;background:var(--bg-card);border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden">'
-    + '<div class="vol-section-head" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="toggleTlcDocsGenerali()">'
-    + '<span>📁 Documenti generali TLC <span style="font-size:0.6rem;color:var(--green);margin-left:4px">(' + count + ')</span></span>'
-    + '<span id="tlcDocsGenChev" style="color:var(--testo-3);font-size:0.85rem">' + (expanded ? '▼' : '▶') + '</span>'
+  let html = '<div class="card tlc-docs">'
+    + '<div class="tlc-docs-head" onclick="toggleTlcDocsGenerali()">'
+    + '<h2>Documenti generali TLC <span class="pill p-blue">' + count + '</span></h2>'
+    + '<span id="tlcDocsGenChev" class="pst-chev">' + (expanded ? '▼' : '▶') + '</span>'
     + '</div>'
-    + '<div class="vol-section-body" id="tlcDocsGenBody" style="' + (expanded ? '' : 'display:none') + '">';
+    + '<div class="tlc-docs-body" id="tlcDocsGenBody"' + (expanded ? '' : ' style="display:none"') + '>';
 
   // Raggruppa per tipo
   const gruppi = { MANUALE: [], FREQUENZE: [], AMMINISTRATIVO: [], ALTRO: [] };
@@ -5823,30 +5831,27 @@ function _renderTlcDocsGenerali() {
   });
 
   if (!count) {
-    html += '<div style="font-size:0.75rem;color:var(--testo-3);padding:0.5rem 0">Nessun documento generale.</div>';
+    html += '<p class="note">Nessun documento generale.</p>';
   } else {
     TLC_DOC_TIPI_GENERALI.forEach(k => {
       const docs = gruppi[k];
       if (!docs.length) return;
       const lbl = TLC_DOC_TIPI[k] || k;
-      html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.6rem 0 0.3rem">' + lbl + ' (' + docs.length + ')</div>';
+      html += '<div class="grp mt10">' + lbl + ' (' + docs.length + ')</div>';
       docs.forEach(d => {
         const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
         const nome = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : lbl;
-        html += '<div style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button>'
-          + '</div></div>';
+        html += '<div class="doc-item">'
+          + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
+          + '<div class="doc-item-meta">' + data + '</div></div>'
+          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button></div>'
+          + '</div>';
       });
     });
   }
 
-  html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUploadGenerale()">+ aggiungi documento generale</button>';
+  html += '<button class="doc-add-btn mt10" onclick="apriTlcDocUploadGenerale()">+ Aggiungi documento generale</button>';
   html += '</div></div>';
   return html;
 }
@@ -5894,7 +5899,7 @@ function apriDettaglioTlc(id) {
     + '<div class="vol-detail-role">' + info.label + (t.assegnazione ? ' | ' + t.assegnazione : '') + '</div></div>'
     + '</div>';
 
-  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body" style="display:block">'
+  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body">'
     + _tlcField('Tipologia', info.label)
     + _tlcField('Marca', t.marca)
     + _tlcField('Modello', t.modello)
@@ -5907,16 +5912,14 @@ function apriDettaglioTlc(id) {
 
   // Sezione documenti
   html += '<div class="vol-section">'
-    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleTlcDoc(' + id + ')">'
-    + 'Documenti <span id="tlcDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '<div class="vol-section-head" onclick="toggleTlcDoc(' + id + ')">'
+    + '<span>Documenti <span class="sec-count" id="tlcDocCount"></span></span>'
     + '</div>'
     + '<div class="vol-section-body" id="tlcDocBody" style="display:none"></div>'
     + '</div>';
 
   // Azioni
-  html += '<div style="padding:1rem 0">'
-    + '<button class="btn-sm btn-danger" style="width:100%" onclick="eliminaTlc(' + id + ')">🗑️ Elimina apparato</button>'
-    + '</div>';
+  html += '<button class="vol-delete-btn" onclick="eliminaTlc(' + id + ')">Elimina apparato</button>';
 
   body.innerHTML = html;
   tlcDocLoadedFor = null;
@@ -6049,7 +6052,7 @@ function toggleTlcDoc(tlcId) {
 async function caricaDocTlc(tlcId) {
   const body = document.getElementById('tlcDocBody');
   if (!body) return;
-  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
     const docs = await res.json();
@@ -6058,28 +6061,24 @@ async function caricaDocTlc(tlcId) {
 
     let html = '';
     if (!docs.length) {
-      html += '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.3rem 0">Nessun documento.</div>';
+      html += '<p class="note">Nessun documento.</p>';
     } else {
       docs.forEach(d => {
         const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
         const label = TLC_DOC_TIPI[d.tipo] || d.tipo;
         const nome  = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : label;
-        html += '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + label + ' · ' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button>'
-          + '</div>'
+        html += '<div class="doc-item">'
+          + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
+          + '<div class="doc-item-meta">' + label + ' · ' + data + '</div></div>'
+          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button></div>'
           + '</div>';
       });
     }
-    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUpload(' + tlcId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn mt10" onclick="apriTlcDocUpload(' + tlcId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 
