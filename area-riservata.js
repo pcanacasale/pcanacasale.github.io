@@ -7223,44 +7223,45 @@ async function pdcEsportaPDF() {
 async function caricaMezzi() {
   var list = document.getElementById('mezziList');
   if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     var res  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
     mezziData = await res.json();
     renderMezzi();
-  } catch(e) { list.innerHTML = '<div class="loading-msg">Errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 function renderMezzi() {
   var list = document.getElementById('mezziList');
   if (!list) return;
-  if (!mezziData.length) { list.innerHTML = '<div class="loading-msg">Nessun mezzo registrato.</div>'; return; }
+  if (!mezziData.length) { list.innerHTML = '<div class="empty">Nessun mezzo registrato.</div>'; return; }
 
-  var html = '<div class="mezzi-grid">';
-  mezziData.forEach(function(m) {
-    var rev   = getRevisioneStatus(m.revisione);
-    var revCls = rev.cls === 'scaduta' ? 'scad' : rev.cls === 'vicina' ? 'warn' : 'ok';
-    var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-    var sbCls  = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
-
+  var html = '<div class="grid g3">';
+  mezziData.forEach(function(m, i) {
+    var rev      = getRevisioneStatus(m.revisione);
+    var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{month:'2-digit',year:'numeric'}) : '—';
     var fotoHtml = m.foto_url
-      ? '<img src="' + m.foto_url + '" alt="' + m.automezzo + '">'
-      : '<div class="mezzo-tile-placeholder">' + getMezzoIcon(m.automezzo).replace('viewBox', 'style="width:48px;height:48px;stroke:var(--testo-4);stroke-width:1.2;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox') + '</div>';
+      ? '<img src="' + m.foto_url + '" alt="">'
+      : getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox');
+    var sub = [m.marca, m.modello].filter(Boolean).join(' ');
 
-    html += '<div class="mezzo-tile" onclick="apriDettaglioMezzo(' + m.id + ')">'
-      + '<div class="mezzo-tile-foto">'
-      + fotoHtml
-      + '<span class="mezzo-tile-stato ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span>'
-      + '</div>'
-      + '<div class="mezzo-tile-body">'
-      + '<div class="mezzo-tile-nome">' + m.automezzo + '</div>'
-      + '<div class="mezzo-tile-targa">' + (m.targa||'—') + '</div>'
-      + (m.revisione ? '<div class="mezzo-tile-rev ' + revCls + '">Rev. ' + revLabel + '</div>' : '')
-      + '</div>'
-      + '</div>';
+    html += '<button class="card" onclick="apriDettaglioMezzo(' + m.id + ')">'
+      + '<div class="thumb ' + (i % 2 ? 'b' : 'y') + '">' + fotoHtml + '</div>'
+      + '<div class="vc"><div class="mid"><b>' + m.automezzo + '</b>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' + mezzoStatoPill(m.stato) + '</div>'
+      + '<div class="cfoot"><span class="targa">' + (m.targa||'—') + '</span>'
+      + '<span>Revisione <b class="rev ' + rev.cls + '">' + revLabel + '</b></span></div>'
+      + '</button>';
   });
   html += '</div>';
   list.innerHTML = html;
+}
+
+// Pillola stato mezzo come nel riferimento: Operativo blu chiaro, Manutenzione gialla, Fermo grigia
+function mezzoStatoPill(stato) {
+  var s = stato || 'OPERATIVO';
+  var map = { 'OPERATIVO':['Operativo','p-blue'], 'IN MANUTENZIONE':['Manutenzione','p-yellow'], 'FERMO':['Fermo','p-grey'] };
+  var p = map[s] || [s, 'p-grey'];
+  return '<span class="pill ' + p[1] + '">' + p[0] + '</span>';
 }
 
 function apriDettaglioMezzo(id) {
@@ -7276,16 +7277,15 @@ function apriDettaglioMezzo(id) {
   var fmt = function(v) { return v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>'; };
   var fmtDate = function(v) { return v ? fmt(new Date(v).toLocaleDateString('it-IT')) : fmt(null); };
   var rev = getRevisioneStatus(m.revisione);
-  var sbCls = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
 
   var _fotoHtml = m.foto_url
-    ? '<img src="' + m.foto_url + '" style="width:50px;height:50px;border-radius:12px;object-fit:cover;flex-shrink:0">'
-    : '<div class="mezzo-icon" style="width:50px;height:50px;border-radius:12px">' + getMezzoIcon(m.automezzo) + '</div>';
+    ? '<img src="' + m.foto_url + '" class="thumb hero-thumb" alt="">'
+    : '<div class="thumb y hero-thumb">' + getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox') + '</div>';
 
   body.innerHTML = '<div class="vol-detail-hero">'
     + _fotoHtml
     + '<div><div class="vol-detail-name">' + m.automezzo + '</div>'
-    + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span></div></div>'
+    + '<div class="vol-detail-role">' + mezzoStatoPill(m.stato) + (m.targa ? ' <span class="targa">' + m.targa + '</span>' : '') + '</div></div>'
     + '</div>'
     + '<div class="vol-section"><div class="vol-section-head">Identificazione</div><div class="vol-section-body">'
     + '<div class="vol-field"><span class="vol-field-label">Targa</span>' + fmt(m.targa) + '</div>'
@@ -7294,17 +7294,17 @@ function apriDettaglioMezzo(id) {
     + '<div class="vol-field"><span class="vol-field-label">Immatricolazione</span>' + fmtDate(m.immatricolazione) + '</div>'
     + '</div></div>'
     + '<div class="vol-section"><div class="vol-section-head">Scadenze</div><div class="vol-section-body">'
-    + '<div class="vol-field"><span class="vol-field-label">Revisione</span><span class="vol-field-value ' + rev.cls + '">' + (m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT') : '—') + '</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Revisione</span><span class="vol-field-value rev ' + rev.cls + '">' + (m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT') : '—') + '</span></div>'
     + '<div class="vol-field"><span class="vol-field-label">Assicurazione</span>' + fmtDate(m.assicurazione) + '</div>'
     + '</div></div>'
-    + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value" style="text-align:left">' + m.note + '</span></div></div></div>' : '')
+    + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><p class="note-text">' + m.note + '</p></div></div>' : '')
     + '<div class="vol-section">'
-    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleMezzoDoc(' + m.id + ')">'
-    + 'Documenti <span id="mezzoDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '<div class="vol-section-head" onclick="toggleMezzoDoc(' + m.id + ')">'
+    + '<span>Documenti <span class="sec-count" id="mezzoDocCount"></span></span>'
     + '</div>'
     + '<div class="vol-section-body" id="mezzoDocBody"></div>'
     + '</div>'
-    + '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>';
+    + '<button class="vol-delete-btn" onclick="eliminaMezzo()">Elimina mezzo</button>';
 
   caricaDocMezzo(m.id);
 }
@@ -7329,7 +7329,7 @@ function apriFormMezzo(id) {
     + '<div class="vol-form-section"><div class="vol-form-section-title">Identificazione</div>'
     + '<div class="vol-form-grid">'
     + '<div class="vol-form-field full"><label class="vol-form-lbl">Nome mezzo *</label><input class="vol-form-inp" id="mfNome" value="' + (m.automezzo||'') + '" placeholder="es. FURGONE BIANCO"></div>'
-    + '<div class="vol-form-field"><label class="vol-form-lbl">Targa</label><input class="vol-form-inp" id="mfTarga" value="' + (m.targa||'') + '" style="text-transform:uppercase"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Targa</label><input class="vol-form-inp upper" id="mfTarga" value="' + (m.targa||'') + '"></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Stato</label><select class="vol-form-inp" id="mfStato">' + statoOpts + '</select></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Marca</label><input class="vol-form-inp" id="mfMarca" value="' + (m.marca||'') + '"></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Modello</label><input class="vol-form-inp" id="mfModello" value="' + (m.modello||'') + '"></div>'
@@ -7341,9 +7341,9 @@ function apriFormMezzo(id) {
     + '<div class="vol-form-field full"><label class="vol-form-lbl">Assicurazione</label><input type="date" class="vol-form-inp" id="mfAss" value="' + (m.assicurazione||'') + '"></div>'
     + '</div></div>'
     + '<div class="vol-form-section"><div class="vol-form-section-title">Note</div>'
-    + '<textarea class="vol-form-inp" id="mfNote" rows="3" style="resize:vertical">' + (m.note||'') + '</textarea>'
+    + '<textarea class="vol-form-inp" id="mfNote" rows="3">' + (m.note||'') + '</textarea>'
     + '</div>'
-    + (id ? '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>' : '');
+    + (id ? '<button class="vol-delete-btn" onclick="eliminaMezzo()">Elimina mezzo</button>' : '');
 
   panel.classList.add('open');
   panel.scrollTop = 0;
