@@ -6,67 +6,84 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="PC ANA Casale">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#0A4C9E">
 <link rel="manifest" href="manifest.json">
 <title>PC ANA Casale — Area Riservata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-/* ── DESIGN SYSTEM: iOS-INSPIRED, AUTO LIGHT/DARK, VERDE ANA ── */
+/* ── DESIGN SYSTEM: PALETTE BLU ANA (restyle blocco 1) ── */
 :root {
-  --green:      #1a7a4a;
-  --green-light:#25a863;
-  --green-pale: #e8f5ee;
-  --green-bdr:  #b8dfc9;
-  --blue:       #007aff;
-  --red:        #ff3b30;
-  --red-pale:   #fff0ef;
-  --amber:      #ff9500;
-  --amber-pale: #fff8ee;
+  --bg:         #F3F6FB;
+  --surface:    #FFFFFF;
+  --line:       #DCE5F2;
+  --line2:      #C5D3E8;
+  --fg:         #072F63;
+  --muted:      #44597D;
+  --head:       #0A4C9E;
+  --accent:     #0A4C9E;
+  --soft:       #DCE9FA;
+  --yellow:     #FFC20E;
+  --yellow-soft:#FFF1BF;
+  --on-yellow:  #072F63;
+  --red:        #B42318;
+  --red-soft:   #FDE4E1;
+  --grey-soft:  #E6EAF0;
+  --grey-fg:    #5B6576;
+  --warn-fg:    #8A5A00;
 
-  /* Light mode */
-  --bg:         #f2f2f7;
-  --bg-card:    #ffffff;
-  --bg-2:       #f2f2f7;
-  --bg-3:       #e5e5ea;
-  --border:     rgba(0,0,0,0.1);
-  --border-2:   rgba(0,0,0,0.18);
-  --testo:      #000000;
-  --testo-2:    #3c3c43;
-  --testo-3:    #8e8e93;
-  --testo-4:    #aeaeb2;
-  --shadow:     0 1px 3px rgba(0,0,0,0.08);
-  --r:          12px;
-  --r-sm:       8px;
-  --r-lg:       16px;
-  --font:       -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  /* Alias dei nomi storici usati in tutto il CSS/JS */
+  --green:      var(--accent);
+  --green-light:var(--accent);
+  --green-pale: var(--soft);
+  --green-bdr:  var(--line2);
+  --blue:       var(--accent);
+  --red-pale:   var(--red-soft);
+  --amber:      var(--warn-fg);
+  --amber-pale: var(--yellow-soft);
+  --bg-card:    var(--surface);
+  --bg-2:       var(--bg);
+  --bg-3:       var(--line);
+  --border:     var(--line);
+  --border-2:   var(--line2);
+  --testo:      var(--fg);
+  --testo-2:    var(--fg);
+  --testo-3:    var(--muted);
+  --testo-4:    #8A9BB8;
+  --shadow:     0 1px 2px rgba(7,47,99,0.06);
+  --r:          20px;
+  --r-md:       20px;
+  --r-sm:       12px;
+  --r-lg:       20px;
+  --r-btn:      14px;
+  --r-pill:     999px;
+  --field-h:    44px;
+  --font:       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --safe-b:     env(safe-area-inset-bottom, 0px);
   --safe-t:     env(safe-area-inset-top, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --green:      #30d158;
-    --green-light:#30d158;
-    --green-pale: rgba(48,209,88,0.15);
-    --green-bdr:  rgba(48,209,88,0.3);
-    --blue:       #0a84ff;
-    --red:        #ff453a;
-    --red-pale:   rgba(255,69,58,0.15);
-    --amber:      #ff9f0a;
-    --amber-pale: rgba(255,159,10,0.15);
-    --bg:         #000000;
-    --bg-card:    #1c1c1e;
-    --bg-2:       #2c2c2e;
-    --bg-3:       #3a3a3c;
-    --border:     rgba(255,255,255,0.1);
-    --border-2:   rgba(255,255,255,0.18);
-    --testo:      #ffffff;
-    --testo-2:    rgba(255,255,255,0.85);
-    --testo-3:    rgba(255,255,255,0.55);
-    --testo-4:    rgba(255,255,255,0.3);
-    --shadow:     0 1px 3px rgba(0,0,0,0.4);
+    --bg:         #0B1424;
+    --surface:    #121E33;
+    --line:       #243553;
+    --line2:      #2F4469;
+    --fg:         #E6EEFB;
+    --muted:      #9DB0CF;
+    --head:       #0E2F5C;
+    --accent:     #8DBBF7;
+    --soft:       #1B2F52;
+    --yellow-soft:#3A3012;
+    --red:        #F97066;
+    --red-soft:   #3B1A1A;
+    --grey-soft:  #26324A;
+    --grey-fg:    #B3BDCC;
+    --warn-fg:    #FFC20E;
+    --bg-2:       #182740;
+    --testo-4:    #6B7FA3;
+    --shadow:     0 1px 2px rgba(0,0,0,0.35);
   }
 }
 
@@ -770,7 +787,7 @@ div:hover > .vista-edit-btn { display:flex; }
 
 
 /* -- SPLASH SCREEN -- */
-#splashScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
+#splashScreen { position:fixed; inset:0; background:#0A4C9E; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
 #splashScreen.fade-out { opacity:0; pointer-events:none; }
 .splash-logo-wrap { width:120px; height:120px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 24px rgba(0,0,0,0.2); opacity:0; transform:scale(0.82); transition:opacity 0.7s ease,transform 0.7s ease; }
 .splash-logo-wrap.show { opacity:1; transform:scale(1); }
@@ -785,7 +802,7 @@ div:hover > .vista-edit-btn { display:flex; }
 .splash-dot.lit { background:white; }
 
 /* -- WELCOME SCREEN -- */
-#welcomeScreen { position:fixed; inset:0; background:#1a7a4a; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
+#welcomeScreen { position:fixed; inset:0; background:#0A4C9E; z-index:9998; display:none; flex-direction:column; align-items:center; justify-content:center; gap:1rem; transition:opacity 0.5s ease; }
 #welcomeScreen.visible { display:flex; }
 #welcomeScreen.fade-out { opacity:0; pointer-events:none; }
 .welcome-avatar { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.82); transition:opacity 0.6s ease,transform 0.6s ease; }
@@ -800,6 +817,85 @@ div:hover > .vista-edit-btn { display:flex; }
 
 .inv-extra-list { padding:0.4rem 0.8rem 0.5rem; border-top:0.5px solid var(--border); background:var(--bg-2); border-radius:0 0 var(--r) var(--r); }
 .inv-extra-row { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem; }
+
+/* ── RESTYLE BLOCCO 1: forme, pulsanti, chip, stati, intestazione ── */
+body { font-family:var(--font); }
+
+/* Intestazione: barra blu con logo + titolo */
+.topbar { background:var(--head); border-bottom:none; }
+.topbar-hamburger span { background:#fff; }
+.topbar-center { display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; }
+.topbar-logo-img { height:30px; width:30px; border-radius:50%; object-fit:cover; background:#fff; flex-shrink:0; }
+.topbar-page-title { color:#fff; font-size:1rem; font-weight:800; letter-spacing:0.1px; }
+.topbar-time { color:rgba(255,255,255,0.8); }
+.sidebar-header { background:var(--head); }
+.home-hero { background:var(--head); }
+.panel-hdr h2 { font-size:1.5rem; font-weight:800; letter-spacing:-0.3px; }
+
+/* Card e pannelli: raggio 20px, bordo leggero */
+.login-card, .nav-card, .vol-list, .int-list, .home-list, .vol-section, .doc-vol-card,
+.richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card,
+.acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap,
+.mezzo-list, .mezzo-tile, .dotazione-tile, .dotazioni-list, .db-wrap, .vol-filters,
+.vol-detail-hero, .coming-soon, .int-stat, .impo-perm-row, .int-vol-card {
+  border-radius:20px; border:1px solid var(--line);
+}
+.vista-form-card, .doc-upload-card, .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
+.vd-card.vd-active { background:var(--soft); border-color:var(--accent); }
+
+/* Campi: 44px, raggio 12px */
+.login-input, .vol-form-inp, .form-inp, .db-record-inp, .vol-filter-sel, .vol-search,
+.int-search, .doc-search, .db-search, .vol-picker-search {
+  min-height:var(--field-h); border-radius:12px; border:1px solid var(--line2);
+  background:var(--surface); box-shadow:none; font-family:var(--font);
+}
+.login-input:focus, .vol-form-inp:focus, .form-inp:focus, .db-record-inp:focus, .vol-filter-sel:focus,
+.vol-search:focus, .int-search:focus, .doc-search:focus, .db-search:focus, .vol-picker-search:focus {
+  border-color:var(--accent); box-shadow:0 0 0 3px var(--soft);
+}
+
+/* Pulsanti: raggio 14px */
+.btn-login, .btn-primary, .mezzi-add-btn, .btn-export, .vol-delete-btn, .vol-add-btn, .int-add-btn,
+.vol-form-save, .db-btn, .btn-sm, .vol-filter-btn, .aic-draft-actions button, .doc-add-btn, .vol-detail-edit {
+  border-radius:var(--r-btn); font-family:var(--font);
+}
+.vol-add-btn, .int-add-btn, .vol-filter-btn, .db-btn { min-height:var(--field-h); }
+/* Principale: giallo con testo blu scuro */
+.btn-login, .btn-primary, .mezzi-add-btn, .vol-add-btn, .int-add-btn, .vol-form-save,
+.db-btn.green, .aic-btn-confirm, .aic-send {
+  background:var(--yellow); color:var(--on-yellow); border:none; font-weight:700;
+}
+/* Secondario: bianco con bordo */
+.btn-sm, .btn-export, .db-btn, .vol-filter-btn, .aic-btn-edit, .db-pag-btn {
+  background:var(--surface); color:var(--fg); border:1px solid var(--line2); box-shadow:none;
+}
+.btn-ok { background:var(--soft); color:var(--accent); border-color:var(--line2); }
+.btn-warn { background:var(--yellow-soft); color:var(--on-yellow); border-color:var(--yellow); }
+.btn-danger, .vol-delete-btn { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
+
+/* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
+.vista-btn, .nav-btn, .vol-stat-pill, .int-pill, .vol-badge, .badge, .perm-badge, .acc-badge,
+.visite-stato, .mezzo-stato-badge, .mezzo-tile-stato, .home-list-badge, .schema-tipo-pill,
+.badge-nuova, .dotazione-tile-cat, .vgh-count, .db-pag-btn, .login-tab {
+  border-radius:var(--r-pill);
+}
+.login-tabs { border-radius:var(--r-pill); }
+.vista-btn { background:var(--surface); border:1px solid var(--line2); color:var(--fg); box-shadow:none; font-weight:600; }
+.vista-btn.active, .nav-btn.active, .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active {
+  background:var(--accent); border-color:var(--accent); color:#fff;
+}
+@media (prefers-color-scheme: dark) {
+  .vista-btn.active, .nav-btn.active, .vol-filter-btn.active, .db-pag-btn.active, .login-tab.active { color:#072F63; }
+}
+
+/* Stati: Attivo = blu chiaro, In intervento = giallo, Sospeso = grigio */
+.st-pill { display:inline-block; font-family:var(--font); font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:var(--r-pill); border:none; letter-spacing:0.3px; line-height:1.4; }
+select.st-pill { cursor:pointer; outline:none; -webkit-appearance:none; appearance:none; }
+.st-attivo, .acc-active, .vb-ok, .msb-ok { background:var(--soft); color:var(--accent); }
+.st-intervento, .int-pill.prog { background:var(--yellow); color:var(--on-yellow); }
+.st-sospeso, .acc-sosp, .acc-inactive { background:var(--grey-soft); color:var(--grey-fg); }
+.st-dimesso { background:transparent; color:var(--muted); border:1px solid var(--line2); }
+.int-card-prog { border-left-color:var(--yellow); }
 
 
 </style>
@@ -858,7 +954,7 @@ div:hover > .vista-edit-btn { display:flex; }
       <span></span><span></span><span></span>
     </button>
     <div class="topbar-center">
-      <span class="topbar-page-title" id="topbarPageTitle">PC ANA Casale</span>
+      <img class="topbar-logo-img" src="images/logo-ana.gif" alt="" onerror="this.style.display='none'"><span class="topbar-page-title" id="topbarPageTitle">PC ANA Casale</span>
     </div>
     <span class="topbar-time" id="topbarClock">--:--</span>
   </div>
@@ -2015,7 +2111,7 @@ div:hover > .vista-edit-btn { display:flex; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=154"></script>
+<script src="area-riservata.js?v=155"></script>
 <script src="aggiornamento-dati.js?v=7"></script>
 </body>
 </html>

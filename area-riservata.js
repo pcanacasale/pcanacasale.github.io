@@ -859,17 +859,16 @@ function _renderVolCard(v) {
   if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
 
   // Dropdown stato inline (se può modificare) o badge readonly
-  const statoColor = stato === 'ATTIVO' ? 'var(--green)' : (stato === 'SOSPESO' ? '#d9a400' : '#999');
+  const statoCls = 'st-pill st-' + stato.toLowerCase();
   let statoSel;
   if (canModificaVolontari()) {
-    statoSel = '<select class="vol-stato-sel" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" '
-      + 'style="background:transparent;border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:10px;font-family:var(--font);cursor:pointer;outline:none">'
+    statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)">'
       + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
       + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
       + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
       + '</select>';
   } else {
-    statoSel = '<span style="border:1px solid ' + statoColor + ';color:' + statoColor + ';font-size:0.6rem;font-weight:700;padding:2px 8px;border-radius:10px">' + stato + '</span>';
+    statoSel = '<span class="' + statoCls + '">' + stato + '</span>';
   }
 
   card.innerHTML = (v.foto_url
