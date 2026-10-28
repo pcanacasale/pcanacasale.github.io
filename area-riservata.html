@@ -421,6 +421,12 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .pdc-add{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .pdc-add input{flex:1;min-width:160px;width:auto}
 
+/* ── emergenze ── */
+.em-card{display:flex;flex-direction:column}
+.em-foto{display:block;height:160px;margin:12px 0 0}
+.em-desc{margin:12px 0 0;white-space:pre-wrap}
+.em-azioni{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -1396,8 +1402,9 @@ body { font-family:var(--font); }
 
     <!-- EMERGENZE (per master: segnalazioni di emergenza dal bot Telegram) -->
     <div class="panel" id="panelEmergenze">
-      <div class="panel-hdr"><h2>Emergenze</h2><p>Segnalazioni di emergenza inviate dai volontari via bot Telegram</p></div>
-      <div id="emergenzeContent"><div class="loading-msg">caricamento...</div></div>
+      <div class="phead"><div><h1>Emergenze</h1></div></div>
+      <div id="emergenzeContent"><div class="loading-msg">Caricamento…</div></div>
+      <p class="note">Le segnalazioni arrivano dal bot Telegram, con foto e posizione.</p>
     </div>
 
     <!-- BOT (per master: permessi e messaggi broadcast) -->
@@ -1911,7 +1918,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=163"></script>
+<script src="area-riservata.js?v=164"></script>
 <script src="aggiornamento-dati.js?v=8"></script>
 </body>
 </html>

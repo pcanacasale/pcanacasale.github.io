@@ -7806,7 +7806,7 @@ async function caricaBadgeSegnalazioni() {
 async function caricaEmergenze() {
   const content = document.getElementById('emergenzeContent');
   if (!content) return;
-  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome),intervento:intervento_id(evento,data)&order=gestita.asc,creato_il.desc', { headers: H });
     const arr = await res.json();
@@ -7822,37 +7822,37 @@ function renderEmergenze(list, contentElId, opts) {
   const content = document.getElementById(contentElId);
   if (!content) return;
   if (!list.length) {
-    content.innerHTML = '<div class="loading-msg">nessuna segnalazione di emergenza.</div>';
+    content.innerHTML = '<div class="empty">Nessuna segnalazione di emergenza.</div>';
     return;
   }
-  let html = '';
+  let html = '<div class="grid g3">';
   list.forEach(s => {
     const v      = s.volontario || {};
-    const data   = new Date(s.creato_il).toLocaleString('it-IT');
+    const data   = new Date(s.creato_il).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     const statoLbl = s.gestita
-      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
-      : '<span class="msb-off" style="padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.65rem;text-transform:uppercase">⚠ Da gestire</span>';
+      ? '<span class="pill p-grey">Gestita</span>'
+      : '<span class="pill p-yellow">Da gestire</span>';
     const mapLink = (s.lat != null && s.lon != null)
-      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">📍 vedi posizione</a>'
+      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" rel="noopener" class="btn sm">Vedi posizione</a>'
       : '';
     const intervento = s.intervento || null;
-    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : 'var(--red)') + '">'
-      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
-      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + '</div>'
-      + (intervento ? '<div style="font-size:0.75rem;color:var(--testo-2);margin-bottom:0.4rem">Intervento: ' + (intervento.evento || '—') + '</div>' : '')
-      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank"><img src="' + s.foto_url + '" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:0.5rem;cursor:pointer"></a>' : '')
-      + (s.descrizione ? '<div class="seg-card-text">' + s.descrizione + '</div>' : '')
-      + (mapLink ? '<div style="margin-top:0.5rem">' + mapLink + '</div>' : '')
-      + (mostraAzione
-        ? '<div style="margin-top:0.6rem">'
-          + (s.gestita
-              ? '<button class="btn-sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">↻ Riapri</button>'
-              : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoEmergenza(' + s.id + ', true)">✓ Segna come gestita</button>')
+    html += '<div class="card em-card">'
+      + '<div class="vc"><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
+      + (intervento ? '<span class="sub" style="margin-top:8px">Intervento: <b style="color:var(--fg)">' + (intervento.evento || '—') + '</b></span>' : '')
+      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank" rel="noopener" class="thumb em-foto"><img src="' + s.foto_url + '" alt=""></a>' : '')
+      + (s.descrizione ? '<p class="em-desc">' + s.descrizione + '</p>' : '')
+      + ((mapLink || mostraAzione)
+        ? '<div class="em-azioni">' + mapLink
+          + (mostraAzione
+            ? (s.gestita
+                ? '<button class="btn sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">Riapri</button>'
+                : '<button class="btn sm pri" onclick="cambiaStatoEmergenza(' + s.id + ', true)">Segna come gestita</button>')
+            : '')
           + '</div>'
         : '')
       + '</div>';
   });
-  content.innerHTML = html;
+  content.innerHTML = html + '</div>';
 }
 
 async function cambiaStatoEmergenza(id, gestita) {
