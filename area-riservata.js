@@ -7951,18 +7951,19 @@ function botRenderPermessi() {
     );
   }
   if (!righe.length) {
-    list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
+    list.innerHTML = '<div class="loading-msg">Nessun volontario trovato.</div>';
     return;
   }
   let html = '';
   righe.forEach(v => {
     const collegatoLbl = v.collegato
-      ? '<span class="badge badge-std" style="font-size:0.6rem">collegato ✅</span>'
-      : '<span class="badge badge-off" style="font-size:0.6rem">non collegato</span>';
+      ? '<span class="pill p-blue">Collegato</span>'
+      : '<span class="pill p-grey">Non collegato</span>';
     html += '<div class="impo-u-row">'
       + '<div class="impo-u-info"><div class="impo-u-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="impo-u-role">' + (v.squadra || '—') + ' &nbsp; ' + collegatoLbl + '</div></div>'
-      + '<div class="impo-u-actions"><label class="vol-form-check" style="padding:0"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
+      + '<div class="impo-u-role">' + (v.squadra || '—') + '</div></div>'
+      + collegatoLbl
+      + '<div class="impo-u-actions"><label class="vol-form-check"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
       + '</div>';
   });
   list.innerHTML = html;
