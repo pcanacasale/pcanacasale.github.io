@@ -3300,7 +3300,7 @@ async function archiviaAttestato(idx, interventoId) {
       body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url, data_carico: new Date().toISOString() })
     });
     await logAttivita('ha archiviato attestato per ' + r.v.cognome + ' ' + r.v.nome);
-    if (btn) { btn.textContent = '✓ Archiviato'; btn.style.color = 'var(--green)'; }
+    if (btn) { btn.textContent = '✓ Archiviato'; btn.classList.add('ok-txt'); }
     r.archiviato = true;
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '📁 Archivia'; }
@@ -4160,48 +4160,45 @@ function pstRenderLista() {
       : '<span class="pill p-grey">' + nVolAssegnati + '</span>';
 
     const infoRighe = [];
-    infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
-    infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span style="color:var(--testo-3)">nessun vigile</span>');
+    infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span class="muted">nessuna radio</span>');
+    infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span class="muted">nessun vigile</span>');
     infoRighe.push(p.assegnata_ana === false ? '🏳️ <span class="pill p-sand">non assegnata a noi</span>' : '🏳️ ANA');
-    infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
+    infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span class="muted">nessun mezzo</span>');
 
     const righeVol = p.volontari.length
       ? p.volontari.map(a => {
           const v = a.volontari || {};
           const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.indirizzo));
-          const warnAltrove = altrove.length ? '<span class="pill p-sand" style="margin-top:4px">anche a: ' + altrove.join(', ') + '</span>' : '';
+          const warnAltrove = altrove.length ? '<span class="pill p-sand mt6">anche a: ' + altrove.join(', ') + '</span>' : '';
           const tr = a.trasporto || 'piedi';
           const opt = (val, label) => '<option value="' + val + '"' + (tr === val ? ' selected' : '') + '>' + label + '</option>';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem;gap:0.4rem">'
-            + '<span style="font-size:0.8rem;flex:1;min-width:0">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
-            + '<select class="form-inp" style="width:auto;font-size:0.72rem;padding:2px 4px" onchange="pstAggiornaTrasporto(' + a.id + ',this.value)">'
+          return '<div class="pst-vol">'
+            + '<span class="grow"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>' + (v.squadra ? '<span class="sub">' + v.squadra + '</span>' : '') + warnAltrove + '</span>'
+            + '<select aria-label="Trasporto" onchange="pstAggiornaTrasporto(' + a.id + ',this.value)">'
             + opt('piedi','🚶 a piedi') + opt('mezzo_fisso','🚗 con mezzo (resta)') + opt('trasportato','🚐 trasportato')
             + '</select>'
-            + '<button class="btn-sm btn-danger" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
+            + '<button class="btn sm danger" aria-label="Rimuovi" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
             + '</div>';
         }).join('')
       : '<div class="loading-msg sm">nessun volontario assegnato</div>';
 
-    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span style="color:var(--testo-3);font-weight:400;font-size:0.75em">(' + p.nome + ')</span>' : '');
+    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span class="sub">(' + p.nome + ')</span>' : '');
     const bodyId = 'pstCardBody' + p.id;
     const chevId = 'pstCardChev' + p.id;
 
-    return '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div class="vol-section-head" onclick="pstToggleCard(' + p.id + ')" style="gap:0.6rem">'
-      + '<h3 style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0">📍 ' + titolo + '</h3>'
-      + '<div style="display:flex;gap:0.3rem;align-items:center;flex-shrink:0">'
-      + '<button class="btn-sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
-      + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">elimina</button>'
-      + '<span id="' + chevId + '" style="font-size:0.7rem">▸</span>'
-      + '</div></div>'
-      + '<div id="' + bodyId + '" style="padding:0.6rem;display:none;grid-template-columns:180px 1fr;gap:1rem">'
-      + '<div style="font-size:0.78rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.35rem">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
-      + '<div style="border-left:0.5px solid var(--border);padding-left:1rem">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">'
-      + '<span style="font-size:0.72rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px">Volontari</span>' + contatore
+    return '<div class="card pst-card">'
+      + '<div class="pst-head" onclick="pstToggleCard(' + p.id + ')">'
+      + '<h3>' + titolo + '</h3>' + contatore
+      + '<button class="btn sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">Modifica</button>'
+      + '<button class="btn sm danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">Elimina</button>'
+      + '<span id="' + chevId + '" class="pst-chev">▸</span>'
       + '</div>'
+      + '<div id="' + bodyId + '" class="pst-body" style="display:none">'
+      + '<div class="pst-info">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
+      + '<div class="pst-vols">'
+      + '<div class="pst-vols-head"><span class="grp m0">Volontari</span></div>'
       + righeVol
-      + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.indirizzo||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
+      + '<button class="btn sm mt10" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.indirizzo||p.numero||'').replace(/'/g,"\\'") + '\')">+ Aggiungi volontario</button>'
       + '</div></div></div>';
   }).join('');
 }
@@ -4701,8 +4698,8 @@ async function pstImportaExcel(file) {
 
     let html = '<div class="loading-msg">✔ ' + creati + ' postazioni create.' + (avvisi.length ? ' ⚠ ' + avvisi.length + ' avvisi.' : '') + '</div>';
     if (avvisi.length) {
-      html += '<details style="margin-top:0.4rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Vedi avvisi</summary>'
-        + '<ul style="font-size:0.78rem;color:var(--testo-2);padding-left:1.2rem">' + avvisi.map(a => '<li>' + a + '</li>').join('') + '</ul></details>';
+      html += '<details class="pst-avvisi mt6"><summary>Vedi avvisi</summary>'
+        + '<ul>' + avvisi.map(a => '<li>' + a + '</li>').join('') + '</ul></details>';
     }
     status.innerHTML = html;
     document.getElementById('pstFileInput').value = '';
@@ -4728,8 +4725,7 @@ let pstPanState = null;  // { startX, startY, scrollLeft, scrollTop, moved }
 function pstSetTabActive(id, active) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.background = active ? 'var(--green)' : '';
-  el.style.color = active ? '#fff' : '';
+  el.classList.toggle('on', !!active);
 }
 
 function pstMostraTab(tab) {
@@ -4841,7 +4837,7 @@ function pstRenderCanvasImmagine() {
   const puntiSvg = percorso.map(p => p.x + ',' + p.y).join(' ');
 
   const bandiera = (x, y, emoji, colore) => {
-    return '<div style="position:absolute;left:' + x + '%;top:' + y + '%;transform:translate(-50%,-100%);font-size:1.1rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))">' + emoji + '</div>';
+    return '<div class="pst-flag" style="left:' + x + '%;top:' + y + '%">' + emoji + '</div>';
   };
   const partenzaHtml = (pstMappaData.partenza_x != null) ? bandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩') : '';
   const arrivoHtml = (pstMappaData.arrivo_x != null) ? bandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁') : '';
@@ -4854,25 +4850,21 @@ function pstRenderCanvasImmagine() {
     const angolo = Math.atan2(dy, dx) * 180 / Math.PI;
     const haVol = p.volontari.length > 0;
     const haVigile = !!p.vigile_presente;
-    let bordo, outline = '';
-    if (haVigile && haVol) { bordo = '2px solid #16a34a'; outline = 'outline:2px solid #06b6d4;outline-offset:2px;'; }
-    else if (haVigile) { bordo = '2px solid #06b6d4'; }
-    else if (haVol) { bordo = '2px solid #16a34a'; }
-    else { bordo = '2px dashed #999'; }
-    const dashNonAna = p.assegnata_ana === false ? 'opacity:0.6;' : '';
+    const statoCls = (haVol ? ' vol' : '') + (haVigile ? ' vig' : '') + (p.assegnata_ana === false ? ' non-ana' : '');
 
-    return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
-      + '<div style="position:absolute;width:8px;height:8px;left:-4px;top:-4px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
-      + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:#333;transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
-      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:#fff;color:#111;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:3px;border:' + bordo + ';' + outline + dashNonAna + 'white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);z-index:3">' + numero + '</div>'
+    // posizioni e angoli calcolati dai dati: restano inline, l'aspetto sta nelle classi pst-*
+    return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="left:' + p.map_x + '%;top:' + p.map_y + '%">'
+      + '<div class="pst-pin-dot"></div>'
+      + '<div class="pst-pin-line" style="width:' + lunghezza + 'px;transform:rotate(' + angolo + 'deg)"></div>'
+      + '<div class="pst-map-pin-label' + statoCls + '" style="left:' + dx + 'px;top:' + dy + 'px">' + numero + '</div>'
       + '</div>';
   }).join('');
 
   canvas.innerHTML =
-    '<div id="pstMapZoomWrap" style="position:relative;width:' + PST_IMG_BASE_WIDTH + 'px;transform-origin:0 0;transform:scale(' + pstImgZoom + ')">'
-    + '<img id="pstMapImgEl" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px;display:block;pointer-events:none" draggable="false">'
-    + '<svg id="pstMapSvg" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
-    + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
+    '<div id="pstMapZoomWrap" class="pst-zoomwrap" style="width:' + PST_IMG_BASE_WIDTH + 'px;transform:scale(' + pstImgZoom + ')">'
+    + '<img id="pstMapImgEl" class="pst-img" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px" draggable="false" alt="">'
+    + '<svg id="pstMapSvg" class="pst-svg" viewBox="0 0 100 100" preserveAspectRatio="none">'
+    + (puntiSvg ? '<polyline class="pst-route" points="' + puntiSvg + '" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
     + '</svg>'
     + partenzaHtml + arrivoHtml
     + pins
@@ -4913,7 +4905,7 @@ function pstRenderCanvasImmagine() {
         origDx: parseFloat(pinEl.getAttribute('data-dx')), origDy: parseFloat(pinEl.getAttribute('data-dy')),
         moved: false, el
       };
-      el.style.cursor = 'grabbing';
+      el.classList.add('dragging');
     });
   });
 }
@@ -4942,6 +4934,7 @@ async function pstGestisciPanEnd(e) {
   if (pstDragLabel) {
     const drag = pstDragLabel;
     pstDragLabel = null;
+    if (drag.el) drag.el.classList.remove('dragging');
     if (drag.moved) {
       const dx = (e.clientX - drag.startX) / pstImgZoom;
       const dy = (e.clientY - drag.startY) / pstImgZoom;
@@ -5446,9 +5439,9 @@ function pstRenderListePosizionamento() {
   }).join('') : '<div class="loading-msg sm">tutte posizionate</div>';
 
   boxOk.innerHTML = posizionate.length ? posizionate.map(p => {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.5rem;background:var(--bg-2);border-radius:6px;font-size:0.76rem">'
-      + '<span>📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
-      + '<button class="btn-sm btn-danger" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
+    return '<div class="pst-posizionata">'
+      + '<span>' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
+      + '<button class="btn sm danger" aria-label="Togli dalla mappa" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
       + '</div>';
   }).join('') : '<div class="loading-msg sm">nessuna postazione sulla mappa</div>';
 }

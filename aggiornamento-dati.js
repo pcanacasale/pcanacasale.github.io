@@ -1187,7 +1187,7 @@ function aggAttivaDragCrop() {
     aggCropDragging = true;
     aggCropDragStart = { x: e.clientX, y: e.clientY, panX: aggCropPanX, panY: aggCropPanY };
     canvas.setPointerCapture(e.pointerId);
-    canvas.style.cursor = 'grabbing';
+    canvas.classList.add('dragging');
   });
   canvas.addEventListener('pointermove', e => {
     if (!aggCropDragging) return;
@@ -1197,7 +1197,7 @@ function aggAttivaDragCrop() {
     aggCropPanY = aggCropDragStart.panY + (e.clientY - aggCropDragStart.y) * ratio;
     aggFotoRidisegna();
   });
-  const fine = () => { aggCropDragging = false; canvas.style.cursor = 'grab'; };
+  const fine = () => { aggCropDragging = false; canvas.classList.remove('dragging'); };
   canvas.addEventListener('pointerup', fine);
   canvas.addEventListener('pointercancel', fine);
 }
