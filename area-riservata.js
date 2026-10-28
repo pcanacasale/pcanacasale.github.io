@@ -464,7 +464,7 @@ function buildHomeCards(isMaster, p) {
 async function caricaHomeDashboard() {
   const grid = document.getElementById('homeGrid');
   if (!grid) return;
-  grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">caricamento...</div>';
+  grid.innerHTML = '<p class="note">Caricamento…</p>';
 
   try {
     const oggi = new Date();
@@ -486,39 +486,33 @@ async function caricaHomeDashboard() {
       return parseInt(a.data_nascita.slice(8,10)) - parseInt(b.data_nascita.slice(8,10));
     });
 
-    let html = '';
-
-    // -- COMPLEANNI DEL MESE --
     const mesiIt = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    html += '<div class="home-section">';
-    html += '<div class="home-section-title">🎂 Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</div>';
-    if (!bdayMonth.length) {
-      html += '<div class="home-empty">Nessun compleanno questo mese</div>';
-    } else {
-      html += '<div class="home-list">';
-      bdayMonth.forEach(v => {
-        const giorno  = v.data_nascita.slice(8,10);
-        const isOggi  = v.data_nascita.slice(5,10) === (mm + '-' + String(oggi.getDate()).padStart(2,'0'));
-        const anno    = v.data_nascita.slice(0,4);
-        const eta     = oggi.getFullYear() - parseInt(anno);
-        const [bg, fg] = avatarColor(v.cognome);
-        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-        html += '<div class="home-list-row' + (isOggi ? ' home-list-row-today' : '') + '">'
-          + (v.foto_url
-              ? '<img src="' + v.foto_url + '" class="home-list-avatar" style="object-fit:cover">'
-              : '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-          + '<div class="home-list-info">'
-          + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
-          + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' | ' + eta + ' anni</div>'
-          + '</div>'
-  
-          + '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div>';
+    const mesiBr = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const dtTile = function(iso) {
+      return '<div class="dt"><b>' + iso.slice(8,10) + '</b><span>' + mesiBr[parseInt(iso.slice(5,7)) - 1] + '</span></div>';
+    };
+    let left = '', right = '';
 
-    // -- REVISIONI DEL MESE -- (skip per volontari)
+    // -- ULTIMI INTERVENTI -- (skip per volontari)
+    if (!window.isVolUser) {
+      left += '<div class="card"><div class="phead" style="margin-bottom:6px"><h2>Ultimi interventi</h2>'
+        + '<button class="btn sm" onclick="navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;))">Vedi tutti →</button></div>';
+      if (!interventi || !interventi.length) {
+        left += '<p class="note">Nessun intervento registrato.</p>';
+      } else {
+        interventi.forEach(i => {
+          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
+          left += '<div class="lr clk" onclick="' + onclickInt + '">'
+            + (i.data ? dtTile(i.data) : '<div class="dt"><b>—</b></div>')
+            + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + (i.tipo_attivita || '') + '</span></div>'
+            + '<div class="end">' + (i.n_volontari||0) + ' vol' + (i.n_ore ? ' · ' + i.n_ore + ' h' : '') + '</div>'
+            + '</div>';
+        });
+      }
+      left += '</div>';
+    }
+
+    // -- REVISIONI IN SCADENZA -- (skip per volontari)
     if (!window.isVolUser) try {
       var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
       var mezziAll  = await mezziRes.json();
@@ -539,56 +533,45 @@ async function caricaHomeDashboard() {
       revMese.forEach(function(m){ if (!revDaMostrare.find(function(x){return x.id===m.id;})) revDaMostrare.push(m); });
 
       if (revDaMostrare.length) {
-        html += '<div class="home-section">';
-        html += '<div class="home-section-title">🔧 Revisioni in scadenza</div>';
-        html += '<div class="home-list">';
+        right += '<div class="card"><h2>Revisioni in scadenza</h2>';
         revDaMostrare.forEach(function(m) {
-          var d    = new Date(m.revisione);
-          var diff = (d - oggi2) / (1000*60*60*24);
-          var cls  = diff < 0 ? 'var(--red)' : 'var(--amber)';
-          var lbl  = diff < 0 ? 'Scaduta' : 'Scade il';
-          html += '<div class="home-list-row" style="cursor:pointer" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
-            + '<div class="home-list-avatar" style="background:var(--bg-2);border-radius:9px">' + getMezzoIcon(m.automezzo).replace('<svg', '<svg style="width:20px;height:20px;stroke:var(--testo-3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"') + '</div>'
-            + '<div class="home-list-info">'
-            + '<div class="home-list-name">' + m.automezzo + '</div>'
-            + '<div class="home-list-sub" style="color:' + cls + '">' + lbl + ' ' + d.toLocaleDateString('it-IT') + '</div>'
-            + '</div>'
-            + '<div class="home-list-badge" style="background:var(--bg-2);color:' + cls + '">' + (m.targa||'—') + '</div>'
-            + '</div>';
+          var d       = new Date(m.revisione);
+          var scaduta = d < oggi2;
+          right += '<button class="todo" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
+            + '<span class="dot" style="background:var(' + (scaduta ? '--red' : '--yellow') + ')"></span>'
+            + '<span style="flex:1"><b>' + m.automezzo + '</b> <span class="targa">' + (m.targa||'—') + '</span>'
+            + '<span class="sub">' + (scaduta ? 'Scaduta il ' : 'Scade il ') + d.toLocaleDateString('it-IT') + '</span></span>'
+            + '<span style="color:var(--accent);font-weight:700">→</span></button>';
         });
-        html += '</div></div>';
+        right += '</div>';
       }
     } catch(e) {}
 
-    // -- ULTIMI INTERVENTI -- (skip per volontari)
-    if (!window.isVolUser) {
-      html += '<div class="home-section">';
-      html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
-      if (!interventi || !interventi.length) {
-        html += '<div class="home-empty">Nessun intervento registrato</div>';
-      } else {
-        html += '<div class="home-list">';
-        interventi.forEach(i => {
-          const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
-          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
-          html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
-            + getTipoAttivitaAvatar(i.tipo_attivita, 36)
-            + '<div class="home-list-info">'
-            + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
-            + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
-            + '</div>'
-            + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
-            + '</div>';
-        });
-        html += '</div>';
-      }
-      html += '</div>';
+    // -- COMPLEANNI DEL MESE --
+    right += '<div class="card"><h2>Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</h2>';
+    if (!bdayMonth.length) {
+      right += '<p class="note">Nessun compleanno questo mese.</p>';
+    } else {
+      const oggiMd = mm + '-' + String(oggi.getDate()).padStart(2,'0');
+      bdayMonth.forEach(v => {
+        const isOggi   = v.data_nascita.slice(5,10) === oggiMd;
+        const eta      = oggi.getFullYear() - parseInt(v.data_nascita.slice(0,4));
+        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+        right += '<div class="lr">'
+          + (v.foto_url ? '<img src="' + v.foto_url + '" class="av s40" alt="">' : '<span class="av s40">' + initials + '</span>')
+          + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + v.data_nascita.slice(8,10) + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</span></div>'
+          + (isOggi ? '<span class="pill p-yellow">Oggi</span>' : '')
+          + '</div>';
+      });
     }
+    right += '</div>';
 
-    grid.innerHTML = html;
+    grid.innerHTML = left
+      ? '<div class="cols">' + left + '<div class="stack">' + right + '</div></div>'
+      : '<div class="stack">' + right + '</div>';
 
   } catch(e) {
-    grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">Errore caricamento dashboard</div>';
+    grid.innerHTML = '<div class="empty">Errore nel caricamento della dashboard.</div>';
   }
 }
 

@@ -202,6 +202,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
  .pop{display:none!important}
 }
 
+/* ── dashboard ── */
+.bday{display:flex;align-items:center;gap:12px;margin-bottom:18px;background:var(--yellow-soft);border-color:var(--yellow-soft);font-weight:600}
+.card h2+.lr,.card h2+.todo{margin-top:6px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -244,31 +248,8 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .sec-label { font-size:0.72rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; padding:0.8rem 0 0.4rem; }
 
 /* ── HOME ── */
-.home-hero { background:var(--green); border-radius:var(--r-lg); padding:1rem 1.1rem; margin-bottom:0.8rem; color:#fff; position:relative; overflow:hidden; }
-.home-hero::after { content:''; position:absolute; right:-20px; bottom:-20px; width:100px; height:100px; border-radius:50%; background:rgba(255,255,255,0.08); }
-.home-greeting { font-size:0.72rem; opacity:0.8; }
-.home-name { font-size:1.05rem; font-weight:700; margin-top:0.1rem; }
-.home-unit { font-size:0.7rem; opacity:0.75; margin-top:0.1rem; }
-.bday-banner { background:var(--amber-pale); border:1px solid var(--amber); border-radius:var(--r-sm); padding:0.7rem 0.9rem; margin-bottom:0.8rem; display:flex; align-items:center; gap:0.7rem; }
-.bday-text { font-size:0.78rem; color:var(--amber); line-height:1.4; }
-.bday-text strong { color:var(--amber); }
-.nav-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.5rem; }
-.nav-card { background:var(--bg-card); border-radius:var(--r); padding:0.75rem 0.8rem; box-shadow:none; cursor:pointer; transition:transform 0.1s,opacity 0.1s; border:0.5px solid var(--border); }
-.nav-card:active { transform:scale(0.97); opacity:0.8; }
-.nav-card svg { width:20px; height:20px; stroke:var(--green); stroke-width:1.5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-.nav-card-title { font-size:0.82rem; font-weight:600; color:var(--testo); margin-top:0.4rem; }
-.nav-card-sub { font-size:0.68rem; color:var(--testo-3); margin-top:0.1rem; }
-.nav-card.span2 { grid-column:span 2; display:flex; align-items:center; gap:0.7rem; padding:0.65rem 0.9rem; }
-.nav-card.span2 .nav-card-title { margin-top:0; }
-.nav-card.span2 svg { flex-shrink:0; }
-.nav-card.featured { background:var(--green-pale); border-color:var(--green-bdr); }
-.nav-card.featured .nav-card-title { color:var(--green); }
 
 /* COMING SOON */
-.coming-soon { background:var(--bg-card); border-radius:var(--r-lg); padding:3rem 1.5rem; text-align:center; box-shadow:none; }
-.cs-icon { font-size:2.5rem; margin-bottom:0.8rem; opacity:0.35; }
-.coming-soon h3 { font-size:1rem; font-weight:600; color:var(--testo-2); }
-.coming-soon p { font-size:0.82rem; color:var(--testo-3); margin-top:0.4rem; line-height:1.6; }
 
 /* ── VOLONTARI ── */
 .vol-toolbar { display:flex; gap:0.5rem; margin-bottom:0.7rem; }
@@ -730,19 +711,6 @@ div:hover > .vista-edit-btn { display:flex; }
 .db-record-check input { accent-color:var(--green); width:15px; height:15px; }
 
 /* -- HOME DASHBOARD -- */
-.home-section { margin-bottom:0.7rem; }
-.home-section-title { font-size:0.78rem; font-weight:700; color:var(--testo); margin-bottom:0.5rem; padding-bottom:0.4rem; border-bottom:0.5px solid var(--border); }
-.home-empty { font-size:0.78rem; color:var(--testo-3); padding:0.8rem 0; font-style:italic; }
-.home-list { background:var(--bg-card); border-radius:var(--r); overflow:hidden; box-shadow:none; }
-.home-list-row { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 0.9rem; border-bottom:0.5px solid var(--border); transition:background 0.12s; }
-.home-list-row:last-child { border-bottom:none; }
-.home-list-row:active { background:var(--bg-2); }
-.home-list-row-today { background:var(--green-pale) !important; }
-.home-list-avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:600; flex-shrink:0; }
-.home-list-info { flex:1; min-width:0; overflow:hidden; }
-.home-list-name { font-size:0.82rem; font-weight:500; color:var(--testo); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.home-list-sub { font-size:0.68rem; color:var(--testo-3); margin-top:0.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.home-list-badge { font-size:0.65rem; font-weight:600; color:var(--testo-3); flex-shrink:0; background:var(--bg-2); padding:2px 7px; border-radius:10px; white-space:nowrap; }
 
 /* -- MEZZI -- */
 .mezzo-list { display:flex; flex-direction:column; gap:0; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; overflow:hidden; }
@@ -840,15 +808,10 @@ body { font-family:var(--font); }
 
 /* Intestazione: barra blu con logo + titolo */
 
-.home-hero { background:var(--head); }
 .panel-hdr h2 { font-size:1.5rem; font-weight:800; letter-spacing:-0.3px; }
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .nav-card, .vol-list, .int-list, .home-list, .vol-section, .doc-vol-card,
-.richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card,
-.acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap,
-.mezzo-list, .mezzo-tile, .dotazione-tile, .dotazioni-list, .db-wrap, .vol-filters,
-.vol-detail-hero, .coming-soon, .int-stat, .impo-perm-row, .int-vol-card {
+.login-card, .vol-list, .int-list, .vol-section, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .mezzo-list, .mezzo-tile, .dotazione-tile, .dotazioni-list, .db-wrap, .vol-filters, .vol-detail-hero, .int-stat, .impo-perm-row, .int-vol-card {
   border-radius:20px; border:1px solid var(--line);
 }
 .vista-form-card, .doc-upload-card, .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
@@ -885,7 +848,7 @@ body { font-family:var(--font); }
 .btn-danger, .vol-delete-btn { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
 
 /* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.vista-btn, .vol-stat-pill, .int-pill, .vol-badge, .badge, .perm-badge, .acc-badge, .visite-stato, .mezzo-stato-badge, .mezzo-tile-stato, .home-list-badge, .schema-tipo-pill, .badge-nuova, .dotazione-tile-cat, .vgh-count, .db-pag-btn, .login-tab {
+.vista-btn, .vol-stat-pill, .int-pill, .vol-badge, .badge, .perm-badge, .acc-badge, .visite-stato, .mezzo-stato-badge, .mezzo-tile-stato, .schema-tipo-pill, .badge-nuova, .dotazione-tile-cat, .vgh-count, .db-pag-btn, .login-tab {
   border-radius:var(--r-pill);
 }
 .login-tabs { border-radius:var(--r-pill); }
@@ -1005,16 +968,13 @@ select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-
 
     <!-- HOME -->
     <div class="panel active" id="panelHome">
-      <div class="home-hero">
-        <div class="home-greeting">Bentornato</div>
-        <div class="home-name" id="homeWelcome">—</div>
-        <div class="home-unit" id="homeUnit">—</div>
+      <div class="phead"><div><h1>Dashboard</h1></div></div>
+      <!-- nome/ruolo utente: compilati da avviaDashboard, mostrati nella barra alta -->
+      <span id="homeWelcome" hidden></span><span id="homeUnit" hidden></span>
+      <div class="card bday" id="bdayBanner" style="display:none">
+        <span class="dot" style="background:var(--yellow)"></span>
+        <div id="bdayText"></div>
       </div>
-      <div class="bday-banner" id="bdayBanner" style="display:none">
-        <span class="bday-icon">🎂</span>
-        <div class="bday-text" id="bdayText"></div>
-      </div>
-      
       <div id="homeGrid"></div>
     </div>
 
@@ -1990,7 +1950,7 @@ select.st-pill { height:auto; width:auto; cursor:pointer; outline:none; -webkit-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=157"></script>
+<script src="area-riservata.js?v=158"></script>
 <script src="aggiornamento-dati.js?v=7"></script>
 </body>
 </html>
