@@ -568,6 +568,39 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .doc-drop-text{min-height:20px}
 .doc-item.hl{padding-left:12px;padding-right:12px;border-radius:14px;background:var(--bg);border-top:0;margin-bottom:6px}
 
+/* ── DB avanzato ── */
+.db-wrap{overflow-x:auto;padding:0}
+.db-table{border-collapse:collapse;min-width:100%;font-size:14px}
+.db-table th{position:sticky;top:0;z-index:2;background:var(--bg);padding:12px 14px;text-align:left;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.db-table th.sortable{cursor:pointer;user-select:none}
+.db-table th.sortable:hover{color:var(--accent)}
+.db-table th.num,.db-table td.num{width:40px;text-align:center;color:var(--muted);font-size:12px}
+.db-table th.act{width:56px}
+.db-table td{padding:10px 14px;border-top:1px solid var(--line);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.db-table tbody tr:hover td{background:var(--bg)}
+.db-check{color:var(--accent);font-weight:800}
+.db-empty{color:var(--muted)}
+.db-loading{text-align:center;padding:36px 16px;color:var(--muted)}
+.db-loading.bad{color:var(--red);font-weight:600}
+.db-add-row{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-top:1px solid var(--line);color:var(--accent);font-weight:700;cursor:pointer}
+.db-add-row:hover{background:var(--bg)}
+.db-cols-overlay,.db-record-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(5,15,35,.55);align-items:center;justify-content:center;padding:16px}
+.db-cols-overlay.open,.db-record-overlay.open{display:flex}
+.db-cols-card,.db-record-card{width:min(640px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px 20px 20px}
+@media (max-width:860px){.db-cols-overlay,.db-record-overlay{align-items:flex-end;padding:0}.db-cols-card,.db-record-card{border-radius:24px 24px 0 0;max-height:92%;padding-bottom:calc(20px + var(--safe-b))}}
+.db-cols-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.db-col-item{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
+.db-col-item label{font-size:14px;font-weight:600;cursor:pointer}
+.db-record-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.db-record-field.full{grid-column:1 / -1}
+.db-record-lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.db-record-check{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer}
+@media (max-width:420px){.db-record-grid{grid-template-columns:1fr}}
+.vcf-card{margin-bottom:18px}
+.vcf-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.vcf-avvisi{margin-top:10px}
+.vcf-avvisi summary{cursor:pointer;font-size:14px;color:var(--muted)}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -712,49 +745,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* Topbar semplificata */
 
 /* -- DB AVANZATO -- */
-.db-toolbar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.7rem; flex-wrap:wrap; }
-.db-search { flex:1; min-width:140px; padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
-.db-search:focus { border-color:var(--green); }
-.db-btn { padding:0.55rem 0.9rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:20px; font-family:var(--font); font-size:0.75rem; color:var(--testo-2); cursor:pointer; white-space:nowrap; }
-.db-btn.green { background:var(--yellow); color:var(--on-yellow); border-color:var(--yellow); }
-.db-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--r); border:0.5px solid var(--border); background:var(--bg-card); }
-.db-table { border-collapse:collapse; min-width:100%; font-size:0.8rem; }
-.db-table th { background:var(--bg-2); padding:0.5rem 0.8rem; text-align:left; font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; border-bottom:0.5px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
-.db-table th.sortable { cursor:pointer; user-select:none; }
-.db-table th.sortable:hover { color:var(--green); }
-.db-table td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); color:var(--testo); white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
-.db-table tr:last-child td { border-bottom:none; }
-.db-table tr:hover td { background:var(--bg-2); }
-.db-check { color:var(--green); font-size:0.85rem; }
-.db-empty { color:var(--testo-4); font-style:italic; }
-.db-loading { text-align:center; padding:2rem; color:var(--testo-3); }
-.db-add-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.8rem; cursor:pointer; color:var(--green); font-size:0.78rem; border-top:0.5px solid var(--border); background:var(--bg-card); }
-.db-add-row:hover { background:var(--green-pale); }
 
 /* Colonne overlay */
-.db-cols-overlay { display:none; position:fixed; inset:0; background:rgba(5,15,35,.55); z-index:600; align-items:flex-end; }
-.db-cols-overlay.open { display:flex; }
-.db-cols-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:70vh; overflow-y:auto; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
-.db-cols-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:0.8rem; }
-.db-cols-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; }
-.db-col-item { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.5rem; border-radius:6px; cursor:pointer; }
-.db-col-item:hover { background:var(--bg-2); }
-.db-col-item input { accent-color:var(--green); width:14px; height:14px; }
-.db-col-item label { font-size:0.78rem; color:var(--testo-2); cursor:pointer; }
 
 /* Form nuovo/modifica record */
-.db-record-overlay { display:none; position:fixed; inset:0; background:rgba(5,15,35,.55); z-index:700; align-items:flex-end; }
-.db-record-overlay.open { display:flex; }
-.db-record-card { background:var(--bg-card); border-radius:var(--r-lg) var(--r-lg) 0 0; padding:1.2rem; width:100%; max-height:85vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp 0.2s ease; padding-bottom:calc(1.2rem + var(--safe-b)); }
-.db-record-card h4 { font-size:0.9rem; font-weight:700; color:var(--testo); margin-bottom:1rem; }
-.db-record-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.8rem; }
-.db-record-field { }
-.db-record-field.full { grid-column:span 2; }
-.db-record-lbl { font-size:0.65rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:0.2rem; display:block; }
-.db-record-inp { width:100%; padding:0.6rem 0.8rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.85rem; color:var(--testo); outline:none; }
-.db-record-inp:focus { border-color:var(--green); }
-.db-record-check { display:flex; align-items:center; gap:0.4rem; padding:0.5rem 0; font-size:0.82rem; color:var(--testo-2); cursor:pointer; }
-.db-record-check input { accent-color:var(--green); width:15px; height:15px; }
 
 /* -- HOME DASHBOARD -- */
 
@@ -795,12 +789,11 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
 /* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
-.richiesta-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap {border-radius:20px;border:1px solid var(--line)}
-.db-cols-card,.db-record-card{border-radius:24px 24px 0 0}
-.form-inp, .db-record-inp, .db-search {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
-.form-inp:focus, .db-record-inp:focus, .db-search:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
-.db-btn{min-height:44px;border-radius:14px;background:var(--surface);color:var(--accent);border:1px solid var(--line2);font-weight:700;box-shadow:none}
-.db-btn.green{background:var(--yellow);color:var(--on-yellow);border-color:var(--yellow);font-weight:800}
+.richiesta-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap {border-radius:20px;border:1px solid var(--line)}
+
+.form-inp {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
+.form-inp:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
+
 .visite-stato{border-radius:999px}
 
 </style>
@@ -1218,46 +1211,43 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- DB AVANZATO -->
     <div class="panel" id="panelDb">
-      <div class="panel-hdr"><h2>DB Avanzato</h2><p>Database volontari completo</p></div>
-      <div class="db-toolbar">
-        <input class="db-search" id="dbSearch" placeholder="🔍 cerca..." oninput="dbFiltra(this.value)">
-        <button class="db-btn" onclick="dbToggleCols()">⚙ Colonne</button>
-        <button class="db-btn" onclick="eseguiVerificaCF()">🔍 Verifica CF</button>
-        <button class="db-btn green" onclick="dbNuovoRecord()">+ Nuovo</button>
+      <div class="phead">
+        <div><h1>DB avanzato</h1><span class="sub" id="dbPagInfo">—</span></div>
+        <div class="pact"><button class="btn pri" onclick="dbNuovoRecord()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo volontario</button></div>
       </div>
-      <div id="verCFRisultati" style="display:none;margin:0.6rem 0"></div>
-      <div class="db-wrap">
+      <div class="bar">
+        <label class="search" for="dbSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="dbSearch" placeholder="Cerca nel database" autocomplete="off" oninput="dbFiltra(this.value)"></label>
+        <span class="grow"></span>
+        <button class="btn sm" onclick="dbToggleCols()">Colonne</button>
+        <button class="btn sm" onclick="eseguiVerificaCF()">Verifica CF</button>
+      </div>
+      <div id="verCFRisultati" style="display:none"></div>
+      <div class="card tbl db-wrap">
         <table class="db-table" id="dbTable">
           <thead id="dbThead"></thead>
           <tbody id="dbTbody"><tr><td colspan="99" class="db-loading">caricamento...</td></tr></tbody>
         </table>
-        <div class="db-add-row" onclick="dbNuovoRecord()">+ aggiungi record</div>
+        <div class="db-add-row" onclick="dbNuovoRecord()">+ Aggiungi record</div>
       </div>
-      <div style="padding:0.4rem 0.8rem;font-size:0.68rem;color:var(--testo-3)" id="dbPagInfo">—</div>
     </div>
 
     <!-- Overlay colonne DB -->
     <div class="db-cols-overlay" id="dbColsOverlay">
       <div class="db-cols-card">
-        <h4>Colonne visibili</h4>
+        <div class="shead sheet-h"><h2>Colonne visibili</h2><button class="x" onclick="document.getElementById('dbColsOverlay').classList.remove('open')" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="db-cols-grid" id="dbColsGrid"></div>
-        <div style="display:flex;gap:0.5rem;margin-top:1rem">
-          <button class="db-btn" onclick="dbSalvaColonne();document.getElementById('dbColsOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">salva</button>
-        </div>
+        <div class="actions mt14"><button class="btn pri" onclick="dbSalvaColonne();document.getElementById('dbColsOverlay').classList.remove('open')">Salva</button></div>
       </div>
     </div>
 
     <!-- Overlay record DB -->
     <div class="db-record-overlay" id="dbRecordOverlay">
       <div class="db-record-card">
-        <h4 id="dbRecordTitle">Nuovo volontario</h4>
+        <div class="shead sheet-h"><h2 id="dbRecordTitle">Nuovo volontario</h2><button class="x" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="form-err" id="dbRecordErr"></div>
         <div class="db-record-grid" id="dbRecordForm"></div>
-        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
-          <button class="db-btn" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">annulla</button>
-          <button class="db-btn green" onclick="dbSalvaRecord()" style="flex:1;padding:0.7rem">salva</button>
-        </div>
-        <button class="db-btn" onclick="dbEliminaRecord()" style="width:100%;padding:0.6rem;color:var(--red);border-color:var(--red)" id="dbDelBtn">elimina</button>
+        <div class="actions"><button class="btn" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')">Annulla</button><button class="btn pri" onclick="dbSalvaRecord()">Salva</button></div>
+        <button class="vol-delete-btn" onclick="dbEliminaRecord()" id="dbDelBtn">Elimina</button>
       </div>
     </div>
 
@@ -1850,7 +1840,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=173"></script>
+<script src="area-riservata.js?v=174"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

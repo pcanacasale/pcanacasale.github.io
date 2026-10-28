@@ -3927,13 +3927,13 @@ async function eseguiVerificaCF() {
   const box = document.getElementById('verCFRisultati');
   if (!box) return;
   box.style.display = 'block';
-  box.innerHTML = '<div class="db-loading" style="padding:0.6rem">verifica in corso...</div>';
+  box.innerHTML = '<div class="card vcf-card"><p class="note m0">Verifica in corso…</p></div>';
   let vols;
   try {
     const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
     vols = await r.json();
   } catch(e) {
-    box.innerHTML = '<div class="db-loading" style="color:var(--red)">errore caricamento volontari.</div>';
+    box.innerHTML = '<div class="card vcf-card"><p class="bad m0">Errore nel caricamento dei volontari.</p></div>';
     return;
   }
 
@@ -3959,30 +3959,24 @@ async function eseguiVerificaCF() {
   });
 
   const rigaTab = arr => {
-    let t = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Volontario</th>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Dettaglio</th>'
-      + '</tr></thead><tbody>';
+    let t = '<div class="card tbl acc-log"><div class="irow ihead"><span>Volontario</span><span>Dettaglio</span><span></span></div>';
     arr.forEach(p => {
-      t += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500;white-space:nowrap">' + p.v + '</td>'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + p.msg + '</td>'
-        + '</tr>';
+      t += '<div class="irow"><b class="nowrap">' + p.v + '</b><span>' + p.msg + '</span><span></span></div>';
     });
-    return t + '</tbody></table>';
+    return t + '</div>';
   };
 
-  let out = '<div class="panel" style="padding:0.8rem">'
-    + '<div style="font-size:0.8rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center">'
+  let out = '<div class="card vcf-card">'
+    + '<div class="vcf-head">'
     + '<span><strong>' + vols.length + '</strong> volontari verificati — '
     + '<span class="pill p-blue">' + ok + ' coerenti</span> '
     + '<span class="pill p-red">' + errori.length + ' discrepanze</span>'
-    + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '') + '</span>'
-    + '<button class="db-btn" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">✕ chiudi</button>'
+    + (info.length ? ' <span class="pill p-grey">' + info.length + ' avvisi</span>' : '') + '</span>'
+    + '<button class="btn sm" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">Chiudi</button>'
     + '</div>';
   if (errori.length) out += rigaTab(errori);
-  if (info.length) out += '<details style="margin-top:0.5rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
-  if (!errori.length && !info.length) out += '<div class="db-loading">nessuna discrepanza trovata 🎉</div>';
+  if (info.length) out += '<details class="vcf-avvisi"><summary>Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
+  if (!errori.length && !info.length) out += '<p class="note">Nessuna discrepanza trovata.</p>';
   out += '</div>';
   box.innerHTML = out;
 }
@@ -5522,7 +5516,7 @@ async function caricaDb() {
     dbRenderBody();
     dbRenderPag();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="99" class="db-loading" style="color:var(--red)">Errore: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading bad">Errore: ' + e.message + '</td></tr>';
   }
 }
 
@@ -5530,12 +5524,12 @@ function dbRenderHead() {
   var thead = document.getElementById('dbThead');
   if (!thead) return;
   var cols = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
-  thead.innerHTML = '<tr><th style="width:32px;text-align:center">#</th>'
+  thead.innerHTML = '<tr><th class="num">#</th>'
     + cols.map(function(c){
         var arrow = dbSortKey === c.key ? (dbSortAsc ? ' ↑' : ' ↓') : '';
         return '<th class="sortable" onclick="dbSort(\'' + c.key + '\')">' + c.label + arrow + '</th>';
       }).join('')
-    + '<th style="width:52px"></th></tr>';
+    + '<th class="act"></th></tr>';
 }
 
 function dbRenderBody() {
@@ -5549,7 +5543,7 @@ function dbRenderBody() {
   tbody.innerHTML = '';
   dbRecords.forEach(function(rec, idx) {
     var tr  = document.createElement('tr');
-    var tds = '<td style="color:var(--testo-3);font-size:0.65rem;text-align:center">' + (dbPage * dbPageSize + idx + 1) + '</td>';
+    var tds = '<td class="num">' + (dbPage * dbPageSize + idx + 1) + '</td>';
     cols.forEach(function(c) {
       var val = rec[c.key];
       var cell;
@@ -5558,14 +5552,14 @@ function dbRenderBody() {
       } else if (c.type === 'date') {
         cell = val ? new Date(val).toLocaleDateString('it-IT') : '<span class="db-empty">—</span>';
       } else if (c.type === 'select') {
-        var colors = { 'COMPLETATA':'var(--green)','DA FARE':'var(--red)','SOLO ESAMI':'var(--amber)','VERIFICA':'var(--blue)','ESONERO':'var(--testo-3)' };
-        cell = val ? '<span style="font-size:0.68rem;padding:2px 8px;border-radius:10px;background:var(--bg-2);color:' + (colors[val]||'var(--testo-2)') + '">' + val + '</span>' : '<span class="db-empty">—</span>';
+        var pills = { 'COMPLETATA':'p-blue','DA FARE':'p-red','SOLO ESAMI':'p-sand','VERIFICA':'p-yellow','ESONERO':'p-grey' };
+        cell = val ? '<span class="pill ' + (pills[val]||'p-grey') + '">' + val + '</span>' : '<span class="db-empty">—</span>';
       } else {
         cell = val ? '<span title="' + String(val).replace(/"/g,'') + '">' + String(val).substring(0,30) + (String(val).length > 30 ? '…' : '') + '</span>' : '<span class="db-empty">—</span>';
       }
       tds += '<td>' + cell + '</td>';
     });
-    tds += '<td><button class="db-btn" style="padding:2px 7px;font-size:0.62rem" onclick="dbApriModifica(' + JSON.stringify(rec.id) + ')">✏</button></td>';
+    tds += '<td><button class="btn sm" onclick="dbApriModifica(' + JSON.stringify(rec.id) + ')">Apri</button></td>';
     tr.innerHTML = tds;
     tbody.appendChild(tr);
   });
