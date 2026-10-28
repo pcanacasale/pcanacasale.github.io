@@ -638,6 +638,26 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .ric-msg{margin-top:6px;padding:10px 14px;border-radius:14px;background:var(--bg);font-style:italic}
 .note-page{margin:-8px 0 16px}
 
+/* ── statistiche (componenti del riferimento: stat, bars, righe con barra) ── */
+.stats{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:18px}
+.stat{display:flex;align-items:center;gap:12px;padding:16px}
+.stat .ib{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--fg)}
+.stat b{display:block;font-size:27px;font-weight:800;letter-spacing:-.8px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;font-weight:600;color:var(--muted)}
+.ib.y{background:var(--yellow-soft)}.ib.b{background:var(--soft)}
+.stats-anno{width:auto;min-width:120px}
+.stat-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.stat-row:first-of-type{border-top:0}
+.stat-row .lbl{width:44%;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-row .progbar{flex:1}
+.stat-row .val{width:40px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-ore .irow{grid-template-columns:minmax(0,1fr) 90px 80px}
+.stat-ore .r{text-align:right}
+.bars .c i{background:var(--accent-bg)}
+.bars .c i.cur{background:var(--yellow)}
+.bars .c{min-width:0}
+@media (max-width:860px){.bars{gap:4px}.bars .c small,.bars .c em{font-size:10px}}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -1617,18 +1637,19 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- STATISTICHE -->
     <div class="panel" id="panelStatistiche">
-      <div class="panel-hdr"><h2>Statistiche</h2><p>Analisi interventi</p></div>
-      <div id="statsCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-bottom:1rem"></div>
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.8rem">
-        <select id="statsAnno" class="vol-form-inp" style="flex:1;font-size:0.8rem" onchange="caricaStatistiche()"></select>
-        <button class="btn-export" onclick="stampaPDFStatistiche()">📄 PDF</button>
+      <div class="phead">
+        <div><h1>Statistiche</h1></div>
+        <div class="pact">
+          <select id="statsAnno" class="stats-anno" aria-label="Anno" onchange="caricaStatistiche()"></select>
+          <button class="btn" onclick="stampaPDFStatistiche()">Scarica PDF</button>
+        </div>
       </div>
-      <div style="font-size:0.72rem;font-weight:600;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:0.4rem">Interventi per tipo</div>
-      <div id="statsLegendaTipo" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;font-size:0.65rem;color:var(--testo-3)"></div>
-      <div style="position:relative;width:100%;height:200px;margin-bottom:1.2rem"><canvas id="chartStatsTipo" role="img" aria-label="Interventi per tipo">Dati interventi per tipo.</canvas></div>
-      <div style="font-size:0.72rem;font-weight:600;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:0.4rem">Andamento mensile</div>
-      <div style="position:relative;width:100%;height:180px;margin-bottom:1.2rem"><canvas id="chartStatsMesi" role="img" aria-label="Andamento mensile interventi">Andamento mensile.</canvas></div>
-      <div style="font-size:0.72rem;font-weight:600;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:0.4rem">Ore per volontario</div>
+      <div id="statsCards" class="stats"></div>
+      <div class="cols">
+        <div class="card"><h2>Interventi per mese</h2><div id="chartStatsMesi" class="bars" role="img" aria-label="Interventi per mese"></div></div>
+        <div class="card"><h2>Interventi per tipo</h2><div id="chartStatsTipo" class="mt10" role="img" aria-label="Interventi per tipo"></div></div>
+      </div>
+      <div class="grp mt18">Ore per volontario</div>
       <div id="statsOreTable"></div>
     </div>
 
@@ -1834,7 +1855,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=177"></script>
+<script src="area-riservata.js?v=178"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

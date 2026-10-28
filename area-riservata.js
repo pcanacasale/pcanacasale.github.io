@@ -8756,13 +8756,6 @@ var statsInterventi = [];
 var statsChartTipo  = null;
 var statsChartMesi  = null;
 
-var TIPO_COLORS = {
-  'EMERGENZA':'#c0392b','ESERCITAZIONE':'#185fa5','CORSI':'#3b6d11',
-  'PREVENZIONE INFORTUNI':'#854f0b','RAPPRESENTANZA':'#534ab7',
-  'ASSEMBLEE E RIUNIONI':'#0f6e56','CONTROLLO TERRITORIO':'#185fa5',
-  'SEGRETERIA':'#5f5e5a','MAGAZZINO':'#854f0b'
-};
-
 async function caricaStatistiche() {
   var anno = document.getElementById('statsAnno').value;
   var url  = SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data&stato_calcolato=eq.SVOLTO';
@@ -8793,46 +8786,39 @@ function renderStatCards() {
   var totInt  = statsInterventi.length;
   var totOre  = statsInterventi.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
   var totVol  = statsInterventi.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
+  var ic = function(n){ return navIc(n, 22); };
   el.innerHTML = [
-    ['Interventi', totInt, '#1a7a4a'],
-    ['Ore totali', Math.round(totOre*10)/10, '#185fa5'],
-    ['Presenze', totVol, '#854f0b']
+    ['Interventi', totInt, 'clock', 'y'],
+    ['Ore totali', Math.round(totOre*10)/10, 'clock', 'b'],
+    ['Presenze', totVol, 'users', 'y']
   ].map(function(c){
-    return '<div style="background:var(--bg-2);border-radius:var(--r);padding:0.7rem 0.8rem">'
-      + '<div style="font-size:0.65rem;color:var(--testo-3);margin-bottom:2px">'+c[0]+'</div>'
-      + '<div style="font-size:1.3rem;font-weight:600;color:'+c[2]+'">'+c[1]+'</div></div>';
+    return '<div class="card stat"><span class="ib ' + c[3] + '">' + ic(c[2]) + '</span><div><b>' + c[1] + '</b><span>' + c[0] + '</span></div></div>';
   }).join('');
 }
 
+// Interventi per tipo: righe con barra di avanzamento (componente progbar del riferimento)
 function renderChartTipo() {
-  var ctx = document.getElementById('chartStatsTipo');
-  if (!ctx) return;
+  var el = document.getElementById('chartStatsTipo');
+  if (!el) return;
   var contegg = {};
   statsInterventi.forEach(function(i){
     var t = i.tipo_attivita || 'ALTRO';
     contegg[t] = (contegg[t]||0) + 1;
   });
-  var labels = Object.keys(contegg);
-  var data   = labels.map(function(l){ return contegg[l]; });
-  var colors = labels.map(function(l){ return TIPO_COLORS[l] || '#888'; });
-
-  // Legenda
-  var leg = document.getElementById('statsLegendaTipo');
-  if (leg) leg.innerHTML = labels.map(function(l,i){
-    return '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:'+colors[i]+'"></span>'+l+' '+data[i]+'</span>';
+  var labels = Object.keys(contegg).sort(function(a,b){ return contegg[b] - contegg[a]; });
+  if (!labels.length) { el.innerHTML = '<p class="note">Nessun intervento.</p>'; return; }
+  var max = Math.max.apply(null, labels.map(function(l){ return contegg[l]; }));
+  el.innerHTML = labels.map(function(l){
+    return '<div class="stat-row"><span class="lbl">' + l + '</span>'
+      + '<div class="progbar"><i style="width:' + Math.round(contegg[l] / max * 100) + '%"></i></div>'
+      + '<span class="val">' + contegg[l] + '</span></div>';
   }).join('');
-
-  if (statsChartTipo) statsChartTipo.destroy();
-  statsChartTipo = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
-  });
 }
 
+// Interventi per mese: colonne del riferimento (.bars), mese corrente in giallo
 function renderChartMesi(anno) {
-  var ctx = document.getElementById('chartStatsMesi');
-  if (!ctx) return;
+  var el = document.getElementById('chartStatsMesi');
+  if (!el) return;
   var mesi   = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
   var counts = new Array(12).fill(0);
   statsInterventi.forEach(function(i){
@@ -8840,22 +8826,13 @@ function renderChartMesi(anno) {
     var m = parseInt(i.data.slice(5,7)) - 1;
     if (m >= 0 && m < 12) counts[m]++;
   });
-  var isDark = matchMedia('(prefers-color-scheme: dark)').matches;
-  var grid   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  var txt    = isDark ? '#aaa' : '#666';
-  if (statsChartMesi) statsChartMesi.destroy();
-  statsChartMesi = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: mesi, datasets: [{ data: counts, backgroundColor: '#1a7a4a', borderRadius: 4, label: 'Interventi' }] },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales: {
-        x:{ ticks:{ color:txt, autoSkip:false, font:{size:10} }, grid:{ color:grid } },
-        y:{ ticks:{ color:txt, font:{size:10} }, grid:{ color:grid }, beginAtZero:true }
-      }
-    }
-  });
+  var top = Math.max.apply(null, counts.concat([1]));
+  var oggi = new Date();
+  var meseCorr = String(oggi.getFullYear()) === String(anno) ? oggi.getMonth() : -1;
+  el.innerHTML = counts.map(function(n, i){
+    var h = Math.round(n / top * 130) + 4;
+    return '<div class="c"><em>' + n + '</em><i class="' + (i === meseCorr ? 'cur' : '') + '" style="height:' + h + 'px"></i><small>' + mesi[i] + '</small></div>';
+  }).join('');
 }
 
 function renderOreTable() {
@@ -8875,7 +8852,7 @@ function renderOreTable() {
   });
   // Carica nomi volontari
   var ids = Object.keys(volMap);
-  if (!ids.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--testo-3)">Nessun dato.</div>'; return; }
+  if (!ids.length) { el.innerHTML = '<div class="empty">Nessun dato.</div>'; return; }
   fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome,codice_fiscale', { headers: H })
     .then(function(r){ return r.json(); })
     .then(function(vols){
@@ -8884,20 +8861,11 @@ function renderOreTable() {
         return { nome: v.cognome + ' ' + v.nome, ore: Math.round(s.ore*10)/10, count: s.count };
       }).sort(function(a,b){ return b.ore - a.ore; });
 
-      var html = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
-        + '<thead><tr style="border-bottom:0.5px solid var(--border)">'
-        + '<th style="text-align:left;padding:5px 4px;color:var(--testo-3);font-weight:500">Volontario</th>'
-        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Interventi</th>'
-        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Ore</th>'
-        + '</tr></thead><tbody>';
+      var html = '<div class="card tbl stat-ore"><div class="irow ihead"><span>Volontario</span><span class="r">Interventi</span><span class="r">Ore</span></div>';
       rows.forEach(function(r, i){
-        html += '<tr style="border-bottom:0.5px solid var(--border)">'
-          + '<td style="padding:5px 4px;color:var(--testo)">' + (i+1) + '. ' + r.nome + '</td>'
-          + '<td style="padding:5px 4px;text-align:right;color:var(--testo-2)">' + r.count + '</td>'
-          + '<td style="padding:5px 4px;text-align:right;font-weight:500;color:var(--green)">' + r.ore + 'h</td>'
-          + '</tr>';
+        html += '<div class="irow"><b>' + (i+1) + '. ' + r.nome + '</b><span class="r">' + r.count + '</span><b class="r">' + r.ore + ' h</b></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
       el.innerHTML = html;
     });
 }
