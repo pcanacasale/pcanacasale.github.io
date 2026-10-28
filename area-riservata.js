@@ -4154,8 +4154,8 @@ function pstRenderLista() {
     const nVolAssegnati = p.volontari.length;
     const previsti = p.n_volontari_previsti;
     const contatore = previsti
-      ? '<span class="acc-badge ' + (nVolAssegnati < previsti ? 'acc-inactive' : 'acc-active') + '">' + nVolAssegnati + '/' + previsti + '</span>'
-      : '<span class="acc-badge acc-std">' + nVolAssegnati + '</span>';
+      ? '<span class="pill ' + (nVolAssegnati < previsti ? 'p-sand' : 'p-blue') + '">' + nVolAssegnati + '/' + previsti + '</span>'
+      : '<span class="pill p-grey">' + nVolAssegnati + '</span>';
 
     const infoRighe = [];
     infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
@@ -4373,11 +4373,11 @@ function pstRenderModalList() {
 
   box.innerHTML = filtrati.map(v => {
     const assegnato = giaQui.has(v.id);
-    return '<div class="acc-row" style="padding:0.4rem 0;border-bottom:0.5px solid var(--border-2)">'
-      + '<span class="acc-val">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + '</span>'
+    return '<div class="lr">'
+      + '<span class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>' + (v.squadra ? '<span class="sub">' + v.squadra + '</span>' : '') + '</span>'
       + (assegnato
-          ? '<span class="acc-badge acc-active" style="margin-left:auto">✓ assegnato</span>'
-          : '<button class="btn-sm" style="margin-left:auto" onclick="pstAggiungiVolontarioA(' + v.id + ')">+ aggiungi</button>')
+          ? '<span class="pill p-blue">Assegnato</span>'
+          : '<button class="btn sm" onclick="pstAggiungiVolontarioA(' + v.id + ')">Aggiungi</button>')
       + '</div>';
   }).join('');
 }
@@ -7331,7 +7331,7 @@ let accessiData = { admin: [], vol: [] };
 async function caricaAccessi() {
   const content = document.getElementById('accessiContent');
   if (!content) return;
-  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
 
   // Mostra/nascondi sezione nuovo utente e matrice permessi solo per master
   const nuovoSec = document.getElementById('accNuovoUtenteSection');
@@ -7392,7 +7392,7 @@ function caricaMatricePermessi() {
 
   let html = '<thead><tr><th></th>';
   utenti.forEach(function(u) {
-    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' 🔑' : '') + '</th>';
+    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' · master' : '') + '</th>';
   });
   html += '</tr></thead><tbody>';
 
@@ -7437,7 +7437,7 @@ async function togglePermessoMatrice(userId, key, checked) {
 }
 
 function _accCollapsibleHead(label, id) {
-  return '<div class="vol-section-head" onclick="toggleVolSection(this)" style="margin-bottom:0;border-radius:var(--r-sm)">' + label + '</div>'
+  return '<div class="vol-section-head acc-head" onclick="toggleVolSection(this)">' + label + '</div>'
     + '<div id="' + id + '" class="acc-collapsible-body">';
 }
 
@@ -7452,46 +7452,43 @@ function renderAccessi() {
   // --- Amministratori ---
   if (tipo !== 'vol') {
     const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('🔐 Amministratori (' + admins.length + ')', 'accAdminBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Amministratori (' + admins.length + ')', 'accAdminBody');
     if (!admins.length) {
-      html += '<div class="loading-msg sm">nessun amministratore</div>';
+      html += '<div class="loading-msg sm">Nessun amministratore</div>';
     } else {
-      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
+      html += '<div class="grid g3">';
       admins.forEach(u => {
-        const stato  = u.attivo ? '<span class="acc-badge acc-active">ATTIVO</span>' : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
-        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="acc-badge acc-master">MASTER</span>' : '<span class="acc-badge acc-std">STANDARD</span>';
-        html += '<div class="acc-card">'
-          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome||'—') + '</strong></span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
-          + (isMasterUser ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏️ Modifica</button></div>' : '')
-          + '</div>';
+        const ini    = (u.nome || '?').split(' ').map(x => x[0] || '').join('').slice(0,2).toUpperCase();
+        const stato  = u.attivo ? '<span class="pill p-blue">Attivo</span>' : '<span class="pill p-grey">Disattivato</span>';
+        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="pill p-yellow">Master</span>' : '<span class="pill p-sand">Standard</span>';
+        html += '<div class="card">'
+          + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.username||'—') + ' · ' + (u.ruolo||'—') + '</span></div></div>'
+          + '<div class="cfoot"><span class="int-pills" style="margin:0">' + tipoLbl + stato + '</span>'
+          + (isMasterUser ? '<button class="btn sm" onclick="apriModificaUtenteById(\'' + u.id + '\')">Modifica</button>' : '')
+          + '</div></div>';
       });
       html += '</div>';
     }
-    html += '</div></div>'; // chiude body + vol-section
+    html += '</div></div>'; // chiude body + sezione
   }
 
   // --- Volontari abilitati ---
   if (tipo !== 'admin') {
     const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('👤 Volontari abilitati (' + vols.length + ')', 'accVolBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Volontari abilitati (' + vols.length + ')', 'accVolBody');
     if (!vols.length) {
-      html += '<div class="loading-msg sm">nessun volontario</div>';
+      html += '<div class="loading-msg sm">Nessun volontario</div>';
     } else {
-      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
+      html += '<div class="grid g3">';
       vols.forEach(v => {
         const dataNasc = v.data_nascita ? v.data_nascita.split('-').reverse().join('/') : '—';
         const avatar = v.foto_url
-          ? '<img src="' + v.foto_url + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
-          : '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;font-weight:700">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</div>';
-        html += '<div class="acc-card">'
-          + '<div class="acc-row" style="gap:0.4rem">' + avatar + '<span class="acc-val"><strong>' + (v.cognome||'') + ' ' + (v.nome||'') + '</strong></span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Data nascita</span><span class="acc-val">' + dataNasc + '</span></div>'
+          ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
+          : '<span class="av s40">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</span>';
+        html += '<div class="card">'
+          + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">CF ' + (v.codice_fiscale||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
           + '</div>';
       });
       html += '</div>';
@@ -7502,56 +7499,38 @@ function renderAccessi() {
   // --- Log accessi recenti ---
   if (!q) {
     const logs = accessiData.log || [];
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('🕐 Log accessi (' + logs.length + ')', 'accLogBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Registro accessi (' + logs.length + ')', 'accLogBody');
     if (!logs.length) {
-      html += '<div class="loading-msg sm">nessun accesso registrato</div>';
+      html += '<div class="loading-msg sm">Nessun accesso registrato</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;padding:0 0.4rem">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Tipo</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
-        + '</tr></thead><tbody>';
+      html += '<div class="card tbl acc-log"><div class="irow ihead"><span>Data e ora</span><span>Utente</span><span>Tipo</span></div>';
       logs.forEach(l => {
         const dt = new Date(l.accesso_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
         const badge = l.utente_tipo === 'admin'
-          ? '<span class="acc-badge acc-master" style="font-size:0.6rem">ADMIN</span>'
-          : '<span class="acc-badge acc-std" style="font-size:0.6rem">VOL</span>';
-        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo)">' + (l.utente_label||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem">' + badge + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
-          + '</tr>';
+          ? '<span class="pill p-yellow">Admin</span>'
+          : '<span class="pill p-blue">Volontario</span>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b style="font-size:14px">' + (l.utente_label||'—') + '</b><span>' + badge + '</span></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
     }
     html += '</div></div>';
 
     // --- Log attività ---
     const atts = accessiData.att || [];
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('📋 Log attività (' + atts.length + ')', 'accAttBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Registro attività (' + atts.length + ')', 'accAttBody');
     if (!atts.length) {
-      html += '<div class="loading-msg sm">nessuna attività registrata</div>';
+      html += '<div class="loading-msg sm">Nessuna attività registrata</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Azione</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
-        + '</tr></thead><tbody>';
+      html += '<div class="card tbl acc-log"><div class="irow ihead"><span>Data e ora</span><span>Utente</span><span>Azione</span></div>';
       atts.forEach(a => {
         const dt = new Date(a.created_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
-        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500">' + (a.utente||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + (a.azione||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
-          + '</tr>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b style="font-size:14px">' + (a.utente||'—') + '</b><span>' + (a.azione||'—') + '</span></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
     }
     html += '</div></div>';
   }

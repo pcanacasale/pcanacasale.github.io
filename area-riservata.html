@@ -431,6 +431,25 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .seg-text{margin:12px 0 14px;white-space:pre-wrap}
 .seg-nota{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 
+/* ── accessi ── */
+.acc-tipo{width:auto;min-width:200px}
+.nuovo-utente-form{margin-bottom:18px}
+#nuovoUtenteForm:not([style*="none"]){display:flex!important}
+.perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.perm-check{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:14px;font-weight:600;color:var(--fg);cursor:pointer}
+.mp-wrap{overflow-x:auto;margin-bottom:18px}
+#matricePermessi{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap}
+#matricePermessi th,#matricePermessi td{padding:10px 14px;border-top:1px solid var(--line);text-align:center}
+#matricePermessi thead th{border-top:0;background:var(--bg);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+#matricePermessi td:first-child,#matricePermessi th:first-child{position:sticky;left:0;background:var(--surface);text-align:left;font-weight:600;z-index:1}
+#matricePermessi thead th:first-child{background:var(--bg)}
+@keyframes mp-flash{0%{box-shadow:inset 0 0 0 2px var(--yellow)}100%{box-shadow:inset 0 0 0 2px transparent}}
+#matricePermessi td.mp-flash{animation:mp-flash .7s ease-out}
+.acc-head{border-top:0;margin-top:6px}
+.acc-collapsible-body{margin-bottom:18px}
+.acc-log .irow{grid-template-columns:150px minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:860px){.acc-log .irow{grid-template-columns:1fr 1fr}.acc-log .irow>:first-child{grid-column:1 / -1}}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -480,19 +499,6 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .vol-filter-btn.active { background:var(--green-pale); color:var(--green); border-color:var(--green-bdr); }
 
 /* Accessi */
-.accessi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:0.7rem; }
-.acc-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:none; }
-.acc-row { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0; border-top:0.5px solid var(--border); font-size:0.78rem; gap:0.5rem; }
-.acc-row:first-of-type { border-top:none; }
-.acc-lbl { color:var(--testo-3); flex-shrink:0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.3px; }
-.acc-val { color:var(--testo); text-align:right; word-break:break-all; }
-.acc-mono { font-family:monospace; font-size:0.76rem; }
-.acc-badge { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; margin-left:0.3rem; }
-.acc-active { background:rgba(34,139,82,0.15); color:var(--green); }
-.acc-sosp   { background:rgba(217,164,0,0.15); color:#d9a400; }
-.acc-inactive { background:rgba(120,120,120,0.15); color:var(--testo-3); }
-.acc-master { background:rgba(155,89,182,0.15); color:#9b59b6; }
-.acc-std    { background:rgba(76,141,255,0.15); color:#4c8dff; }
 
 /* Scheda personale (volontario) */
 .schedapers-hero { display:flex; align-items:center; gap:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; margin-bottom:1rem; }
@@ -646,15 +652,9 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 
 .form-inp { width:100%; padding:0.65rem 0.9rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; transition:border-color 0.2s; }
 .form-inp:focus { border-color:var(--green); }
-.perm-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.3rem; background:var(--bg-2); border-radius:var(--r-sm); padding:0.7rem; margin-bottom:0.7rem; }
-.perm-check { display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:var(--testo-2); cursor:pointer; padding:0.2rem 0; }
-.perm-check input { accent-color:var(--green); width:15px; height:15px; }
-#matricePermessi th, #matricePermessi td { padding:6px 10px; border-bottom:0.5px solid var(--border); text-align:center; }
-#matricePermessi td:first-child, #matricePermessi th:first-child { position:sticky; left:0; background:var(--bg-card); text-align:left; font-weight:500; z-index:1; }
-#matricePermessi th { background:var(--bg-2); font-weight:600; font-size:0.72rem; }
-#matricePermessi input[type="checkbox"] { accent-color:var(--green); width:15px; height:15px; cursor:pointer; }
+
 @keyframes mp-flash { 0% { box-shadow:inset 0 0 0 2px var(--green); } 100% { box-shadow:inset 0 0 0 2px transparent; } }
-#matricePermessi td.mp-flash { animation:mp-flash 0.7s ease-out; }
+
 .nc-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.6rem; }
 .nc-full { grid-column:span 2; }
 .schema-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.6rem; }
@@ -780,7 +780,7 @@ body { font-family:var(--font); }
 /* Intestazione: barra blu con logo + titolo */
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .impo-perm-row {
+.login-card, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .impo-perm-row {
   border-radius:20px; border:1px solid var(--line);
 }
 .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
@@ -810,7 +810,7 @@ body { font-family:var(--font); }
 }
 
 /* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.vol-badge, .perm-badge, .acc-badge, .visite-stato, .schema-tipo-pill, .db-pag-btn, .login-tab {
+.vol-badge, .perm-badge, .visite-stato, .schema-tipo-pill, .db-pag-btn, .login-tab {
   border-radius:var(--r-pill);
 }
 .login-tabs { border-radius:var(--r-pill); }
@@ -824,9 +824,7 @@ body { font-family:var(--font); }
 
 /* Stati: Attivo = blu chiaro, In intervento = giallo, Sospeso = grigio */
 
-.acc-active, .vb-ok { background:var(--soft); color:var(--accent); }
-
-.acc-sosp, .acc-inactive { background:var(--grey-soft); color:var(--grey-fg); }
+.vb-ok { background:var(--soft); color:var(--accent); }
 
 </style>
 </head>
@@ -1325,38 +1323,32 @@ body { font-family:var(--font); }
 
     <!-- ACCESSI (per master) -->
     <div class="panel" id="panelAccessi">
-      <div class="panel-hdr"><h2>Accessi e credenziali</h2><p>Gestione utenti e log</p></div>
+      <div class="phead"><div><h1>Accessi</h1></div></div>
 
-      <!-- Ricerca/filtro -->
-      <div class="form-row" style="margin-bottom:0.8rem">
-        <input type="text" id="accessiSearch" class="form-inp" placeholder="cerca per nome, CF, ruolo..." oninput="filtraAccessi()" style="flex:1">
-        <select id="accessiTipo" class="form-inp" onchange="filtraAccessi()" style="max-width:180px">
-          <option value="">tutti</option>
+      <div class="bar">
+        <label class="search" for="accessiSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="accessiSearch" placeholder="Cerca per nome, CF o ruolo" autocomplete="off" oninput="filtraAccessi()"></label>
+        <select id="accessiTipo" class="acc-tipo" onchange="filtraAccessi()" aria-label="Tipo">
+          <option value="">Tutti</option>
           <option value="admin">Solo amministratori</option>
           <option value="vol">Solo volontari</option>
         </select>
       </div>
 
-      <!-- Matrice permessi -->
-      <div class="impo-section" id="matricePermessiSection" style="display:none">
-        <div class="sec-label">Matrice permessi</div>
-        <div style="overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--r-lg)">
-          <table id="matricePermessi" style="border-collapse:collapse;font-size:0.78rem;white-space:nowrap">
-            <!-- popolata via JS -->
-          </table>
-        </div>
-      </div>
-
       <!-- Nuovo utente (spostato da Impostazioni) -->
       <div class="impo-section" id="accNuovoUtenteSection">
-        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
-        <div class="nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
-          <h4>+ Nuovo utente</h4>
+        <button class="btn pri" style="margin-bottom:18px" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
+        <div class="card form nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
+          <h2>Nuovo utente</h2>
           <div class="form-err" id="nuovoUtenteErr"></div>
-          <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" type="text" id="nuovoNome" placeholder="Mario Rossi"></div>
-          <div class="form-field"><label class="form-lbl">Username</label><input class="form-inp" type="text" id="nuovoUsername" placeholder="mrossi"></div>
-          <div class="form-field"><label class="form-lbl">Password</label><input class="form-inp" type="password" id="nuovaPassword" placeholder="••••••••"></div>
-          <div class="form-field"><label class="form-lbl">Ruolo</label><input class="form-inp" type="text" id="nuovoRuolo" placeholder="es. Volontario"></div>
+          <div class="row2">
+            <label>Nome e cognome<input type="text" id="nuovoNome" placeholder="Mario Rossi"></label>
+            <label>Username<input type="text" id="nuovoUsername" placeholder="mrossi"></label>
+          </div>
+          <div class="row2">
+            <label>Password<input type="password" id="nuovaPassword" placeholder="••••••••"></label>
+            <label>Ruolo<input type="text" id="nuovoRuolo" placeholder="es. Volontario"></label>
+          </div>
+          <div class="grp" style="margin:4px 0 0">Permessi</div>
           <div class="perm-grid">
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
@@ -1381,11 +1373,21 @@ body { font-family:var(--font); }
             <label class="perm-check"><input type="checkbox" id="permImpostazioni"> Impostazioni</label>
             <label class="perm-check"><input type="checkbox" id="permAggDati"> Aggiornamento dati</label>
           </div>
-          <button class="btn-primary" onclick="salvaUtente()">salva utente</button>
+          <div class="actions"><button class="btn" onclick="toggleNuovoUtente()">Annulla</button><button class="btn pri" onclick="salvaUtente()">Salva utente</button></div>
         </div>
       </div>
 
-      <div id="accessiContent"><div class="loading-msg">caricamento...</div></div>
+      <div id="accessiContent"><div class="loading-msg">Caricamento…</div></div>
+
+      <!-- Matrice permessi -->
+      <div class="impo-section" id="matricePermessiSection" style="display:none">
+        <div class="grp">Matrice permessi</div>
+        <div class="card tbl mp-wrap">
+          <table id="matricePermessi">
+            <!-- popolata via JS -->
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- SCHEDA PERSONALE (per volontari) -->    <div class="panel" id="panelSchedapers">
@@ -1825,45 +1827,42 @@ body { font-family:var(--font); }
   </div>
   <!-- Modifica utente -->
   <div class="vista-form-overlay" id="modUtenteOverlay">
-    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-      <h4>Modifica utente</h4>
+    <div class="vista-form-card">
+      <div class="shead" style="padding:0 0 10px"><h2>Modifica utente</h2><button class="x" onclick="chiudiModificaUtente()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <input type="hidden" id="modUtenteId">
       <div class="form-err" id="modUtenteErr"></div>
-      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Nome e Cognome *</label><input class="form-inp" id="modNome"></div>
-      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Username *</label><input class="form-inp" id="modUsername"></div>
-      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Nuova password (lascia vuoto per non cambiare)</label><input class="form-inp" type="password" id="modPassword" placeholder="••••••••"></div>
-      <div class="form-field" style="margin-bottom:0.5rem"><label class="form-lbl">Ruolo *</label><input class="form-inp" id="modRuolo"></div>
-      <div class="form-field" style="margin-bottom:0.7rem">
+      <div class="form-field"><label class="form-lbl">Nome e Cognome *</label><input class="form-inp" id="modNome"></div>
+      <div class="form-field"><label class="form-lbl">Username *</label><input class="form-inp" id="modUsername"></div>
+      <div class="form-field"><label class="form-lbl">Nuova password (lascia vuoto per non cambiare)</label><input class="form-inp" type="password" id="modPassword" placeholder="••••••••"></div>
+      <div class="form-field"><label class="form-lbl">Ruolo *</label><input class="form-inp" id="modRuolo"></div>
+      <div class="form-field">
         <label class="form-lbl">Permessi sezioni</label>
         <div class="perm-grid">
-          <label class="perm-check"><input type="checkbox" id="modPermVolontari"> 👤 Volontari</label>
-          <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> ✏️ Modifica Volontari</label>
-          <label class="perm-check"><input type="checkbox" id="modPermInterventi"> 📋 Interventi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPostazioni"> 📍 Postazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDotazioni"> 📦 Dotazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPianiCarico"> 🧾 Piani di Carico</label>
-          <label class="perm-check"><input type="checkbox" id="modPermMezzi"> 🚛 Mezzi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermTlc"> 📻 TLC</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDb"> 🗄️ DB Avanzato</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> 📁 Documenti</label>
-          <label class="perm-check"><input type="checkbox" id="modPermVisite"> 🩺 Visite Mediche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermGalleria"> 🖼️ Galleria</label>
-          <label class="perm-check"><input type="checkbox" id="modPermRichieste"> 📬 Richieste</label>
-          <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> ⚙️ Impostazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> 📊 Statistiche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> 📨 Convocazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermAccessi"> 🔐 Accessi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermGestioneSegnalazioni"> 🚩 Gestione Segnalazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermBot"> 🤖 Bot</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEmergenze"> 🚨 Emergenze</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPosizione"> 📍 Posizione</label>
-          <label class="perm-check"><input type="checkbox" id="modPermAggDati"> 🗂️ Aggiornamento dati</label>
+          <label class="perm-check"><input type="checkbox" id="modPermVolontari"> Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> Modifica Volontari</label>
+          <label class="perm-check"><input type="checkbox" id="modPermInterventi"> Interventi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPostazioni"> Postazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermDotazioni"> Dotazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPianiCarico"> Piani di Carico</label>
+          <label class="perm-check"><input type="checkbox" id="modPermMezzi"> Mezzi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermTlc"> TLC</label>
+          <label class="perm-check"><input type="checkbox" id="modPermDb"> DB Avanzato</label>
+          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti</label>
+          <label class="perm-check"><input type="checkbox" id="modPermVisite"> Visite Mediche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
+          <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
+          <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> Convocazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermAccessi"> Accessi</label>
+          <label class="perm-check"><input type="checkbox" id="modPermGestioneSegnalazioni"> Gestione Segnalazioni</label>
+          <label class="perm-check"><input type="checkbox" id="modPermBot"> Bot</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEmergenze"> Emergenze</label>
+          <label class="perm-check"><input type="checkbox" id="modPermPosizione"> Posizione</label>
+          <label class="perm-check"><input type="checkbox" id="modPermAggDati"> Aggiornamento dati</label>
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiModificaUtente()" style="flex:1;padding:0.7rem">annulla</button>
-        <button class="btn-primary" onclick="salvaModificaUtente()" style="padding:0.7rem">salva</button>
-      </div>
+      <div class="actions"><button class="btn" onclick="chiudiModificaUtente()">Annulla</button><button class="btn pri" onclick="salvaModificaUtente()">Salva</button></div>
     </div>
   </div>
   <!-- Export PDF visite mediche -->
@@ -1918,7 +1917,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=166"></script>
+<script src="area-riservata.js?v=167"></script>
 <script src="aggiornamento-dati.js?v=9"></script>
 </body>
 </html>
