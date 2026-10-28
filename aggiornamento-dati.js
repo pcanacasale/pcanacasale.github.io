@@ -129,81 +129,80 @@ function aggApri() {
 }
 
 // ============================================================
-// CSS (iniettato una sola volta — tutto ciò che non è già coperto dalle
-// classi esistenti vol-card / vol-detail / vol-section / vol-field / btn-sm /
-// doc-upload-overlay ecc., riusate ovunque possibile per restare coerenti
-// con lo stile di Mezzi/Volontari senza toccare lo <style> esistente).
+// CSS (iniettato una sola volta — solo ciò che non è già coperto dai
+// componenti condivisi di area-riservata.html: card, pill, chip, progbar,
+// vol-detail / vol-section / vol-field, doc-upload-overlay ecc.).
 // ============================================================
 function aggIniettaCSS() {
   if (document.getElementById('aggStyle')) return;
   const style = document.createElement('style');
   style.id = 'aggStyle';
   style.textContent = `
-.agg-counters { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.8rem; }
-.agg-counter { flex:1; min-width:84px; background:var(--bg-card); border-radius:var(--r); padding:0.55rem 0.7rem; box-shadow:var(--shadow); text-align:center; cursor:pointer; border:1px solid transparent; }
-.agg-counter.active { border-color:var(--green); }
-.agg-counter-val { font-size:1.15rem; font-weight:700; color:var(--testo); }
-.agg-counter-lbl { font-size:0.62rem; color:var(--testo-3); margin-top:0.1rem; text-transform:uppercase; letter-spacing:0.3px; }
-.agg-toolbar-row { display:flex; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap; }
-.agg-toolbar-row .vol-search { flex:1; min-width:160px; }
-.agg-filtri { display:none; gap:0.5rem; flex-wrap:wrap; background:var(--bg-card); border-radius:var(--r); padding:0.6rem; margin-bottom:0.6rem; box-shadow:var(--shadow); }
-.agg-filtri.open { display:flex; }
-.agg-filtri select { padding:0.5rem 0.7rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.78rem; color:var(--testo); }
-.agg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:0.7rem; }
-.agg-card { background:var(--bg-card); border-radius:var(--r-lg); padding:0.75rem; box-shadow:var(--shadow); cursor:pointer; border:0.5px solid var(--border); transition:transform 0.12s; }
-.agg-card:active { transform:scale(0.98); }
-.agg-card-top { display:flex; align-items:center; gap:0.6rem; }
-.agg-card-top .vol-card-info { flex:1; min-width:0; }
-.agg-badge { font-size:0.6rem; font-weight:700; padding:2px 7px; border-radius:10px; white-space:nowrap; }
-.agg-card-badges { display:flex; gap:0.3rem; flex-wrap:wrap; margin:0.5rem 0 0.4rem; }
-.agg-bar { height:6px; border-radius:4px; background:var(--bg-2); overflow:hidden; }
-.agg-bar-fill { height:100%; transition:width 0.3s; }
-.agg-bar-label { font-size:0.62rem; color:var(--testo-3); margin-top:0.2rem; text-align:right; }
-.agg-field-missing { border-color:var(--red) !important; background:var(--red-pale) !important; }
-.agg-orig-hint { font-size:0.62rem; color:var(--testo-4); font-style:italic; margin-top:0.15rem; text-align:right; }
-.agg-cf-msg { font-size:0.68rem; padding:0.3rem 0.5rem; border-radius:6px; margin-top:0.3rem; }
-.agg-cf-msg.ok { background:var(--green-pale); color:var(--green); }
-.agg-cf-msg.err { background:var(--red-pale); color:var(--red); }
-.agg-cf-msg.info { background:var(--bg-2); color:var(--testo-3); }
-.agg-doc-row { display:flex; align-items:center; gap:0.6rem; padding:0.55rem 0.75rem; background:var(--bg-2); border-radius:var(--r-sm); margin-bottom:0.4rem; }
-.agg-doc-row-info { flex:1; min-width:0; }
-.agg-doc-row-name { font-size:0.8rem; color:var(--testo); }
-.agg-doc-row-meta { font-size:0.65rem; color:var(--testo-3); margin-top:0.1rem; }
-.agg-dpi-cat { margin-bottom:0.7rem; }
-.agg-dpi-cat-head { font-size:0.7rem; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:0.3rem; }
-.agg-dpi-row { display:grid; grid-template-columns:1.2fr 0.9fr 0.9fr; gap:0.4rem; align-items:center; padding:0.4rem 0; border-bottom:0.5px solid var(--border); }
-.agg-dpi-row:last-child { border-bottom:none; }
-.agg-dpi-row label { display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; color:var(--testo-2); }
-.agg-dpi-row select, .agg-dpi-row input[type=date] { padding:0.4rem 0.5rem; background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.75rem; color:var(--testo); width:100%; }
-.agg-dpi-row.off select, .agg-dpi-row.off input { opacity:0.35; pointer-events:none; }
-.agg-dpi-consegnato { display:flex; align-items:center; gap:0.3rem; font-size:0.72rem; }
-.agg-photo-box { display:flex; align-items:center; gap:1rem; }
-.agg-photo-preview { width:98px; height:118px; border-radius:8px; object-fit:cover; background:var(--bg-2); flex-shrink:0; border:0.5px solid var(--border); }
-.agg-photo-placeholder { width:98px; height:118px; border-radius:8px; background:var(--bg-2); display:flex; align-items:center; justify-content:center; font-size:1.6rem; color:var(--testo-4); flex-shrink:0; }
-.agg-crop-wrap { position:relative; width:245px; height:295px; margin:0.8rem auto; border-radius:8px; overflow:hidden; background:#000; touch-action:none; }
-.agg-crop-canvas { width:100%; height:100%; display:block; cursor:grab; }
-.agg-crop-guide { position:absolute; inset:0; pointer-events:none; }
-.agg-crop-guide svg { width:100%; height:100%; }
-.agg-crop-controls { display:flex; align-items:center; gap:0.6rem; margin:0.5rem 0; padding:0 0.5rem; }
-.agg-crop-controls input[type=range] { flex:1; accent-color:var(--green); }
-.agg-crop-info { text-align:center; font-size:0.72rem; color:var(--testo-3); margin-bottom:0.5rem; }
-.agg-crop-info.ok { color:var(--green); font-weight:600; }
-.agg-crop-info.err { color:var(--red); font-weight:600; }
-.agg-cat-list-row { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.5rem; background:var(--bg-2); border-radius:6px; margin-bottom:0.3rem; }
-.agg-cat-list-row.inattivo { opacity:0.5; }
-.vb-prop { background:rgba(0,122,255,0.12); color:var(--blue); }
-.agg-prop-box { border:1.5px solid var(--blue); border-radius:var(--r-lg); padding:0.8rem; margin-bottom:0.8rem; background:var(--bg-card); }
-.agg-prop-title { font-weight:700; color:var(--blue); font-size:0.85rem; margin-bottom:0.2rem; }
-.agg-prop-meta { font-size:0.65rem; color:var(--testo-3); margin-bottom:0.6rem; }
-.agg-prop-sub { font-size:0.68rem; font-weight:700; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.3px; margin:0.7rem 0 0.3rem; }
-.agg-prop-table { width:100%; border-collapse:collapse; font-size:0.74rem; }
-.agg-prop-table th { text-align:left; font-size:0.62rem; color:var(--testo-4); font-weight:600; padding:0.25rem 0.3rem; border-bottom:0.5px solid var(--border); }
-.agg-prop-table td { padding:0.35rem 0.3rem; border-bottom:0.5px solid var(--border); vertical-align:top; color:var(--testo-2); word-break:break-word; }
-.agg-prop-table td.att { color:var(--testo-4); text-decoration:line-through; }
-.agg-prop-table td.prop { color:var(--testo); font-weight:600; }
-.agg-prop-actions { display:flex; gap:0.5rem; margin-top:0.8rem; }
-.agg-prop-actions button { flex:1; }
-.agg-link-url { width:100%; padding:0.55rem 0.6rem; font-size:0.72rem; font-family:monospace; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); color:var(--testo); }
+.agg-prog{margin-bottom:18px}
+.agg-prog b{display:block;font-size:17px}
+.agg-prog .progbar{margin-top:12px}
+.agg-chips .chip .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700}
+.agg-chips .chip.on .n{background:rgba(255,255,255,.2);color:inherit}
+.agg-filtri{display:none;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.agg-filtri.open{display:grid}
+.agg-filtri label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
+.agg-row{display:grid;grid-template-columns:minmax(200px,1.4fr) minmax(0,1.6fr) 110px 150px;gap:14px;align-items:center;padding:12px 18px;border-top:1px solid var(--line);cursor:pointer}
+.agg-row:first-child{border-top:0}
+.agg-row:hover{background:var(--bg)}
+.agg-row .vol-n b{display:block}
+.agg-row .pills{display:flex;gap:6px;flex-wrap:wrap}
+.agg-comp{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.agg-comp .progbar{flex:1}
+@media (max-width:860px){.agg-row{grid-template-columns:1fr 1fr;gap:10px}.agg-row .vol-n,.agg-row .pills{grid-column:1 / -1}}
+.agg-field-missing{border-color:var(--red)!important;background:var(--red-soft)!important}
+.agg-orig-hint{font-size:12px;color:var(--muted);font-style:italic;margin-top:4px;text-align:right}
+.agg-cf-msg{font-size:13px;font-weight:600;padding:8px 12px;border-radius:12px;margin-top:6px}
+.agg-cf-msg.ok{background:var(--soft);color:var(--accent)}
+.agg-cf-msg.err{background:var(--red-soft);color:var(--red)}
+.agg-cf-msg.info{background:var(--bg);color:var(--muted)}
+.agg-doc-row{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 0;border-top:1px solid var(--line)}
+.agg-doc-row:first-child{border-top:0}
+.agg-doc-row-info{flex:1;min-width:0}
+.agg-doc-row-name{font-weight:700;font-size:15px}
+.agg-doc-row-meta{font-size:13px;color:var(--muted)}
+.agg-dpi-cat{margin-bottom:14px}
+.agg-dpi-cat-head{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:4px 0 8px}
+.agg-dpi-row{display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.agg-dpi-row label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.agg-dpi-row.off select,.agg-dpi-row.off input{opacity:.35;pointer-events:none}
+.agg-dpi-consegnato{display:flex;align-items:center;gap:6px;font-size:13px}
+.agg-photo-box{display:flex;align-items:center;gap:16px}
+.agg-photo-preview{width:98px;height:118px;border-radius:14px;object-fit:cover;background:var(--bg);flex-shrink:0;border:1px solid var(--line)}
+.agg-photo-preview.sm{width:49px;height:59px;border-radius:8px}
+.agg-firma{width:105px;height:35px;background:#fff;border-radius:6px;border:1px solid var(--line);object-fit:contain}
+.agg-photo-placeholder{width:98px;height:118px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);flex-shrink:0}
+.agg-crop-wrap{position:relative;width:245px;height:295px;margin:12px auto;border-radius:14px;overflow:hidden;background:#000;touch-action:none}
+.agg-crop-canvas{width:100%;height:100%;display:block;cursor:grab}
+.agg-crop-guide{position:absolute;inset:0;pointer-events:none}
+.agg-crop-guide svg{width:100%;height:100%}
+.agg-crop-controls{display:flex;align-items:center;gap:10px;margin:8px 0}
+.agg-crop-controls input[type=range]{flex:1;accent-color:var(--accent-bg)}
+.agg-crop-info{text-align:center;font-size:13px;color:var(--muted);margin-bottom:10px}
+.agg-crop-info.ok{color:var(--accent);font-weight:700}
+.agg-crop-info.err{color:var(--red);font-weight:700}
+.agg-cat-list-row{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 0;border-top:1px solid var(--line)}
+.agg-cat-list-row.inattivo{opacity:.5}
+.agg-cat-head{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.agg-prop-box{border:1px solid var(--line);border-radius:16px;padding:14px;margin:4px 0 12px;background:var(--bg)}
+.agg-prop-title{font-weight:800;font-size:16px;margin-bottom:2px}
+.agg-prop-meta{font-size:13px;color:var(--muted);margin-bottom:10px}
+.agg-prop-sub{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin:12px 0 6px}
+.agg-prop-table{width:100%;border-collapse:collapse;font-size:14px}
+.agg-prop-table th{text-align:left;font-size:12px;color:var(--muted);font-weight:700;padding:6px;border-bottom:1px solid var(--line)}
+.agg-prop-table td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+.agg-prop-table td.att{color:var(--muted);text-decoration:line-through}
+.agg-prop-table td.prop{font-weight:700}
+.agg-prop-actions{display:flex;gap:10px;margin-top:12px}
+.agg-prop-actions button{flex:1}
+.agg-link-url{width:100%;font-family:monospace;font-size:13px}
+.agg-mt{margin-top:12px}
+.agg-row2{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.agg-row2>*{flex:1}
 `;
   document.head.appendChild(style);
 }
@@ -217,38 +216,41 @@ function aggInitUI() {
   const root = document.getElementById('aggRoot');
   if (!root) return;
   root.innerHTML = `
-    <div class="agg-counters">
-      <div class="agg-counter" id="aggCntTot" onclick="aggImpostaMissing('')"><div class="agg-counter-val" id="aggCTot">0</div><div class="agg-counter-lbl">Totale</div></div>
-      <div class="agg-counter" id="aggCntFoto" onclick="aggImpostaMissing('foto')"><div class="agg-counter-val" id="aggCFoto">0</div><div class="agg-counter-lbl">Senza foto</div></div>
-      <div class="agg-counter" id="aggCntDpi" onclick="aggImpostaMissing('dpi')"><div class="agg-counter-val" id="aggCDpi">0</div><div class="agg-counter-lbl">DPI da fare</div></div>
-      <div class="agg-counter" id="aggCntDoc" onclick="aggImpostaMissing('doc')"><div class="agg-counter-val" id="aggCDoc">0</div><div class="agg-counter-lbl">Doc. mancanti</div></div>
-      <div class="agg-counter" id="aggCntVer" onclick="aggImpostaMissing('verifica')"><div class="agg-counter-val" id="aggCVer">0</div><div class="agg-counter-lbl">Da verificare</div></div>
-      <div class="agg-counter" id="aggCntProp" onclick="aggImpostaMissing('proposte')"><div class="agg-counter-val" id="aggCProp" style="color:var(--blue)">0</div><div class="agg-counter-lbl">Proposte</div></div>
+    <div class="card agg-prog" id="aggProg"></div>
+
+    <div class="bar">
+      <label class="search" for="aggSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="aggSearch" placeholder="Cerca volontario" autocomplete="off" oninput="aggImpostaSearch(this.value)"></label>
+      <button class="chip" id="aggFilterBtn" onclick="aggToggleFiltri()">Filtri</button>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="aggApriCatalogo()">Catalogo DPI</button>
+      <button class="btn sm" onclick="aggEsportaCSV()">Esporta CSV</button>
+      <button class="btn sm" id="aggSyncBtn" onclick="aggSincronizzaNuovi()">Sincronizza nuovi volontari</button>
     </div>
 
-    <div class="agg-toolbar-row">
-      <input type="text" class="vol-search" id="aggSearch" placeholder="Cerca volontario..." oninput="aggImpostaSearch(this.value)">
-      <button class="vol-filter-btn" id="aggFilterBtn" onclick="aggToggleFiltri()">filtri</button>
-      <button class="btn-sm" onclick="aggApriCatalogo()">📋 Catalogo DPI</button>
-      <button class="btn-sm" onclick="aggEsportaCSV()">⬇️ Export CSV</button>
-      <button class="btn-sm" id="aggSyncBtn" onclick="aggSincronizzaNuovi()">🔄 Sincronizza nuovi volontari</button>
+    <div class="card agg-filtri" id="aggFiltriBox">
+      <label>Squadra<select id="aggFiltroSquadra" onchange="aggFiltri.squadra=this.value;aggApplicaFiltri()"><option value="">Tutte le squadre</option></select></label>
+      <label>Stato
+        <select id="aggFiltroStato" onchange="aggFiltri.stato=this.value;aggApplicaFiltri()">
+          <option value="">Tutti gli stati</option>
+          <option value="ATTIVO">Attivo</option>
+          <option value="SOSPESO">Sospeso</option>
+          <option value="DIMESSO">Dimesso</option>
+        </select>
+      </label>
     </div>
 
-    <div class="agg-filtri" id="aggFiltriBox">
-      <select id="aggFiltroSquadra" onchange="aggFiltri.squadra=this.value;aggApplicaFiltri()"><option value="">Tutte le squadre</option></select>
-      <select id="aggFiltroStato" onchange="aggFiltri.stato=this.value;aggApplicaFiltri()">
-        <option value="">Tutti gli stati</option>
-        <option value="ATTIVO">Attivo</option>
-        <option value="SOSPESO">Sospeso</option>
-        <option value="DIMESSO">Dimesso</option>
-      </select>
+    <div class="chips agg-chips" style="margin-bottom:18px">
+      <button class="chip agg-counter" id="aggCntTot" onclick="aggImpostaMissing('')">Tutti <span class="n" id="aggCTot">0</span></button>
+      <button class="chip agg-counter" id="aggCntFoto" onclick="aggImpostaMissing('foto')">Senza foto <span class="n" id="aggCFoto">0</span></button>
+      <button class="chip agg-counter" id="aggCntDpi" onclick="aggImpostaMissing('dpi')">DPI da fare <span class="n" id="aggCDpi">0</span></button>
+      <button class="chip agg-counter" id="aggCntDoc" onclick="aggImpostaMissing('doc')">Documenti mancanti <span class="n" id="aggCDoc">0</span></button>
+      <button class="chip agg-counter" id="aggCntVer" onclick="aggImpostaMissing('verifica')">Da verificare <span class="n" id="aggCVer">0</span></button>
+      <button class="chip agg-counter" id="aggCntProp" onclick="aggImpostaMissing('proposte')">Proposte <span class="n" id="aggCProp">0</span></button>
     </div>
 
-    <div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">
-      <span id="aggMostrati">0</span> risultati
-    </div>
+    <p class="sub" style="margin:-8px 0 10px"><span id="aggMostrati">0</span> risultati</p>
 
-    <div id="aggGrid" class="agg-grid"><div class="loading-msg">caricamento...</div></div>
+    <div id="aggGrid" class="card tbl"><div class="loading-msg">Caricamento…</div></div>
   `;
 
   aggCostruisciOverlay();
@@ -263,20 +265,17 @@ function aggCostruisciOverlay() {
   wrap.innerHTML = `
     <div class="vol-detail" id="aggDetail">
       <div class="vol-detail-top">
-        <button class="vol-detail-back" onclick="aggChiudiScheda()">← indietro</button>
-        <span class="vol-detail-title" id="aggDetailTitle">—</span>
+        <h2 class="vol-detail-title" id="aggDetailTitle">—</h2>
+        <button class="x" onclick="aggChiudiScheda()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-detail-body" id="aggDetailBody"></div>
     </div>
 
     <div class="doc-upload-overlay" id="aggCatalogoOverlay">
-      <div class="login-card" style="max-width:480px;width:100%;max-height:85vh;overflow-y:auto;margin:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
-          <strong>Catalogo DPI</strong>
-          <button class="btn-sm" onclick="aggChiudiCatalogo()">chiudi</button>
-        </div>
+      <div class="doc-upload-card">
+        <div class="shead" style="padding:0 0 10px"><h2>Catalogo DPI</h2><button class="x" onclick="aggChiudiCatalogo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div id="aggCatalogoList"></div>
-        <div class="vol-form-section" style="margin-top:1rem">
+        <div class="vol-form-section" style="margin-top:14px">
           <div class="vol-form-section-title">Nuovo capo</div>
           <div class="vol-form-grid">
             <div class="vol-form-field"><span class="vol-form-lbl">Categoria</span><input class="vol-form-inp" id="aggCatNuovaCategoria" list="aggCatCategorieList" placeholder="es. GENERICO"></div>
@@ -290,75 +289,60 @@ function aggCostruisciOverlay() {
             <div class="vol-form-field"><span class="vol-form-lbl">Ordine</span><input class="vol-form-inp" id="aggCatNuovoOrdine" type="number" value="0"></div>
           </div>
           <datalist id="aggCatCategorieList"></datalist>
-          <button class="vol-form-save" style="margin-top:0.6rem;width:100%" onclick="aggCatalogoSalva()">+ aggiungi al catalogo</button>
+          <button class="btn pri full agg-mt" onclick="aggCatalogoSalva()">Aggiungi al catalogo</button>
         </div>
       </div>
     </div>
 
     <div class="doc-upload-overlay" id="aggFotoOverlay">
-      <div class="login-card" style="max-width:360px;width:100%;max-height:92vh;overflow-y:auto;margin:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
-          <strong>Foto tessera PIA</strong>
-          <button class="btn-sm" onclick="aggChiudiEditorFoto()">chiudi</button>
-        </div>
-        <div style="font-size:0.68rem;color:var(--testo-3);margin-bottom:0.5rem">
-          Formato 196×236 px, JPG, &lt; 50 KB. Inquadra viso e spalle: il viso deve occupare il 70–80% della foto.
-        </div>
-        <input type="file" accept="image/*" id="aggFotoInput" onchange="aggFotoFileSelezionato(this)" style="width:100%;margin-bottom:0.5rem">
+      <div class="doc-upload-card" style="width:min(400px,100%)">
+        <div class="shead" style="padding:0 0 10px"><h2>Foto tessera PIA</h2><button class="x" onclick="aggChiudiEditorFoto()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <p class="note" style="margin:0 0 10px">Formato 196×236 px, JPG, &lt; 50 KB. Inquadra viso e spalle: il viso deve occupare il 70–80% della foto.</p>
+        <input type="file" accept="image/*" id="aggFotoInput" onchange="aggFotoFileSelezionato(this)" style="width:100%;margin-bottom:10px">
         <div id="aggCropArea" style="display:none">
           <div class="agg-crop-wrap">
             <canvas class="agg-crop-canvas" id="aggCropCanvas" width="196" height="236"></canvas>
             <div class="agg-crop-guide"><svg viewBox="0 0 196 236" preserveAspectRatio="none"><ellipse cx="98" cy="100" rx="56" ry="68" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" stroke-dasharray="4 3"/></svg></div>
           </div>
           <div class="agg-crop-controls">
-            <span style="font-size:0.9rem">🔍</span>
+            <span class="sub">Zoom</span>
             <input type="range" id="aggCropZoom" min="100" max="400" value="100" oninput="aggFotoZoomCambiato(this.value)">
           </div>
           <div class="agg-crop-info" id="aggCropInfo">trascina per spostare, usa lo zoom per ingrandire</div>
-          <button class="vol-form-save" style="width:100%" onclick="aggFotoConferma()">usa questa foto</button>
+          <button class="btn pri full" onclick="aggFotoConferma()">Usa questa foto</button>
         </div>
       </div>
     </div>
 
     <div class="doc-upload-overlay" id="aggLinkOverlay">
-      <div class="login-card" style="max-width:400px;width:100%;margin:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
-          <strong>Link personale</strong>
-          <button class="btn-sm" onclick="aggChiudiLinkOverlay()">chiudi</button>
-        </div>
-        <div style="font-size:0.72rem;color:var(--testo-2);margin-bottom:0.5rem" id="aggLinkInfo"></div>
+      <div class="doc-upload-card" style="width:min(460px,100%)">
+        <div class="shead" style="padding:0 0 10px"><h2>Link personale</h2><button class="x" onclick="aggChiudiLinkOverlay()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <p class="note" style="margin:0 0 10px" id="aggLinkInfo"></p>
         <input class="agg-link-url" id="aggLinkUrl" readonly onclick="this.select()">
-        <div style="font-size:0.66rem;color:var(--red);margin:0.5rem 0 0.7rem">⚠️ Il link si vede solo adesso: copialo o invialo prima di chiudere. Se lo perdi, generane uno nuovo (il precedente smette di funzionare).</div>
-        <div style="display:flex;gap:0.5rem">
-          <button class="btn-sm" style="flex:1" id="aggLinkCopiaBtn" onclick="aggLinkCopia()">📋 Copia</button>
-          <button class="btn-sm btn-ok" style="flex:1" onclick="aggLinkWhatsApp()">💬 Invia su WhatsApp</button>
+        <p class="bad" style="margin:10px 0 12px">Il link si vede solo adesso: copialo o invialo prima di chiudere. Se lo perdi, generane uno nuovo (il precedente smette di funzionare).</p>
+        <div class="agg-row2">
+          <button class="btn" id="aggLinkCopiaBtn" onclick="aggLinkCopia()">Copia</button>
+          <button class="btn pri" onclick="aggLinkWhatsApp()">Invia su WhatsApp</button>
         </div>
-        <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
-          <button class="btn-sm" style="flex:1" onclick="aggLinkEmail()">✉️ Email</button>
-          <button class="btn-sm" style="flex:1" onclick="aggLinkSms()">📱 SMS</button>
-          <button class="btn-sm" style="flex:1" id="aggLinkShareBtn" onclick="aggLinkCondividi()">↗️ Condividi</button>
+        <div class="agg-row2">
+          <button class="btn sm" onclick="aggLinkEmail()">Email</button>
+          <button class="btn sm" onclick="aggLinkSms()">SMS</button>
+          <button class="btn sm" id="aggLinkShareBtn" onclick="aggLinkCondividi()">Condividi</button>
         </div>
       </div>
     </div>
 
     <div class="doc-upload-overlay" id="aggDocOverlay">
-      <div class="login-card" style="max-width:360px;width:100%;margin:1rem">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
-          <strong id="aggDocOverlayTitle">Carica documento</strong>
-          <button class="btn-sm" onclick="aggChiudiUploadDoc()">chiudi</button>
+      <div class="doc-upload-card" style="width:min(460px,100%)">
+        <div class="shead" style="padding:0 0 10px"><h2 id="aggDocOverlayTitle">Carica documento</h2><button class="x" onclick="aggChiudiUploadDoc()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="form">
+          <label>Descrizione<input id="aggDocDescrizione" placeholder="es. Attestato corso antincendio"></label>
+          <label>Scadenza (facoltativa)<input id="aggDocScadenza" type="date"></label>
+          <input type="file" accept="application/pdf,image/*" id="aggDocFileInput" onchange="aggDocFileSelezionato(this)">
+          <p class="note" id="aggDocFileLabel" style="margin:0">PDF o JPG, max 10MB</p>
+          <p class="bad" id="aggDocUploadErr" style="display:none;margin:0"></p>
+          <div class="actions"><button class="btn" onclick="aggChiudiUploadDoc()">Annulla</button><button class="btn pri" id="aggDocUploadBtn" onclick="aggEseguiUploadDoc()">Carica</button></div>
         </div>
-        <div class="vol-form-field" style="margin-bottom:0.5rem">
-          <span class="vol-form-lbl">Descrizione</span>
-          <input class="vol-form-inp" id="aggDocDescrizione" placeholder="es. Attestato corso antincendio">
-        </div>
-        <div class="vol-form-field" style="margin-bottom:0.5rem">
-          <span class="vol-form-lbl">Scadenza (opzionale)</span>
-          <input class="vol-form-inp" id="aggDocScadenza" type="date">
-        </div>
-        <input type="file" accept="application/pdf,image/*" id="aggDocFileInput" onchange="aggDocFileSelezionato(this)" style="width:100%;margin-bottom:0.5rem">
-        <div id="aggDocFileLabel" style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.6rem">PDF o JPG, max 10MB</div>
-        <div class="loading-msg" id="aggDocUploadErr" style="display:none;padding:0.5rem;color:var(--red);text-align:left"></div>
-        <button class="vol-form-save" style="width:100%" id="aggDocUploadBtn" onclick="aggEseguiUploadDoc()">carica</button>
       </div>
     </div>
   `;
@@ -370,7 +354,7 @@ function aggCostruisciOverlay() {
 // ============================================================
 async function aggCaricaLista() {
   const grid = document.getElementById('aggGrid');
-  if (grid) grid.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  if (grid) grid.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const [data, prop] = await Promise.all([aggCall('list', {}), aggCall('proposte_lista', {}).catch(aggErroreFase2)]);
     aggProposteAperte = {};
@@ -394,6 +378,16 @@ function aggRenderContatori() {
   set('aggCDoc', aggContatori.documenti_mancanti);
   set('aggCVer', aggContatori.da_verificare);
   set('aggCProp', aggContatori.proposte);
+  const box = document.getElementById('aggProg');
+  if (box) {
+    const tot = aggVolontari.length;
+    const ok  = aggVolontari.filter(v => v.completezza >= 100).length;
+    box.innerHTML = '<b>Schede complete: ' + ok + ' su ' + tot + '</b>'
+      + '<span class="sub">Anagrafica, foto, documenti e DPI</span>'
+      + '<div class="progbar"><i style="width:' + Math.round(ok / Math.max(1, tot) * 100) + '%"></i></div>';
+  }
+  const t = document.getElementById('aggCntTot');
+  if (t && !aggFiltri.missing) t.classList.add('active');
 }
 
 function aggPopolaFiltroSquadre() {
@@ -417,7 +411,7 @@ function aggImpostaMissing(m) {
   document.querySelectorAll('.agg-counter').forEach(c => c.classList.remove('active'));
   const map = { '': 'aggCntTot', foto: 'aggCntFoto', dpi: 'aggCntDpi', doc: 'aggCntDoc', verifica: 'aggCntVer', proposte: 'aggCntProp' };
   const el = document.getElementById(map[aggFiltri.missing] || 'aggCntTot');
-  if (el && aggFiltri.missing) el.classList.add('active');
+  if (el) el.classList.add('active');
   aggApplicaFiltri();
 }
 
@@ -445,45 +439,35 @@ function aggApplicaFiltri() {
   aggRenderGriglia(filtrati);
 }
 
-function aggColoreBarra(pct) {
-  return pct >= 100 ? 'var(--green)' : (pct >= 50 ? 'var(--amber)' : 'var(--red)');
-}
-
 function aggRenderGriglia(list) {
   const grid = document.getElementById('aggGrid');
   if (!grid) return;
   const m = document.getElementById('aggMostrati'); if (m) m.textContent = list.length;
-  if (!list.length) { grid.innerHTML = '<div class="loading-msg">nessun risultato.</div>'; return; }
+  if (!list.length) { grid.innerHTML = '<div class="loading-msg">Nessun volontario in questo elenco.</div>'; return; }
   grid.innerHTML = '';
   list.forEach(v => grid.appendChild(aggCardEl(v)));
 }
 
 function aggCardEl(v) {
-  const [bg, fg] = avatarColor(v.cognome);
   const initials = ((v.cognome || '?')[0] + (v.nome || '?')[0]).toUpperCase();
-  const card = document.createElement('div');
-  card.className = 'agg-card';
-  card.onclick = () => aggApriScheda(v.id);
-  const verColor = v.stato_verifica === 'VERIFICATO' ? 'var(--green)' : (v.stato_verifica === 'IN_CORSO' ? 'var(--amber)' : 'var(--testo-4)');
-  const verBg    = v.stato_verifica === 'VERIFICATO' ? 'var(--green-pale)' : (v.stato_verifica === 'IN_CORSO' ? 'var(--amber-pale)' : 'var(--bg-2)');
+  const row = document.createElement('div');
+  row.className = 'agg-row';
+  row.onclick = () => aggApriScheda(v.id);
+  const ver = v.stato_verifica || 'DA_FARE';
+  const verCls = ver === 'VERIFICATO' ? 'p-blue' : (ver === 'IN_CORSO' ? 'p-yellow' : 'p-grey');
   const docManca = aggDocManca(v);
 
-  card.innerHTML = '<div class="agg-card-top">'
-    + '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>'
-    + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-    + '<div class="vol-card-sub">' + (v.squadra || '—') + '</div></div>'
-    + '<span class="agg-badge" style="background:' + verBg + ';color:' + verColor + '">' + (v.stato_verifica || 'DA_FARE').replace('_', ' ') + '</span>'
+  row.innerHTML = '<div class="vol-n"><span class="av s40">' + initials + '</span><div><b>' + v.cognome + ' ' + v.nome + '</b>'
+    + '<span class="sub">' + (v.squadra || '—') + ' · PIA ' + (v.pia_matricola || '—') + '</span></div></div>'
+    + '<div class="pills">'
+    + (v.proposta_aperta ? '<span class="pill p-yellow">Proposta da approvare</span>' : '')
+    + '<span class="pill ' + (v.blocchi.foto ? 'p-blue' : 'p-red') + '">' + (v.blocchi.foto ? 'Foto' : 'Senza foto') + '</span>'
+    + (docManca ? '<span class="pill p-sand">Documenti mancanti</span>' : '')
+    + (!v.blocchi.dpi_valutati ? '<span class="pill p-sand">DPI da fare</span>' : '')
     + '</div>'
-    + '<div class="agg-card-badges">'
-    + (v.proposta_aperta ? '<span class="vol-badge vb-prop">📝 Proposta da approvare</span>' : '')
-    + '<span class="vol-badge ' + (v.blocchi.foto ? 'vb-ok' : 'vb-off') + '">' + (v.blocchi.foto ? '📷 foto' : '📷 no foto') + '</span>'
-    + '<span class="vol-badge vb-tipo">PIA ' + (v.pia_matricola || '—') + '</span>'
-    + (docManca ? '<span class="vol-badge vb-warn">doc. mancanti</span>' : '')
-    + (!v.blocchi.dpi_valutati ? '<span class="vol-badge vb-warn">DPI da fare</span>' : '')
-    + '</div>'
-    + '<div class="agg-bar"><div class="agg-bar-fill" style="width:' + v.completezza + '%;background:' + aggColoreBarra(v.completezza) + '"></div></div>'
-    + '<div class="agg-bar-label">' + v.completezza + '%</div>';
-  return card;
+    + '<span><span class="pill ' + verCls + '">' + ver.replace('_', ' ').toLowerCase().replace(/^./, c => c.toUpperCase()) + '</span></span>'
+    + '<div class="agg-comp"><div class="progbar"><i style="width:' + v.completezza + '%"></i></div>' + v.completezza + '%</div>';
+  return row;
 }
 
 // ============================================================
@@ -493,7 +477,7 @@ async function aggSincronizzaNuovi() {
   if (!aggHaAccesso()) return;
   if (!confirm('Aggiungere ad "Aggiornamento dati" i volontari non dimessi che non sono ancora presenti?\n\nLe schede già esistenti non vengono modificate.')) return;
   const btn = document.getElementById('aggSyncBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '🔄 sincronizzazione...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sincronizzazione…'; }
   try {
     const data = await aggCall('sincronizza_nuovi', {});
     const aggiunti = data.aggiunti || [];
@@ -503,7 +487,7 @@ async function aggSincronizzaNuovi() {
       : 'Nessun nuovo volontario');
     await aggCaricaLista();
   } catch (e) { alert('Errore sincronizzazione: ' + e.message); }
-  if (btn) { btn.disabled = false; btn.textContent = '🔄 Sincronizza nuovi volontari'; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Sincronizza nuovi volontari'; }
 }
 
 // ============================================================
@@ -529,7 +513,7 @@ async function aggApriScheda(id) {
   const body = document.getElementById('aggDetailBody');
   detail.classList.add('open');
   detail.scrollTop = 0;
-  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  body.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   aggFotoSignedUrl = null;
   aggPropCorrente = null;
   try {
@@ -559,8 +543,7 @@ function aggRenderScheda() {
   const v = aggCorrente.volontario;
   const comp = aggCorrente.completezza;
 
-  body.innerHTML = '<div class="agg-bar" style="margin-bottom:0.3rem"><div class="agg-bar-fill" style="width:' + comp.percentuale + '%;background:' + aggColoreBarra(comp.percentuale) + '"></div></div>'
-    + '<div class="agg-bar-label" style="text-align:left;margin-bottom:0.8rem">Completezza scheda: ' + comp.percentuale + '%</div>'
+  body.innerHTML = '<div class="agg-comp" style="margin:4px 0 14px"><span>Completezza</span><div class="progbar"><i style="width:' + comp.percentuale + '%"></i></div>' + comp.percentuale + '%</div>'
     + aggBloccoProposta(v)
     + aggBloccoLink(v)
     + aggBloccoAnagrafica(v)
@@ -604,25 +587,25 @@ async function aggRicaricaScheda(id) {
 // -- BLOCCO LINK --
 function aggBloccoLink(v) {
   const l = aggPropCorrente && aggPropCorrente.link;
-  let stato = '<span style="color:var(--testo-4)">nessun link generato</span>';
+  let stato = '<span class="pill p-grey">Nessun link generato</span>';
   if (l) {
-    if (l.attivo) stato = '<span style="color:var(--green);font-weight:600">attivo</span> fino al ' + new Date(l.scade_il).toLocaleDateString('it-IT');
-    else if (l.bloccato && !l.revocato) stato = '<span style="color:var(--red);font-weight:600">bloccato</span> (troppi tentativi errati)';
-    else if (l.revocato) stato = '<span style="color:var(--testo-3)">revocato / chiuso</span>';
-    else stato = '<span style="color:var(--amber)">scaduto</span> il ' + new Date(l.scade_il).toLocaleDateString('it-IT');
+    if (l.attivo) stato = '<span class="pill p-blue">Attivo</span> fino al ' + new Date(l.scade_il).toLocaleDateString('it-IT');
+    else if (l.bloccato && !l.revocato) stato = '<span class="pill p-red">Bloccato</span> (troppi tentativi errati)';
+    else if (l.revocato) stato = '<span class="pill p-grey">Revocato / chiuso</span>';
+    else stato = '<span class="pill p-sand">Scaduto</span> il ' + new Date(l.scade_il).toLocaleDateString('it-IT');
   }
   return '<div class="vol-section">'
     + '<div class="vol-section-head" onclick="toggleVolSection(this)">Link per il volontario</div>'
-    + '<div class="vol-section-body" style="padding:0.8rem 1rem">'
+    + '<div class="vol-section-body">'
     + '<div class="vol-field"><span class="vol-field-label">Stato</span><span class="vol-field-value">' + stato + '</span></div>'
     + (l ? '<div class="vol-field"><span class="vol-field-label">Generato</span><span class="vol-field-value">' + aggFmtDataOra(l.creato_il) + (l.creato_da ? ' — ' + aggEsc(l.creato_da) : '') + '</span></div>'
          + '<div class="vol-field"><span class="vol-field-label">Ultimo accesso</span><span class="vol-field-value">' + aggFmtDataOra(l.ultimo_accesso) + ' (' + (l.usi || 0) + ' utilizzi)</span></div>'
          + (l.tentativi_falliti ? '<div class="vol-field"><span class="vol-field-label">Tentativi errati</span><span class="vol-field-value">' + l.tentativi_falliti + ' / 5</span></div>' : '')
        : '')
     + (!v.data_nascita ? '<div class="agg-cf-msg err">Per generare il link serve la data di nascita in anagrafica.</div>' : '')
-    + '<div style="display:flex;gap:0.5rem;margin-top:0.6rem">'
-    + '<button class="btn-sm btn-ok" style="flex:1" onclick="aggLinkGenera(' + v.id + ')">🔗 ' + (l ? 'Genera nuovo link' : 'Genera link') + '</button>'
-    + (l && l.attivo ? '<button class="btn-sm btn-danger" onclick="aggLinkRevoca(' + v.id + ')">revoca</button>' : '')
+    + '<div class="agg-row2">'
+    + '<button class="btn sm pri" onclick="aggLinkGenera(' + v.id + ')">' + (l ? 'Genera nuovo link' : 'Genera link') + '</button>'
+    + (l && l.attivo ? '<button class="btn sm danger" style="flex:none" onclick="aggLinkRevoca(' + v.id + ')">Revoca</button>' : '')
     + '</div></div></div>';
 }
 
@@ -711,7 +694,7 @@ async function aggLinkRevoca(id) {
 
 // -- BLOCCO PROPOSTA --
 function aggFmtValProp(campo, val) {
-  if (val === null || val === undefined || String(val).trim() === '') return '<span style="color:var(--testo-4)">—</span>';
+  if (val === null || val === undefined || String(val).trim() === '') return '<span class="sub" style="display:inline">—</span>';
   if (campo === 'data_nascita' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) return new Date(String(val).slice(0, 10) + 'T00:00:00').toLocaleDateString('it-IT');
   return aggEsc(val);
 }
@@ -726,7 +709,7 @@ function aggBloccoProposta(v) {
     + (p.privacy_accettata_il ? ' — informativa privacy accettata' : '') + '. I dati attuali non cambiano finché non approvi.</div>';
 
   html += '<div class="agg-prop-sub">Anagrafica</div>';
-  if (!p.campi.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessuna modifica</div>';
+  if (!p.campi.length) html += '<div class="note">nessuna modifica</div>';
   else {
     html += '<table class="agg-prop-table"><tr><th></th><th>Campo</th><th>Attuale</th><th>Proposto</th></tr>';
     p.campi.forEach(c => {
@@ -739,12 +722,12 @@ function aggBloccoProposta(v) {
   }
 
   html += '<div class="agg-prop-sub">Taglie e DPI</div>';
-  if (!p.dpi.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessuna modifica</div>';
+  if (!p.dpi.length) html += '<div class="note">nessuna modifica</div>';
   else {
     html += '<table class="agg-prop-table"><tr><th></th><th>Capo</th><th>Attuale</th><th>Proposto</th></tr>';
     p.dpi.forEach(d => {
       html += '<tr><td><input type="checkbox" class="aggPropDpi" value="' + Number(d.dpi_id) + '" checked></td>'
-        + '<td>' + aggEsc(d.nome) + '<div style="font-size:0.6rem;color:var(--testo-4)">' + aggEsc(d.categoria) + '</div></td>'
+        + '<td>' + aggEsc(d.nome) + '<div class="note">' + aggEsc(d.categoria) + '</div></td>'
         + '<td class="att">' + aggFmtDpi(d.attuale) + '</td>'
         + '<td class="prop">' + aggFmtDpi(d.proposto) + '</td></tr>';
     });
@@ -753,19 +736,19 @@ function aggBloccoProposta(v) {
 
   html += '<div class="agg-prop-sub">Foto e documenti in attesa</div>';
   const docs = p.documenti || [];
-  if (!docs.length) html += '<div style="font-size:0.72rem;color:var(--testo-4)">nessun file caricato</div>';
+  if (!docs.length) html += '<div class="note">nessun file caricato</div>';
   docs.forEach(d => {
     const scad = d.scadenza ? ' — scade ' + new Date(d.scadenza).toLocaleDateString('it-IT') : '';
     html += '<div class="agg-doc-row">'
       + '<input type="checkbox" class="aggPropDoc" value="' + Number(d.id) + '" checked>'
-      + (d.tipo === 'FOTO' ? '<img id="aggPropFoto_' + Number(d.id) + '" class="agg-photo-preview" style="width:49px;height:59px" alt="">' : '')
-      + (d.tipo === 'FIRMA' ? '<img id="aggPropFoto_' + Number(d.id) + '" style="width:105px;height:35px;background:#fff;border-radius:4px;border:0.5px solid var(--border);object-fit:contain" alt="">' : '')
+      + (d.tipo === 'FOTO' ? '<img id="aggPropFoto_' + Number(d.id) + '" class="agg-photo-preview sm" alt="">' : '')
+      + (d.tipo === 'FIRMA' ? '<img id="aggPropFoto_' + Number(d.id) + '" class="agg-firma" alt="">' : '')
       + '<div class="agg-doc-row-info"><div class="agg-doc-row-name">' + aggEsc(AGG_DOC_LABEL[d.tipo] || d.tipo) + '</div>'
       + '<div class="agg-doc-row-meta">' + (d.descrizione ? aggEsc(d.descrizione) + ' — ' : '') + aggEsc(d.nome_file || '') + scad + '</div></div>'
       + '<button class="btn-sm" onclick="aggApriDocumento(' + Number(d.id) + ')">apri</button></div>';
   });
 
-  html += '<div style="font-size:0.62rem;color:var(--testo-4);margin-top:0.5rem">Le righe non spuntate vengono scartate (i file non accettati sono eliminati). Dopo l\'approvazione il link del volontario viene chiuso.</div>'
+  html += '<div class="note">Le righe non spuntate vengono scartate (i file non accettati sono eliminati). Dopo l\'approvazione il link del volontario viene chiuso.</div>'
     + '<div class="agg-prop-actions">'
     + '<button class="vol-form-save" onclick="aggPropostaApprova(' + Number(p.id) + ')">✓ Approva selezionati</button>'
     + '<button class="btn-sm btn-danger" onclick="aggPropostaRifiuta(' + Number(p.id) + ')">Rifiuta</button>'
@@ -829,7 +812,7 @@ function aggCampoHtml(key, label, v, tipo) {
   } else {
     input = '<input class="vol-form-inp' + (vuoto ? ' agg-field-missing' : '') + '" id="aggF_' + key + '" type="' + tipo + '" value="' + String(val).replace(/"/g, '&quot;') + '" ' + onchange + '>';
   }
-  return '<div class="vol-form-field" style="margin-bottom:0.5rem">'
+  return '<div class="vol-form-field" style="margin-bottom:12px">'
     + '<span class="vol-form-lbl">' + label + (obbligatorio ? ' *' : '') + '</span>'
     + input
     + (diverso ? '<div class="agg-orig-hint">originale: ' + origVal + '</div>' : '')
@@ -839,7 +822,7 @@ function aggCampoHtml(key, label, v, tipo) {
 function aggBloccoAnagrafica(v) {
   return '<div class="vol-section">'
     + '<div class="vol-section-head" onclick="toggleVolSection(this)">Anagrafica</div>'
-    + '<div class="vol-section-body" style="padding:0.8rem 1rem">'
+    + '<div class="vol-section-body">'
     + '<div class="vol-form-grid">'
     + aggCampoHtml('cognome', 'Cognome', v)
     + aggCampoHtml('nome', 'Nome', v)
@@ -865,10 +848,10 @@ function aggBloccoAnagrafica(v) {
     + aggCampoHtml('pia_matricola', 'Matricola PIA', v)
     + '</div>'
     + '<div id="aggCFCheck"></div>'
-    + '<div class="vol-form-field" style="margin-top:0.5rem"><span class="vol-form-lbl">Note</span>'
+    + '<div class="vol-form-field" style="margin-top:12px"><span class="vol-form-lbl">Note</span>'
     + '<textarea class="vol-form-inp" id="aggF_note" rows="2" oninput="aggAnagraficaCambiata(\'note\',this.value)">' + (v.note || '') + '</textarea></div>'
     + '<label class="vol-form-check"><input type="checkbox" id="aggF_pia_badge" ' + (v.pia_badge ? 'checked' : '') + ' onchange="aggAnagraficaCambiata(\'pia_badge\',this.checked)"> Badge PIA consegnato</label>'
-    + '<button class="vol-form-save" style="width:100%;margin-top:0.7rem" onclick="aggSalvaAnagrafica()">salva anagrafica</button>'
+    + '<button class="btn pri full agg-mt" onclick="aggSalvaAnagrafica()">salva anagrafica</button>'
     + '</div></div>';
 }
 
@@ -910,11 +893,11 @@ async function aggSalvaAnagrafica() {
 function aggBloccoFoto(v) {
   return '<div class="vol-section">'
     + '<div class="vol-section-head" onclick="toggleVolSection(this)">Foto</div>'
-    + '<div class="vol-section-body" style="padding:0.8rem 1rem">'
+    + '<div class="vol-section-body">'
     + '<div class="agg-photo-box">'
     + '<div id="aggFotoPreviewBox"><div class="agg-photo-placeholder">📷</div></div>'
     + '<div><button class="btn-sm btn-ok" onclick="aggApriEditorFoto(' + v.id + ')">' + (v.pia_foto ? 'sostituisci foto' : '+ carica foto') + '</button>'
-    + '<div style="font-size:0.65rem;color:var(--testo-3);margin-top:0.4rem">JPG 196×236, &lt; 50KB</div></div>'
+    + '<div class="note">JPG 196×236, &lt; 50KB</div></div>'
     + '</div></div></div>';
 }
 
@@ -933,7 +916,7 @@ async function aggCaricaFotoAnteprima() {
 // -- BLOCCO 3: DOCUMENTI --
 function aggBloccoDocumenti(v) {
   const docs = aggCorrente.documenti || [];
-  let html = '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">Documenti</div><div class="vol-section-body" style="padding:0.8rem 1rem">';
+  let html = '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">Documenti</div><div class="vol-section-body">';
 
   AGG_TIPI_DOC_SINGOLI.forEach(tipo => {
     if (tipo === 'PATENTE' && !v.patenti) return; // solo se patenti valorizzato
@@ -944,12 +927,12 @@ function aggBloccoDocumenti(v) {
   });
   // Firma per il consenso privacy (raccolta col link del volontario, non caricabile da qui)
   docs.filter(d => d.tipo === 'FIRMA').forEach(d => { html += aggDocRigaHtml('FIRMA', d); });
-  html += '<div style="margin:0.6rem 0 0.3rem;font-size:0.68rem;font-weight:600;color:var(--testo-3);text-transform:uppercase">Attestati e abilitazioni</div>';
+  html += '<div class="agg-prop-sub">Attestati e abilitazioni</div>';
   const multipli = docs.filter(d => AGG_TIPI_DOC_MULTIPLI.includes(d.tipo));
-  if (!multipli.length) html += '<div style="font-size:0.72rem;color:var(--testo-4);margin-bottom:0.4rem">nessuno</div>';
+  if (!multipli.length) html += '<div class="note">nessuno</div>';
   multipli.forEach(d => { html += aggDocRigaHtml(d.tipo, d); });
 
-  html += '<div style="display:flex;gap:0.4rem;margin-top:0.5rem">'
+  html += '<div class="agg-row2">'
     + '<button class="btn-sm" onclick="aggApriUploadDoc(' + v.id + ',\'ATTESTATO\')">+ attestato</button>'
     + '<button class="btn-sm" onclick="aggApriUploadDoc(' + v.id + ',\'ABILITAZIONE\')">+ abilitazione</button>'
     + '</div>';
@@ -1061,8 +1044,8 @@ function aggBloccoDpi(v) {
   // Suggerite per prime, poi le altre
   categorie.sort((a, b) => (suggerite.includes(b) ? 1 : 0) - (suggerite.includes(a) ? 1 : 0));
 
-  let html = '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">DPI</div><div class="vol-section-body" style="padding:0.8rem 1rem">';
-  if (!categorie.length) html += '<div style="font-size:0.78rem;color:var(--testo-4)">Nessun capo nel catalogo. Usa "Catalogo DPI" per aggiungerne.</div>';
+  let html = '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">DPI</div><div class="vol-section-body">';
+  if (!categorie.length) html += '<div class="note">Nessun capo nel catalogo. Usa "Catalogo DPI" per aggiungerne.</div>';
 
   categorie.forEach(cat => {
     const capi = catalogo.filter(c => c.categoria === cat).sort((a, b) => (a.ordine || 0) - (b.ordine || 0));
@@ -1118,8 +1101,8 @@ async function aggDpiCampo(volontarioId, dpiId, campo, valore) {
 // -- BLOCCO 5: VERIFICA --
 function aggBloccoVerifica(v) {
   const fmtData = v.verificato_il ? new Date(v.verificato_il).toLocaleDateString('it-IT') : '—';
-  return '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">Verifica</div><div class="vol-section-body" style="padding:0.8rem 1rem">'
-    + '<div class="vol-form-field" style="margin-bottom:0.5rem"><span class="vol-form-lbl">Stato verifica</span>'
+  return '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">Verifica</div><div class="vol-section-body">'
+    + '<div class="vol-form-field" style="margin-bottom:12px"><span class="vol-form-lbl">Stato verifica</span>'
     + '<select class="vol-form-inp" onchange="aggSetVerifica(' + v.id + ',this.value)">'
     + AGG_STATI_VERIFICA.map(s => '<option value="' + s + '"' + (v.stato_verifica === s ? ' selected' : '') + '>' + s.replace('_', ' ') + '</option>').join('')
     + '</select></div>'
@@ -1253,7 +1236,7 @@ async function aggFotoConferma() {
   const dim = aggCropRidotto ? '98×118' : '196×236';
   info.className = 'agg-crop-info ok';
   info.innerHTML = '✓ pronta — ' + dim + ', ' + (blob.size / 1024).toFixed(1) + ' KB'
-    + '<br><button class="vol-form-save" style="width:100%;margin-top:0.5rem" onclick="aggFotoSalva()">salva foto</button>';
+    + '<button class="btn pri full agg-mt" onclick="aggFotoSalva()">salva foto</button>';
 }
 
 async function aggFotoSalva() {
@@ -1277,7 +1260,7 @@ async function aggFotoSalva() {
 async function aggApriCatalogo() {
   document.getElementById('aggCatalogoOverlay').classList.add('open');
   const list = document.getElementById('aggCatalogoList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const data = await aggCall('dpi_catalogo_list', {});
     aggCatalogoCache = data.catalogo || [];
@@ -1295,10 +1278,10 @@ function aggRenderCatalogo() {
   if (!aggCatalogoCache.length) { list.innerHTML = '<div class="loading-msg">nessun capo nel catalogo.</div>'; return; }
   let html = '';
   categorie.forEach(cat => {
-    html += '<div style="font-size:0.68rem;font-weight:700;color:var(--green);margin:0.5rem 0 0.2rem;text-transform:uppercase">' + cat + '</div>';
+    html += '<div class="agg-cat-head">' + cat + '</div>';
     aggCatalogoCache.filter(c => c.categoria === cat).sort((a, b) => (a.ordine || 0) - (b.ordine || 0)).forEach(c => {
       html += '<div class="agg-cat-list-row' + (c.attivo === false ? ' inattivo' : '') + '">'
-        + '<div style="flex:1">' + c.nome + ' <span style="color:var(--testo-4);font-size:0.65rem">(' + c.tipo_taglia + ')</span></div>'
+        + '<div style="flex:1">' + c.nome + ' <span class="sub" style="display:inline">(' + c.tipo_taglia + ')</span></div>'
         + '<button class="btn-sm" onclick="aggCatalogoToggleAttivo(' + c.id + ')">' + (c.attivo === false ? 'riattiva' : 'disattiva') + '</button>'
         + '</div>';
     });
