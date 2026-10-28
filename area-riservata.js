@@ -2093,30 +2093,25 @@ async function caricaInterventi() {
     if (stats)   stats.style.display = 'none';
     if (toolbar) toolbar.style.display = 'none';
     list.innerHTML = '';
+    list.classList.remove('card', 'tbl');
     const btn = document.createElement('button');
-    btn.className = 'int-add-btn';
-    btn.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
+    btn.className = 'btn pri full';
     btn.textContent = '+ Registra nuovo intervento';
     btn.onclick = () => apriFormIntervento(null);
     list.appendChild(btn);
-    const btnAi = document.createElement('button');
-    btnAi.className = 'int-ai-btn';
-    btnAi.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
-    btnAi.textContent = '🤖 Compila da messaggio';
-    btnAi.onclick = () => apriChatAgenteIntervento();
-    list.appendChild(btnAi);
     return;
   }
 
   // Master — carica tutti gli interventi
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.classList.add('card', 'tbl');
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
     interventiData = await res.json();
     await caricaIntOreMancanti();
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
 }
 
 // Set degli intervento_id che hanno almeno un volontario con ore non segnate (0 o null)
@@ -2163,10 +2158,10 @@ function renderInterventi(data) {
   const figli = data.filter(i => i.macro_id);
 
   if (!data.length) {
-    list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>';
+    list.innerHTML = '<div class="loading-msg">Nessun intervento trovato.</div>';
     return;
   }
-  list.innerHTML = '';
+  list.innerHTML = '<div class="irow ihead"><span>Data</span><span>Intervento</span><span>Vol.</span><span>Ore</span></div>';
 
   // Macro e orfani insieme, in ordine cronologico (data desc, come arriva dal server)
   data.forEach(i => {
@@ -2180,44 +2175,43 @@ function renderInterventi(data) {
   });
 }
 
+// Pillola tipo attività come nel riferimento: Emergenza gialla, Esercitazione sabbia, altro blu chiaro
+function intTipoPill(tipo) {
+  if (!tipo) return '';
+  const t = tipo.toUpperCase();
+  const cls = t.includes('EMERG') ? 'p-yellow' : t.includes('ESERCIT') ? 'p-sand' : 'p-blue';
+  return '<span class="pill ' + cls + '">' + tipo + '</span>';
+}
+function _intDataCella(iso) {
+  if (!iso) return '<b>—</b>';
+  return '<b>' + iso.slice(8,10) + '/' + iso.slice(5,7) + '<span class="sub">' + iso.slice(0,4) + '</span></b>';
+}
+
 function _renderIntCard(i, isChild) {
   const card = document.createElement('div');
-  card.className = 'int-card' + (isChild ? ' int-card-child' : '');
-  if (i.stato_calcolato === 'PROGRAMMATO') card.classList.add('int-card-prog');
+  card.className = 'irow clk' + (isChild ? ' child' : '');
   card.onclick = () => apriDettaglioIntervento(i.id);
-  const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
   const pills = [];
-  if (i.stato_calcolato === 'PROGRAMMATO') pills.push('<span class="int-pill prog">⏳ PROGRAMMATO</span>');
-  if (i.tipo_attivita)  pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
-  if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
-  if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
+  if (i.stato_calcolato === 'PROGRAMMATO') pills.push('<span class="pill p-grey">Programmato</span>');
+  if (i.tipo_attivita)  pills.push(intTipoPill(i.tipo_attivita));
+  if (i.utilizzo_radio) pills.push('<span class="pill p-blue">Radio</span>');
+  if (i.vola)           pills.push('<span class="pill p-blue">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
+  if (i.volter)         pills.push('<span class="pill p-blue">VolTer</span>');
   const oreOk = i.n_ore && parseFloat(i.n_ore) > 0;
   const haOreMancanti = intOreMancantiSet.has(i.id);
-  if (oreOk) {
-    pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
-  } else if (haOreMancanti) {
-    pills.push('<span class="int-pill" style="background:rgba(255,160,0,0.15);color:#e08000;border:1px solid #e08000">⚠️ ore mancanti</span>');
-  }
-  if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
-  if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
-  if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
-  const childArrow = isChild ? '<span style="color:var(--testo-3);margin-right:0.2rem;flex-shrink:0;font-size:0.8rem">↳</span>' : '';
-  card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.5rem">'
-    + childArrow
-    + getTipoAttivitaAvatar(i.tipo_attivita, isChild ? 30 : 38)
-    + '<div style="flex:1;min-width:0">'
-    + '<div class="int-card-top">'
-    + '<div class="int-card-evento" style="' + (isChild ? 'font-size:0.82rem' : '') + '">' + (i.evento || '—') + '</div>'
-    + '<div class="int-card-data" style="' + (isChild ? 'font-size:0.72rem' : '') + '">' + dataFmt + '</div>'
-    + '</div>'
-    + '<div class="int-card-meta">' + pills.join('') + '</div>'
-    + '</div></div>';
+  if (haOreMancanti)    pills.push('<span class="pill p-red">Ore mancanti</span>');
+  card.innerHTML = _intDataCella(i.data)
+    + '<div style="min-width:0"><b>' + (isChild ? '↳ ' : '') + (i.evento || '—') + '</b>'
+    + (i.luogo ? '<span class="sub">' + i.luogo + '</span>' : '')
+    + (pills.length ? '<span class="int-pills">' + pills.join('') + '</span>' : '') + '</div>'
+    + '<b>' + (i.n_volontari || 0) + '</b>'
+    + '<b>' + (oreOk ? i.n_ore + ' h' : '—') + '</b>';
   return card;
 }
 
 function _renderMacroCard(m, figliMacro) {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin-bottom:0.5rem';
+  wrap.className = 'int-macro';
   const dataInizio = m.data ? new Date(m.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dataFine   = m.data_fine ? new Date(m.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
@@ -2226,36 +2220,26 @@ function _renderMacroCard(m, figliMacro) {
   const macroOreMancanti = intOreMancantiSet.has(m.id) || figliMacro.some(f => intOreMancantiSet.has(f.id));
 
   const header = document.createElement('div');
-  header.className = 'int-card int-macro-header';
-  header.style.cssText = 'cursor:pointer;border-left:3px solid var(--green);background:var(--bg-2)';
-  header.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.7rem">'
-    + '<div style="font-size:1.2rem;flex-shrink:0;line-height:1.2">📦</div>'
-    + '<div style="flex:1;min-width:0">'
-    + '<div class="int-card-top">'
-    + '<div class="int-card-evento" style="font-size:0.9rem;font-weight:700">' + (m.evento || '—') + '</div>'
-    + '<div style="display:flex;align-items:center;gap:0.4rem">'
-    + (figliMacro.length ? '<span class="int-pill green" style="font-size:0.65rem">' + figliMacro.length + ' int.</span>' : '<span class="int-pill" style="font-size:0.65rem">vuota</span>')
-    + '<span id="macro-arrow-' + m.id + '" style="font-size:0.7rem;color:var(--testo-3);transition:transform 0.2s">▶</span>'
-    + '</div></div>'
-    + '<div class="int-card-meta">'
-    + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="int-pill prog">⏳ PROGRAMMATO</span>' : '')
-    + (m.tipo_attivita ? '<span class="int-pill green">' + m.tipo_attivita + '</span>' : '')
-    + (m.luogo ? '<span class="int-pill">' + m.luogo + '</span>' : '')
-    + '<span class="int-pill">' + dateRange + '</span>'
-    + (nVol ? '<span class="int-pill blue">' + nVol + ' vol. tot.</span>' : '')
-    + (nOre ? '<span class="int-pill blue">' + Math.round(nOre*10)/10 + 'h tot.' + (macroOreMancanti ? ' ⚠️' : '') + '</span>' : '')
-    + '</div></div>'
-    + '<button class="btn-sm" style="flex-shrink:0;font-size:0.7rem;padding:3px 8px;margin-left:0.3rem;align-self:flex-start" onclick="event.stopPropagation();apriDettaglioIntervento(' + m.id + ')">✏️</button>'
-    + '</div>';
+  header.className = 'irow clk macro';
+  header.innerHTML = _intDataCella(m.data)
+    + '<div style="min-width:0"><b><span id="macro-arrow-' + m.id + '" class="macro-arrow">▶</span> ' + (m.evento || '—') + '</b>'
+    + '<span class="sub">' + (m.luogo ? m.luogo + ' · ' : '') + dateRange + '</span>'
+    + '<span class="int-pills"><span class="pill p-sand">Macro · ' + (figliMacro.length ? figliMacro.length + ' interventi' : 'vuota') + '</span>'
+    + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="pill p-grey">Programmato</span>' : '')
+    + intTipoPill(m.tipo_attivita)
+    + (macroOreMancanti ? '<span class="pill p-red">Ore mancanti</span>' : '')
+    + '<button class="btn sm" onclick="event.stopPropagation();apriDettaglioIntervento(' + m.id + ')">Apri</button></span></div>'
+    + '<b>' + (nVol || 0) + '</b>'
+    + '<b>' + (nOre ? Math.round(nOre*10)/10 + ' h' : '—') + '</b>';
 
   const childrenWrap = document.createElement('div');
   childrenWrap.id = 'macro-children-' + m.id;
-  childrenWrap.style.cssText = 'display:none;padding:0 0 0 0.5rem;border-left:2px solid var(--green);margin-left:0.5rem';
+  childrenWrap.className = 'macro-children';
+  childrenWrap.style.display = 'none';
   figliMacro.forEach(i => childrenWrap.appendChild(_renderIntCard(i, true)));
 
   const addBtn = document.createElement('button');
-  addBtn.className = 'int-add-btn';
-  addBtn.style.cssText = 'width:100%;padding:0.5rem;font-size:0.78rem;margin:0.3rem 0';
+  addBtn.className = 'btn sm macro-add';
   addBtn.textContent = '+ Aggiungi intervento a questa macro';
   addBtn.onclick = () => apriFormIntervento(null, m.id);
   childrenWrap.appendChild(addBtn);
@@ -2291,13 +2275,13 @@ async function apriDettaglioIntervento(id) {
   const body   = document.getElementById('intDetailBody');
   detail.classList.add('open');
   detail.scrollTop = 0;
-  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  body.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const i = data[0];
-    if (!i) { body.innerHTML = '<div class="loading-msg">intervento non trovato.</div>'; return; }
-    document.getElementById('intDetailTitle').textContent = (i.is_macro ? '📦 ' : '') + (i.evento || '—');
+    if (!i) { body.innerHTML = '<div class="loading-msg">Intervento non trovato.</div>'; return; }
+    document.getElementById('intDetailTitle').textContent = i.evento || '—';
 
     const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
     const fmt = (v) => v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>';
@@ -2324,10 +2308,10 @@ async function apriDettaglioIntervento(id) {
     let posSegSection = '';
     if (posSegPosizioni.length || posSegSegnalazioni.length) {
       posSegSection = `<div class="vol-section">
-        <div class="vol-section-head">📍 Posizioni e segnalazioni</div>
+        <div class="vol-section-head">Posizioni e segnalazioni</div>
         <div class="vol-section-body">
-          ${posSegPosizioni.length ? `<div id="intDetailMap" style="height:280px;border-radius:12px;margin-bottom:0.6rem;position:relative;z-index:0;isolation:isolate"></div>
-          <div id="intDetailPosLista" style="margin-bottom:0.8rem"></div>` : ''}
+          ${posSegPosizioni.length ? `<div id="intDetailMap" class="mini-map tall"></div>
+          <div id="intDetailPosLista" style="margin-bottom:12px"></div>` : ''}
           ${posSegSegnalazioni.length ? `<div id="intDetailEmergContent"></div>` : ''}
         </div>
       </div>`;
@@ -2341,20 +2325,18 @@ async function apriDettaglioIntervento(id) {
       const nOre = figliMacro.reduce((s, f) => s + parseFloat(f.n_ore || 0), 0) + parseFloat(i.n_ore || 0);
       let figliHtml = figliMacro.map(f => {
         const fd = f.data ? new Date(f.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
-          + getTipoAttivitaAvatar(f.tipo_attivita, 26)
-          + '<div style="flex:1;font-size:0.8rem;color:var(--testo)">' + (f.evento||'—') + '</div>'
-          + '<div style="font-size:0.7rem;color:var(--testo-3)">' + fd + '</div>'
+        return '<div class="lr clk" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
+          + getTipoAttivitaAvatar(f.tipo_attivita, 40)
+          + '<div class="mid"><b>' + (f.evento||'—') + '</b><span class="sub">' + fd + '</span></div>'
+          + '<span style="color:var(--accent);font-weight:700">→</span>'
           + '</div>';
       }).join('');
       macroSection = `<div class="vol-section">
-        <div class="vol-section-head" style="display:flex;align-items:center;justify-content:space-between">
-          Interventi inclusi
-          <button class="btn-sm" style="font-size:0.7rem;padding:2px 8px" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button>
-        </div>
+        <div class="vol-section-head">Interventi inclusi</div>
         <div class="vol-section-body">
-          <div style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.5rem">${figliMacro.length} interventi | ${nVol} vol. tot. | ${Math.round(nOre*10)/10}h tot.</div>
-          ${figliHtml || '<div style="font-size:0.78rem;color:var(--testo-3)">Nessun intervento associato.</div>'}
+          <div class="bar" style="margin-bottom:6px"><span class="sub" style="flex:1">${figliMacro.length} interventi · ${nVol} vol. tot. · ${Math.round(nOre*10)/10} h tot.</span>
+          <button class="btn sm" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button></div>
+          ${figliHtml || '<p class="note">Nessun intervento associato.</p>'}
         </div>
       </div>`;
     }
@@ -2366,42 +2348,36 @@ async function apriDettaglioIntervento(id) {
       macroParentSection = `<div class="vol-section">
         <div class="vol-section-head">Parte di macro-attività</div>
         <div class="vol-section-body">
-          <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(${i.macro_id})">
-            <span style="font-size:1rem">📦</span>
-            <span style="font-size:0.82rem;color:var(--green);font-weight:500">${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</span>
-          </div>
+          <button class="todo" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(${i.macro_id})">
+            <span style="flex:1"><b>${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</b></span>
+            <span style="color:var(--accent);font-weight:700">→</span>
+          </button>
         </div>
       </div>`;
     }
 
-    var _heroAvatar = getTipoAttivitaAvatar(i.tipo_attivita, 50);
+    var _heroAvatar = getTipoAttivitaAvatar(i.tipo_attivita, 56);
     body.innerHTML = `
       <div class="vol-detail-hero">
         ${_heroAvatar}
         <div>
-          <div class="vol-detail-name">${(i.is_macro ? '📦 ' : '') + (i.evento || '—')}</div>
-          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} | ${dataFmt}</div>
+          <div class="vol-detail-name">${i.evento || '—'}</div>
+          <div class="vol-detail-role">${i.is_macro ? '<span class="pill p-sand">Macro</span> ' : ''}${intTipoPill(i.tipo_attivita)} ${dataFmt}</div>
         </div>
       </div>
       ${macroParentSection}
       ${i.stato_calcolato === 'PROGRAMMATO'
-        ? `<div style="background:rgba(217,164,0,0.12);border:1px solid #d9a400;border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
-            <span style="font-size:1.2rem">⏳</span>
-            <div style="flex:1">
-              <div style="font-size:0.82rem;font-weight:700;color:#a87800">Intervento PROGRAMMATO</div>
-              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore non vengono conteggiate fino al passaggio in SVOLTO.${i.stato_manuale === 'PROGRAMMATO' ? ' (Stato forzato manualmente)' : ''}</div>
-            </div>
+        ? `<div class="stato-box sand">
+            <span class="pill p-grey">Programmato</span>
+            <div style="flex:1"><span class="sub">Le ore non vengono conteggiate fino al passaggio in svolto.${i.stato_manuale === 'PROGRAMMATO' ? ' Stato forzato manualmente.' : ''}</span></div>
             ${i.stato_manuale === 'PROGRAMMATO'
-              ? `<button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
+              ? `<button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
               : ''}
           </div>`
-        : `<div style="background:rgba(34,139,82,0.1);border:1px solid var(--green);border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
-            <span style="font-size:1.2rem">✓</span>
-            <div style="flex:1">
-              <div style="font-size:0.82rem;font-weight:700;color:var(--green)">Intervento SVOLTO</div>
-              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore vengono conteggiate nelle statistiche.</div>
-            </div>
-            <button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
+        : `<div class="stato-box">
+            <span class="pill p-blue">Svolto</span>
+            <div style="flex:1"><span class="sub">Le ore vengono conteggiate nelle statistiche.</span></div>
+            <button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
           </div>`
       }
       <div class="vol-section">
@@ -2425,19 +2401,19 @@ async function apriDettaglioIntervento(id) {
       <div class="vol-section">
         <div class="vol-section-head">Volontari intervenuti</div>
         <div class="vol-section-body">
-          <div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${volNomi}</div>
+          <p class="note-text">${volNomi}</p>
         </div>
       </div>
       ${posSegSection}
       ${macroSection}
       ${i.note ? `<div class="vol-section">
         <div class="vol-section-head">Note</div>
-        <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
+        <div class="vol-section-body"><p class="note-text">${i.note}</p></div>
       </div>` : ''}
       <div class="vol-section" id="intPosizioneSection" style="display:none">
         <div class="vol-section-head">Percorso GPS condiviso</div>
         <div class="vol-section-body">
-          <div id="intDetailMap" style="height:220px;border-radius:10px;overflow:hidden;position:relative;z-index:0;isolation:isolate"></div>
+          <div id="intDetailMap" class="mini-map"></div>
         </div>
       </div>
       <div class="vol-section" id="intFotoSection" style="display:none">
@@ -2446,17 +2422,17 @@ async function apriDettaglioIntervento(id) {
           <div class="gall-photos" id="intDetailGallery"></div>
         </div>
       </div>
-      <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem">
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="stampaIntervento(${i.id})">📄 Esporta CF</button>
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="apriGeneratoreAttestati(${i.id})">📜 Attestati</button>
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem;background:var(--bg-2);border-color:#1a4a9a;color:#4a90d9" onclick="esportaModuloTerritoriale(${i.id})">📋 Territoriale</button>
+      <div class="int-azioni">
+        <button class="btn" onclick="stampaIntervento(${i.id})">Esporta CF</button>
+        <button class="btn" onclick="apriGeneratoreAttestati(${i.id})">Attestati</button>
+        <button class="btn" onclick="esportaModuloTerritoriale(${i.id})">Territoriale</button>
+        <button class="btn pri" onclick="apriFormIntervento(${i.id})">Modifica</button>
       </div>
-      <button class="vol-delete-btn" style="margin-top:0.8rem;font-size:0.72rem;opacity:0.6" onclick="eliminaIntervento()">elimina intervento</button>`;
+      <button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>`;
 
     if (posSegPosizioni.length) renderPosizioni(posSegPosizioni, 'intDetail', 'intDetailMap', 'intDetailPosLista');
     if (posSegSegnalazioni.length) renderEmergenze(posSegSegnalazioni, 'intDetailEmergContent', { azione: false });
-  } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { body.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
 }
 
 async function caricaDettaglioPosizioniEFoto(interventoId) {
@@ -2546,46 +2522,46 @@ async function apriFormIntervento(id, macroIdPreset) {
     <div class="vol-form-section">
       <div class="vol-form-section-title">Numeri</div>
       <div class="vol-form-grid">
-        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Calcolato automaticamente"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">N° ore <label class="vol-form-check" style="display:inline-flex;margin-left:0.4rem;font-size:0.7rem"><input type="checkbox" id="ifNOreOverride" onchange="toggleNOreOverride()"> manuale</label></label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Somma automatica dalle ore dei volontari"></div>
-        <div class="vol-form-field full"><label class="vol-form-check" style="margin-top:0.3rem"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
-        <div class="vol-form-field" style="grid-column:span 2;display:flex;align-items:center;gap:0.7rem;margin-top:0.2rem">
-          <label class="vol-form-check" style="flex-shrink:0"><input type="checkbox" id="ifVola"> VolA</label>
-          <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA" style="flex:1">
+        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0" readonly title="Calcolato automaticamente"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl lbl-row">N° ore <label class="inline-chk"><input type="checkbox" id="ifNOreOverride" onchange="toggleNOreOverride()"> manuale</label></label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5" readonly title="Somma automatica dalle ore dei volontari"></div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
+        <div class="vol-form-field full vola-row">
+          <label class="vol-form-check"><input type="checkbox" id="ifVola"> VolA</label>
+          <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA">
         </div>
         <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifVolter"> VolTer</label></div>
-        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifPostazioni"> 📍 Gestione Postazioni (mostra questo intervento nella pagina Postazioni)</label></div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifPostazioni"> Gestione postazioni (mostra questo intervento nella pagina Postazioni)</label></div>
       </div>
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Volontari intervenuti</div>
       <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario per aggiungerlo..." oninput="filtraVolPickerDropdown(this.value)">
       <div id="volPickerDropdown" class="vol-picker-dropdown" style="display:none"></div>
-      <div id="intVolList" style="margin-top:0.6rem"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;font-size:0.78rem;color:var(--testo-3)">
+      <div id="intVolList" style="margin-top:10px"></div>
+      <div class="kv" style="margin-top:6px">
         <span>Volontari: <strong id="intVolCount">0</strong></span>
         <span>Somma ore: <strong id="intVolOreSum">0</strong></span>
       </div>
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Note</div>
-      <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..." style="resize:vertical"></textarea>
+      <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..."></textarea>
     </div>
-    <div class="vol-form-section" style="border:1px solid var(--border);border-radius:10px;padding:0.8rem">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.7rem">Raggruppamento</div>
-      <label class="vol-form-check" style="margin-bottom:0.7rem;display:flex;align-items:center;gap:0.5rem">
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Raggruppamento</div>
+      <label class="vol-form-check" style="margin-bottom:12px">
         <input type="checkbox" id="ifIsMacro" onchange="toggleMacroMode()">
-        <span style="font-size:0.85rem;font-weight:500">📦 Questo è una macro-attività</span>
+        Questo è una macro-attività
       </label>
       <div id="ifMacroParentWrap">
         <label class="vol-form-lbl">Associa a macro esistente</label>
-        <select class="vol-form-inp" id="ifMacroId" style="margin-top:0.3rem">
+        <select class="vol-form-inp" id="ifMacroId">
           <option value="">— Nessuna (intervento singolo) —</option>
           ${macroOpts}
         </select>
       </div>
     </div>
-    ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>' : ''}`;
+    ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>' : ''}`;
 
   panel.classList.add('open');
   panel.scrollTop = 0;
@@ -2648,7 +2624,7 @@ function filtraVolPickerDropdown(q) {
     ((v.cognome || '') + ' ' + (v.nome || '')).toLowerCase().includes(term)
   ).slice(0, 20);
   if (!filtered.length) {
-    dd.innerHTML = '<div style="padding:0.5rem;font-size:0.78rem;color:var(--testo-3)">nessun risultato</div>';
+    dd.innerHTML = '<div class="vp-dd-item muted">Nessun risultato</div>';
   } else {
     dd.innerHTML = filtered.map(v =>
       '<div class="vp-dd-item" onclick="aggiungiVolIntervento(' + v.id + ')">'
@@ -2711,7 +2687,7 @@ function renderIntVolList() {
   const list = document.getElementById('intVolList');
   if (!list) return;
   if (!intVolSelezionati.length) {
-    list.innerHTML = '<div style="padding:0.6rem;font-size:0.78rem;color:var(--testo-3);text-align:center;background:var(--bg-2);border-radius:6px">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
+    list.innerHTML = '<div class="empty" style="padding:16px">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
     aggiornaContatoriVolontari();
     return;
   }
@@ -2722,13 +2698,13 @@ function renderIntVolList() {
     return (a.nome || '').localeCompare(b.nome || '', 'it');
   });
   const applicaTuttiBtn = intVolSelezionati.length > 1
-    ? '<button type="button" class="btn-sm" style="width:100%;margin-bottom:0.5rem;background:var(--bg-2)" onclick="applicaOreATutti()">🕐 Applica le stesse ore a tutti</button>'
+    ? '<button type="button" class="btn sm full" style="margin-bottom:10px" onclick="applicaOreATutti()">Applica le stesse ore a tutti</button>'
     : '';
   list.innerHTML = applicaTuttiBtn + intVolSelezionati.map(v =>
     '<div class="int-vol-card">'
     + '<div class="int-vol-card-head">'
     + '<strong>' + v.cognome + ' ' + v.nome + '</strong>'
-    + '<button type="button" class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="rimuoviVolIntervento(' + v.volontario_id + ')">✕</button>'
+    + '<button type="button" class="btn sm danger" aria-label="Rimuovi" onclick="rimuoviVolIntervento(' + v.volontario_id + ')">✕</button>'
     + '</div>'
     + '<div class="int-vol-card-grid">'
     +   '<label class="int-vol-field"><span>Ore</span><input type="number" min="0" step="0.5" value="' + (v.ore || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'ore\', parseFloat(this.value)||0)"></label>'
@@ -2736,7 +2712,7 @@ function renderIntVolList() {
     +   '<label class="int-vol-field"><span>Data fine</span><input type="date" value="' + (v.data_fine || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'data_fine\', this.value||null)"></label>'
     +   '<label class="int-vol-check"><input type="checkbox"' + (v.art_39 ? ' checked' : '') + ' onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'art_39\', this.checked)"> Art. 39</label>'
     + '</div>'
-    + (v.art_39 ? ('<button type="button" class="btn-sm" style="width:100%;margin-top:0.5rem;background:#1a4a9a;color:#fff;border-color:#1a4a9a" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">📄 Lettera attivazione</button>') : '')
+    + (v.art_39 ? ('<button type="button" class="btn sm full" style="margin-top:10px" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">Lettera di attivazione</button>') : '')
     + '</div>'
   ).join('');
   aggiornaContatoriVolontari();
@@ -3027,7 +3003,7 @@ function aicDraftHtml(draft, id) {
   const oreTot = vol.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
   return '<div class="aic-draft">'
     + '<div class="aic-draft-title">Bozza scheda intervento</div>'
-    + (draft.messaggio_riepilogo ? '<div style="margin-bottom:0.6rem">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</div>' : '')
+    + (draft.messaggio_riepilogo ? '<p class="note" style="margin:0 0 8px">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</p>' : '')
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Evento</span><span class="aic-draft-val">' + aicEscapeHtml(draft.evento || '—') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Data</span><span class="aic-draft-val">' + aicEscapeHtml(draft.data || '—') + (draft.data_fine ? ' → ' + aicEscapeHtml(draft.data_fine) : '') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Luogo</span><span class="aic-draft-val">' + aicEscapeHtml(draft.luogo || '—') + '</span></div>'
@@ -3036,8 +3012,8 @@ function aicDraftHtml(draft, id) {
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Ore totali</span><span class="aic-draft-val">' + (Math.round(oreTot * 10) / 10) + '</span></div>'
     + (draft.note ? '<div class="aic-draft-row"><span class="aic-draft-lbl">Note</span><span class="aic-draft-val">' + aicEscapeHtml(draft.note) + '</span></div>' : '')
     + '<div class="aic-draft-actions">'
-    +   '<button type="button" class="aic-btn-edit" onclick="aicCorreggi()">✏️ correggi</button>'
-    +   '<button type="button" class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">✅ conferma e salva</button>'
+    +   '<button type="button" class="aic-btn-edit" onclick="aicCorreggi()">Correggi</button>'
+    +   '<button type="button" class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">Conferma e salva</button>'
     + '</div></div>';
 }
 
@@ -3924,22 +3900,10 @@ function getTipoAttivitaIcon(tipo, size, color) {
   return icons[tipo] || '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 }
 
-var TIPO_ATTIVITA_COLORS = {
-  'EMERGENZA':            { bg:'#fde8e8', stroke:'#c0392b' },
-  'ESERCITAZIONE':        { bg:'#e8f0fb', stroke:'#185fa5' },
-  'CORSI':                { bg:'#eaf3de', stroke:'#3b6d11' },
-  'PREVENZIONE INFORTUNI':{ bg:'#faeeda', stroke:'#854f0b' },
-  'RAPPRESENTANZA':       { bg:'#eeedfe', stroke:'#534ab7' },
-  'ASSEMBLEE E RIUNIONI': { bg:'#e1f5ee', stroke:'#0f6e56' },
-  'CONTROLLO TERRITORIO': { bg:'#e6f1fb', stroke:'#185fa5' },
-  'SEGRETERIA':           { bg:'#f1efe8', stroke:'#5f5e5a' },
-  'MAGAZZINO':            { bg:'#faeeda', stroke:'#854f0b' },
-};
-
 function getTipoAttivitaAvatar(tipo, size) {
   size = size || 36;
-  var c = TIPO_ATTIVITA_COLORS[tipo] || { bg:'var(--green-pale)', stroke:'var(--green)' };
-  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:9px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+  var c = { bg: /EMERG/i.test(tipo || '') ? 'var(--yellow-soft)' : 'var(--soft)', stroke: 'var(--fg)' };
+  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:12px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
     + getTipoAttivitaIcon(tipo, Math.round(size*0.55), c.stroke)
     + '</div>';
 }
