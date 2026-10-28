@@ -7559,9 +7559,8 @@ async function caricaSchedaPersonale() {
 function renderSchedaPersonale(v) {
   const content = document.getElementById('schedaPersContent');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : '—';
-  const yes = (b) => b ? '<span style="color:var(--green);font-weight:600">✓ Sì</span>' : '<span style="color:var(--testo-3)">—</span>';
+  const yes = (b) => b ? '<span class="vol-bool-yes">✓ Sì</span>' : '<span class="muted">—</span>';
   const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-  const [bg, fg] = avatarColor(v.cognome);
 
   // Sezioni e campi (sola lettura)
   const sections = [
@@ -7590,22 +7589,23 @@ function renderSchedaPersonale(v) {
     ]},
   ];
 
-  let html = '<div class="schedapers-hero">'
+  let html = '<div class="card vc sp-hero">'
     + (v.foto_url
-        ? '<img src="' + v.foto_url + '" class="schedapers-avatar" style="object-fit:cover">'
-        : '<div class="schedapers-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-    + '<div><div class="schedapers-name">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div>'
-    + '<div class="schedapers-role">' + (v.tipo_volontario||'Volontario') + ' | ' + (v.squadra||'—') + '</div></div>'
-    + '</div>'
-    + '<button class="btn-primary" style="margin-bottom:1rem" onclick="navTo(\'segnalazioni\',\'Segnalazioni\',null)">⚠️ Segnala un errore nei tuoi dati</button>';
+        ? '<img src="' + v.foto_url + '" class="av" alt="">'
+        : '<span class="av">' + initials + '</span>')
+    + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>'
+    + '<span class="sub">' + (v.tipo_volontario||'Volontario') + ' · ' + (v.squadra||'—') + '</span></div>'
+    + '<span class="pill ' + ((v.stato || 'ATTIVO') === 'ATTIVO' ? 'p-blue' : 'p-grey') + '">' + (v.stato || 'ATTIVO') + '</span>'
+    + '</div><div class="grid sp-grid">';
 
   sections.forEach(s => {
-    html += '<div class="schedapers-sec"><div class="schedapers-sec-title">' + s.titolo + '</div>';
+    html += '<div class="card"><h2>' + s.titolo + '</h2>';
     s.fields.forEach(f => {
-      html += '<div class="schedapers-field"><span class="schedapers-lbl">' + f[0] + '</span><span class="schedapers-val">' + (f[1] || '—') + '</span></div>';
+      html += '<div class="kv"><span>' + f[0] + '</span><b>' + (f[1] || '—') + '</b></div>';
     });
     html += '</div>';
   });
+  html += '</div>';
 
   content.innerHTML = html;
 }

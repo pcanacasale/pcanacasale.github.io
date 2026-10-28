@@ -625,6 +625,13 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .vs-vuoto{background:var(--red-soft);color:var(--red)}
 .visite-saving{opacity:.5;pointer-events:none}
 
+/* ── la mia scheda ── */
+.sp-hero{margin-bottom:18px}
+.sp-hero .av{width:64px;height:64px;font-size:20px}
+.sp-hero b{font-size:20px}
+.sp-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
+.sp-grid .card h2{margin-bottom:6px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -653,16 +660,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* Accessi */
 
 /* Scheda personale (volontario) */
-.schedapers-hero { display:flex; align-items:center; gap:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; margin-bottom:1rem; }
-.schedapers-avatar { width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:1.3rem; flex-shrink:0; }
-.schedapers-name { font-size:1.1rem; font-weight:600; color:var(--testo); }
-.schedapers-role { font-size:0.78rem; color:var(--testo-3); margin-top:0.2rem; }
-.schedapers-sec { background:var(--bg-card); border-radius:var(--r-md); box-shadow:none; margin-bottom:0.8rem; overflow:hidden; }
-.schedapers-sec-title { font-size:0.7rem; font-weight:700; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; padding:0.6rem 1rem; background:var(--bg-2); }
-.schedapers-field { display:flex; justify-content:space-between; padding:0.55rem 1rem; border-top:0.5px solid var(--border); font-size:0.82rem; gap:0.6rem; }
-.schedapers-field:first-of-type { border-top:none; }
-.schedapers-lbl { color:var(--testo-3); flex-shrink:0; }
-.schedapers-val { color:var(--testo); text-align:right; word-break:break-word; }
 
 /* Segnalazioni */
 
@@ -785,7 +782,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
 /* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
-.richiesta-card, .schedapers-hero, .schedapers-sec, .gall-album {border-radius:20px;border:1px solid var(--line)}
+.richiesta-card, .gall-album {border-radius:20px;border:1px solid var(--line)}
 
 .form-inp {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
 .form-inp:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
@@ -1338,8 +1335,11 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     </div>
 
     <!-- SCHEDA PERSONALE (per volontari) -->    <div class="panel" id="panelSchedapers">
-      <div class="panel-hdr"><h2>La mia scheda</h2><p>I tuoi dati personali (sola lettura)</p></div>
-      <div id="schedaPersContent"><div class="loading-msg">caricamento...</div></div>
+      <div class="phead">
+        <div><h1>La mia scheda</h1></div>
+        <div class="pact"><button class="btn pri" onclick="navTo('segnalazioni','Segnalazioni',null)">Segnala un errore</button></div>
+      </div>
+      <div id="schedaPersContent"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- SEGNALAZIONI (per volontari: invia; per admin: gestisci) -->
@@ -1837,7 +1837,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=175"></script>
+<script src="area-riservata.js?v=176"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>
