@@ -198,17 +198,112 @@ function hasPerm(key) {
   return isMaster || !!p[key];
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('open');
+// -- MENU (barra alta, barra bassa su telefono, pannello "Altro") --
+// Le voci stanno nel registro nascosto #navRegistry: avviaDashboard ne decide la
+// visibilità per ruolo e showPanel la voce attiva; qui le disegniamo soltanto.
+const NAV_DESK = ['siHome','siVolontari','siMezzi','siDotazioni','siInterventi'];
+const NAV_MOB  = ['siHome','siVolontari','siMezzi','siInterventi'];
+const NAV_GRUPPI = ['Persone','Risorse','Operativo','Gestione'];
+const NAV_IC = {
+  home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
+  user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
+  truck:'M2 6h12v10H2zM14 10h4l4 3v3h-8M6 19a1 1 0 1 0 .01 0M18 19a1 1 0 1 0 .01 0',
+  box:'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2',
+  clip:'M8 4h8v3H8zM6 5H5v16h14V5h-1M9 12h6M9 16h6', alert:'M12 3l10 18H2zM12 10v5M12 18v.5',
+  flag:'M5 21V4M5 4h12l-2 4 2 4H5', refresh:'M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4',
+  shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', gear:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  file:'M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h4', heart:'M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11',
+  image:'M3 4h18v16H3zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M21 15l-5-5L5 20', pin:'M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  radio:'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+  inbox:'M3 13l3-9h12l3 9v7H3zM3 13h5l1 3h6l1-3h5', chart:'M4 20V10M10 20V4M16 20v-7M22 20H2', table:'M3 4h18v16H3zM3 10h18M3 15h18M9 4v16',
+  more:'M5 12h.01M12 12h.01M19 12h.01', logout:'M9 21H5V3h4M16 17l5-5-5-5M21 12H9', close:'M6 6l12 12M18 6L6 18'
+};
+function navIc(n, s) { s = s || 22; return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(NAV_IC[n]||NAV_IC.more)+'"/></svg>'; }
+function _navVoci() {
+  return Array.prototype.slice.call(document.querySelectorAll('#navRegistry > button'))
+    .filter(function(b){ return b.style.display !== 'none'; });
 }
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
+function _navLabel(b) { return b.firstChild ? b.firstChild.textContent.trim() : ''; }
+function _navBadge(b) { var s = b.querySelector('.si-badge.show'); return s && s.textContent ? '<span class="nbadge">'+s.textContent+'</span>' : ''; }
+function _navAltroOn(main) {
+  var a = document.querySelector('#navRegistry > button.active');
+  return !!a && main.indexOf(a.id) < 0;
 }
-function toggleSidebarGroup(btn) {
-  btn.closest('.sidebar-group').classList.toggle('collapsed');
+function _navAltroHtml(main) {
+  var voci = _navVoci().filter(function(b){ return main.indexOf(b.id) < 0; });
+  var h = '';
+  NAV_GRUPPI.forEach(function(g) {
+    var items = voci.filter(function(b){ return b.dataset.g === g; });
+    if (!items.length) return;
+    h += '<div class="grp">'+g+'</div><div class="pgrid">' + items.map(function(b) {
+      return '<button class="pitem'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+b.id+'\')">'+navIc(b.dataset.ic,20)+'<span>'+_navLabel(b)+'</span>'+_navBadge(b)+'</button>';
+    }).join('') + '</div>';
+  });
+  h += '<div class="grp">Account</div><div class="pgrid"><button class="pitem" onclick="chiudiAltro();logout()">'+navIc('logout',20)+'<span>Esci</span></button></div>';
+  return h;
 }
+function renderNav() {
+  var top = document.getElementById('topnav'), bot = document.getElementById('bottomnav');
+  if (!top || !bot) return;
+  var voci = _navVoci();
+  var vis = function(id){ return voci.filter(function(b){ return b.id === id; })[0]; };
+  var t = '';
+  NAV_DESK.forEach(function(id){ var b = vis(id); if (b) t += '<button class="tab'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')">'+_navLabel(b)+'</button>'; });
+  t += '<button class="tab'+(_navAltroOn(NAV_DESK)?' on':'')+'" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>';
+  top.innerHTML = t;
+  var m = '';
+  NAV_MOB.forEach(function(id){ var b = vis(id); if (b) m += '<button class="bt'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')"><span class="pill-i">'+navIc(b.dataset.ic)+'</span>'+_navLabel(b)+'</button>'; });
+  m += '<button class="bt'+(_navAltroOn(NAV_MOB)?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
+  bot.innerHTML = m;
+  var emg = document.getElementById('emgBtn'), siE = document.getElementById('siEmergenze');
+  if (emg && siE) {
+    emg.hidden = siE.style.display === 'none';
+    var n = siE.querySelector('.si-badge.show');
+    emg.innerHTML = navIc('alert',18) + '<span class="t">Emergenze</span>' + (n && n.textContent ? '<span class="n">'+n.textContent+'</span>' : '');
+  }
+  var pop = document.getElementById('altroPop');
+  if (pop && !pop.hidden) pop.innerHTML = _navAltroHtml(NAV_DESK);
+}
+function navVai(id) { chiudiAltro(); var b = document.getElementById(id); if (b) b.click(); window.scrollTo(0, 0); }
+function toggleAltro() {
+  if (window.matchMedia('(max-width:860px)').matches) {
+    var s = document.getElementById('altroSheet');
+    s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Altro"><div class="shead"><h2>Altro</h2><button class="x" onclick="chiudiAltro()" aria-label="Chiudi">'+navIc('close',18)+'</button></div><div class="sbody">'+_navAltroHtml(NAV_MOB)+'</div></div>';
+    s.hidden = false;
+    return;
+  }
+  var p = document.getElementById('altroPop');
+  if (p.hidden) { p.innerHTML = _navAltroHtml(NAV_DESK); p.hidden = false; } else p.hidden = true;
+}
+function chiudiAltro() {
+  var p = document.getElementById('altroPop'), s = document.getElementById('altroSheet');
+  if (p) p.hidden = true;
+  if (s) { s.hidden = true; s.innerHTML = ''; }
+}
+function renderWho() {
+  var n = document.getElementById('whoName'), a = document.getElementById('whoAv');
+  if (!n || !currentUser) return;
+  var nome = currentUser.nome || '';
+  a.textContent = nome.split(' ').map(function(x){ return x[0] || ''; }).join('').slice(0,2).toUpperCase() || '—';
+  n.innerHTML = '<span>' + escapeHtmlNav(nome.split(' ')[0]) + '<small>' + escapeHtmlNav(currentUser.ruolo || '') + '</small></span>';
+}
+function escapeHtmlNav(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('altroPop');
+  if (p && !p.hidden && !e.target.closest('#altroPop') && !e.target.closest('.tab')) p.hidden = true;
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') chiudiAltro(); });
+document.addEventListener('DOMContentLoaded', function() {
+  var reg = document.getElementById('navRegistry');
+  if (!reg) return;
+  new MutationObserver(function(){ renderNav(); renderWho(); })
+    .observe(reg, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['style','class'] });
+  renderNav();
+});
+
+// Compatibilità con le chiamate storiche (prima c'era la sidebar)
+function toggleSidebar() { toggleAltro(); }
+function closeSidebar() { chiudiAltro(); }
 
 function navTo(panel, title, btn) {
   showPanel(panel, null);
@@ -293,6 +388,9 @@ function avviaDashboard() {
 
   // Home cards
   buildHomeCards(isMaster, p);
+
+  renderNav();
+  renderWho();
 }
 
 
