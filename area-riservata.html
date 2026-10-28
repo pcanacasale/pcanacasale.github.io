@@ -450,6 +450,23 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .acc-log .irow{grid-template-columns:150px minmax(0,1fr) minmax(0,1fr)}
 @media (max-width:860px){.acc-log .irow{grid-template-columns:1fr 1fr}.acc-log .irow>:first-child{grid-column:1 / -1}}
 
+/* ── impostazioni ── */
+.impo-grid{grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
+.nuovo-campo-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+#nuovoCampoForm:not([style*="none"]){display:flex!important}
+.schema-row{display:flex;align-items:center;gap:10px;min-height:60px;padding:8px 0;border-top:1px solid var(--line)}
+.schema-row:first-child,.grp+.schema-row{border-top:0}
+.schema-row.nascosto{opacity:.5}
+.schema-row-info{flex:1;min-width:0}
+.schema-row-label{font-weight:700;font-size:15px}
+.schema-row-meta{margin-top:4px}
+.schema-row-actions{display:flex;gap:8px}
+.cat-row{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 0;border-top:1px solid var(--line)}
+.cat-row:first-child{border-top:0}
+.cat-row b{flex:1}
+.cat-row.sub{padding-left:22px}
+.cat-row.sub span{flex:1;color:var(--muted)}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -625,20 +642,9 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .richiesta-actions { padding:0.4rem 1rem 0.85rem; display:flex; gap:0.5rem; }
 
 /* ── IMPOSTAZIONI ── */
-.impo-users-list { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; overflow:hidden; }
-.impo-u-row { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-bottom:0.5px solid var(--border); }
-.impo-u-row:last-child { border-bottom:none; }
-.impo-u-row.utente-disattivo { opacity:0.5; }
-.impo-u-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:600; flex-shrink:0; }
-.impo-u-info { flex:1; min-width:0; }
-.impo-u-name { font-size:0.88rem; font-weight:500; color:var(--testo); }
-.impo-u-role { font-size:0.7rem; color:var(--testo-3); margin-top:0.1rem; }
-.impo-u-actions { display:flex; gap:0.4rem; flex-shrink:0; align-items:center; }
 
 .perm-badge { display:inline-block; font-size:0.6rem; font-weight:600; background:var(--green-pale); color:var(--green); padding:2px 7px; border-radius:10px; margin:2px 2px 0 0; }
-.impo-perm-row { background:var(--bg-card); border-radius:var(--r); padding:0.85rem 1rem; margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; box-shadow:none; }
-.impo-perm-title { font-size:0.88rem; color:var(--testo); font-weight:500; }
-.impo-perm-sub { font-size:0.72rem; color:var(--testo-3); margin-top:0.1rem; }
+
 .log-list { background:var(--bg-card); border-radius:var(--r-lg); overflow:hidden; box-shadow:none; }
 .log-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.65rem 1rem; border-bottom:0.5px solid var(--border); }
 .log-row:last-child { border-bottom:none; }
@@ -647,24 +653,11 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .log-user { color:var(--green); font-weight:500; }
 
 /* FORM UTENTE */
-.new-user-form, .nuovo-campo-form { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; padding:1.1rem; margin-top:0.7rem; }
-.new-user-form h3, .nuovo-campo-form h4 { font-size:0.95rem; font-weight:700; color:var(--testo); margin-bottom:0.8rem; }
 
 .form-inp { width:100%; padding:0.65rem 0.9rem; background:var(--bg-2); border:0.5px solid var(--border); border-radius:var(--r-sm); font-family:var(--font); font-size:0.9rem; color:var(--testo); outline:none; transition:border-color 0.2s; }
 .form-inp:focus { border-color:var(--green); }
 
 @keyframes mp-flash { 0% { box-shadow:inset 0 0 0 2px var(--green); } 100% { box-shadow:inset 0 0 0 2px transparent; } }
-
-.nc-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.6rem; }
-.nc-full { grid-column:span 2; }
-.schema-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.6rem; }
-.schema-row { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-sm); padding:0.75rem 1rem; display:flex; align-items:center; gap:0.6rem; box-shadow:none; }
-.schema-row.nascosto { opacity:0.4; }
-.schema-row-info { flex:1; }
-.schema-row-label { font-size:0.85rem; color:var(--testo); font-weight:500; }
-.schema-row-meta { font-size:0.68rem; color:var(--testo-3); margin-top:0.1rem; }
-.schema-row-actions { display:flex; gap:0.3rem; }
-.schema-tipo-pill { font-size:0.62rem; padding:2px 8px; border-radius:10px; background:var(--bg-2); color:var(--testo-3); }
 
 /* BUTTONS */
 
@@ -780,7 +773,7 @@ body { font-family:var(--font); }
 /* Intestazione: barra blu con logo + titolo */
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .impo-perm-row {
+.login-card, .doc-vol-card, .richiesta-card, .log-list, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap {
   border-radius:20px; border:1px solid var(--line);
 }
 .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
@@ -810,7 +803,7 @@ body { font-family:var(--font); }
 }
 
 /* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.vol-badge, .perm-badge, .visite-stato, .schema-tipo-pill, .db-pag-btn, .login-tab {
+.vol-badge, .perm-badge, .visite-stato, .db-pag-btn, .login-tab {
   border-radius:var(--r-pill);
 }
 .login-tabs { border-radius:var(--r-pill); }
@@ -1724,35 +1717,31 @@ body { font-family:var(--font); }
 
     <!-- IMPOSTAZIONI -->
     <div class="panel" id="panelImpostazioni">
-      <div class="panel-hdr"><h2>Impostazioni</h2><p>Configurazione campi e struttura</p></div>
+      <div class="phead"><div><h1>Impostazioni</h1></div></div>
 
-      <div class="impo-section">
-        <div class="sec-label">Campi volontari</div>
-        <div class="schema-toolbar">
-          <span style="font-size:0.65rem;color:var(--text-3)">Gestisci i campi della scheda volontario</span>
-        </div>
-        <div class="schema-list" id="schemaList"><div class="loading-msg">caricamento...</div></div>
-        <button class="btn-primary" style="width:100%;margin-bottom:0.5rem" onclick="toggleNuovoCampo()">+ Nuovo campo</button>
-        <div class="nuovo-campo-form" id="nuovoCampoForm" style="display:none">
-          <h4>+ Nuovo campo</h4>
+      <div class="grid g3 impo-grid">
+      <div class="card impo-section">
+        <h2>Campi volontari</h2>
+        <p class="note" style="margin:4px 0 14px">Gestisci i campi aggiuntivi della scheda volontario.</p>
+        <div class="schema-list" id="schemaList"><div class="loading-msg">Caricamento…</div></div>
+        <button class="btn pri" style="margin-top:14px" onclick="toggleNuovoCampo()">+ Nuovo campo</button>
+        <div class="form nuovo-campo-form" id="nuovoCampoForm" style="display:none">
           <div class="form-err" id="nuovoCampoErr"></div>
-          <div class="nc-grid">
-            <div class="form-field">
-              <label class="form-lbl">Etichetta *</label>
-              <input class="form-inp" id="ncEtichetta" placeholder="es. Taglia uniforme">
-            </div>
-            <div class="form-field">
-              <label class="form-lbl">Tipo</label>
-              <select class="form-inp" id="ncTipo">
+          <div class="row2">
+            <label>Etichetta *
+              <input id="ncEtichetta" placeholder="es. Taglia uniforme">
+            </label>
+            <label>Tipo
+              <select id="ncTipo">
                 <option value="text">Testo</option>
                 <option value="boolean">Sì / No</option>
                 <option value="date">Data</option>
                 <option value="number">Numero</option>
               </select>
-            </div>
-            <div class="form-field nc-full">
-              <label class="form-lbl">Sezione</label>
-              <select class="form-inp" id="ncSezione">
+            </label>
+          </div>
+          <label>Sezione
+              <select id="ncSezione">
                 <option>Anagrafica</option>
                 <option>Unità</option>
                 <option>Contatti</option>
@@ -1761,22 +1750,20 @@ body { font-family:var(--font); }
                 <option>Amministrativo</option>
                 <option>Altro</option>
               </select>
-            </div>
-          </div>
-          <button class="btn-primary" onclick="salvaNuovoCampo()">aggiungi campo</button>
+          </label>
+          <div class="actions"><button class="btn" onclick="toggleNuovoCampo()">Annulla</button><button class="btn pri" onclick="salvaNuovoCampo()">Aggiungi campo</button></div>
         </div>
       </div>
 
-      <div class="impo-section">
-        <div class="sec-label">Categorie Dotazioni</div>
-        <div class="schema-toolbar">
-          <span style="font-size:0.65rem;color:var(--text-3)">Gestisci categorie e sottocategorie per l'inventario</span>
+      <div class="card impo-section">
+        <h2>Categorie dotazioni</h2>
+        <p class="note" style="margin:4px 0 14px">Gestisci categorie e sottocategorie dell'inventario.</p>
+        <div id="catDotList"><div class="loading-msg">Caricamento…</div></div>
+        <div class="pdc-add">
+          <input id="catDotNuovaCategoria" placeholder="Nuova categoria (es. Elettroutensili)" aria-label="Nuova categoria">
+          <button class="btn sm" onclick="catDotAggiungiCategoria()">Aggiungi</button>
         </div>
-        <div id="catDotList" style="display:flex;flex-direction:column;gap:0.3rem;margin-bottom:0.6rem"><div class="loading-msg">caricamento...</div></div>
-        <div style="display:flex;gap:0.4rem;margin-bottom:0.4rem">
-          <input class="form-inp" id="catDotNuovaCategoria" placeholder="Nuova categoria (es. Elettroutensili)">
-          <button class="btn-sm" onclick="catDotAggiungiCategoria()">+ aggiungi</button>
-        </div>
+      </div>
       </div>
     </div>
 
@@ -1917,7 +1904,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=167"></script>
+<script src="area-riservata.js?v=168"></script>
 <script src="aggiornamento-dati.js?v=9"></script>
 </body>
 </html>

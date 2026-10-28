@@ -1682,7 +1682,7 @@ async function renderSchemaList() {
   });
   Object.entries(sezioni).forEach(([sez, campi]) => {
     const label = document.createElement('div');
-    label.style.cssText = 'font-size:0.58rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.6px;padding:0.4rem 0 0.2rem;';
+    label.className = 'grp';
     label.textContent = sez;
     list.appendChild(label);
     campi.forEach(c => {
@@ -1691,11 +1691,11 @@ async function renderSchemaList() {
       const tipoLabel = { text:'Testo', boolean:'Sì/No', date:'Data', number:'Numero' }[c.tipo] || c.tipo;
       row.innerHTML = '<div class="schema-row-info">'
         + '<div class="schema-row-label">' + c.etichetta + '</div>'
-        + '<div class="schema-row-meta"><span class="schema-tipo-pill">' + tipoLabel + '</span></div>'
+        + '<div class="schema-row-meta"><span class="pill ' + (c.visibile ? 'p-blue' : 'p-grey') + '">' + tipoLabel + (c.visibile ? '' : ' · nascosto') + '</span></div>'
         + '</div>'
         + '<div class="schema-row-actions">'
-        + '<button class="btn-sm ' + (c.visibile ? 'btn-warn' : 'btn-ok') + '" onclick="toggleCampo(' + JSON.stringify(c.id) + ',' + c.visibile + ')">' + (c.visibile ? 'nascondi' : 'mostra') + '</button>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaCampo(' + JSON.stringify(c.id) + ',' + JSON.stringify(c.etichetta) + ')">elimina</button>'
+        + '<button class="btn sm" onclick="toggleCampo(' + JSON.stringify(c.id) + ',' + c.visibile + ')">' + (c.visibile ? 'Nascondi' : 'Mostra') + '</button>'
+        + '<button class="btn sm danger" onclick="eliminaCampo(' + JSON.stringify(c.id) + ',' + JSON.stringify(c.etichetta) + ')">Elimina</button>'
         + '</div>';
       list.appendChild(row);
     });
@@ -6769,15 +6769,15 @@ function catDotRenderList() {
   if (!principali.length) { el.innerHTML = '<div class="loading-msg">nessuna categoria creata.</div>'; return; }
   let html = '';
   principali.forEach(p => {
-    html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.4rem;background:var(--bg-2);border-radius:6px">'
-      + '<div style="flex:1;font-weight:600">' + p.nome + '</div>'
-      + '<button class="btn-sm" style="padding:0.15rem 0.4rem" onclick="catDotAggiungiSottocategoria(' + p.id + ')">+ sottocategoria</button>'
-      + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + p.id + ')">🗑️</button>'
+    html += '<div class="cat-row">'
+      + '<b>' + p.nome + '</b>'
+      + '<button class="btn sm" onclick="catDotAggiungiSottocategoria(' + p.id + ')">+ Sottocategoria</button>'
+      + '<button class="btn sm danger" aria-label="Elimina" onclick="catDotElimina(' + p.id + ')">✕</button>'
       + '</div>';
     dotCategorieAlbero.filter(c => c.parent_id === p.id).forEach(f => {
-      html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.4rem 0.25rem 1.4rem">'
-        + '<div style="flex:1;color:var(--testo-2)">— ' + f.nome + '</div>'
-        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + f.id + ')">🗑️</button>'
+      html += '<div class="cat-row sub">'
+        + '<span>' + f.nome + '</span>'
+        + '<button class="btn sm danger" aria-label="Elimina" onclick="catDotElimina(' + f.id + ')">✕</button>'
         + '</div>';
     });
   });
