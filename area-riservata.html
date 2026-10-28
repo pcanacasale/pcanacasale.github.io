@@ -601,6 +601,30 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .vcf-avvisi{margin-top:10px}
 .vcf-avvisi summary{cursor:pointer;font-size:14px;color:var(--muted)}
 
+/* ── chip con conteggio (filtri a contatore) ── */
+.chip .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700}
+.chip.on .n{background:rgba(255,255,255,.2);color:inherit}
+/* ── visite mediche ── */
+.visite-wrap{overflow-x:auto;padding:0}
+.visite-tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+.visite-tbl th{text-align:left;padding:12px 14px;background:var(--bg);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.visite-tbl td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:middle}
+.visite-tbl tbody tr:hover td{background:var(--bg)}
+.visite-tbl .c{text-align:center}
+.vt-nome{font-weight:700}
+.vt-cf{font-family:monospace;font-size:13px;color:var(--muted)}
+.vt-sel,.vt-date{height:38px;font-size:14px}
+.vt-sel{min-width:150px}
+.vt-chk{margin:0 auto;display:block}
+.visite-stato{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.vs-completata{background:var(--soft);color:var(--accent)}
+.vs-da_fare{background:var(--red-soft);color:var(--red)}
+.vs-verifica{background:var(--yellow);color:var(--on-yellow)}
+.vs-solo_esami{background:var(--yellow-soft);color:var(--fg)}
+.vs-esonero{background:var(--grey-bg);color:var(--muted)}
+.vs-vuoto{background:var(--red-soft);color:var(--red)}
+.visite-saving{opacity:.5;pointer-events:none}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -668,34 +692,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .gall-lb-caption { position:absolute; bottom:1.2rem; left:50%; transform:translateX(-50%); color:white; font-size:0.85rem; background:rgba(0,0,0,0.6); padding:0.4rem 0.9rem; border-radius:14px; }
 
 /* Visite Mediche */
-.visite-dashboard { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem; margin-bottom:0.9rem; }
-.vd-card { background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-md); padding:0.7rem 0.9rem; cursor:pointer; transition:all 0.15s; box-shadow:none; }
-.vd-card:hover { transform:translateY(-1px); border-color:var(--green); }
-.vd-card.vd-active { border-color:var(--accent); background:var(--soft); }
-.vd-card-num { font-size:1.55rem; font-weight:700; line-height:1; color:var(--testo); }
-.vd-card-lbl { font-size:0.62rem; font-weight:600; color:var(--testo-3); text-transform:uppercase; letter-spacing:0.5px; margin-top:0.3rem; }
-.vd-card-bar { height:3px; border-radius:2px; margin-top:0.45rem; background:var(--bg-2); overflow:hidden; }
-.vd-card-bar-fill { height:100%; border-radius:2px; }
-
-.visite-table-wrap { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; overflow-x:auto; }
-.visite-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; min-width:720px; }
-.visite-tbl th { text-align:left; font-weight:600; font-size:0.65rem; color:var(--testo-3); padding:0.6rem 0.8rem; border-bottom:0.5px solid var(--border); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; background:var(--bg-2); position:sticky; top:0; }
-.visite-tbl td { padding:0.55rem 0.8rem; border-bottom:0.5px solid var(--border); vertical-align:middle; }
-.visite-tbl tr:hover td { background:var(--bg-2); }
-.visite-tbl .vt-nome { font-weight:500; color:var(--testo); }
-.visite-tbl .vt-cf { font-family:monospace; font-size:0.72rem; color:var(--testo-3); }
-.visite-tbl .vt-sel { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 8px; font-size:0.7rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; }
-.visite-tbl .vt-sel:hover { border-color:var(--green); }
-.visite-tbl .vt-date { background:transparent; border:0.5px solid var(--border); border-radius:6px; padding:3px 6px; font-size:0.72rem; color:var(--testo); font-family:var(--font); cursor:pointer; outline:none; min-width:110px; }
-.visite-tbl .vt-chk { width:18px; height:18px; cursor:pointer; accent-color:var(--green); margin:0 auto; display:block; }
-.visite-stato { display:inline-block; font-size:0.6rem; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.3px; }
-.vs-completata { background:var(--soft); color:var(--accent); }
-.vs-da_fare    { background:var(--red-soft); color:var(--red); }
-.vs-verifica   { background:var(--yellow); color:var(--on-yellow); }
-.vs-solo_esami { background:var(--yellow-soft); color:var(--fg); }
-.vs-esonero    { background:var(--grey-bg); color:var(--muted); }
-.vs-vuoto      { background:var(--red-soft); color:var(--red); }
-.visite-saving { opacity:0.5; pointer-events:none; }
 
 /* Desktop ≥800px: lista volontari a griglia 2 colonne */
 
@@ -789,12 +785,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
 /* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
-.richiesta-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap {border-radius:20px;border:1px solid var(--line)}
+.richiesta-card, .schedapers-hero, .schedapers-sec, .gall-album {border-radius:20px;border:1px solid var(--line)}
 
 .form-inp {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
 .form-inp:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
-
-.visite-stato{border-radius:999px}
 
 </style>
 </head>
@@ -1253,11 +1247,15 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- VISITE MEDICHE -->
     <div class="panel" id="panelVisite">
-      <div class="panel-hdr"><h2>Visite Mediche</h2><p>Stato visite e CDC dei volontari attivi</p></div>
-      <div id="visiteDashboard" class="visite-dashboard"></div>
-      <div class="form-row" style="margin-bottom:0.8rem">
-        <input type="text" id="visiteSearch" class="form-inp" placeholder="cerca cognome, nome, CF..." oninput="filtraVisite()" style="flex:1">
-        <select id="visiteFiltroStato" class="form-inp" onchange="filtraVisite()" style="max-width:180px">
+      <div class="phead">
+        <div><h1>Visite mediche</h1></div>
+        <div class="pact"><button class="btn" onclick="apriExportVisite()">Esporta PDF</button></div>
+      </div>
+      <div class="bar">
+        <div id="visiteDashboard" class="chips"></div>
+        <span class="grow"></span>
+        <label class="search" for="visiteSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="visiteSearch" placeholder="Cerca cognome, nome, CF" autocomplete="off" oninput="filtraVisite()"></label>
+        <select id="visiteFiltroStato" hidden onchange="filtraVisite()" aria-hidden="true">
           <option value="">tutti gli stati</option>
           <option value="ESONERO">Esonero</option>
           <option value="DA_FARE">Da Fare</option>
@@ -1266,9 +1264,8 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
           <option value="COMPLETATA">Completata</option>
           <option value="VUOTO">Non impostato</option>
         </select>
-        <button class="btn-sm" onclick="apriExportVisite()">Esporta PDF</button>
       </div>
-      <div id="visiteList"><div class="loading-msg">caricamento...</div></div>
+      <div id="visiteList"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- ACCESSI (per master) -->
@@ -1790,10 +1787,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
   </div>
   <!-- Export PDF visite mediche -->
   <div class="vista-form-overlay" id="visiteExportOverlay">
-    <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-      <h4>Esporta PDF — Visite Mediche</h4>
+    <div class="vista-form-card">
+      <div class="shead sheet-h"><h2>Esporta PDF — Visite mediche</h2><button class="x" onclick="chiudiExportVisite()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
-      <div class="form-field" style="margin-bottom:0.6rem">
+      <div class="form-field">
         <label class="form-lbl">Stati da includere</label>
         <div class="perm-grid">
           <label class="perm-check"><input type="checkbox" class="vexp-stato" value="ESONERO" checked> Esonero</label>
@@ -1805,7 +1802,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         </div>
       </div>
 
-      <div class="form-field" style="margin-bottom:0.6rem">
+      <div class="form-field">
         <label class="form-lbl">Colonne da includere</label>
         <div class="perm-grid">
           <label class="perm-check"><input type="checkbox" class="vexp-col" value="nome" checked disabled> Nominativo</label>
@@ -1815,23 +1812,23 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         </div>
       </div>
 
-      <div class="form-field" style="margin-bottom:0.6rem">
-        <label class="form-lbl">Intervallo data (opzionale)</label>
-        <div class="form-row">
-          <input type="date" class="form-inp" id="vexpDataDa">
-          <input type="date" class="form-inp" id="vexpDataA">
+      <div class="form-field">
+        <label class="form-lbl">Intervallo data (facoltativo)</label>
+        <div class="row2">
+          <input type="date" id="vexpDataDa" aria-label="Dal">
+          <input type="date" id="vexpDataA" aria-label="Al">
         </div>
       </div>
 
-      <div class="form-field" style="margin-bottom:0.6rem">
+      <div class="form-field">
         <label class="perm-check"><input type="checkbox" id="vexpSoloTestoRicerca"> Applica anche la ricerca testuale corrente (<b id="vexpTestoCorrente"></b>)</label>
       </div>
 
       <div class="form-err" id="visiteExportErr"></div>
 
-      <div class="form-row" style="justify-content:flex-end;gap:0.5rem;margin-top:0.5rem">
-        <button class="btn-sm" onclick="chiudiExportVisite()">Annulla</button>
-        <button class="btn-primary" onclick="generaExportVisitePDF()">Genera PDF</button>
+      <div class="actions">
+        <button class="btn" onclick="chiudiExportVisite()">Annulla</button>
+        <button class="btn pri" onclick="generaExportVisitePDF()">Genera PDF</button>
       </div>
     </div>
   </div>
@@ -1840,7 +1837,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=174"></script>
+<script src="area-riservata.js?v=175"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

@@ -8444,14 +8444,11 @@ function renderDashboardVisite() {
     { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: 'var(--muted)' },
     { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: 'var(--red)' },
   ];
+  // contatori come chip filtro con conteggio (stesso componente del riferimento)
   dash.innerHTML = cards.map(c => {
-    const pct = tot > 0 ? Math.round((c.n / tot) * 100) : 0;
-    const active = currentFilter === c.key ? ' vd-active' : '';
-    return '<div class="vd-card' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
-      + '<div class="vd-card-num" style="color:' + c.color + '">' + c.n + '</div>'
-      + '<div class="vd-card-lbl">' + c.label + '</div>'
-      + '<div class="vd-card-bar"><div class="vd-card-bar-fill" style="width:' + pct + '%;background:' + c.color + '"></div></div>'
-      + '</div>';
+    const active = currentFilter === c.key ? ' on' : '';
+    return '<button class="chip' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
+      + (c.key ? c.label : 'Tutti') + ' <span class="n">' + c.n + '</span></button>';
   }).join('');
 }
 
@@ -8471,11 +8468,11 @@ function renderVisite(data) {
     list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
     return;
   }
-  let html = '<div class="visite-table-wrap"><table class="visite-tbl">'
+  let html = '<div class="card tbl visite-wrap"><table class="visite-tbl">'
     + '<thead><tr>'
     + '<th>Cognome</th><th>Nome</th><th>Codice Fiscale</th>'
     + '<th>Stato Visita</th><th>Data Visita</th>'
-    + '<th style="text-align:center">CDC 1°</th><th style="text-align:center">CDC 2°</th>'
+    + '<th class="c">CDC 1°</th><th class="c">CDC 2°</th>'
     + '</tr></thead><tbody>';
 
   data.forEach(v => {
@@ -8500,8 +8497,8 @@ function renderVisite(data) {
       + '</select>'
       + '</td>'
       + '<td><input type="date" class="vt-date" value="' + (v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ', \'data_visita\', this.value)"></td>'
-      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
-      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
+      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
+      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
       + '</tr>';
   });
 
