@@ -8181,16 +8181,18 @@ function renderPosizioni(list, ns, mapElId, listElId) {
     const attiva = g.punti.some(p => p.scade_il && new Date(p.scade_il).getTime() > now);
     const minFa = Math.max(0, Math.round((now - new Date(ultimo.creato_il).getTime()) / 60000));
     const statoTxt = attiva ? '🟢 Attiva' : '⚪ Terminata';
-    const statoColor = attiva ? 'var(--green)' : 'var(--testo-3)';
+    const statoCls = attiva ? 'p-blue' : 'p-grey';
 
     const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(ctx.map);
     marker.bindPopup('<strong>' + g.nome + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
     ctx.layers.push(marker);
 
-    legendHtml += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
-      + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + colore + ';margin-right:0.6rem;flex-shrink:0"></span>'
+    // il pallino ha il colore della traccia GPS sulla mappa (dato, non tema)
+    legendHtml += '<div class="impo-u-row clk" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
+      + '<span class="pos-dot" style="background:' + colore + '"></span>'
       + '<div class="impo-u-info"><div class="impo-u-name">' + g.nome + '</div>'
-      + '<div class="impo-u-role"><span style="color:' + statoColor + ';font-weight:600">' + statoTxt + '</span> · aggiornato ' + minFa + 'm fa</div></div>'
+      + '<div class="impo-u-role">aggiornato ' + minFa + ' min fa</div></div>'
+      + '<span class="pill ' + statoCls + '">' + (attiva ? 'Attiva' : 'Terminata') + '</span>'
       + '</div>';
   });
   lista.innerHTML = legendHtml;
