@@ -382,7 +382,7 @@ async function aggCaricaLista() {
     aggPopolaFiltroSquadre();
     aggApplicaFiltri();
   } catch (e) {
-    if (grid) grid.innerHTML = '<div class="loading-msg" style="color:var(--red)">Errore: ' + e.message + '</div>';
+    if (grid) grid.innerHTML = '<div class="loading-msg bad">Errore: ' + e.message + '</div>';
   }
 }
 
@@ -539,7 +539,7 @@ async function aggApriScheda(id) {
     document.getElementById('aggDetailTitle').textContent = data.volontario.cognome + ' ' + data.volontario.nome;
     aggRenderScheda();
   } catch (e) {
-    body.innerHTML = '<div class="loading-msg" style="color:var(--red)">Errore: ' + e.message + '</div>';
+    body.innerHTML = '<div class="loading-msg bad">Errore: ' + e.message + '</div>';
   }
 }
 
@@ -1282,7 +1282,7 @@ async function aggApriCatalogo() {
     const data = await aggCall('dpi_catalogo_list', {});
     aggCatalogoCache = data.catalogo || [];
     aggRenderCatalogo();
-  } catch (e) { list.innerHTML = '<div class="loading-msg" style="color:var(--red)">Errore: ' + e.message + '</div>'; }
+  } catch (e) { list.innerHTML = '<div class="loading-msg bad">Errore: ' + e.message + '</div>'; }
 }
 function aggChiudiCatalogo() { document.getElementById('aggCatalogoOverlay').classList.remove('open'); }
 

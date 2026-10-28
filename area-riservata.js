@@ -1670,7 +1670,7 @@ async function renderSchemaList() {
   if (!list) return;
   const schema = await caricaSchema();
   if (!schema.length) {
-    list.innerHTML = '<div class="loading-msg" style="font-size:0.68rem">Nessun campo custom. Aggiungine uno qui sotto.</div>';
+    list.innerHTML = '<div class="loading-msg sm">Nessun campo custom. Aggiungine uno qui sotto.</div>';
     return;
   }
   list.innerHTML = '';
@@ -4143,7 +4143,7 @@ async function pstCaricaLista() {
 
     pstRenderLista();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento postazioni.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento postazioni.</div>';
   }
 }
 
@@ -4214,7 +4214,7 @@ function pstRenderLista() {
             + '<button class="btn-sm btn-danger" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
             + '</div>';
         }).join('')
-      : '<div class="loading-msg" style="padding:0.3rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
+      : '<div class="loading-msg sm">nessun volontario assegnato</div>';
 
     const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span style="color:var(--testo-3);font-weight:400;font-size:0.75em">(' + p.nome + ')</span>' : '');
     const bodyId = 'pstCardBody' + p.id;
@@ -4651,7 +4651,7 @@ async function pstImportaExcel(file) {
   const status = document.getElementById('pstImportStatus');
   status.style.display = 'block';
   status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
-  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
+  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg bad">impossibile caricare la libreria Excel.</div>'; return; }
 
   try {
     const buf = await file.arrayBuffer();
@@ -4674,7 +4674,7 @@ async function pstImportaExcel(file) {
       righe.push({ numero, nome, indirizzo, nvol: nvolRaw ? parseInt(nvolRaw, 10) : null, radioLabel, mezzoLabel, volontariRaw });
     });
 
-    if (!righe.length) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessuna riga valida trovata nel file.</div>'; return; }
+    if (!righe.length) { status.innerHTML = '<div class="loading-msg bad">nessuna riga valida trovata nel file.</div>'; return; }
 
     await _pstCaricaRadioMezzoOpts();
     if (!pstVolontariIntervento.length) await pstCaricaVolontariIntervento();
@@ -4742,7 +4742,7 @@ async function pstImportaExcel(file) {
     document.getElementById('pstFileInput').value = '';
     await pstCaricaLista();
   } catch(e) {
-    status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante la lettura del file: ' + e.message + '</div>';
+    status.innerHTML = '<div class="loading-msg bad">errore durante la lettura del file: ' + e.message + '</div>';
   }
 }
 
@@ -5477,14 +5477,14 @@ function pstRenderListePosizionamento() {
   boxDa.innerHTML = daPosizionare.length ? daPosizionare.map(p => {
     const attivo = pstMapArmedPostazioneId === p.id;
     return '<button class="btn-sm" style="text-align:left' + (attivo ? ';background:var(--green);color:#fff' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
-  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">tutte posizionate</div>';
+  }).join('') : '<div class="loading-msg sm">tutte posizionate</div>';
 
   boxOk.innerHTML = posizionate.length ? posizionate.map(p => {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.5rem;background:var(--bg-2);border-radius:6px;font-size:0.76rem">'
       + '<span>📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
       + '<button class="btn-sm btn-danger" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
       + '</div>';
-  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">nessuna postazione sulla mappa</div>';
+  }).join('') : '<div class="loading-msg sm">nessuna postazione sulla mappa</div>';
 }
 
 // -- DB AVANZATO (Supabase) --
@@ -5798,7 +5798,7 @@ async function caricaTlc() {
     tlcDocsGenerali = await rDoc.json();
     renderTlc(tlcData);
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -6292,38 +6292,7 @@ var dotManCache = {};
 var dotVistaLista = false;     // false = card (griglia), true = lista
 
 // palette colori per categoria principale, ciclica per hue (oklch)
-var DOT_PALETTE = [
-  { dotL:55, dotC:0.16, h:75  },
-  { dotL:55, dotC:0.18, h:25  },
-  { dotL:55, dotC:0.15, h:250 },
-  { dotL:55, dotC:0.15, h:300 },
-  { dotL:50, dotC:0.10, h:190 },
-  { dotL:55, dotC:0.16, h:140 },
-  { dotL:55, dotC:0.16, h:340 },
-  { dotL:55, dotC:0.16, h:10  }
-];
-var DOT_COLORE_NEUTRO = { dot: 'var(--border)', bg: 'var(--bg-2)', text: 'var(--testo-3)' };
-
-function _dotCategoriaPrincipaleId(catId) {
-  if (!catId) return null;
-  const nodo = dotCategorieAlbero.find(c => c.id === catId);
-  if (!nodo) return null;
-  return nodo.parent_id || nodo.id;
-}
-
-function _dotCategoriaColore(catId) {
-  const principaleId = _dotCategoriaPrincipaleId(catId);
-  if (principaleId === null) return null;
-  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
-  const idx = principali.findIndex(c => c.id === principaleId);
-  if (idx < 0) return null;
-  const p = DOT_PALETTE[idx % DOT_PALETTE.length];
-  return {
-    dot:  'oklch(' + p.dotL + '% ' + p.dotC + ' ' + p.h + ')',
-    bg:   'oklch(96% 0.025 ' + p.h + ')',
-    text: 'oklch(45% 0.15 ' + p.h + ')'
-  };
-}
+function _dotIcona(s) { return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/></svg>'; }
 
 function _dotCategoriaNomeBreve(catId) {
   if (!catId) return '';
@@ -6335,8 +6304,8 @@ function dotRenderVistaToggle() {
   const el = document.getElementById('dotVistaToggle');
   if (!el) return;
   el.innerHTML =
-    '<button class="btn-sm' + (!dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a card" onclick="dotImpostaVista(false)">▦</button>'
-    + '<button class="btn-sm' + (dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a lista" onclick="dotImpostaVista(true)">☰</button>';
+    '<button class="' + (!dotVistaLista ? 'on' : '') + '" onclick="dotImpostaVista(false)">Card</button>'
+    + '<button class="' + (dotVistaLista ? 'on' : '') + '" onclick="dotImpostaVista(true)">Lista</button>';
 }
 
 function dotImpostaVista(lista) {
@@ -6347,7 +6316,7 @@ function dotImpostaVista(lista) {
 
 async function caricaDotazioni() {
   const lista = document.getElementById('dotLista');
-  lista.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  lista.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const [magRes, catRes, dotRes] = await Promise.all([
       fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?select=*&order=ordine.asc', { headers: H }),
@@ -6358,7 +6327,7 @@ async function caricaDotazioni() {
     dotCategorieAlbero = await catRes.json();
     dotAll = await dotRes.json();
   } catch(e) {
-    lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento dotazioni.</div>';
+    lista.innerHTML = '<div class="empty">Errore nel caricamento delle dotazioni.</div>';
     return;
   }
   dotRenderCategoriaTabs();
@@ -6374,11 +6343,11 @@ function dotRenderCategoriaTabs() {
   if (!el) return;
   const principali = dotCategorieAlbero.filter(c => !c.parent_id);
   if (!principali.length) { el.innerHTML = ''; return; }
-  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
-  html += '<button class="btn-sm' + (dotCategoriaAttiva === null ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
+  let html = '<span class="fl">Categoria</span><div class="chips">';
+  html += '<button class="chip' + (dotCategoriaAttiva === null ? ' on' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
   principali.forEach(c => {
     const attiva = dotCategoriaAttiva === c.id;
-    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(' + c.id + ')">' + c.nome + '</button>';
+    html += '<button class="chip' + (attiva ? ' on' : '') + '" onclick="dotSelezionaCategoria(' + c.id + ')">' + c.nome + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6393,14 +6362,14 @@ function dotSelezionaCategoria(id) {
 function dotRenderMagazziniTabs() {
   const el = document.getElementById('dotMagazzinoTabs');
   if (!el) return;
-  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
-  html += '<button class="btn-sm' + (dotMagazzinoAttivo === null ? ' btn-primary' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
+  let html = '<span class="fl">Magazzino</span><div class="chips">';
+  html += '<button class="chip' + (dotMagazzinoAttivo === null ? ' on' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
   dotMagazzini.forEach((c, idx) => {
     const attiva = dotMagazzinoAttivo === c.nome;
-    html += '<span style="display:inline-flex;align-items:center;gap:0.15rem;border:1px solid var(--border);border-radius:8px;padding:0.15rem">';
-    if (idx > 0) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a sinistra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',-1)">◀</button>';
-    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" style="border:none" onclick="dotSelezionaMagazzino(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
-    if (idx < dotMagazzini.length - 1) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a destra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',1)">▶</button>';
+    html += '<span class="chip-grp">';
+    if (idx > 0) html += '<button class="chip-mv" title="sposta a sinistra" aria-label="Sposta a sinistra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',-1)">‹</button>';
+    html += '<button class="chip' + (attiva ? ' on' : '') + '" onclick="dotSelezionaMagazzino(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
+    if (idx < dotMagazzini.length - 1) html += '<button class="chip-mv" title="sposta a destra" aria-label="Sposta a destra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',1)">›</button>';
     html += '</span>';
   });
   html += '</div>';
@@ -6487,23 +6456,19 @@ function dotRenderLista() {
     );
   }
   if (!righe.length) {
-    el.innerHTML = '<div class="loading-msg">' + (dotAll.length ? 'nessun articolo trovato.' : 'nessun articolo registrato.') + '</div>';
+    el.innerHTML = '<div class="empty">' + (dotAll.length ? 'Nessun articolo trovato.' : 'Nessun articolo registrato.') + '</div>';
     return;
   }
 
   if (dotVistaLista) {
-    let html = '<div class="dotazioni-list">';
+    let html = '<div class="card dot-rows">';
     righe.forEach(r => {
       const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
       const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
-      const colore = _dotCategoriaColore(r.categoria_id) || DOT_COLORE_NEUTRO;
-      html += '<div class="dotazione-row" onclick="apriDettaglioDotazione(' + r.id + ')">'
-        + '<span class="dotazione-row-dot" style="background:' + colore.dot + '"></span>'
-        + '<div class="dotazione-row-info">'
-        + '<div class="dotazione-row-nome">' + r.articolo + '</div>'
-        + (nomeCat ? '<div class="dotazione-row-cat">' + nomeCat + '</div>' : '')
-        + '</div>'
-        + (qtaLbl !== null ? '<div class="dotazione-row-qta">' + qtaLbl + '</div>' : '')
+      html += '<div class="lr clk" onclick="apriDettaglioDotazione(' + r.id + ')">'
+        + '<div class="dt">' + _dotIcona(22) + '</div>'
+        + '<div class="mid"><b>' + r.articolo + '</b><span class="sub">' + [nomeCat, r.magazzino].filter(Boolean).join(' · ') + '</span></div>'
+        + (qtaLbl !== null ? '<span class="qty">' + qtaLbl + ' <small>pz</small></span>' : '')
         + '</div>';
     });
     html += '</div>';
@@ -6511,17 +6476,17 @@ function dotRenderLista() {
     return;
   }
 
-  let html = '<div class="dotazioni-grid">';
-  righe.forEach(r => {
+  let html = '<div class="grid g4">';
+  righe.forEach((r, i) => {
     const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
     const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
-    const colore = _dotCategoriaColore(r.categoria_id);
-    html += '<div class="dotazione-tile" onclick="apriDettaglioDotazione(' + r.id + ')">'
-      + '<div class="dotazione-tile-body">'
-      + '<div class="dotazione-tile-nome">' + r.articolo + '</div>'
-      + (colore ? '<div class="dotazione-tile-cat" style="background:' + colore.bg + ';color:' + colore.text + '"><span class="dotazione-tile-cat-dot" style="background:' + colore.dot + '"></span>' + nomeCat + '</div>' : '')
-      + (qtaLbl !== null ? '<div class="dotazione-tile-qta">' + qtaLbl + '</div>' : '')
-      + '</div></div>';
+    html += '<button class="card" onclick="apriDettaglioDotazione(' + r.id + ')">'
+      + '<div class="thumb ' + (i % 2 ? 'b' : 'y') + '" style="height:72px">' + _dotIcona(36) + '</div>'
+      + '<b class="dot-nome">' + r.articolo + '</b>'
+      + '<span class="sub">' + [nomeCat, r.magazzino].filter(Boolean).join(' · ') + '</span>'
+      + '<div class="cfoot flat"><span class="qty">' + (qtaLbl !== null ? qtaLbl : '—') + ' <small>pz</small></span>'
+      + (r.codice ? '<span class="targa">' + r.codice + '</span>' : '') + '</div>'
+      + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6558,9 +6523,9 @@ function dotRenderDettaglioBody() {
   const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
   const catPath = _dotCategoriaPath(r.categoria_id);
 
-  let html = '<div style="display:flex;gap:0.4rem;margin-bottom:0.8rem">'
-    + '<button class="btn-sm' + (dotDetailTab==='dettagli'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
-    + '<button class="btn-sm' + (dotDetailTab==='manutenzione'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">🔧 Manutenzione</button>'
+  let html = '<div class="seg" role="group" aria-label="Sezione" style="margin:4px 0 10px">'
+    + '<button class="' + (dotDetailTab==='dettagli'?'on':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
+    + '<button class="' + (dotDetailTab==='manutenzione'?'on':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">Manutenzione</button>'
     + '</div>';
 
   if (dotDetailTab === 'dettagli') {
@@ -6572,29 +6537,28 @@ function dotRenderDettaglioBody() {
       + '<div class="vol-field"><span class="vol-field-label">Descrizione</span><span class="vol-field-value' + (r.descrizione?'':' null') + '">' + (r.descrizione || '—') + '</span></div>'
       + '<div class="vol-field"><span class="vol-field-label">Note</span><span class="vol-field-value' + (r.note?'':' null') + '">' + (r.note || '—') + '</span></div>'
       + '</div></div>'
-      + '<button class="vol-delete-btn" onclick="dotEliminaArticolo(' + r.id + ')">elimina articolo</button>';
+      + '<button class="vol-delete-btn" onclick="dotEliminaArticolo(' + r.id + ')">Elimina articolo</button>';
   } else {
     const entries = dotManCache[r.id];
     if (!entries) {
-      html += '<div class="loading-msg">caricamento manutenzioni...</div>';
+      html += '<p class="note">Caricamento manutenzioni…</p>';
     } else {
-      if (!entries.length) html += '<div class="loading-msg">nessun intervento registrato.</div>';
+      if (!entries.length) html += '<p class="note">Nessun intervento di manutenzione registrato.</p>';
       else {
-        html += '<div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem">';
         entries.forEach(m => {
-          html += '<div style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;border-bottom:0.5px dashed var(--border);padding-bottom:0.3rem">'
-            + '<div style="white-space:nowrap;color:var(--testo-3)">' + (m.data ? new Date(m.data).toLocaleDateString('it-IT') : '') + '</div>'
-            + '<div style="flex:1"><b>' + (m.utente||'—') + '</b> — ' + (m.nota||'') + '</div>'
-            + '<button class="btn-sm btn-danger" style="padding:0.1rem 0.35rem" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
+          const d = m.data || '';
+          html += '<div class="lr">'
+            + (d ? '<div class="dt"><b>' + d.slice(8,10) + '</b><span>' + ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][parseInt(d.slice(5,7)) - 1] + '</span></div>' : '')
+            + '<div class="mid"><b>' + (m.nota||'') + '</b><span class="sub">' + (m.utente||'—') + '</span></div>'
+            + '<button class="btn sm danger" aria-label="Elimina" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
             + '</div>';
         });
-        html += '</div>';
       }
-      html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
-        + '<input class="form-inp" type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '" style="max-width:150px">'
-        + '<input class="form-inp" id="dotManUtente' + r.id + '" placeholder="Utente" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '" style="max-width:160px">'
-        + '<input class="form-inp" id="dotManNota' + r.id + '" placeholder="Intervento effettuato..." style="flex:1;min-width:160px">'
-        + '<button class="btn-sm" onclick="dotAggiungiManutenzione(' + r.id + ')">+ aggiungi</button>'
+      html += '<div class="form dot-man-form">'
+        + '<div class="row2"><label>Data<input type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '"></label>'
+        + '<label>Utente<input id="dotManUtente' + r.id + '" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '"></label></div>'
+        + '<label>Intervento effettuato<input id="dotManNota' + r.id + '"></label>'
+        + '<div class="actions"><button class="btn sm pri" onclick="dotAggiungiManutenzione(' + r.id + ')">Aggiungi intervento</button></div>'
         + '</div>';
     }
   }
@@ -6768,7 +6732,7 @@ async function dotImportaExcel(file) {
   const status = document.getElementById('dotImportStatus');
   status.style.display = 'block';
   status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
-  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
+  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg bad">impossibile caricare la libreria Excel.</div>'; return; }
 
   const MAGAZZINI_VALIDI = { 'magazzino a':'Magazzino A', 'magazzino b':'Magazzino B', 'magazzino c':'Magazzino C' };
 
@@ -6811,14 +6775,14 @@ async function dotImportaExcel(file) {
     }
 
     if (!fogliUsati.length) {
-      status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
+      status.innerHTML = '<div class="loading-msg bad">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
       return;
     }
-    status.innerHTML = '<div class="loading-msg" style="color:var(--green)">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + '). Codice, descrizione e categoria vanno completati a mano.</div>';
+    status.innerHTML = '<div class="loading-msg ok">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + '). Codice, descrizione e categoria vanno completati a mano.</div>';
     await logAttivita('ha importato dotazioni da Excel (' + fogliUsati.join(', ') + ')');
     await caricaDotazioni();
   } catch(e) {
-    status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante l\'importazione: ' + e.message + '</div>';
+    status.innerHTML = '<div class="loading-msg bad">errore durante l\'importazione: ' + e.message + '</div>';
   }
 }
 
@@ -6830,7 +6794,7 @@ async function caricaCategorieDotazioni() {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H });
     dotCategorieAlbero = await res.json();
-  } catch(e) { el.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento categorie.</div>'; return; }
+  } catch(e) { el.innerHTML = '<div class="loading-msg bad">errore caricamento categorie.</div>'; return; }
   catDotRenderList();
 }
 
@@ -7422,7 +7386,7 @@ async function caricaAccessi() {
     renderAccessi();
     if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -7523,7 +7487,7 @@ function renderAccessi() {
     html += '<div class="vol-section" style="margin-bottom:0.6rem">';
     html += _accCollapsibleHead('🔐 Amministratori (' + admins.length + ')', 'accAdminBody');
     if (!admins.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun amministratore</div>';
+      html += '<div class="loading-msg sm">nessun amministratore</div>';
     } else {
       html += '<div class="accessi-grid" style="padding:0.4rem 0">';
       admins.forEach(u => {
@@ -7548,7 +7512,7 @@ function renderAccessi() {
     html += '<div class="vol-section" style="margin-bottom:0.6rem">';
     html += _accCollapsibleHead('👤 Volontari abilitati (' + vols.length + ')', 'accVolBody');
     if (!vols.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun volontario</div>';
+      html += '<div class="loading-msg sm">nessun volontario</div>';
     } else {
       html += '<div class="accessi-grid" style="padding:0.4rem 0">';
       vols.forEach(v => {
@@ -7573,7 +7537,7 @@ function renderAccessi() {
     html += '<div class="vol-section" style="margin-bottom:0.6rem">';
     html += _accCollapsibleHead('🕐 Log accessi (' + logs.length + ')', 'accLogBody');
     if (!logs.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun accesso registrato</div>';
+      html += '<div class="loading-msg sm">nessun accesso registrato</div>';
     } else {
       html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;padding:0 0.4rem">'
         + '<thead><tr>'
@@ -7602,7 +7566,7 @@ function renderAccessi() {
     html += '<div class="vol-section" style="margin-bottom:0.6rem">';
     html += _accCollapsibleHead('📋 Log attività (' + atts.length + ')', 'accAttBody');
     if (!atts.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessuna attività registrata</div>';
+      html += '<div class="loading-msg sm">nessuna attività registrata</div>';
     } else {
       html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
         + '<thead><tr>'
@@ -7663,7 +7627,7 @@ async function caricaSchedaPersonale() {
     const v = arr[0];
     renderSchedaPersonale(v);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -7737,7 +7701,7 @@ async function caricaSegnalazioni() {
       const arr = await res.json();
       renderSegnalazioniVolontario(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
     }
   } else if (!hasPerm('gestione_segnalazioni')) {
     sub.textContent = 'Segnalazioni ricevute dai volontari';
@@ -7751,7 +7715,7 @@ async function caricaSegnalazioni() {
       const arr = await res.json();
       renderSegnalazioniAdmin(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
     }
   }
 }
@@ -7880,7 +7844,7 @@ async function caricaEmergenze() {
     const arr = await res.json();
     renderEmergenze(arr || []);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -8040,7 +8004,7 @@ async function caricaBotPermessi() {
     botPermessiAll = (volontari || []).map(v => Object.assign({}, v, { collegato: collegatiIds.has(v.id) }));
     botRenderPermessi();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -8210,7 +8174,7 @@ async function _posizioneCarica() {
     const arr = await res.json();
     renderPosizioni(arr || []);
   } catch(e) {
-    if (lista) lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    if (lista) lista.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -8383,7 +8347,7 @@ async function caricaGalleria() {
     galleriaAlbumsCache = albumsConCover;
     renderAlbums(albumsConCover);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore: ' + (e.message || 'caricamento fallito') + '</div>';
   }
 }
 
@@ -8465,7 +8429,7 @@ async function apriAlbum(folderId, nome) {
     html += '</div>';
     content.innerHTML = html;
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore: ' + (e.message || 'caricamento fallito') + '</div>';
   }
 }
 

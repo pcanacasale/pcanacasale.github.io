@@ -301,6 +301,9 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .form-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .form-field{margin-bottom:12px}
 .loading-msg{padding:36px 16px;text-align:center;color:var(--muted);font-size:14px}
+.loading-msg.sm{padding:10px 0;text-align:left}
+.loading-msg.bad{color:var(--red);font-weight:600}
+.loading-msg.ok{color:var(--accent);font-weight:600}
 .btn-sm{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap}
 .btn-sm:hover{border-color:var(--accent)}
 .btn-ok{color:var(--accent)}
@@ -337,6 +340,15 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .doc-progress{display:none;height:12px;border-radius:999px;background:var(--grey-bg);overflow:hidden;margin-bottom:12px}
 .doc-progress-bar{height:100%;width:0;background:var(--yellow);border-radius:999px;transition:width .3s}
 @media (max-width:860px){.doc-upload-overlay{align-items:flex-end;padding:0}.doc-upload-card{border-radius:24px 24px 0 0;max-height:92%;padding-bottom:calc(20px + var(--safe-b))}}
+
+/* ── dotazioni ── */
+.chip-grp{display:inline-flex;align-items:center;gap:2px}
+.chip-mv{width:28px;height:40px;border:0;background:none;color:var(--muted);font-size:18px;font-weight:700;padding:0}
+.chip-mv:hover{color:var(--accent)}
+.dot-nome{display:block;font-size:15px}
+.dot-rows{padding:4px 18px}
+.dot-rows .dt,.dot-man-form{color:var(--fg)}
+.dot-man-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -726,27 +738,8 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 /* -- MEZZI GALLERIA -- */
 
 /* -- DOTAZIONI GRIGLIA -- */
-.dotazioni-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.7rem; }
-.dotazione-tile { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; border:0.5px solid var(--border); cursor:pointer; transition:transform 0.12s; }
-.dotazione-tile:active { transform:scale(0.97); }
-.dotazione-tile-body { padding:0.75rem 0.8rem; display:flex; flex-direction:column; gap:0.35rem; }
-.dotazione-tile-nome { font-size:0.85rem; font-weight:600; color:var(--testo); line-height:1.25; }
-.dotazione-tile-cat { display:inline-flex; align-items:center; gap:4px; font-size:0.66rem; font-weight:600; border-radius:20px; padding:2px 8px; align-self:flex-start; }
-.dotazione-tile-cat-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.dotazione-tile-qta { font-size:0.7rem; font-weight:600; color:var(--testo); }
 
 /* -- DOTAZIONI LISTA -- */
-.dotazioni-list { background:var(--bg-card); border-radius:var(--r-lg); box-shadow:none; border:0.5px solid var(--border); overflow:hidden; }
-.dotazione-row { display:flex; align-items:center; gap:0.65rem; padding:0.65rem 0.9rem; cursor:pointer; border-bottom:0.5px solid var(--border); transition:background 0.1s; }
-.dotazione-row:last-child { border-bottom:none; }
-.dotazione-row:active { background:var(--bg-2); }
-.dotazione-row-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-.dotazione-row-info { flex:1; min-width:0; }
-.dotazione-row-nome { font-size:0.85rem; font-weight:600; color:var(--testo); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dotazione-row-cat { font-size:0.7rem; color:var(--testo-3); margin-top:1px; }
-.dotazione-row-qta { font-size:0.85rem; font-weight:600; color:var(--testo); flex-shrink:0; }
-
-.dot-vista-toggle { display:flex; gap:0.3rem; flex-shrink:0; }
 
 /* -- SPLASH SCREEN -- */
 #splashScreen { position:fixed; inset:0; background:#0A4C9E; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; transition:opacity 0.5s ease; }
@@ -785,7 +778,7 @@ body { font-family:var(--font); }
 /* Intestazione: barra blu con logo + titolo */
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .int-list, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .dotazione-tile, .dotazioni-list, .db-wrap, .int-stat, .impo-perm-row, .int-vol-card {
+.login-card, .int-list, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .int-stat, .impo-perm-row, .int-vol-card {
   border-radius:20px; border:1px solid var(--line);
 }
 .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
@@ -815,7 +808,7 @@ body { font-family:var(--font); }
 }
 
 /* Chip e badge a pillola; chip attivo blu pieno con testo bianco */
-.int-pill, .vol-badge, .perm-badge, .acc-badge, .visite-stato, .schema-tipo-pill, .dotazione-tile-cat, .db-pag-btn, .login-tab {
+.int-pill, .vol-badge, .perm-badge, .acc-badge, .visite-stato, .schema-tipo-pill, .db-pag-btn, .login-tab {
   border-radius:var(--r-pill);
 }
 .login-tabs { border-radius:var(--r-pill); }
@@ -1485,59 +1478,56 @@ body { font-family:var(--font); }
 
     <!-- DOTAZIONI -->
     <div class="panel" id="panelDotazioni">
-      <div class="panel-hdr"><h2>Dotazioni</h2><p>Inventario materiale di magazzino</p></div>
-
-      <div style="padding:0 0.9rem 0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-        <button class="btn-sm" onclick="dotScaricaModello()">⬇️ Scarica modello Excel</button>
-        <button class="btn-sm" onclick="document.getElementById('dotFileInput').click()">⬆️ Carica file Excel</button>
-        <input type="file" id="dotFileInput" accept=".xlsx" style="display:none" onchange="dotImportaExcel(this.files[0])">
-        <button class="btn-sm" onclick="dotEsportaExcel()">📊 Esporta elenco</button>
+      <div class="phead">
+        <div><h1>Dotazioni</h1></div>
+        <div class="pact">
+          <button class="btn" onclick="dotScaricaModello()">Scarica modello Excel</button>
+          <button class="btn" onclick="document.getElementById('dotFileInput').click()">Carica Excel</button>
+          <button class="btn" onclick="dotEsportaExcel()">Esporta elenco</button>
+          <button class="btn pri" onclick="dotApriNuovo()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo articolo</button>
+        </div>
       </div>
-      <div id="dotImportStatus" style="display:none;padding:0 0.9rem 0.6rem"></div>
+      <input type="file" id="dotFileInput" accept=".xlsx" hidden onchange="dotImportaExcel(this.files[0])">
+      <div id="dotImportStatus" style="display:none;margin-bottom:18px"></div>
 
-      <div style="padding:0 0.9rem 0.6rem">
-        <input class="form-inp" id="dotSearch" placeholder="🔍 cerca articolo, ubicazione, note..." oninput="dotFiltraLista()">
+      <div class="bar">
+        <label class="search" for="dotSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="dotSearch" placeholder="Cerca articolo, categoria o magazzino" autocomplete="off" oninput="dotFiltraLista()"></label>
+        <span style="flex:1"></span>
+        <div class="seg" role="group" aria-label="Vista" id="dotVistaToggle"></div>
       </div>
+      <div class="frow" id="dotCategoriaTabs"></div>
+      <div class="frow" id="dotMagazzinoTabs" style="margin-bottom:18px"></div>
 
-      <div style="padding:0 0.9rem 0.6rem" id="dotCategoriaTabs"></div>
-      <div style="padding:0 0.9rem 0.6rem;display:flex;align-items:center;gap:0.5rem">
-        <div id="dotMagazzinoTabs" style="flex:1;min-width:0"></div>
-        <div class="dot-vista-toggle" id="dotVistaToggle"></div>
-      </div>
-
-      <div style="padding:0 0.9rem 0.6rem">
-        <button class="btn-primary" onclick="dotApriNuovo()">+ nuovo articolo</button>
-      </div>
-
-      <div id="dotLista" style="padding:0 0.9rem 1rem"><div class="loading-msg">caricamento...</div></div>
+      <div id="dotLista"><p class="note">Caricamento…</p></div>
     </div>
 
     <!-- MODALE NUOVO ARTICOLO DOTAZIONE -->
     <div class="vista-form-overlay" id="dotNuovoOverlay">
-      <div class="vista-form-card" style="max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">
-        <h4 id="dotNuovoTitolo">Nuovo articolo</h4>
-        <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.6rem">
-          <div style="display:flex;gap:0.5rem">
-            <input class="form-inp" id="dotNuovoCodice" placeholder="Codice" style="flex:1">
-            <select class="form-inp" id="dotNuovoMagazzino" style="flex:1"></select>
+      <div class="vista-form-card">
+        <div class="shead" style="padding:0 0 10px"><h2 id="dotNuovoTitolo">Nuovo articolo</h2><button class="x" onclick="dotChiudiNuovo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="form">
+          <div class="row2">
+            <label>Codice<input id="dotNuovoCodice"></label>
+            <label>Magazzino<select id="dotNuovoMagazzino"></select></label>
           </div>
-          <input class="form-inp" id="dotNuovoArticolo" placeholder="Articolo">
-          <input class="form-inp" id="dotNuovoDescrizione" placeholder="Descrizione">
-          <select class="form-inp" id="dotNuovoCategoria"></select>
-          <input class="form-inp" id="dotNuovoQuantita" type="number" step="0.01" placeholder="Quantità">
-          <input class="form-inp" id="dotNuovoNote" placeholder="Note">
+          <label>Articolo<input id="dotNuovoArticolo"></label>
+          <label>Descrizione<input id="dotNuovoDescrizione"></label>
+          <div class="row2">
+            <label>Categoria<select id="dotNuovoCategoria"></select></label>
+            <label>Quantità<input id="dotNuovoQuantita" type="number" step="0.01"></label>
+          </div>
+          <label>Note<input id="dotNuovoNote"></label>
+          <div class="actions"><button class="btn" onclick="dotChiudiNuovo()">Annulla</button><button class="btn pri" onclick="dotSalvaNuovo()">Salva</button></div>
         </div>
-        <button class="btn-primary" style="width:100%;margin-bottom:0.4rem" onclick="dotSalvaNuovo()">salva</button>
-        <button class="vol-detail-back" style="width:100%" onclick="dotChiudiNuovo()">annulla</button>
       </div>
     </div>
 
     <!-- SCHEDA DOTAZIONE -->
     <div class="vol-detail" id="dotDetail">
       <div class="vol-detail-top">
-        <button class="vol-detail-back" onclick="chiudiDettaglioDotazione()">← indietro</button>
-        <span class="vol-detail-title" id="dotDetailTitle">—</span>
-        <button class="vol-detail-edit" onclick="dotApriModifica(dotCorrenteId)">modifica</button>
+        <h2 class="vol-detail-title" id="dotDetailTitle">—</h2>
+        <button class="btn sm" onclick="dotApriModifica(dotCorrenteId)">Modifica</button>
+        <button class="x" onclick="chiudiDettaglioDotazione()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="vol-detail-body" id="dotDetailBody"></div>
     </div>
@@ -1919,7 +1909,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=160"></script>
-<script src="aggiornamento-dati.js?v=7"></script>
+<script src="area-riservata.js?v=161"></script>
+<script src="aggiornamento-dati.js?v=8"></script>
 </body>
 </html>
