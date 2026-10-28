@@ -632,6 +632,12 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .sp-grid{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start}
 .sp-grid .card h2{margin-bottom:6px}
 
+/* ── richieste adesione ── */
+.ric-card.letta{opacity:.65}
+.ric-body{margin-top:12px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.ric-msg{margin-top:6px;padding:10px 14px;border-radius:14px;background:var(--bg);font-style:italic}
+.note-page{margin:-8px 0 16px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -707,16 +713,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* ── DOCUMENTI ── */
 
 /* ── RICHIESTE ── */
-.richiesta-card { background:var(--bg-card); border-radius:var(--r); box-shadow:none; margin-bottom:0.6rem; overflow:hidden; border:0.5px solid var(--border); }
-.richiesta-card.nuova { border-left:3px solid var(--green); }
-.richiesta-card.letta { opacity:0.65; }
-.richiesta-top { display:flex; align-items:flex-start; justify-content:space-between; padding:0.85rem 1rem 0.4rem; }
-.richiesta-nome { font-size:0.9rem; font-weight:600; color:var(--testo); }
-.richiesta-data { font-size:0.7rem; color:var(--testo-3); flex-shrink:0; }
-
-.richiesta-body { padding:0 1rem 0.4rem; font-size:0.8rem; color:var(--testo-3); line-height:1.6; }
-.richiesta-msg { margin-top:0.4rem; font-style:italic; color:var(--testo-2); background:var(--bg-2); padding:0.5rem 0.7rem; border-radius:var(--r-sm); font-size:0.8rem; }
-.richiesta-actions { padding:0.4rem 1rem 0.85rem; display:flex; gap:0.5rem; }
 
 /* ── IMPOSTAZIONI ── */
 
@@ -782,7 +778,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .welcome-text .wt-ruolo { color:rgba(255,255,255,0.55); font-size:0.75rem; margin-top:0.2rem; }
 
 /* pagine extra (documenti, DB, visite, galleria, scheda personale, richieste): forme del riferimento */
-.richiesta-card, .gall-album {border-radius:20px;border:1px solid var(--line)}
+.gall-album {border-radius:20px;border:1px solid var(--line)}
 
 .form-inp {min-height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);box-shadow:none}
 .form-inp:focus {border-color:var(--accent);outline:2px solid var(--accent);outline-offset:1px}
@@ -1638,8 +1634,9 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <!-- RICHIESTE -->
     <div class="panel" id="panelRichieste">
-      <div class="panel-hdr"><h2>Richieste adesione</h2><p>Dal modulo sul sito</p></div>
-      <div id="richiesteList"><div class="loading-msg">caricamento...</div></div>
+      <div class="phead"><div><h1>Richieste adesione</h1></div></div>
+      <p class="note note-page">Arrivano dal modulo sul sito pubblico.</p>
+      <div id="richiesteList" class="grid g3"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- AGGIORNAMENTO DATI (solo master — tutta la UI è generata da aggiornamento-dati.js) -->
@@ -1837,7 +1834,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=176"></script>
+<script src="area-riservata.js?v=177"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

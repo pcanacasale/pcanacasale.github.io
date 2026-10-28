@@ -628,7 +628,7 @@ async function caricaBadgeRichieste() {
 
 async function caricaRichieste() {
   const list = document.getElementById('richiesteList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res       = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
     const richieste = await res.json();
@@ -636,23 +636,24 @@ async function caricaRichieste() {
     const badge     = document.getElementById('siBadgeRichieste');
     if (nonLette > 0) { badge.textContent = nonLette; badge.classList.add('show'); }
     else badge.classList.remove('show');
-    if (!richieste.length) { list.innerHTML = '<div class="loading-msg">nessuna richiesta.</div>'; return; }
+    if (!richieste.length) { list.innerHTML = '<div class="empty">Nessuna richiesta.</div>'; return; }
     list.innerHTML = '';
     richieste.forEach(r => {
       const data = new Date(r.created_at).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
       const div  = document.createElement('div');
-      div.className = 'richiesta-card ' + (r.letta ? 'letta' : 'nuova');
-      const tag   = r.letta ? '' : '<span class="badge-nuova">NUOVA</span>';
+      div.className = 'card ric-card' + (r.letta ? ' letta' : '');
+      const tag   = r.letta ? '<span class="pill p-grey">Letta</span>' : '<span class="pill p-yellow">Nuova</span>';
       const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
-      const msg   = r.messaggio ? '<div class="richiesta-msg">"' + r.messaggio + '"</div>' : '';
-      const tel   = r.telefono  ? ' | ' + r.telefono : '';
-      const btnL  = r.letta ? '<span style="font-size:0.65rem;color:var(--text-4)">✓ letta</span>' : '<button class="btn-sm btn-ok" onclick="segnaLetta(\'' + r.id + '\')">segna letta</button>';
-      div.innerHTML = '<div class="richiesta-top"><div><span class="richiesta-nome">' + r.nome + '</span>' + tag + '</div><span class="richiesta-data">' + data + '</span></div>'
-        + '<div class="richiesta-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
-        + '<div class="richiesta-actions">' + btnL + '<button class="btn-sm btn-danger" onclick="eliminaRichiesta(\'' + r.id + '\')">elimina</button></div>';
+      const msg   = r.messaggio ? '<div class="ric-msg">"' + r.messaggio + '"</div>' : '';
+      const tel   = r.telefono  ? ' · ' + r.telefono : '';
+      const ini   = (r.nome || '?').split(' ').map(x => x[0] || '').join('').slice(0,2).toUpperCase();
+      const btnL  = r.letta ? '' : '<button class="btn sm pri" onclick="segnaLetta(\'' + r.id + '\')">Segna letta</button>';
+      div.innerHTML = '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + r.nome + '</b><span class="sub">' + data + '</span></div>' + tag + '</div>'
+        + '<div class="ric-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
+        + '<div class="em-azioni">' + btnL + '<button class="btn sm danger" onclick="eliminaRichiesta(\'' + r.id + '\')">Elimina</button></div>';
       list.appendChild(div);
     });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 async function segnaLetta(id) {
