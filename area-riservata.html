@@ -427,6 +427,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .em-desc{margin:12px 0 0;white-space:pre-wrap}
 .em-azioni{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
+/* ── segnalazioni ── */
+.seg-text{margin:12px 0 14px;white-space:pre-wrap}
+.seg-nota{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 body { font-family:var(--font); background:var(--bg); color:var(--testo); min-height:100vh; min-height:100dvh; -webkit-text-size-adjust:100%; }
@@ -503,11 +507,6 @@ body { font-family:var(--font); background:var(--bg); color:var(--testo); min-he
 .schedapers-val { color:var(--testo); text-align:right; word-break:break-word; }
 
 /* Segnalazioni */
-.seg-form { background:var(--bg-card); border-radius:var(--r-md); padding:1rem; box-shadow:none; margin-bottom:0.8rem; }
-.seg-card { background:var(--bg-card); border-radius:var(--r-md); padding:0.8rem 1rem; box-shadow:none; margin-bottom:0.6rem; }
-.seg-card-head { display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--testo-3); margin-bottom:0.5rem; }
-.seg-card-text { font-size:0.85rem; color:var(--testo); white-space:pre-wrap; }
-.seg-card-resp { margin-top:0.5rem; padding:0.5rem 0.8rem; background:var(--bg-2); border-radius:6px; font-size:0.78rem; color:var(--testo-2); border-left:3px solid var(--green); }
 
 /* Volontari picker NUOVO per intervento */
 
@@ -781,7 +780,7 @@ body { font-family:var(--font); }
 /* Intestazione: barra blu con logo + titolo */
 
 /* Card e pannelli: raggio 20px, bordo leggero */
-.login-card, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .seg-form, .seg-card, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .impo-perm-row {
+.login-card, .doc-vol-card, .richiesta-card, .impo-users-list, .log-list, .new-user-form, .nuovo-campo-form, .acc-card, .schedapers-hero, .schedapers-sec, .gall-album, .vd-card, .visite-table-wrap, .db-wrap, .impo-perm-row {
   border-radius:20px; border:1px solid var(--line);
 }
 .db-cols-card, .db-record-card { border-radius:20px 20px 0 0; }
@@ -1396,8 +1395,9 @@ body { font-family:var(--font); }
 
     <!-- SEGNALAZIONI (per volontari: invia; per admin: gestisci) -->
     <div class="panel" id="panelSegnalazioni">
-      <div class="panel-hdr"><h2>Segnalazioni</h2><p id="segnalazioniSub">Segnala errori nella tua scheda</p></div>
-      <div id="segnalazioniContent"><div class="loading-msg">caricamento...</div></div>
+      <div class="phead"><div><h1>Segnalazioni</h1></div></div>
+      <p class="note" id="segnalazioniSub" style="margin:-8px 0 16px">Segnala errori nella tua scheda</p>
+      <div id="segnalazioniContent"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- EMERGENZE (per master: segnalazioni di emergenza dal bot Telegram) -->
@@ -1918,7 +1918,7 @@ body { font-family:var(--font); }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=164"></script>
+<script src="area-riservata.js?v=165"></script>
 <script src="aggiornamento-dati.js?v=8"></script>
 </body>
 </html>

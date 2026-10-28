@@ -7663,7 +7663,7 @@ async function caricaSegnalazioni() {
   if (isVol) {
     // Volontario: form per inviare + storico proprie segnalazioni
     sub.textContent = 'Segnala errori nella tua scheda. Verranno presi in carico dagli amministratori.';
-    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
       const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
       const arr = await res.json();
@@ -7677,7 +7677,7 @@ async function caricaSegnalazioni() {
   } else {
     // Admin: lista tutte le segnalazioni
     sub.textContent = 'Segnalazioni ricevute dai volontari';
-    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
       const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
       const arr = await res.json();
@@ -7690,23 +7690,24 @@ async function caricaSegnalazioni() {
 
 function renderSegnalazioniVolontario(list) {
   const content = document.getElementById('segnalazioniContent');
-  let html = '<div class="seg-form">'
-    + '<label class="form-lbl">Descrivi l\'errore o l\'aggiornamento necessario</label>'
-    + '<textarea class="form-inp" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea>'
-    + '<button class="btn-primary" style="margin-top:0.6rem" onclick="inviaSegnalazione()">📤 Invia segnalazione</button>'
+  let html = '<div class="card form" style="margin-bottom:18px">'
+    + '<h2>Nuova segnalazione</h2>'
+    + '<label>Descrivi l\'errore o l\'aggiornamento necessario<textarea class="msg" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea></label>'
+    + '<div class="actions"><button class="btn pri" onclick="inviaSegnalazione()">Invia segnalazione</button></div>'
     + '</div>';
 
   if (list.length) {
-    html += '<div class="schedapers-sec-title" style="margin-top:1.4rem">Tue segnalazioni precedenti</div>';
+    html += '<div class="grp">Le tue segnalazioni</div><div class="grid g3">';
     list.forEach(s => {
       const data = new Date(s.data_creazione).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'});
-      const statoLbl = s.gestita ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>' : '<span style="color:#d9a400;font-weight:600">⏳ In attesa</span>';
-      html += '<div class="seg-card">'
-        + '<div class="seg-card-head"><span>' + data + '</span>' + statoLbl + '</div>'
-        + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
-        + (s.note_admin ? '<div class="seg-card-resp"><strong>Risposta:</strong> ' + s.note_admin + '</div>' : '')
+      const statoLbl = s.gestita ? '<span class="pill p-blue">Risolta</span>' : '<span class="pill p-yellow">In attesa</span>';
+      html += '<div class="card">'
+        + '<div class="vc"><div class="mid"><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
+        + '<p class="seg-text">' + (s.testo || '') + '</p>'
+        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note" style="margin-top:4px">' + s.note_admin + '</p></div>' : '')
         + '</div>';
     });
+    html += '</div>';
   }
   content.innerHTML = html;
 }
@@ -7714,31 +7715,30 @@ function renderSegnalazioniVolontario(list) {
 function renderSegnalazioniAdmin(list) {
   const content = document.getElementById('segnalazioniContent');
   if (!list.length) {
-    content.innerHTML = '<div class="loading-msg">nessuna segnalazione.</div>';
+    content.innerHTML = '<div class="empty">Nessuna segnalazione.</div>';
     return;
   }
-  let html = '';
+  let html = '<div class="grid g3">';
   list.forEach(s => {
     const v    = s.volontario || {};
-    const data = new Date(s.data_creazione).toLocaleString('it-IT');
+    const data = new Date(s.data_creazione).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const ini  = ((v.cognome || '?')[0] + ((v.nome || ' ')[0])).toUpperCase();
     const statoLbl = s.gestita
-      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
-      : '<span style="color:#d9a400;font-weight:600">⏳ Da gestire</span>';
-    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : '#d9a400') + '">'
-      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
-      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</div>'
-      + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
-      + '<div style="margin-top:0.6rem">'
-      + '<textarea class="form-inp" id="segNote_' + s.id + '" rows="2" placeholder="Risposta opzionale al volontario..." style="font-size:0.8rem">' + (s.note_admin || '') + '</textarea>'
-      + '<div style="display:flex;gap:0.4rem;margin-top:0.4rem">'
+      ? '<span class="pill p-blue">Risolta</span>'
+      : '<span class="pill p-yellow">Da gestire</span>';
+    html += '<div class="card">'
+      + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</span></div>' + statoLbl + '</div>'
+      + '<p class="seg-text">' + (s.testo || '') + '</p>'
+      + '<label class="seg-nota">Risposta al volontario<textarea id="segNote_' + s.id + '" rows="2" placeholder="Facoltativa">' + (s.note_admin || '') + '</textarea></label>'
+      + '<div class="em-azioni">'
       + (s.gestita
-          ? '<button class="btn-sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">↻ Riapri</button>'
-          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">✓ Segna come gestita</button>')
-      + '<button class="btn-sm" onclick="salvaNoteSegnalazione(' + s.id + ')">💾 Salva nota</button>'
-      + '</div></div>'
+          ? '<button class="btn sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">Riapri</button>'
+          : '<button class="btn sm pri" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">Segna come risolta</button>')
+      + '<button class="btn sm" onclick="salvaNoteSegnalazione(' + s.id + ')">Salva nota</button>'
+      + '</div>'
       + '</div>';
   });
-  content.innerHTML = html;
+  content.innerHTML = html + '</div>';
 }
 
 async function inviaSegnalazione() {
