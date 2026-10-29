@@ -141,7 +141,7 @@ input[type=radio]{accent-color:var(--accent-bg)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:800;background:var(--fg);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:600;font-size:14px;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
-@media (max-width:860px){
+@media (max-width:899px){
  h1{font-size:26px}
  .cols{grid-template-columns:1fr}
  .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
@@ -162,16 +162,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .brand{display:flex;align-items:center;gap:12px;border:0;background:none;color:inherit;padding:0;text-align:left;flex-shrink:0}
 .brand-logo{width:40px;height:40px;border-radius:12px;background:var(--paper);object-fit:contain;padding:2px}
 .brand b{display:block;font-size:16px;font-weight:800;line-height:1.15}
-.topnav{display:flex;gap:4px;flex:1;min-width:0}
-.tab{height:40px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--head-muted);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.topnav{display:flex;gap:2px;flex:1;min-width:0;overflow:hidden}
+.tab{height:40px;padding:0 12px;flex-shrink:0;border:0;border-radius:999px;background:transparent;color:var(--head-muted);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .tab:hover{background:rgba(255,255,255,.12);color:var(--head-fg)}
 .tab.on{background:var(--yellow);color:var(--on-yellow)}
-.emg{height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--yellow);background:transparent;color:var(--yellow);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.emg{height:40px;padding:0 14px;flex-shrink:0;border-radius:999px;border:2px solid var(--yellow);background:transparent;color:var(--yellow);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .emg[hidden]{display:none}
 .emg:hover{background:var(--yellow);color:var(--on-yellow)}
 .emg .n{background:var(--yellow);color:var(--on-yellow);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
 .emg:hover .n{background:var(--on-yellow);color:var(--yellow)}
-.who{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.who{display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:13px;font-weight:600}
 .who .av{width:38px;height:38px;background:var(--yellow);color:var(--on-yellow);font-size:13px}
 .who small{display:block;color:var(--head-muted);font-weight:500}
 /* menu altro */
@@ -194,8 +194,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .bt.on .pill-i{background:var(--yellow);color:var(--on-yellow)}
 /* contenuto pagina */
 .main-content{width:100%;padding-block:28px 48px;min-height:70vh}
-@media (max-width:860px){
- .topnav,.who small,.emg .t{display:none}
+@media (max-width:1099px){
+ .topin{gap:14px}
+ .emg{padding:0 10px}
+ .emg .t,#whoName{display:none}
+}
+@media (max-width:899px){
+ .topnav{display:none}
  .topin{justify-content:space-between;gap:10px}
  .bottom{display:flex}
  .main-content{padding-block:20px calc(104px + env(safe-area-inset-bottom,0px))}
@@ -1888,7 +1893,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=183"></script>
+<script src="area-riservata.js?v=184"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 </body>
 </html>

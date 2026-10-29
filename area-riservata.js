@@ -266,7 +266,7 @@ function renderNav() {
 }
 function navVai(id) { chiudiAltro(); var b = document.getElementById(id); if (b) b.click(); window.scrollTo(0, 0); }
 function toggleAltro() {
-  if (window.matchMedia('(max-width:860px)').matches) {
+  if (window.matchMedia('(max-width:899px)').matches) {
     var s = document.getElementById('altroSheet');
     s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Altro"><div class="shead"><h2>Altro</h2><button class="x" onclick="chiudiAltro()" aria-label="Chiudi">'+navIc('close',18)+'</button></div><div class="sbody">'+_navAltroHtml(NAV_MOB)+'</div></div>';
     s.hidden = false;
