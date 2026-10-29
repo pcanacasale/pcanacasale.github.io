@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#1a7a4a">
+<meta name="theme-color" content="#0A4C9E" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E2F5C" media="(prefers-color-scheme: dark)">
 <title>Aggiorna i tuoi dati</title>
 <!--
   Pagina PUBBLICA per i volontari (fase 2 "Aggiornamento dati").
@@ -15,122 +16,186 @@
   invia diventa una PROPOSTA: i dati reali cambiano solo quando un master
   la approva dall'area riservata.
 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --green: #1a7a4a; --green-2: #25a863; --green-pale: #e8f5ee;
-  --red: #d92d20; --red-pale: #fdecea; --amber: #b25e00; --amber-pale: #fff4e5;
-  --blue: #0a6cdc; --blue-pale: #e8f1fc;
-  --bg: #f2f2f7; --card: #ffffff; --bg-2: #f2f2f7; --border: rgba(0,0,0,0.12);
-  --text: #111111; --text-2: #3c3c43; --text-3: #6b6b72;
-  --r: 14px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --green: #30b56c; --green-2: #3fd17f; --green-pale: rgba(48,181,108,0.15);
-    --red: #ff6b5e; --red-pale: rgba(255,107,94,0.15); --amber: #ffb340; --amber-pale: rgba(255,179,64,0.15);
-    --blue: #5aa7ff; --blue-pale: rgba(90,167,255,0.15);
-    --bg: #000000; --card: #1c1c1e; --bg-2: #2c2c2e; --border: rgba(255,255,255,0.14);
-    --text: #f2f2f7; --text-2: #d1d1d6; --text-3: #9a9aa1;
-    --shadow: none;
-  }
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 17px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
-.top { background: var(--green); color: #fff; padding: 14px 16px 12px; padding-top: max(14px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; }
-.top img { width: 40px; height: 40px; border-radius: 50%; background: #fff; object-fit: contain; flex-shrink: 0; }
-.top-t { font-weight: 700; font-size: 1rem; line-height: 1.2; }
-.top-s { font-size: 0.78rem; opacity: 0.85; }
-.prog { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 16px; }
-.prog-bar { height: 8px; border-radius: 6px; background: var(--bg-2); overflow: hidden; }
-.prog-fill { height: 100%; background: var(--green); width: 0; transition: width 0.3s; }
-.prog-l { font-size: 0.8rem; color: var(--text-3); margin-top: 5px; display: flex; justify-content: space-between; }
-main { max-width: 560px; margin: 0 auto; padding: 16px 16px calc(110px + env(safe-area-inset-bottom)); }
-h1 { font-size: 1.45rem; margin: 6px 0 6px; line-height: 1.2; }
-h2 { font-size: 1.05rem; margin: 22px 0 8px; }
-p { margin: 0 0 12px; color: var(--text-2); }
-.card { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; border: 1px solid var(--border); }
-.f { margin-bottom: 14px; }
-.f label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
-.f input, .f select, .sel { width: 100%; font-size: 1.05rem; font-family: var(--font); padding: 13px 12px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); -webkit-appearance: none; appearance: none; min-height: 50px; }
-.f input:focus, .f select:focus, .sel:focus { outline: none; border-color: var(--green); }
-.f.changed input { border-color: var(--blue); background: var(--blue-pale); }
-.f .was { font-size: 0.78rem; color: var(--blue); margin-top: 4px; }
-.f .hint { font-size: 0.78rem; color: var(--text-3); margin-top: 4px; }
-.f .warn { font-size: 0.8rem; color: var(--amber); margin-top: 4px; }
-.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.row3 { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; }
-.btn { display: block; width: 100%; min-height: 54px; font-size: 1.08rem; font-weight: 700; font-family: var(--font); border-radius: 12px; border: none; background: var(--green); color: #fff; cursor: pointer; padding: 12px 16px; }
-.btn:disabled { opacity: 0.45; cursor: default; }
-.btn.sec { background: var(--bg-2); color: var(--text); border: 1.5px solid var(--border); }
-.btn.small { min-height: 44px; font-size: 0.95rem; font-weight: 600; width: auto; display: inline-block; }
-.btn.danger { background: var(--red-pale); color: var(--red); }
-.nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom)); z-index: 10; }
-.nav-in { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; }
-.nav-in .btn.sec { flex: 0 0 34%; }
-.msg { padding: 12px 14px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 14px; }
-.msg.err { background: var(--red-pale); color: var(--red); }
-.msg.ok { background: var(--green-pale); color: var(--green); }
-.msg.info { background: var(--blue-pale); color: var(--blue); }
-.msg.warn { background: var(--amber-pale); color: var(--amber); }
-.dob { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 10px; }
-.dob input { text-align: center; font-size: 1.3rem; }
-.cat-h { font-size: 0.82rem; font-weight: 800; color: var(--green); text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 8px; }
-.capo { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-.capo-n { font-weight: 600; margin-bottom: 8px; }
-.yn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.yn button { min-height: 46px; font-size: 1rem; font-family: var(--font); font-weight: 600; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg-2); color: var(--text); cursor: pointer; }
-.yn button.on-si { background: var(--green); border-color: var(--green); color: #fff; }
-.yn button.on-no { background: var(--text-3); border-color: var(--text-3); color: #fff; }
-.capo .sel { margin-top: 8px; }
-.crop-wrap { position: relative; width: 245px; height: 295px; margin: 12px auto; border-radius: 10px; overflow: hidden; background: #000; touch-action: none; }
-.crop-wrap canvas { width: 100%; height: 100%; display: block; cursor: grab; }
-.crop-guide { position: absolute; inset: 0; pointer-events: none; }
-.crop-guide svg { width: 100%; height: 100%; }
-.zoom { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; }
-.zoom input { flex: 1; accent-color: var(--green); height: 32px; }
-.foto-prev { width: 98px; height: 118px; border-radius: 8px; object-fit: cover; background: var(--bg-2); border: 1px solid var(--border); display: block; }
-.slot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px; background: var(--bg-2); border-radius: 12px; margin-bottom: 10px; }
-.slot-i { flex: 1; min-width: 0; }
-.slot-t { font-weight: 600; font-size: 0.98rem; }
-.slot-m { font-size: 0.8rem; color: var(--text-3); word-break: break-word; }
-.slot-m.ok { color: var(--green); font-weight: 600; }
-.thumb { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; background: var(--card); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-.slot-b { display: flex; gap: 8px; width: 100%; }
-.slot-b .btn { flex: 1; min-height: 44px; font-size: 0.92rem; padding: 6px 10px; }
-.duo { display: flex; gap: 10px; }
-.duo .btn { flex: 1; }
-.sum li { margin-bottom: 6px; color: var(--text-2); }
-.sum .k { color: var(--text-3); }
-.chk { display: flex; gap: 12px; align-items: flex-start; font-size: 0.98rem; padding: 14px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; }
-.chk input { width: 26px; height: 26px; flex-shrink: 0; accent-color: var(--green); margin: 0; }
+/* ══ DESIGN SYSTEM (fonte: riferimento-grafica.html, come area-riservata.html) ══
+   Token, Inter, raggi, pulsanti gialli, chip, card, campi e pillole dell'app.
+   Mobile first: colonna unica, barra azioni fissa in basso. */
+:root{--bg:#F3F6FB;--surface:#FFFFFF;--line:#DCE5F2;--line2:#C5D3E8;--fg:#072F63;--muted:#44597D;--head:#0A4C9E;--head-fg:#FFFFFF;--head-muted:#C9DBF5;--accent:#0A4C9E;--accent-bg:#0A4C9E;--accent-fg:#FFFFFF;--soft:#DCE9FA;--yellow:#FFC20E;--yellow-soft:#FFF1BF;--on-yellow:#072F63;--grey-bg:#E7EAF0;--red:#B42318;--red-soft:#FDE4E1;--shadow:0 12px 40px rgba(7,47,99,.22);--font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --paper:#FFFFFF;--paper-line:#C5D3E8;--paper-muted:#44597D;--photo-bg:#000000;--safe-b:env(safe-area-inset-bottom,0px);--col:640px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}
+
+/* ── base ── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--head)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.wrap{max-width:var(--col);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hidden{display:none!important}
+.center{text-align:center}
+
+/* ── barra alta ── */
+.top{background:var(--head);color:var(--head-fg);padding-top:env(safe-area-inset-top,0px)}
+.topin{height:68px;display:flex;align-items:center;gap:12px}
+.brand-logo{width:40px;height:40px;border-radius:12px;background:var(--paper);object-fit:contain;padding:2px;flex-shrink:0}
+.top-t{font-size:16px;font-weight:800;line-height:1.15}
+.top-s{font-size:12px;color:var(--head-muted)}
+
+/* ── avanzamento ── */
+.prog{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-block:12px}
+.prog-bar{display:block;width:100%;height:12px;border:0;border-radius:999px;background:var(--grey-bg);overflow:hidden;-webkit-appearance:none;appearance:none}
+.prog-bar::-webkit-progress-bar{background:var(--grey-bg);border-radius:999px}
+.prog-bar::-webkit-progress-value{background:var(--yellow);border-radius:999px}
+.prog-bar::-moz-progress-bar{background:var(--yellow);border-radius:999px}
+.prog-l{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:700;color:var(--fg)}
+#progStep{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--yellow-soft);color:var(--fg)}
+
+/* ── pagina ── */
+main{padding-top:24px;padding-bottom:calc(112px + var(--safe-b))}
+h1{font-size:26px;font-weight:800;letter-spacing:-.8px;line-height:1.1;text-wrap:balance;margin:4px 0 10px}
+h2{font-size:18px;font-weight:800;margin:26px 0 10px}
+p{margin:0 0 12px;color:var(--muted)}
+p strong{color:var(--fg)}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+.load{margin-top:40px}
+.blu{color:var(--accent);font-weight:700}
+.amb{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--yellow-soft);color:var(--fg)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
+.big-ico{font-size:52px;margin:20px 0 6px}
+.link-btn{background:none;border:0;color:var(--accent);font-size:15px;font-weight:700;padding:10px 0;text-decoration:underline}
+
+/* ── campi ── */
+.f{margin-bottom:14px}
+.f:last-child{margin-bottom:0}
+.f label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.f input,.f select,.sel{width:100%;height:46px;padding:0 12px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--fg);font-size:16px;-webkit-appearance:none;appearance:none}
+.f select,.sel{padding-right:36px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.f input:focus,.f select:focus,.sel:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.f.changed input{border-color:var(--accent);background:var(--soft)}
+.f .was{font-size:12px;font-weight:600;color:var(--accent);margin-top:6px}
+.f .hint{font-size:12px;color:var(--muted);margin-top:6px}
+.f .warn{font-size:13px;font-weight:600;color:var(--fg);background:var(--yellow-soft);border-radius:12px;padding:8px 12px;margin-top:6px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:12px}
+.dob{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:12px}
+.dob .f{margin:0}
+.dob input{height:56px;text-align:center;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ── pulsanti: giallo = azione principale, bordo = secondaria ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;height:46px;padding:0 20px;border-radius:14px;border:1px solid var(--yellow);background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:15px;white-space:nowrap;text-decoration:none}
+.btn:hover{filter:brightness(.96)}
+.btn:disabled{opacity:.5;cursor:default;filter:none}
+.btn.sec{background:var(--surface);border-color:var(--line2);color:var(--accent);font-weight:700}
+.btn.sec:hover{border-color:var(--accent);filter:none}
+.btn.danger{background:var(--surface);border-color:var(--line2);color:var(--red);font-weight:700}
+.btn.danger:hover{border-color:var(--red);filter:none}
+.btn.small{width:auto;height:38px;padding:0 14px;font-size:14px;border-radius:12px}
+.cat-add{margin-bottom:8px}
+.duo{display:flex;gap:10px}
+.duo .btn{flex:1;min-width:0}
+#firmaBox .duo{margin-top:10px}
+
+/* ── barra azioni in basso ── */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding-top:10px;padding-bottom:calc(10px + var(--safe-b))}
+.nav-in{display:flex;gap:10px}
+.nav-in .btn.sec{flex:0 0 34%}
+
+/* ── messaggi ── */
+.msg{padding:12px 16px;border-radius:16px;font-size:14px;font-weight:600;margin-bottom:14px}
+.msg.err{background:var(--red-soft);color:var(--red)}
+.msg.ok{background:var(--soft);color:var(--fg)}
+.msg.info{background:var(--soft);color:var(--accent)}
+.msg.warn{background:var(--yellow-soft);color:var(--fg)}
+#stato{margin-top:14px}
+
+/* ── taglie e DPI: capi come card, Ce l'ho / Non ce l'ho come chip ── */
+.cat-h{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:22px 2px 8px}
+.capo{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 16px;margin-bottom:10px}
+.capo-n{font-weight:700;font-size:15px;margin-bottom:10px}
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.yn button{height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--fg);font-weight:600;font-size:14px;white-space:nowrap}
+.yn button:hover{border-color:var(--accent)}
+.yn button.on-si{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-fg)}
+.yn button.on-no{background:var(--grey-bg);border-color:var(--grey-bg);color:var(--fg)}
+.capo .sel{margin-top:10px}
+
+/* ── foto tessera ── */
+.foto-ok{display:flex;gap:14px;align-items:center}
+.foto-prev{width:98px;height:118px;border-radius:14px;object-fit:cover;background:var(--bg);border:1px solid var(--line);display:block;flex-shrink:0}
+#cropArea{margin-top:14px}
+.crop-tip{font-size:14px;color:var(--muted);text-align:center}
+.crop-wrap{position:relative;width:245px;height:295px;margin:12px auto;border-radius:14px;overflow:hidden;background:var(--photo-bg);touch-action:none}
+.crop-wrap canvas{width:100%;height:100%;display:block;cursor:grab}
+.crop-guide{position:absolute;inset:0;pointer-events:none}
+.crop-guide svg{width:100%;height:100%}
+.crop-oval{stroke:var(--paper);stroke-opacity:.8}
+.zoom{display:flex;align-items:center;gap:10px;margin:6px 0 10px}
+.zoom input{flex:1;accent-color:var(--accent-bg);height:32px}
+#cropInfo{margin-bottom:10px}
+.mt{margin-top:6px}
+
+/* ── documenti ── */
+.slot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:20px;margin-bottom:10px}
+.slot-i{flex:1;min-width:0}
+.slot-t{font-weight:700;font-size:15px}
+.slot-m{font-size:13px;color:var(--muted);word-break:break-word}
+.slot-m.ok{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--soft);color:var(--accent);margin-top:2px}
+.thumb{width:54px;height:54px;border-radius:14px;object-fit:cover;background:var(--yellow-soft);border:0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.slot-b{display:flex;gap:8px;width:100%}
+.slot-b .btn{flex:1;min-width:0;height:40px;padding:0 10px;font-size:14px;border-radius:12px}
+
+/* ── riepilogo, privacy, firma ── */
+.sum{padding-left:18px;margin:0}
+.sum ul{padding-left:16px;margin:4px 0 8px}
+.sum li{margin-bottom:6px;color:var(--fg)}
+.sum .k{color:var(--muted)}
+details.priv{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:14px 18px;margin-bottom:12px;font-size:14px;color:var(--muted)}
+details.priv summary{font-weight:700;color:var(--accent);cursor:pointer}
+details.priv p{margin:10px 0 0}
+.chk{display:flex;gap:12px;align-items:flex-start;font-size:15px;font-weight:600;padding:14px 16px;background:var(--surface);border:1px solid var(--line2);border-radius:20px;cursor:pointer}
+.chk:has(input:checked){border-color:var(--accent);background:var(--soft)}
+.chk input{width:22px;height:22px;flex-shrink:0;accent-color:var(--accent-bg);margin:0}
 /* Riquadro firma: sempre "foglio bianco" con inchiostro scuro, anche in tema scuro */
-.firma-wrap { position: relative; background: #fff; border: 1.5px dashed #9a9aa1; border-radius: 12px; overflow: hidden; touch-action: none; margin-top: 10px; }
-.firma-wrap canvas { display: block; width: 100%; aspect-ratio: 3 / 1; cursor: crosshair; touch-action: none; }
-.firma-linea { position: absolute; left: 6%; right: 6%; bottom: 22%; border-bottom: 1px solid #c7c7cc; pointer-events: none; }
-.firma-ph { position: absolute; left: 0; right: 0; top: 38%; text-align: center; color: #b0b0b6; font-size: 0.95rem; pointer-events: none; }
-.firma-img { display: block; width: 100%; background: #fff; border: 1.5px solid var(--border); border-radius: 12px; margin-top: 10px; }
-details.priv { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-2); }
-details.priv summary { font-weight: 700; color: var(--text); cursor: pointer; }
-.center { text-align: center; }
-.big-ico { font-size: 3.2rem; margin: 20px 0 6px; }
-.link-btn { background: none; border: none; color: var(--blue); font-size: 0.98rem; font-family: var(--font); padding: 10px 0; cursor: pointer; text-decoration: underline; }
-.hidden { display: none !important; }
+.firma-wrap{position:relative;background:var(--paper);border:2px dashed var(--paper-line);border-radius:20px;overflow:hidden;touch-action:none;margin-top:10px}
+.firma-wrap canvas{display:block;width:100%;aspect-ratio:3 / 1;cursor:crosshair;touch-action:none}
+.firma-linea{position:absolute;left:6%;right:6%;bottom:22%;border-bottom:1px solid var(--paper-line);pointer-events:none}
+.firma-ph{position:absolute;left:0;right:0;top:38%;text-align:center;color:var(--paper-muted);font-size:14px;font-weight:600;pointer-events:none}
+.firma-img{display:block;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:20px;margin-top:10px}
+.firma-img+.slot-m{margin-top:8px}
+#firmaBox .btn.small{margin-top:8px}
+
+/* ── schermi più larghi ── */
+@media (min-width:600px){
+ h1{font-size:32px}
+ main{padding-top:32px}
+ .nav-in .btn.sec{flex:0 0 200px}
+}
+@media (max-width:380px){.dob{gap:8px}.dob input{font-size:20px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="top">
-  <img src="images/logo-sezione.png" alt="">
-  <div><div class="top-t">Protezione Civile ANA</div><div class="top-s">Casale Monferrato — aggiornamento dati</div></div>
-</div>
+<header class="top">
+  <div class="wrap topin">
+    <img class="brand-logo" src="images/logo-sezione.png" alt="">
+    <div><div class="top-t">Protezione Civile ANA</div><div class="top-s">Casale Monferrato — aggiornamento dati</div></div>
+  </div>
+</header>
 <div class="prog hidden" id="prog">
-  <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
-  <div class="prog-l"><span id="progStep"></span><span id="progName"></span></div>
+  <div class="wrap">
+    <progress class="prog-bar" id="progFill" max="100" value="0"></progress>
+    <div class="prog-l"><span id="progStep"></span><span id="progName"></span></div>
+  </div>
 </div>
-<main id="app"><p class="center" style="margin-top:40px">Caricamento…</p></main>
-<div class="nav hidden" id="nav"><div class="nav-in" id="navIn"></div></div>
+<main class="wrap" id="app"><p class="center load">Caricamento…</p></main>
+<div class="nav hidden" id="nav"><div class="wrap nav-in" id="navIn"></div></div>
 
 <script>
 'use strict';
@@ -263,7 +328,7 @@ function setProg() {
   const i = PASSI.findIndex(p => p.id === S.passo);
   $('prog').classList.toggle('hidden', i < 0);
   if (i < 0) return;
-  $('progFill').style.width = Math.round(((i + 1) / PASSI.length) * 100) + '%';
+  $('progFill').value = Math.round(((i + 1) / PASSI.length) * 100);
   $('progStep').textContent = 'Passo ' + (i + 1) + ' di ' + PASSI.length;
   $('progName').textContent = PASSI[i].nome;
 }
@@ -293,7 +358,7 @@ function renderVerifica(errore) {
     + '<div class="f"><label for="dM">Mese</label><input id="dM" inputmode="numeric" maxlength="2" placeholder="MM" autocomplete="bday-month"></div>'
     + '<div class="f"><label for="dA">Anno</label><input id="dA" inputmode="numeric" maxlength="4" placeholder="AAAA" autocomplete="bday-year"></div>'
     + '</div></div>'
-    + '<p style="font-size:0.85rem;color:var(--text-3)">Dopo 5 tentativi sbagliati il link si blocca.</p>';
+    + '<p class="note">Dopo 5 tentativi sbagliati il link si blocca.</p>';
   setNav('<button class="btn" id="btnVerifica" onclick="verifica()">Continua</button>');
   const g = $('dG'), m = $('dM'), a = $('dA');
   g.addEventListener('input', () => { if (g.value.length === 2) m.focus(); });
@@ -344,7 +409,7 @@ function renderAnagrafica() {
   const p = S.info.proposta;
   let html = '<h1>I tuoi dati</h1>';
   if (p) html += '<div class="msg info">Hai già inviato i tuoi dati il ' + esc(fmtDataOra(p.inviata_il)) + '. Sono in attesa di controllo: puoi correggerli e inviarli di nuovo.</div>';
-  html += '<p>Controlla i dati e correggi quelli sbagliati o mancanti. I campi che modifichi diventano <span style="color:var(--blue);font-weight:600">blu</span>.</p>';
+  html += '<p>Controlla i dati e correggi quelli sbagliati o mancanti. I campi che modifichi diventano <span class="blu">blu</span>.</p>';
   const gruppi = [
     ['Chi sei', ['cognome', 'nome', 'codice_fiscale', 'data_nascita', 'luogo_nascita', 'provincia_nascita']],
     ['Dove abiti', ['indirizzo', 'civico', 'cap', 'citta', 'provincia']],
@@ -423,8 +488,8 @@ function renderDpi() {
   const altre = cat.filter(c => !visibili.includes(c));
   visibili.forEach(c => { html += htmlCategoria(c); });
   if (altre.length) {
-    html += '<h2>Altre dotazioni</h2><p style="font-size:0.9rem">Se hai anche capi di queste categorie, aprile e compilale:</p>';
-    altre.forEach(c => { html += '<button class="btn sec" style="margin-bottom:8px" onclick="apriCategoria(\'' + esc(c) + '\')">+ ' + esc(c) + '</button>'; });
+    html += '<h2>Altre dotazioni</h2><p class="note">Se hai anche capi di queste categorie, aprile e compilale:</p>';
+    altre.forEach(c => { html += '<button class="btn sec cat-add" onclick="apriCategoria(\'' + esc(c) + '\')">+ ' + esc(c) + '</button>'; });
   }
   $('app').innerHTML = html;
   navPasso('vai(\'foto\')');
@@ -465,9 +530,9 @@ function renderFoto() {
   let html = '<h1>Foto per il tesserino</h1>'
     + '<p>Serve una foto recente, a colori, di <strong>viso e spalle</strong>, guardando dritto, su sfondo chiaro. Il viso deve riempire quasi tutta la foto (70–80%).</p>';
   if (S.foto) {
-    html += '<div class="card" style="display:flex;gap:14px;align-items:center"><img class="foto-prev" src="' + S.foto.url + '" alt="foto scelta">'
+    html += '<div class="card foto-ok"><img class="foto-prev" src="' + S.foto.url + '" alt="foto scelta">'
       + '<div><div class="slot-m ok">✓ Foto pronta</div><div class="slot-m">' + (S.foto.blob.size / 1024).toFixed(0) + ' KB</div>'
-      + '<div class="slot-m" style="margin-top:6px">Puoi cambiarla qui sotto.</div></div></div>'
+      + '<div class="slot-m mt">Puoi cambiarla qui sotto.</div></div></div>'
       + bottoniFoto('sec');
   } else if (es) {
     html += '<div class="msg ok">✓ Hai già inviato una foto. Puoi sostituirla se vuoi.</div>'
@@ -478,12 +543,12 @@ function renderFoto() {
   // Due input: fotocamera frontale diretta, oppure una foto/file già presente
   html += '<input type="file" accept="image/*" capture="user" id="fotoCam" class="hidden" onchange="fotoScelta(this)">'
     + '<input type="file" accept="image/*" id="fotoFile" class="hidden" onchange="fotoScelta(this)">'
-    + '<div id="cropArea" class="hidden card" style="margin-top:14px">'
-    + '<div style="font-size:0.9rem;color:var(--text-2);text-align:center">Trascina la foto e usa lo zoom per far stare il viso dentro l\'ovale.</div>'
+    + '<div id="cropArea" class="hidden card">'
+    + '<div class="crop-tip">Trascina la foto e usa lo zoom per far stare il viso dentro l\'ovale.</div>'
     + '<div class="crop-wrap"><canvas id="cropCanvas" width="196" height="236"></canvas>'
-    + '<div class="crop-guide"><svg viewBox="0 0 196 236" preserveAspectRatio="none"><ellipse cx="98" cy="100" rx="56" ry="68" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.5" stroke-dasharray="4 3"/></svg></div></div>'
+    + '<div class="crop-guide"><svg viewBox="0 0 196 236" preserveAspectRatio="none"><ellipse cx="98" cy="100" rx="56" ry="68" class="crop-oval" fill="none" stroke-width="1.5" stroke-dasharray="4 3"/></svg></div></div>'
     + '<div class="zoom"><span>➖</span><input type="range" id="cropZoom" min="100" max="400" value="100" oninput="crop.zoom=this.value/100;ridisegna()" aria-label="Zoom"><span>➕</span></div>'
-    + '<div id="cropInfo" class="slot-m center" style="margin-bottom:10px"></div>'
+    + '<div id="cropInfo" class="slot-m center"></div>'
     + '<button class="btn" onclick="confermaFoto()">Usa questa foto</button></div>';
   $('app').innerHTML = html;
   navPasso('vai(\'documenti\')', (S.foto || es) ? 'Avanti →' : 'Salta per ora →');
@@ -491,7 +556,7 @@ function renderFoto() {
 function bottoniFoto(cls) {
   return '<div class="duo"><button class="btn ' + cls + '" onclick="scegliFoto(\'cam\')">📷 Scatta foto</button>'
     + '<button class="btn sec" onclick="scegliFoto(\'file\')">📎 Allega file</button></div>'
-    + '<p style="font-size:0.82rem;color:var(--text-3);margin-top:8px">Con "Allega file" scegli una foto già presente sul telefono o sul computer.</p>';
+    + '<p class="note">Con "Allega file" scegli una foto già presente sul telefono o sul computer.</p>';
 }
 function scegliFoto(modo) { $(modo === 'cam' ? 'fotoCam' : 'fotoFile').click(); }
 function fotoScelta(input) {
@@ -568,7 +633,7 @@ function renderDocumenti() {
     LATI.forEach(lato => { html += htmlSlot(sez.tipo, lato); });
   });
   html += '<h2>📜 Attestati e abilitazioni</h2>'
-    + '<p style="font-size:0.9rem">Ad esempio corsi di protezione civile, antincendio, primo soccorso, motosega, HACCP.</p>';
+    + '<p class="note">Ad esempio corsi di protezione civile, antincendio, primo soccorso, motosega, HACCP.</p>';
   S.esistenti.filter(d => d.tipo === 'ATTESTATO' || d.tipo === 'ABILITAZIONE').forEach(d => {
     html += '<div class="slot"><div class="thumb">📄</div><div class="slot-i"><div class="slot-t">' + esc(d.descrizione || (d.tipo === 'ATTESTATO' ? 'Attestato' : 'Abilitazione')) + '</div>'
       + '<div class="slot-m ok">✓ già inviato' + (d.scadenza ? ' — scade il ' + esc(fmtData(d.scadenza)) : '') + '</div></div>'
@@ -587,7 +652,7 @@ function renderDocumenti() {
     + '<input type="file" accept="' + ACCEPT_DOC + '" id="attFile" class="hidden" onchange="aggiungiAttestato(this)">'
     + '<div class="duo"><button class="btn sec" onclick="scegliAttestato(\'cam\')">📷 Scatta foto</button>'
     + '<button class="btn sec" onclick="scegliAttestato(\'file\')">📎 Allega file</button></div></div>'
-    + '<p style="font-size:0.85rem;color:var(--text-3)">File in totale: ' + contaFile() + ' su ' + ((S.info.limiti && S.info.limiti.max_file) || 15) + '.</p>';
+    + '<p class="note">File in totale: ' + contaFile() + ' su ' + ((S.info.limiti && S.info.limiti.max_file) || 15) + '.</p>';
   $('app').innerHTML = html;
   navPasso('vai(\'riepilogo\')');
 }
@@ -711,20 +776,20 @@ function renderRiepilogo(errore) {
   const nuoviDoc = Object.keys(S.slot).filter(k => S.slot[k]).length + S.attestati.length;
   let html = '<h1>Riepilogo</h1><p>Controlla cosa stai per inviare. Un incaricato della Sezione verificherà i dati prima di aggiornarli.</p>';
   if (errore) html += '<div class="msg err">' + esc(errore) + '</div>';
-  html += '<div class="card"><ul class="sum" style="padding-left:18px;margin:0">';
+  html += '<div class="card"><ul class="sum">';
   html += '<li><strong>Dati personali:</strong> ' + (mod.length ? mod.length + ' modifiche' : 'nessuna modifica') + '</li>';
   if (mod.length) {
-    html += '<ul style="padding-left:16px;margin:4px 0 8px">' + mod.map(k => '<li><span class="k">' + esc(LABEL[k]) + ':</span> ' + esc(k === 'data_nascita' ? fmtData(S.dati[k]) : S.dati[k]) + '</li>').join('') + '</ul>';
+    html += '<ul>' + mod.map(k => '<li><span class="k">' + esc(LABEL[k]) + ':</span> ' + esc(k === 'data_nascita' ? fmtData(S.dati[k]) : S.dati[k]) + '</li>').join('') + '</ul>';
   }
-  html += '<li><strong>Taglie e DPI:</strong> ' + dpi.length + ' capi indicati' + (senzaTaglia.length ? ' <span style="color:var(--amber)">(' + senzaTaglia.length + ' senza taglia)</span>' : '') + '</li>';
-  html += '<li><strong>Foto:</strong> ' + (S.foto ? 'nuova foto pronta' : (fotoEsistente() ? 'già inviata' : '<span style="color:var(--amber)">non caricata</span>')) + '</li>';
+  html += '<li><strong>Taglie e DPI:</strong> ' + dpi.length + ' capi indicati' + (senzaTaglia.length ? ' <span class="amb">(' + senzaTaglia.length + ' senza taglia)</span>' : '') + '</li>';
+  html += '<li><strong>Foto:</strong> ' + (S.foto ? 'nuova foto pronta' : (fotoEsistente() ? 'già inviata' : '<span class="amb">non caricata</span>')) + '</li>';
   html += '<li><strong>Documenti:</strong> ' + (nuoviDoc ? nuoviDoc + ' nuovi file' : 'nessun nuovo file') + (S.esistenti.filter(d => d.tipo !== 'FOTO').length ? ', ' + S.esistenti.filter(d => d.tipo !== 'FOTO').length + ' già inviati' : '') + '</li>';
   html += '</ul></div>';
   html += '<h2>Informativa privacy</h2><details class="priv"><summary>Leggi l\'informativa</summary>' + INFORMATIVA_HTML + '</details>'
     + '<label class="chk"><input type="checkbox" id="priv" ' + (S.privacy ? 'checked' : '') + ' onchange="S.privacy=this.checked;aggiornaBtnInvia()"> <span>Ho letto l\'informativa e autorizzo il trattamento dei miei dati personali.</span></label>'
-    + '<h2>Firma</h2><p style="font-size:0.9rem">Firma con il dito qui sotto: la firma serve ad autorizzare il trattamento dei tuoi dati personali.</p>'
+    + '<h2>Firma</h2><p class="note">Firma con il dito qui sotto: la firma serve ad autorizzare il trattamento dei tuoi dati personali.</p>'
     + '<div id="firmaBox"></div>'
-    + '<div id="stato" style="margin-top:14px"></div>';
+    + '<div id="stato"></div>';
   $('app').innerHTML = html;
   const i = PASSI.findIndex(p => p.id === 'riepilogo');
   setNav('<button class="btn sec" onclick="vai(\'' + PASSI[i - 1].id + '\')">← Indietro</button>'
@@ -741,15 +806,15 @@ function renderFirma() {
   const box = $('firmaBox'); if (!box) return;
   if (S.firma) {
     box.innerHTML = '<img class="firma-img" src="' + S.firma.url + '" alt="la tua firma">'
-      + '<div class="slot-m ok" style="margin-top:6px">✓ Firma pronta</div>'
-      + '<button class="btn sec small" style="margin-top:8px" onclick="rifaiFirma()">Rifai la firma</button>';
+      + '<div class="slot-m ok">✓ Firma pronta</div>'
+      + '<button class="btn sec small" onclick="rifaiFirma()">Rifai la firma</button>';
   } else if (firmaEsistente()) {
     box.innerHTML = '<div class="msg ok">✓ Hai già firmato con l\'invio precedente.</div>'
       + '<button class="btn sec small" onclick="rifaiFirma(true)">Firma di nuovo</button>';
   } else {
     box.innerHTML = '<div class="firma-wrap"><canvas id="firmaCanvas"></canvas><div class="firma-linea"></div><div class="firma-ph" id="firmaPh">firma qui</div></div>'
-      + '<div style="display:flex;gap:10px;margin-top:10px"><button class="btn sec" style="flex:1" onclick="pulisciFirma()">Cancella</button>'
-      + '<button class="btn" style="flex:1" onclick="confermaFirma()">Conferma firma</button></div>';
+      + '<div class="duo"><button class="btn sec" onclick="pulisciFirma()">Cancella</button>'
+      + '<button class="btn" onclick="confermaFirma()">Conferma firma</button></div>';
     attivaFirma();
   }
   aggiornaBtnInvia();
@@ -767,7 +832,7 @@ function attivaFirma() {
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
     firmaPad.ultimo = pos(e);
     ctx.beginPath(); ctx.arc(firmaPad.ultimo.x, firmaPad.ultimo.y, 2, 0, Math.PI * 2); ctx.fill();
-    const ph = $('firmaPh'); if (ph) ph.style.display = 'none';
+    const ph = $('firmaPh'); if (ph) ph.classList.add('hidden');
   });
   cv.addEventListener('pointermove', e => {
     if (!firmaPad.ultimo) return;
@@ -782,7 +847,7 @@ function pulisciFirma() {
   const cv = $('firmaCanvas'); if (!cv) return;
   cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
   firmaPad.punti = 0;
-  const ph = $('firmaPh'); if (ph) ph.style.display = '';
+  const ph = $('firmaPh'); if (ph) ph.classList.remove('hidden');
 }
 function confermaFirma() {
   const cv = $('firmaCanvas'); if (!cv) return;
