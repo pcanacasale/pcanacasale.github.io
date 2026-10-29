@@ -698,6 +698,17 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .gall-lb-next{right:16px}
 .gall-lb-caption{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:var(--photo-fg);font-size:14px;background:var(--photo-scrim);padding:6px 14px;border-radius:999px}
 
+/* ── finestre generate dal JS (attestati, lettera di attivazione) ── */
+.att-intv{margin-bottom:14px}
+.att-list{border:1px solid var(--line);border-radius:16px;padding:0 14px}
+.att-row{display:flex;align-items:center;gap:12px;min-height:52px;border-top:1px solid var(--line)}
+.att-row:first-child{border-top:0}
+.att-row .cf{font-size:13px;color:var(--muted)}
+.att-row .cf.manca{color:var(--red);font-weight:600}
+.att-azioni{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.att-status{min-height:20px;margin-top:12px}
+.lat-off{opacity:.4}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -1865,7 +1876,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=181"></script>
+<script src="area-riservata.js?v=182"></script>
 <script src="aggiornamento-dati.js?v=10"></script>
 </body>
 </html>

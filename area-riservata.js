@@ -3130,19 +3130,18 @@ async function apriGeneratoreAttestati(interventoId) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'attestatiOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay);z-index:500;display:flex;align-items:flex-end;justify-content:center';
+    overlay.className = 'ov';
     overlay.innerHTML =
-      '<div style="background:var(--bg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:1.2rem 1rem 2rem">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">'
-      + '<div style="font-size:1rem;font-weight:700;color:var(--testo)">📜 Genera attestati</div>'
-      + '<button class="btn-sm" onclick="chiudiGeneratoreAttestati()">✕</button>'
+      '<div class="sheet" role="dialog" aria-modal="true" aria-label="Genera attestati">'
+      + '<div class="shead"><h2>Genera attestati</h2>'
+      + '<button class="x" onclick="chiudiGeneratoreAttestati()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
       + '</div>'
-      + '<div id="attestatiBody"><div class="loading-msg">caricamento...</div></div>'
+      + '<div class="sbody" id="attestatiBody"><div class="loading-msg">Caricamento…</div></div>'
       + '</div>';
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'flex';
-  document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">caricamento...</div>';
+  document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">Caricamento…</div>';
 
   try {
     // Carica dati intervento
@@ -3160,7 +3159,7 @@ async function apriGeneratoreAttestati(interventoId) {
 
     renderGeneratoreAttestati(intv);
   } catch(e) {
-    document.getElementById('attestatiBody').innerHTML = '<div style="color:var(--red);font-size:0.8rem">Errore: ' + e.message + '</div>';
+    document.getElementById('attestatiBody').innerHTML = '<p class="bad">Errore: ' + e.message + '</p>';
   }
 }
 
@@ -3170,36 +3169,32 @@ function renderGeneratoreAttestati(intv) {
 
   var volHtml = '';
   if (!attestatiVolontari.length) {
-    volHtml = '<div style="font-size:0.8rem;color:var(--testo-3);padding:0.5rem 0">Nessun volontario associato a questo intervento.<br>Modifica l\'intervento e seleziona i volontari partecipanti.</div>';
+    volHtml = '<p class="note">Nessun volontario associato a questo intervento.<br>Modifica l\'intervento e seleziona i volontari partecipanti.</p>';
   } else {
-    volHtml = '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">'
-      + '<label style="font-size:0.78rem;color:var(--testo-3);cursor:pointer;display:flex;align-items:center;gap:0.4rem">'
-      + '<input type="checkbox" id="attestatiSelAll" onchange="toggleSelAll(this)" checked> Seleziona tutti</label>'
-      + '</div>';
-    volHtml += '<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden">';
-    attestatiVolontari.forEach(function(v, idx) {
-      volHtml += '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.8rem;border-bottom:0.5px solid var(--border)' + (idx === attestatiVolontari.length-1 ? ';border-bottom:none' : '') + '">'
-        + '<input type="checkbox" class="attestato-cb" data-id="' + v.id + '" checked style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0">'
-        + '<div style="flex:1;font-size:0.85rem;font-weight:500;color:var(--testo)">' + v.cognome + ' ' + v.nome + '</div>'
-        + (v.codice_fiscale ? '<div style="font-size:0.7rem;color:var(--testo-3)">' + v.codice_fiscale + '</div>' : '<div style="font-size:0.7rem;color:var(--amber)">CF mancante</div>')
-        + '</div>';
+    volHtml = '<label class="inline-chk mb10"><input type="checkbox" id="attestatiSelAll" onchange="toggleSelAll(this)" checked> Seleziona tutti</label>';
+    volHtml += '<div class="att-list">';
+    attestatiVolontari.forEach(function(v) {
+      volHtml += '<label class="att-row">'
+        + '<input type="checkbox" class="attestato-cb" data-id="' + v.id + '" checked>'
+        + '<b class="grow">' + v.cognome + ' ' + v.nome + '</b>'
+        + (v.codice_fiscale ? '<span class="cf">' + v.codice_fiscale + '</span>' : '<span class="cf manca">CF mancante</span>')
+        + '</label>';
     });
     volHtml += '</div>';
   }
 
   document.getElementById('attestatiBody').innerHTML =
-    '<div style="background:var(--bg-2);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:1rem;font-size:0.82rem">'
-    + '<div style="font-weight:700;color:var(--testo);margin-bottom:0.2rem">' + (intv.evento || '—') + '</div>'
-    + '<div style="color:var(--testo-3)">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' | ' + intv.luogo : '') + '</div>'
+    '<div class="draft att-intv"><b>' + (intv.evento || '—') + '</b>'
+    + '<span class="sub">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' · ' + intv.luogo : '') + '</span>'
     + '</div>'
-    + '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Volontari (' + attestatiVolontari.length + ')</div>'
+    + '<div class="grp">Volontari (' + attestatiVolontari.length + ')</div>'
     + volHtml
-    + (attestatiVolontari.length ? '<div id="attestatiStatus" style="font-size:0.75rem;color:var(--testo-3);margin:0.8rem 0 0;min-height:1.2rem"></div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.8rem">'
-      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem" onclick="generaAttestatiSelezionati(' + intv.id + ')">📜 Genera attestati</button>'
-      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem;background:var(--bg-3);color:var(--testo)" onclick="generaAttestatiSelezionati(' + intv.id + ',true)">📄 PDF unico (stampa)</button>'
+    + (attestatiVolontari.length ? '<p id="attestatiStatus" class="note att-status"></p>'
+      + '<div class="att-azioni">'
+      + '<button class="btn pri" onclick="generaAttestatiSelezionati(' + intv.id + ')">Genera attestati</button>'
+      + '<button class="btn" onclick="generaAttestatiSelezionati(' + intv.id + ',true)">PDF unico (stampa)</button>'
       + '</div>'
-      + '<div id="attestatiRisultati" style="margin-top:0.8rem"></div>' : '');
+      + '<div id="attestatiRisultati" class="mt14"></div>' : '');
 }
 
 function toggleSelAll(cb) {
@@ -3250,17 +3245,17 @@ async function generaAttestatiSelezionati(interventoId, unico) {
 
   // Mostra risultati con azioni per ognuno
   if (risultati) {
-    risultati.innerHTML = '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Risultati</div>';
+    risultati.innerHTML = '<div class="grp">Risultati</div>';
     righe.forEach(function(r, i) {
       var riga = document.createElement('div');
       riga.id  = 'att-riga-' + i;
-      riga.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0;border-bottom:0.5px solid var(--border)';
+      riga.className = 'lr';
       if (r.blob) {
-        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;font-weight:500;color:var(--testo)">' + r.v.cognome + ' ' + r.v.nome + '</div>'
-          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" onclick="scaricaAttestato(' + i + ')">⬇️ Scarica</button>'
-          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" id="att-archivia-' + i + '" onclick="archiviaAttestato(' + i + ',' + intv.id + ')">📁 Archivia</button>';
+        riga.innerHTML = '<b class="grow">' + r.v.cognome + ' ' + r.v.nome + '</b>'
+          + '<button class="btn sm" onclick="scaricaAttestato(' + i + ')">Scarica</button>'
+          + '<button class="btn sm" id="att-archivia-' + i + '" onclick="archiviaAttestato(' + i + ',' + intv.id + ')">Archivia</button>';
       } else {
-        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;color:var(--red)">' + r.v.cognome + ' ' + r.v.nome + ' — errore: ' + r.errore + '</div>';
+        riga.innerHTML = '<span class="bad grow m0">' + r.v.cognome + ' ' + r.v.nome + ' — errore: ' + r.errore + '</span>';
       }
       risultati.appendChild(riga);
     });
@@ -9158,38 +9153,24 @@ async function apriModalLetteraAttivazione(volontarioId) {
 
   const overlay = document.createElement('div');
   overlay.id = 'letteraAttOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.className = 'ov';
   overlay.innerHTML = `
-    <div style="background:var(--bg-card);border-radius:var(--r-lg);box-shadow:var(--shadow);max-width:420px;width:100%;max-height:90vh;overflow-y:auto;padding:1.2rem;">
-      <h3 style="font-size:1rem;font-weight:600;color:var(--testo);margin-bottom:0.2rem;">📄 Lettera attivazione</h3>
-      <p style="font-size:0.78rem;color:var(--testo-3);margin-bottom:1rem;">${v.cognome} ${v.nome} — Art. 39 D.Lgs 1/2018</p>
-
-      <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin:0.6rem 0 0.3rem;">Ragione sociale ditta *</label>
-      <input class="vol-form-inp login-input" id="latDatoreLavoro" value="${v.datore_lavoro || ''}" placeholder="es. EPTA SPA" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
-
-      <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin:0.6rem 0 0.3rem;">Indirizzo ditta</label>
-      <input class="vol-form-inp login-input" id="latIndirizzoLavoro" value="${v.indirizzo_lavoro || ''}" placeholder="es. Via Achille Grandi 43" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
-
-      <div style="display:flex;gap:0.5rem;margin-top:0.6rem;">
-        <div style="flex:1;">
-          <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.3rem;">CAP</label>
-          <input class="vol-form-inp login-input" id="latCapLavoro" value="${v.cap_lavoro || ''}" placeholder="15033" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Lettera di attivazione">
+      <div class="shead"><h2>Lettera di attivazione</h2><button class="x" onclick="document.getElementById('letteraAttOverlay').remove()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="sbody form">
+        <p class="note m0">${v.cognome} ${v.nome} — Art. 39 D.Lgs 1/2018</p>
+        <label>Ragione sociale ditta *<input id="latDatoreLavoro" value="${v.datore_lavoro || ''}" placeholder="es. EPTA SPA"></label>
+        <label>Indirizzo ditta<input id="latIndirizzoLavoro" value="${v.indirizzo_lavoro || ''}" placeholder="es. Via Achille Grandi 43"></label>
+        <div class="row2">
+          <label>CAP<input id="latCapLavoro" value="${v.cap_lavoro || ''}" placeholder="15033"></label>
+          <label>Città<input id="latCittaLavoro" value="${v.citta_lavoro || ''}" placeholder="Casale Monferrato"></label>
         </div>
-        <div style="flex:2;">
-          <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.3rem;">Città</label>
-          <input class="vol-form-inp login-input" id="latCittaLavoro" value="${v.citta_lavoro || ''}" placeholder="Casale Monferrato" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
+        <label class="chk${hasDataFine ? '' : ' lat-off'}"><input type="checkbox" id="latIncludiDataFine" ${hasDataFine ? '' : 'disabled'}> Includi data fine nel periodo di attivazione</label>
+        ${hasDataFine ? '' : '<p class="note m0">Data fine non impostata sull\'intervento.</p>'}
+        <div class="actions">
+          <button type="button" class="btn" onclick="document.getElementById('letteraAttOverlay').remove()">Annulla</button>
+          <button type="button" class="btn pri" onclick="generaLetteraAttivazione()">Genera PDF</button>
         </div>
-      </div>
-
-      <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.9rem;font-size:0.82rem;color:var(--testo-2);${hasDataFine ? '' : 'opacity:0.4;'}">
-        <input type="checkbox" id="latIncludiDataFine" ${hasDataFine ? '' : 'disabled'}>
-        Includi data fine nel periodo di attivazione
-      </label>
-      ${hasDataFine ? '' : '<p style="font-size:0.7rem;color:var(--testo-4);margin-top:0.2rem;">Data fine non impostata sull\'intervento.</p>'}
-
-      <div style="display:flex;gap:0.6rem;margin-top:1.2rem;">
-        <button type="button" class="btn-sm" style="flex:1;padding:0.7rem;" onclick="document.getElementById('letteraAttOverlay').remove()">Annulla</button>
-        <button type="button" class="btn-primary" style="flex:1;margin-top:0;" onclick="generaLetteraAttivazione()">Genera PDF</button>
       </div>
     </div>
   `;
