@@ -333,7 +333,7 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
       'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siConvocazioni','siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
+      'siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
       'siEmergenze','siBot','siPosizione'
     ];
     allSidebarIds.forEach(function(id) {
@@ -364,7 +364,6 @@ function avviaDashboard() {
     if (hasPerm('documenti'))    showSi('siDocumenti');
     if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
-    if (hasPerm('convocazioni')) showSi('siConvocazioni');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
     showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
