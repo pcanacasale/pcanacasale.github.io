@@ -198,17 +198,112 @@ function hasPerm(key) {
   return isMaster || !!p[key];
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('open');
+// -- MENU (barra alta, barra bassa su telefono, pannello "Altro") --
+// Le voci stanno nel registro nascosto #navRegistry: avviaDashboard ne decide la
+// visibilità per ruolo e showPanel la voce attiva; qui le disegniamo soltanto.
+const NAV_DESK = ['siHome','siVolontari','siMezzi','siDotazioni','siInterventi'];
+const NAV_MOB  = ['siHome','siVolontari','siMezzi','siInterventi'];
+const NAV_GRUPPI = ['Persone','Risorse','Operativo','Gestione'];
+const NAV_IC = {
+  home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
+  user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
+  truck:'M2 6h12v10H2zM14 10h4l4 3v3h-8M6 19a1 1 0 1 0 .01 0M18 19a1 1 0 1 0 .01 0',
+  box:'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2',
+  clip:'M8 4h8v3H8zM6 5H5v16h14V5h-1M9 12h6M9 16h6', alert:'M12 3l10 18H2zM12 10v5M12 18v.5',
+  flag:'M5 21V4M5 4h12l-2 4 2 4H5', refresh:'M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4',
+  shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', gear:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  file:'M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h4', heart:'M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11',
+  image:'M3 4h18v16H3zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M21 15l-5-5L5 20', pin:'M12 21s-7-6.3-7-11a7 7 0 0 1 14 0c0 4.7-7 11-7 11M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  radio:'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+  inbox:'M3 13l3-9h12l3 9v7H3zM3 13h5l1 3h6l1-3h5', chart:'M4 20V10M10 20V4M16 20v-7M22 20H2', table:'M3 4h18v16H3zM3 10h18M3 15h18M9 4v16',
+  more:'M5 12h.01M12 12h.01M19 12h.01', logout:'M9 21H5V3h4M16 17l5-5-5-5M21 12H9', close:'M6 6l12 12M18 6L6 18'
+};
+function navIc(n, s) { s = s || 22; return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(NAV_IC[n]||NAV_IC.more)+'"/></svg>'; }
+function _navVoci() {
+  return Array.prototype.slice.call(document.querySelectorAll('#navRegistry > button'))
+    .filter(function(b){ return b.style.display !== 'none'; });
 }
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
+function _navLabel(b) { return b.firstChild ? b.firstChild.textContent.trim() : ''; }
+function _navBadge(b) { var s = b.querySelector('.si-badge.show'); return s && s.textContent ? '<span class="nbadge">'+s.textContent+'</span>' : ''; }
+function _navAltroOn(main) {
+  var a = document.querySelector('#navRegistry > button.active');
+  return !!a && main.indexOf(a.id) < 0;
 }
-function toggleSidebarGroup(btn) {
-  btn.closest('.sidebar-group').classList.toggle('collapsed');
+function _navAltroHtml(main) {
+  var voci = _navVoci().filter(function(b){ return main.indexOf(b.id) < 0; });
+  var h = '';
+  NAV_GRUPPI.forEach(function(g) {
+    var items = voci.filter(function(b){ return b.dataset.g === g; });
+    if (!items.length) return;
+    h += '<div class="grp">'+g+'</div><div class="pgrid">' + items.map(function(b) {
+      return '<button class="pitem'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+b.id+'\')">'+navIc(b.dataset.ic,20)+'<span>'+_navLabel(b)+'</span>'+_navBadge(b)+'</button>';
+    }).join('') + '</div>';
+  });
+  h += '<div class="grp">Account</div><div class="pgrid"><button class="pitem" onclick="chiudiAltro();logout()">'+navIc('logout',20)+'<span>Esci</span></button></div>';
+  return h;
 }
+function renderNav() {
+  var top = document.getElementById('topnav'), bot = document.getElementById('bottomnav');
+  if (!top || !bot) return;
+  var voci = _navVoci();
+  var vis = function(id){ return voci.filter(function(b){ return b.id === id; })[0]; };
+  var t = '';
+  NAV_DESK.forEach(function(id){ var b = vis(id); if (b) t += '<button class="tab'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')">'+_navLabel(b)+'</button>'; });
+  t += '<button class="tab'+(_navAltroOn(NAV_DESK)?' on':'')+'" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>';
+  top.innerHTML = t;
+  var m = '';
+  NAV_MOB.forEach(function(id){ var b = vis(id); if (b) m += '<button class="bt'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')"><span class="pill-i">'+navIc(b.dataset.ic)+'</span>'+_navLabel(b)+'</button>'; });
+  m += '<button class="bt'+(_navAltroOn(NAV_MOB)?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
+  bot.innerHTML = m;
+  var emg = document.getElementById('emgBtn'), siE = document.getElementById('siEmergenze');
+  if (emg && siE) {
+    emg.hidden = siE.style.display === 'none';
+    var n = siE.querySelector('.si-badge.show');
+    emg.innerHTML = navIc('alert',18) + '<span class="t">Emergenze</span>' + (n && n.textContent ? '<span class="n">'+n.textContent+'</span>' : '');
+  }
+  var pop = document.getElementById('altroPop');
+  if (pop && !pop.hidden) pop.innerHTML = _navAltroHtml(NAV_DESK);
+}
+function navVai(id) { chiudiAltro(); var b = document.getElementById(id); if (b) b.click(); window.scrollTo(0, 0); }
+function toggleAltro() {
+  if (window.matchMedia('(max-width:860px)').matches) {
+    var s = document.getElementById('altroSheet');
+    s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Altro"><div class="shead"><h2>Altro</h2><button class="x" onclick="chiudiAltro()" aria-label="Chiudi">'+navIc('close',18)+'</button></div><div class="sbody">'+_navAltroHtml(NAV_MOB)+'</div></div>';
+    s.hidden = false;
+    return;
+  }
+  var p = document.getElementById('altroPop');
+  if (p.hidden) { p.innerHTML = _navAltroHtml(NAV_DESK); p.hidden = false; } else p.hidden = true;
+}
+function chiudiAltro() {
+  var p = document.getElementById('altroPop'), s = document.getElementById('altroSheet');
+  if (p) p.hidden = true;
+  if (s) { s.hidden = true; s.innerHTML = ''; }
+}
+function renderWho() {
+  var n = document.getElementById('whoName'), a = document.getElementById('whoAv');
+  if (!n || !currentUser) return;
+  var nome = currentUser.nome || '';
+  a.textContent = nome.split(' ').map(function(x){ return x[0] || ''; }).join('').slice(0,2).toUpperCase() || '—';
+  n.innerHTML = '<span>' + escapeHtmlNav(nome.split(' ')[0]) + '<small>' + escapeHtmlNav(currentUser.ruolo || '') + '</small></span>';
+}
+function escapeHtmlNav(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+document.addEventListener('click', function(e) {
+  var p = document.getElementById('altroPop');
+  if (p && !p.hidden && !e.target.closest('#altroPop') && !e.target.closest('.tab')) p.hidden = true;
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') chiudiAltro(); });
+document.addEventListener('DOMContentLoaded', function() {
+  var reg = document.getElementById('navRegistry');
+  if (!reg) return;
+  new MutationObserver(function(){ renderNav(); renderWho(); })
+    .observe(reg, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['style','class'] });
+  renderNav();
+});
+
+// Compatibilità con le chiamate storiche (prima c'era la sidebar)
+function toggleSidebar() { toggleAltro(); }
+function closeSidebar() { chiudiAltro(); }
 
 function navTo(panel, title, btn) {
   showPanel(panel, null);
@@ -293,6 +388,9 @@ function avviaDashboard() {
 
   // Home cards
   buildHomeCards(isMaster, p);
+
+  renderNav();
+  renderWho();
 }
 
 
@@ -366,7 +464,7 @@ function buildHomeCards(isMaster, p) {
 async function caricaHomeDashboard() {
   const grid = document.getElementById('homeGrid');
   if (!grid) return;
-  grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">caricamento...</div>';
+  grid.innerHTML = '<p class="note">Caricamento…</p>';
 
   try {
     const oggi = new Date();
@@ -388,39 +486,33 @@ async function caricaHomeDashboard() {
       return parseInt(a.data_nascita.slice(8,10)) - parseInt(b.data_nascita.slice(8,10));
     });
 
-    let html = '';
-
-    // -- COMPLEANNI DEL MESE --
     const mesiIt = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    html += '<div class="home-section">';
-    html += '<div class="home-section-title">🎂 Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</div>';
-    if (!bdayMonth.length) {
-      html += '<div class="home-empty">Nessun compleanno questo mese</div>';
-    } else {
-      html += '<div class="home-list">';
-      bdayMonth.forEach(v => {
-        const giorno  = v.data_nascita.slice(8,10);
-        const isOggi  = v.data_nascita.slice(5,10) === (mm + '-' + String(oggi.getDate()).padStart(2,'0'));
-        const anno    = v.data_nascita.slice(0,4);
-        const eta     = oggi.getFullYear() - parseInt(anno);
-        const [bg, fg] = avatarColor(v.cognome);
-        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-        html += '<div class="home-list-row' + (isOggi ? ' home-list-row-today' : '') + '">'
-          + (v.foto_url
-              ? '<img src="' + v.foto_url + '" class="home-list-avatar" style="object-fit:cover">'
-              : '<div class="home-list-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-          + '<div class="home-list-info">'
-          + '<div class="home-list-name">' + v.cognome + ' ' + v.nome + (isOggi ? ' 🎉' : '') + '</div>'
-          + '<div class="home-list-sub">' + giorno + ' ' + mesiIt[oggi.getMonth()+1] + ' | ' + eta + ' anni</div>'
-          + '</div>'
-  
-          + '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div>';
+    const mesiBr = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const dtTile = function(iso) {
+      return '<div class="dt"><b>' + iso.slice(8,10) + '</b><span>' + mesiBr[parseInt(iso.slice(5,7)) - 1] + '</span></div>';
+    };
+    let left = '', right = '';
 
-    // -- REVISIONI DEL MESE -- (skip per volontari)
+    // -- ULTIMI INTERVENTI -- (skip per volontari)
+    if (!window.isVolUser) {
+      left += '<div class="card"><div class="phead mb6"><h2>Ultimi interventi</h2>'
+        + '<button class="btn sm" onclick="navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;))">Vedi tutti →</button></div>';
+      if (!interventi || !interventi.length) {
+        left += '<p class="note">Nessun intervento registrato.</p>';
+      } else {
+        interventi.forEach(i => {
+          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
+          left += '<div class="lr clk" onclick="' + onclickInt + '">'
+            + (i.data ? dtTile(i.data) : '<div class="dt"><b>—</b></div>')
+            + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + (i.tipo_attivita || '') + '</span></div>'
+            + '<div class="end">' + (i.n_volontari||0) + ' vol' + (i.n_ore ? ' · ' + i.n_ore + ' h' : '') + '</div>'
+            + '</div>';
+        });
+      }
+      left += '</div>';
+    }
+
+    // -- REVISIONI IN SCADENZA -- (skip per volontari)
     if (!window.isVolUser) try {
       var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
       var mezziAll  = await mezziRes.json();
@@ -441,56 +533,45 @@ async function caricaHomeDashboard() {
       revMese.forEach(function(m){ if (!revDaMostrare.find(function(x){return x.id===m.id;})) revDaMostrare.push(m); });
 
       if (revDaMostrare.length) {
-        html += '<div class="home-section">';
-        html += '<div class="home-section-title">🔧 Revisioni in scadenza</div>';
-        html += '<div class="home-list">';
+        right += '<div class="card"><h2>Revisioni in scadenza</h2>';
         revDaMostrare.forEach(function(m) {
-          var d    = new Date(m.revisione);
-          var diff = (d - oggi2) / (1000*60*60*24);
-          var cls  = diff < 0 ? 'var(--red)' : 'var(--amber)';
-          var lbl  = diff < 0 ? 'Scaduta' : 'Scade il';
-          html += '<div class="home-list-row" style="cursor:pointer" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
-            + '<div class="home-list-avatar" style="background:var(--bg-2);border-radius:9px">' + getMezzoIcon(m.automezzo).replace('<svg', '<svg style="width:20px;height:20px;stroke:var(--testo-3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"') + '</div>'
-            + '<div class="home-list-info">'
-            + '<div class="home-list-name">' + m.automezzo + '</div>'
-            + '<div class="home-list-sub" style="color:' + cls + '">' + lbl + ' ' + d.toLocaleDateString('it-IT') + '</div>'
-            + '</div>'
-            + '<div class="home-list-badge" style="background:var(--bg-2);color:' + cls + '">' + (m.targa||'—') + '</div>'
-            + '</div>';
+          var d       = new Date(m.revisione);
+          var scaduta = d < oggi2;
+          right += '<button class="todo" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
+            + '<span class="dot ' + (scaduta ? 'red' : 'yellow') + '"></span>'
+            + '<span class="grow"><b>' + m.automezzo + '</b> <span class="targa">' + (m.targa||'—') + '</span>'
+            + '<span class="sub">' + (scaduta ? 'Scaduta il ' : 'Scade il ') + d.toLocaleDateString('it-IT') + '</span></span>'
+            + '<span class="go">→</span></button>';
         });
-        html += '</div></div>';
+        right += '</div>';
       }
     } catch(e) {}
 
-    // -- ULTIMI INTERVENTI -- (skip per volontari)
-    if (!window.isVolUser) {
-      html += '<div class="home-section">';
-      html += '<div class="home-section-title">⚡ Ultimi interventi</div>';
-      if (!interventi || !interventi.length) {
-        html += '<div class="home-empty">Nessun intervento registrato</div>';
-      } else {
-        html += '<div class="home-list">';
-        interventi.forEach(i => {
-          const data = i.data ? new Date(i.data).toLocaleDateString('it-IT', {day:'2-digit',month:'short',year:'numeric'}) : '—';
-          var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
-          html += '<div class="home-list-row" style="cursor:pointer" onclick="' + onclickInt + '">'
-            + getTipoAttivitaAvatar(i.tipo_attivita, 36)
-            + '<div class="home-list-info">'
-            + '<div class="home-list-name">' + (i.evento||'—') + '</div>'
-            + '<div class="home-list-sub">' + data + (i.tipo_attivita ? ' | ' + i.tipo_attivita : '') + (i.n_ore ? ' | ' + i.n_ore + 'h' : '') + '</div>'
-            + '</div>'
-            + '<div class="home-list-badge" style="background:var(--green-pale);color:var(--green)">' + (i.n_volontari||0) + ' vol.</div>'
-            + '</div>';
-        });
-        html += '</div>';
-      }
-      html += '</div>';
+    // -- COMPLEANNI DEL MESE --
+    right += '<div class="card"><h2>Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</h2>';
+    if (!bdayMonth.length) {
+      right += '<p class="note">Nessun compleanno questo mese.</p>';
+    } else {
+      const oggiMd = mm + '-' + String(oggi.getDate()).padStart(2,'0');
+      bdayMonth.forEach(v => {
+        const isOggi   = v.data_nascita.slice(5,10) === oggiMd;
+        const eta      = oggi.getFullYear() - parseInt(v.data_nascita.slice(0,4));
+        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
+        right += '<div class="lr">'
+          + (v.foto_url ? '<img src="' + v.foto_url + '" class="av s40" alt="">' : '<span class="av s40">' + initials + '</span>')
+          + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + v.data_nascita.slice(8,10) + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</span></div>'
+          + (isOggi ? '<span class="pill p-yellow">Oggi</span>' : '')
+          + '</div>';
+      });
     }
+    right += '</div>';
 
-    grid.innerHTML = html;
+    grid.innerHTML = left
+      ? '<div class="cols">' + left + '<div class="stack">' + right + '</div></div>'
+      : '<div class="stack">' + right + '</div>';
 
   } catch(e) {
-    grid.innerHTML = '<div style="color:var(--testo-3);font-size:0.8rem;padding:0.5rem 0">Errore caricamento dashboard</div>';
+    grid.innerHTML = '<div class="empty">Errore nel caricamento della dashboard.</div>';
   }
 }
 
@@ -547,7 +628,7 @@ async function caricaBadgeRichieste() {
 
 async function caricaRichieste() {
   const list = document.getElementById('richiesteList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res       = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
     const richieste = await res.json();
@@ -555,23 +636,24 @@ async function caricaRichieste() {
     const badge     = document.getElementById('siBadgeRichieste');
     if (nonLette > 0) { badge.textContent = nonLette; badge.classList.add('show'); }
     else badge.classList.remove('show');
-    if (!richieste.length) { list.innerHTML = '<div class="loading-msg">nessuna richiesta.</div>'; return; }
+    if (!richieste.length) { list.innerHTML = '<div class="empty">Nessuna richiesta.</div>'; return; }
     list.innerHTML = '';
     richieste.forEach(r => {
       const data = new Date(r.created_at).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
       const div  = document.createElement('div');
-      div.className = 'richiesta-card ' + (r.letta ? 'letta' : 'nuova');
-      const tag   = r.letta ? '' : '<span class="badge-nuova">NUOVA</span>';
+      div.className = 'card ric-card' + (r.letta ? ' letta' : '');
+      const tag   = r.letta ? '<span class="pill p-grey">Letta</span>' : '<span class="pill p-yellow">Nuova</span>';
       const socio = r.socio_ana ? '<div>Socio ANA: ' + r.socio_ana + (r.gruppo_ana ? ' — ' + r.gruppo_ana : '') + '</div>' : '';
-      const msg   = r.messaggio ? '<div class="richiesta-msg">"' + r.messaggio + '"</div>' : '';
-      const tel   = r.telefono  ? ' | ' + r.telefono : '';
-      const btnL  = r.letta ? '<span style="font-size:0.65rem;color:var(--text-4)">✓ letta</span>' : '<button class="btn-sm btn-ok" onclick="segnaLetta(\'' + r.id + '\')">segna letta</button>';
-      div.innerHTML = '<div class="richiesta-top"><div><span class="richiesta-nome">' + r.nome + '</span>' + tag + '</div><span class="richiesta-data">' + data + '</span></div>'
-        + '<div class="richiesta-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
-        + '<div class="richiesta-actions">' + btnL + '<button class="btn-sm btn-danger" onclick="eliminaRichiesta(\'' + r.id + '\')">elimina</button></div>';
+      const msg   = r.messaggio ? '<div class="ric-msg">"' + r.messaggio + '"</div>' : '';
+      const tel   = r.telefono  ? ' · ' + r.telefono : '';
+      const ini   = (r.nome || '?').split(' ').map(x => x[0] || '').join('').slice(0,2).toUpperCase();
+      const btnL  = r.letta ? '' : '<button class="btn sm pri" onclick="segnaLetta(\'' + r.id + '\')">Segna letta</button>';
+      div.innerHTML = '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + r.nome + '</b><span class="sub">' + data + '</span></div>' + tag + '</div>'
+        + '<div class="ric-body"><div>' + r.email + tel + '</div>' + socio + msg + '</div>'
+        + '<div class="em-azioni">' + btnL + '<button class="btn sm danger" onclick="eliminaRichiesta(\'' + r.id + '\')">Elimina</button></div>';
       list.appendChild(div);
     });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 async function segnaLetta(id) {
@@ -606,20 +688,18 @@ async function caricaUtenti() {
       const row = document.createElement('div');
       row.className = 'impo-u-row' + (u.attivo ? '' : ' utente-disattivo');
       const initials = u.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-      const bgColor  = u.tipo_accesso === 'master' ? '#1a3a1f' : '#1c2a3a';
-      const fgColor  = u.tipo_accesso === 'master' ? '#3fb950' : '#58a6ff';
       const badgeClass = u.tipo_accesso === 'master' ? 'badge-master' : (u.attivo ? 'badge-std' : 'badge-off');
       const badgeText  = u.tipo_accesso === 'master' ? 'MASTER' : (u.attivo ? 'STD' : 'OFF');
       const p = u.permessi || {};
       const perms = u.tipo_accesso === 'master' ? '' :
-        '<div style="margin-top:0.2rem;display:flex;flex-wrap:wrap;gap:2px">'
-        + (p.volontari?'<span class="badge badge-std" style="font-size:0.5rem">Vol</span>':'')
-        + (p.interventi?'<span class="badge badge-std" style="font-size:0.5rem">Int</span>':'')
-        + (p.mezzi?'<span class="badge badge-std" style="font-size:0.5rem">Mez</span>':'')
-        + (p.richieste?'<span class="badge badge-std" style="font-size:0.5rem">Ric</span>':'')
-        + (p.visite?'<span class="badge badge-std" style="font-size:0.5rem">Vis</span>':'')
+        '<div class="int-pills">'
+        + (p.volontari?'<span class="badge badge-std">Vol</span>':'')
+        + (p.interventi?'<span class="badge badge-std">Int</span>':'')
+        + (p.mezzi?'<span class="badge badge-std">Mez</span>':'')
+        + (p.richieste?'<span class="badge badge-std">Ric</span>':'')
+        + (p.visite?'<span class="badge badge-std">Vis</span>':'')
         + '</div>';
-      row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
+      row.innerHTML = '<span class="av s40">' + initials + '</span>'
         + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' | ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
@@ -799,9 +879,9 @@ async function caricaLog() {
 let volontariData = [];
 let volCorrenteId = null;
 
+// Avatar come nel riferimento: giallo chiaro o azzurro, testo blu
 const AVATAR_COLORS = [
-  ['#e8f5ee','#1a7a4a'], ['#e8f0fb','#1a4a9a'], ['#fef3e8','#b45309'],
-  ['#f3e8ff','#7c3aed'], ['#fde8e8','#b91c1c'], ['#e8faf5','#0f766e']
+  ['var(--yellow-soft)','var(--fg)'], ['var(--soft)','var(--fg)']
 ];
 
 function avatarColor(str) {
@@ -812,21 +892,21 @@ function avatarColor(str) {
 async function caricaVolontari() {
   const list = document.getElementById('volList');
   if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<p class="note">Caricamento…</p>';
   if (!visteCache.length) caricaViste();
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty full-row">Errore nel caricamento.</div>'; }
 }
 
 function renderVolontari(data) {
   const list = document.getElementById('volList');
   if (!list) return;
   document.getElementById('volMostrati').textContent = data.length;
-  if (!data.length) { list.innerHTML = '<div class="loading-msg">nessun risultato.</div>'; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty full-row">Nessun volontario trovato.</div>'; return; }
 
   // Separa attivi+sospesi da dimessi
   const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
@@ -837,46 +917,52 @@ function renderVolontari(data) {
 
   if (dimessi.length) {
     const sep = document.createElement('div');
-    sep.style.cssText = 'margin:1.2rem 0 0.5rem;padding:0.4rem 0.7rem;font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;border-top:0.5px solid var(--border);grid-column:1 / -1';
+    sep.className = 'grp';
     sep.textContent = 'Dimessi (' + dimessi.length + ')';
     list.appendChild(sep);
     dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
   }
 }
 
-function _renderVolCard(v) {
+// Pillole di stato come nel riferimento: Attivo blu chiaro, Sospeso/Dimesso grigio
+const VOL_STATO_PILL = { ATTIVO:['Attivo','p-blue'], SOSPESO:['Sospeso','p-grey'], DIMESSO:['Dimesso','p-grey'] };
+function _volAvatar(v) {
   const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-  const [bg, fg] = avatarColor(v.cognome);
+  return v.foto_url ? '<img src="' + v.foto_url + '" class="av" alt="">' : '<span class="av">' + initials + '</span>';
+}
+function _volCardHtml(v, statoHtml, tags) {
+  return '<div class="vc">' + _volAvatar(v)
+    + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + (v.tipo_volontario||'—') + (v.mansione ? ' · ' + v.mansione : '') + '</span></div>'
+    + statoHtml + '</div>'
+    + '<div class="cfoot"><span class="vol-tags">' + (tags.length ? tags.join('') : '<span>' + (v.squadra || 'Nessuna squadra') + '</span>') + '</span>'
+    + '<b class="go">Apri scheda →</b></div>';
+}
+
+function _renderVolCard(v) {
   const stato = v.stato || 'ATTIVO';
   const card = document.createElement('div');
-  card.className = 'vol-card';
-  if (stato === 'DIMESSO') card.style.opacity = '0.55';
+  card.className = 'card clk vcard' + (stato === 'DIMESSO' ? ' off' : '');
   card.onclick = (e) => { if (!e.target.closest('.vol-stato-sel')) apriDettaglio(v.id); };
 
   const badges = [];
-  if (v.squadra) badges.push('<span class="vol-badge vb-squadra">' + v.squadra + '</span>');
-  if (v.dae) badges.push('<span class="vol-badge vb-ok">DAE</span>');
-  if (v.pronto_impiego) badges.push('<span class="vol-badge vb-ok">PI</span>');
+  if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
+  if (v.dae) badges.push('<span class="pill p-blue">DAE</span>');
+  if (v.pronto_impiego) badges.push('<span class="pill p-blue">PI</span>');
 
-  // Dropdown stato inline (se può modificare) o badge readonly
-  const statoCls = 'st-pill st-' + stato.toLowerCase();
+  // Dropdown stato inline (se può modificare) o pillola readonly
+  const statoCls = 'pill ' + (VOL_STATO_PILL[stato] || VOL_STATO_PILL.ATTIVO)[1];
   let statoSel;
   if (canModificaVolontari()) {
-    statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)">'
-      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>ATTIVO</option>'
-      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>SOSPESO</option>'
-      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>DIMESSO</option>'
+    statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" aria-label="Stato">'
+      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>Attivo</option>'
+      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>Sospeso</option>'
+      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>Dimesso</option>'
       + '</select>';
   } else {
-    statoSel = '<span class="' + statoCls + '">' + stato + '</span>';
+    statoSel = '<span class="' + statoCls + '">' + (VOL_STATO_PILL[stato] || [stato])[0] + '</span>';
   }
 
-  card.innerHTML = (v.foto_url
-      ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-      : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-    + '<div class="vol-card-info"><div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-    + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div></div>'
-    + '<div class="vol-card-badges" style="align-items:center;gap:4px">' + statoSel + badges.join('') + '</div>';
+  card.innerHTML = _volCardHtml(v, statoSel, badges);
   return card;
 }
 
@@ -955,14 +1041,13 @@ async function apriDettaglio(id) {
   if (btnMod) btnMod.style.display = canModificaVolontari() ? '' : 'none';
   detail.classList.add('open');
   detail.scrollTop = 0;
-  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const v    = data[0];
-    if (!v) { body.innerHTML = '<div class="loading-msg">volontario non trovato.</div>'; return; }
+    if (!v) { body.innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
     document.getElementById('volDetailTitle').textContent = v.cognome + ' ' + v.nome;
-    const [bg, fg] = avatarColor(v.cognome);
     const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
 
     const fmt = (val) => val ? '<span class="vol-field-value">' + val + '</span>' : '<span class="vol-field-value null">—</span>';
@@ -975,11 +1060,11 @@ async function apriDettaglio(id) {
     body.innerHTML = `
       <div class="vol-detail-hero">
         ${v.foto_url
-          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" style="object-fit:cover">'
-          : '<div class="vol-detail-avatar" style="background:'+bg+';color:'+fg+'">'+initials+'</div>'}
+          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" alt="">'
+          : '<div class="vol-detail-avatar">'+initials+'</div>'}
         <div>
           <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} | ${v.squadra||'—'}</div>
+          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
         </div>
       </div>
 
@@ -1009,8 +1094,8 @@ async function apriDettaglio(id) {
       <div class="vol-section">
         <div class="vol-section-head" onclick="toggleVolSection(this)">Contatti</div>
         <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
-          <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '" style="color:var(--blue);text-decoration:none;font-size:0.72rem">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
+          <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
+          <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
         </div>
       </div>
 
@@ -1043,14 +1128,14 @@ async function apriDettaglio(id) {
 
       <div class="vol-section" id="volInterventiSection">
         <div class="vol-section-head collapsed" onclick="toggleVolInterventi(${v.id})">
-          Interventi <span id="volInterventiCount" style="font-size:0.6rem;color:var(--green);margin-left:4px">caricamento...</span>
+          <span>Interventi <span class="sec-count" id="volInterventiCount"></span></span>
         </div>
         <div class="vol-section-body" id="volInterventiBody" style="display:none"></div>
       </div>
 
       <div class="vol-section">
         <div class="vol-section-head collapsed" onclick="toggleVolDoc(${v.id})">
-          Documenti <span id="volDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>
+          <span>Documenti <span class="sec-count" id="volDocCount"></span></span>
         </div>
         <div class="vol-section-body" id="volDocBody" style="display:none"></div>
       </div>
@@ -1076,7 +1161,7 @@ async function apriDettaglio(id) {
           <div class="vol-field"><span class="vol-field-label">Città ditta</span>${fmt(v.citta_lavoro)}</div>
         </div>
       </div>`;
-  } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { body.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 function toggleVolSection(headEl) {
@@ -1141,19 +1226,19 @@ async function toggleVolInterventi(volId) {
     const interventi = await res.json();
     if (count) count.textContent = '(' + interventi.length + ')';
     if (!interventi.length) {
-      body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun intervento registrato.</div>';
+      body.innerHTML = '<p class="note">Nessun intervento registrato.</p>';
       return;
     }
     body.innerHTML = interventi.map(i => {
       const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
       const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
-      return '<div class="vol-field" style="cursor:pointer" onclick="' + onclick + '">'
-        + '<span class="vol-field-label">' + dataFmt + '</span>'
-        + '<span class="vol-field-value" style="color:var(--text-1)">' + (i.evento||'—') + (i.tipo_attivita ? ' <span style="color:var(--green);font-size:0.6rem">&middot; ' + i.tipo_attivita + '</span>' : '') + '</span>'
+      return '<div class="lr clk" onclick="' + onclick + '">'
+        + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + dataFmt + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + '</span></div>'
+        + '<span class="go">→</span>'
         + '</div>';
     }).join('');
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 
@@ -1217,7 +1302,7 @@ function apriFormVolontario(id) {
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp" id="fCF" placeholder="RSSMRA80A01F205X" style="text-transform:uppercase"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp upper" id="fCF" placeholder="RSSMRA80A01F205X"></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -1236,7 +1321,7 @@ function apriFormVolontario(id) {
         <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
         <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
       </div>
-      <div class="vol-form-grid" style="margin-top:0.5rem">
+      <div class="vol-form-grid mt12">
         <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Data visita</label><input class="vol-form-inp" type="date" id="fDataVisita"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Stato visita</label>
@@ -1266,7 +1351,7 @@ function apriFormVolontario(id) {
       </div>
     </div>
     ${renderCampiCustomForm()}
-    ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">elimina volontario</button>' : ''}`;
+    ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">Elimina volontario</button>' : ''}`;
 
   // Se modifica, carica i dati
   // Precarica schema se vuoto
@@ -1556,7 +1641,7 @@ function renderCampiCustomForm() {
     html += '<div class="vol-form-section"><div class="vol-form-section-title" onclick="toggleFormSection(this)">' + sez + ' (custom)</div><div class="vol-form-grid">';
     campi.forEach(c => {
       if (c.tipo === 'boolean') {
-        html += '<label class="vol-form-check" style="grid-column:span 1"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
+        html += '<label class="vol-form-check"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
       } else {
         const inputType = c.tipo === 'date' ? 'date' : c.tipo === 'number' ? 'number' : 'text';
         html += '<div class="vol-form-field"><label class="vol-form-lbl">' + c.etichetta + '</label><input class="vol-form-inp" type="' + inputType + '" id="fc_' + c.campo_id + '"></div>';
@@ -1584,7 +1669,7 @@ async function renderSchemaList() {
   if (!list) return;
   const schema = await caricaSchema();
   if (!schema.length) {
-    list.innerHTML = '<div class="loading-msg" style="font-size:0.68rem">Nessun campo custom. Aggiungine uno qui sotto.</div>';
+    list.innerHTML = '<div class="loading-msg sm">Nessun campo custom. Aggiungine uno qui sotto.</div>';
     return;
   }
   list.innerHTML = '';
@@ -1596,7 +1681,7 @@ async function renderSchemaList() {
   });
   Object.entries(sezioni).forEach(([sez, campi]) => {
     const label = document.createElement('div');
-    label.style.cssText = 'font-size:0.58rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.6px;padding:0.4rem 0 0.2rem;';
+    label.className = 'grp';
     label.textContent = sez;
     list.appendChild(label);
     campi.forEach(c => {
@@ -1605,11 +1690,11 @@ async function renderSchemaList() {
       const tipoLabel = { text:'Testo', boolean:'Sì/No', date:'Data', number:'Numero' }[c.tipo] || c.tipo;
       row.innerHTML = '<div class="schema-row-info">'
         + '<div class="schema-row-label">' + c.etichetta + '</div>'
-        + '<div class="schema-row-meta"><span class="schema-tipo-pill">' + tipoLabel + '</span></div>'
+        + '<div class="schema-row-meta"><span class="pill ' + (c.visibile ? 'p-blue' : 'p-grey') + '">' + tipoLabel + (c.visibile ? '' : ' · nascosto') + '</span></div>'
         + '</div>'
         + '<div class="schema-row-actions">'
-        + '<button class="btn-sm ' + (c.visibile ? 'btn-warn' : 'btn-ok') + '" onclick="toggleCampo(' + JSON.stringify(c.id) + ',' + c.visibile + ')">' + (c.visibile ? 'nascondi' : 'mostra') + '</button>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaCampo(' + JSON.stringify(c.id) + ',' + JSON.stringify(c.etichetta) + ')">elimina</button>'
+        + '<button class="btn sm" onclick="toggleCampo(' + JSON.stringify(c.id) + ',' + c.visibile + ')">' + (c.visibile ? 'Nascondi' : 'Mostra') + '</button>'
+        + '<button class="btn sm danger" onclick="eliminaCampo(' + JSON.stringify(c.id) + ',' + JSON.stringify(c.etichetta) + ')">Elimina</button>'
         + '</div>';
       list.appendChild(row);
     });
@@ -1705,9 +1790,9 @@ function renderVisteBar() {
   bar.innerHTML = '';
   visteCache.forEach(v => {
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-flex;flex-shrink:0;';
+    wrap.className = 'vista-wrap';
     const btn = document.createElement('button');
-    btn.className = 'vista-btn' + (vistaAttiva === v.id ? ' active' : '');
+    btn.className = 'chip' + (vistaAttiva === v.id ? ' on' : '');
     btn.textContent = v.nome;
     btn.onclick = () => applicaVista(v);
     wrap.appendChild(btn);
@@ -1727,8 +1812,8 @@ function renderVisteBar() {
   const isMaster = currentUser && currentUser.tipo_accesso === 'master';
   if (isMaster) {
     const addBtn = document.createElement('button');
-    addBtn.className = 'vista-btn vista-add';
-    addBtn.textContent = '+ vista';
+    addBtn.className = 'chip chip-add';
+    addBtn.textContent = '+ Vista';
     addBtn.onclick = () => apriFormVista();
     bar.appendChild(addBtn);
   }
@@ -1780,13 +1865,13 @@ function applicaVista(v) {
   renderVolontari(dati);
 }
 
-// Colori per stato visita
-const STATO_VISITA_COLORS = {
-  'COMPLETATA':  ['#e8f5ee','#1a7a4a'],
-  'DA FARE':     ['#fde8e8','#b91c1c'],
-  'SOLO ESAMI':  ['#fef3e8','#b45309'],
-  'VERIFICA':    ['#e8f0fb','#1a4a9a'],
-  'ESONERO':     ['#f2f2f7','#6b7280'],
+// Pillola per stato visita (raggruppamento viste)
+const STATO_VISITA_PILL = {
+  'COMPLETATA':  'p-blue',
+  'DA FARE':     'p-red',
+  'SOLO ESAMI':  'p-sand',
+  'VERIFICA':    'p-yellow',
+  'ESONERO':     'p-grey',
 };
 
 function renderVolontariGrouped(tipo, campo, boolLabel) {
@@ -1829,23 +1914,20 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
   chiavi.forEach((chiave, idx) => {
     const items = gruppi[chiave] || [];
 
-    // Determina etichetta e colore header
-    let headerLabel, headerBg, headerFg;
+    // Etichetta e colore della pillola conteggio
+    let headerLabel, pillCls = 'p-blue';
     if (tipo === 'squadra') {
       headerLabel = chiave;
-      headerBg = '#1c2a3a'; headerFg = '#58a6ff';
     } else if (tipo === '_boolean') {
       if (chiave === 'si') {
-        headerLabel = '✓ ' + (boolLabel || 'Completato');
-        headerBg = '#0d2014'; headerFg = '#3fb950';
+        headerLabel = (boolLabel || 'Completato');
       } else {
-        headerLabel = '— Non ' + (boolLabel ? boolLabel.toLowerCase() : 'completato');
-        headerBg = '#21262d'; headerFg = '#8b949e';
+        headerLabel = 'Non ' + (boolLabel ? boolLabel.toLowerCase() : 'completato');
+        pillCls = 'p-grey';
       }
     } else if (tipo === '_field') {
       headerLabel = chiave;
-      const colors = STATO_VISITA_COLORS[chiave] || ['#1c2a3a','#58a6ff'];
-      headerBg = colors[0]; headerFg = colors[1];
+      pillCls = STATO_VISITA_PILL[chiave] || 'p-blue';
     }
 
     // Collassa di default i gruppi "negativi"
@@ -1854,23 +1936,21 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
 
     const header = document.createElement('div');
     header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
-    header.style.cssText = 'background:' + headerBg + ';border-color:' + headerFg + '30;';
-    header.innerHTML = '<span class="vgh-label" style="color:' + headerFg + '">' + headerLabel + '</span>'
-      + '<span class="vgh-count" style="background:' + headerBg + ';color:' + headerFg + ';border:1px solid ' + headerFg + '50">' + items.length + '</span>'
-      + '<span class="vgh-arrow" style="color:' + headerFg + '">' + (isCollapsed ? '▶' : '▼') + '</span>';
+    header.innerHTML = '<span class="grp m0">' + headerLabel + '</span>'
+      + '<span class="pill ' + pillCls + '">' + items.length + '</span>'
+      + '<span class="vgh-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
 
     const bodyId = 'gb' + idx;
     header.onclick = () => {
       header.classList.toggle('collapsed');
       const arrow = header.querySelector('.vgh-arrow');
       const body  = document.getElementById(bodyId);
-      const col   = isCollapsed ? headerFg : headerFg;
       if (header.classList.contains('collapsed')) {
         arrow.textContent = '▶';
         if (body) body.style.display = 'none';
       } else {
         arrow.textContent = '▼';
-        if (body) body.style.display = 'flex';
+        if (body) body.style.display = '';
       }
     };
     list.appendChild(header);
@@ -1881,23 +1961,13 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
     if (isCollapsed) body.style.display = 'none';
 
     items.forEach(v => {
-      const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-      const [bg, fg] = avatarColor(v.cognome);
       const card = document.createElement('div');
-      card.className = 'vol-card';
+      card.className = 'card clk vcard';
       card.onclick = () => apriDettaglio(v.id);
       const badges = [];
-      if (!v.attivo) badges.push('<span class="vol-badge vb-off">NON ATTIVO</span>');
-      if (v.dae)     badges.push('<span class="vol-badge vb-ok">DAE</span>');
-      var avatarEl = v.foto_url
-        ? '<img src="' + v.foto_url + '" class="vol-avatar" style="object-fit:cover">'
-        : '<div class="vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>';
-      card.innerHTML = avatarEl
-        + '<div class="vol-card-info">'
-        + '<div class="vol-card-name">' + v.cognome + ' ' + v.nome + '</div>'
-        + '<div class="vol-card-sub"><span>' + (v.tipo_volontario||'—') + (v.mansione ? ' | ' + v.mansione : '') + '</span></div>'
-        + '</div>'
-        + '<div class="vol-card-badges">' + badges.join('') + '</div>';
+      if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
+      if (v.dae)     badges.push('<span class="pill p-blue">DAE</span>');
+      card.innerHTML = _volCardHtml(v, v.attivo ? '' : '<span class="pill p-grey">Non attivo</span>', badges);
       body.appendChild(card);
     });
 
@@ -2022,30 +2092,25 @@ async function caricaInterventi() {
     if (stats)   stats.style.display = 'none';
     if (toolbar) toolbar.style.display = 'none';
     list.innerHTML = '';
+    list.classList.remove('card', 'tbl');
     const btn = document.createElement('button');
-    btn.className = 'int-add-btn';
-    btn.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
+    btn.className = 'btn pri full';
     btn.textContent = '+ Registra nuovo intervento';
     btn.onclick = () => apriFormIntervento(null);
     list.appendChild(btn);
-    const btnAi = document.createElement('button');
-    btnAi.className = 'int-ai-btn';
-    btnAi.style.cssText = 'width:100%;padding:1rem;font-size:0.85rem;margin-top:0.5rem';
-    btnAi.textContent = '🤖 Compila da messaggio';
-    btnAi.onclick = () => apriChatAgenteIntervento();
-    list.appendChild(btnAi);
     return;
   }
 
   // Master — carica tutti gli interventi
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.classList.add('card', 'tbl');
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
     interventiData = await res.json();
     await caricaIntOreMancanti();
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
 }
 
 // Set degli intervento_id che hanno almeno un volontario con ore non segnate (0 o null)
@@ -2092,10 +2157,10 @@ function renderInterventi(data) {
   const figli = data.filter(i => i.macro_id);
 
   if (!data.length) {
-    list.innerHTML = '<div class="loading-msg">nessun intervento registrato.</div>';
+    list.innerHTML = '<div class="loading-msg">Nessun intervento trovato.</div>';
     return;
   }
-  list.innerHTML = '';
+  list.innerHTML = '<div class="irow ihead"><span>Data</span><span>Intervento</span><span>Vol.</span><span>Ore</span></div>';
 
   // Macro e orfani insieme, in ordine cronologico (data desc, come arriva dal server)
   data.forEach(i => {
@@ -2109,44 +2174,43 @@ function renderInterventi(data) {
   });
 }
 
+// Pillola tipo attività come nel riferimento: Emergenza gialla, Esercitazione sabbia, altro blu chiaro
+function intTipoPill(tipo) {
+  if (!tipo) return '';
+  const t = tipo.toUpperCase();
+  const cls = t.includes('EMERG') ? 'p-yellow' : t.includes('ESERCIT') ? 'p-sand' : 'p-blue';
+  return '<span class="pill ' + cls + '">' + tipo + '</span>';
+}
+function _intDataCella(iso) {
+  if (!iso) return '<b>—</b>';
+  return '<b>' + iso.slice(8,10) + '/' + iso.slice(5,7) + '<span class="sub">' + iso.slice(0,4) + '</span></b>';
+}
+
 function _renderIntCard(i, isChild) {
   const card = document.createElement('div');
-  card.className = 'int-card' + (isChild ? ' int-card-child' : '');
-  if (i.stato_calcolato === 'PROGRAMMATO') card.classList.add('int-card-prog');
+  card.className = 'irow clk' + (isChild ? ' child' : '');
   card.onclick = () => apriDettaglioIntervento(i.id);
-  const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
   const pills = [];
-  if (i.stato_calcolato === 'PROGRAMMATO') pills.push('<span class="int-pill prog">⏳ PROGRAMMATO</span>');
-  if (i.tipo_attivita)  pills.push('<span class="int-pill green">' + i.tipo_attivita + '</span>');
-  if (i.luogo)          pills.push('<span class="int-pill">' + i.luogo + '</span>');
-  if (i.n_volontari)    pills.push('<span class="int-pill blue">' + i.n_volontari + ' vol.</span>');
+  if (i.stato_calcolato === 'PROGRAMMATO') pills.push('<span class="pill p-grey">Programmato</span>');
+  if (i.tipo_attivita)  pills.push(intTipoPill(i.tipo_attivita));
+  if (i.utilizzo_radio) pills.push('<span class="pill p-blue">Radio</span>');
+  if (i.vola)           pills.push('<span class="pill p-blue">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
+  if (i.volter)         pills.push('<span class="pill p-blue">VolTer</span>');
   const oreOk = i.n_ore && parseFloat(i.n_ore) > 0;
   const haOreMancanti = intOreMancantiSet.has(i.id);
-  if (oreOk) {
-    pills.push('<span class="int-pill blue">' + i.n_ore + 'h' + (haOreMancanti ? ' ⚠️' : '') + '</span>');
-  } else if (haOreMancanti) {
-    pills.push('<span class="int-pill" style="background:rgba(255,160,0,0.15);color:#e08000;border:1px solid #e08000">⚠️ ore mancanti</span>');
-  }
-  if (i.utilizzo_radio) pills.push('<span class="int-pill green">📻 Radio</span>');
-  if (i.vola)           pills.push('<span class="int-pill green">VolA' + (i.vola_numero ? ' ' + i.vola_numero : '') + '</span>');
-  if (i.volter)         pills.push('<span class="int-pill green">VolTer</span>');
-  const childArrow = isChild ? '<span style="color:var(--testo-3);margin-right:0.2rem;flex-shrink:0;font-size:0.8rem">↳</span>' : '';
-  card.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.5rem">'
-    + childArrow
-    + getTipoAttivitaAvatar(i.tipo_attivita, isChild ? 30 : 38)
-    + '<div style="flex:1;min-width:0">'
-    + '<div class="int-card-top">'
-    + '<div class="int-card-evento" style="' + (isChild ? 'font-size:0.82rem' : '') + '">' + (i.evento || '—') + '</div>'
-    + '<div class="int-card-data" style="' + (isChild ? 'font-size:0.72rem' : '') + '">' + dataFmt + '</div>'
-    + '</div>'
-    + '<div class="int-card-meta">' + pills.join('') + '</div>'
-    + '</div></div>';
+  if (haOreMancanti)    pills.push('<span class="pill p-red">Ore mancanti</span>');
+  card.innerHTML = _intDataCella(i.data)
+    + '<div class="minw0"><b>' + (isChild ? '↳ ' : '') + (i.evento || '—') + '</b>'
+    + (i.luogo ? '<span class="sub">' + i.luogo + '</span>' : '')
+    + (pills.length ? '<span class="int-pills">' + pills.join('') + '</span>' : '') + '</div>'
+    + '<b>' + (i.n_volontari || 0) + '</b>'
+    + '<b>' + (oreOk ? i.n_ore + ' h' : '—') + '</b>';
   return card;
 }
 
 function _renderMacroCard(m, figliMacro) {
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin-bottom:0.5rem';
+  wrap.className = 'int-macro';
   const dataInizio = m.data ? new Date(m.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dataFine   = m.data_fine ? new Date(m.data_fine).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : null;
   const dateRange  = dataInizio ? (dataFine && dataFine !== dataInizio ? dataInizio + ' → ' + dataFine : dataInizio) : '—';
@@ -2155,36 +2219,26 @@ function _renderMacroCard(m, figliMacro) {
   const macroOreMancanti = intOreMancantiSet.has(m.id) || figliMacro.some(f => intOreMancantiSet.has(f.id));
 
   const header = document.createElement('div');
-  header.className = 'int-card int-macro-header';
-  header.style.cssText = 'cursor:pointer;border-left:3px solid var(--green);background:var(--bg-2)';
-  header.innerHTML = '<div style="display:flex;align-items:flex-start;gap:0.7rem">'
-    + '<div style="font-size:1.2rem;flex-shrink:0;line-height:1.2">📦</div>'
-    + '<div style="flex:1;min-width:0">'
-    + '<div class="int-card-top">'
-    + '<div class="int-card-evento" style="font-size:0.9rem;font-weight:700">' + (m.evento || '—') + '</div>'
-    + '<div style="display:flex;align-items:center;gap:0.4rem">'
-    + (figliMacro.length ? '<span class="int-pill green" style="font-size:0.65rem">' + figliMacro.length + ' int.</span>' : '<span class="int-pill" style="font-size:0.65rem">vuota</span>')
-    + '<span id="macro-arrow-' + m.id + '" style="font-size:0.7rem;color:var(--testo-3);transition:transform 0.2s">▶</span>'
-    + '</div></div>'
-    + '<div class="int-card-meta">'
-    + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="int-pill prog">⏳ PROGRAMMATO</span>' : '')
-    + (m.tipo_attivita ? '<span class="int-pill green">' + m.tipo_attivita + '</span>' : '')
-    + (m.luogo ? '<span class="int-pill">' + m.luogo + '</span>' : '')
-    + '<span class="int-pill">' + dateRange + '</span>'
-    + (nVol ? '<span class="int-pill blue">' + nVol + ' vol. tot.</span>' : '')
-    + (nOre ? '<span class="int-pill blue">' + Math.round(nOre*10)/10 + 'h tot.' + (macroOreMancanti ? ' ⚠️' : '') + '</span>' : '')
-    + '</div></div>'
-    + '<button class="btn-sm" style="flex-shrink:0;font-size:0.7rem;padding:3px 8px;margin-left:0.3rem;align-self:flex-start" onclick="event.stopPropagation();apriDettaglioIntervento(' + m.id + ')">✏️</button>'
-    + '</div>';
+  header.className = 'irow clk macro';
+  header.innerHTML = _intDataCella(m.data)
+    + '<div class="minw0"><b><span id="macro-arrow-' + m.id + '" class="macro-arrow">▶</span> ' + (m.evento || '—') + '</b>'
+    + '<span class="sub">' + (m.luogo ? m.luogo + ' · ' : '') + dateRange + '</span>'
+    + '<span class="int-pills"><span class="pill p-sand">Macro · ' + (figliMacro.length ? figliMacro.length + ' interventi' : 'vuota') + '</span>'
+    + (m.stato_calcolato === 'PROGRAMMATO' ? '<span class="pill p-grey">Programmato</span>' : '')
+    + intTipoPill(m.tipo_attivita)
+    + (macroOreMancanti ? '<span class="pill p-red">Ore mancanti</span>' : '')
+    + '<button class="btn sm" onclick="event.stopPropagation();apriDettaglioIntervento(' + m.id + ')">Apri</button></span></div>'
+    + '<b>' + (nVol || 0) + '</b>'
+    + '<b>' + (nOre ? Math.round(nOre*10)/10 + ' h' : '—') + '</b>';
 
   const childrenWrap = document.createElement('div');
   childrenWrap.id = 'macro-children-' + m.id;
-  childrenWrap.style.cssText = 'display:none;padding:0 0 0 0.5rem;border-left:2px solid var(--green);margin-left:0.5rem';
+  childrenWrap.className = 'macro-children';
+  childrenWrap.style.display = 'none';
   figliMacro.forEach(i => childrenWrap.appendChild(_renderIntCard(i, true)));
 
   const addBtn = document.createElement('button');
-  addBtn.className = 'int-add-btn';
-  addBtn.style.cssText = 'width:100%;padding:0.5rem;font-size:0.78rem;margin:0.3rem 0';
+  addBtn.className = 'btn sm macro-add';
   addBtn.textContent = '+ Aggiungi intervento a questa macro';
   addBtn.onclick = () => apriFormIntervento(null, m.id);
   childrenWrap.appendChild(addBtn);
@@ -2194,7 +2248,7 @@ function _renderMacroCard(m, figliMacro) {
     const isOpen = childrenWrap.style.display !== 'none';
     childrenWrap.style.display = isOpen ? 'none' : 'block';
     const arrow = document.getElementById('macro-arrow-' + m.id);
-    if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+    if (arrow) arrow.classList.toggle('open', !isOpen);
   };
 
   wrap.appendChild(header);
@@ -2220,13 +2274,13 @@ async function apriDettaglioIntervento(id) {
   const body   = document.getElementById('intDetailBody');
   detail.classList.add('open');
   detail.scrollTop = 0;
-  body.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  body.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const i = data[0];
-    if (!i) { body.innerHTML = '<div class="loading-msg">intervento non trovato.</div>'; return; }
-    document.getElementById('intDetailTitle').textContent = (i.is_macro ? '📦 ' : '') + (i.evento || '—');
+    if (!i) { body.innerHTML = '<div class="loading-msg">Intervento non trovato.</div>'; return; }
+    document.getElementById('intDetailTitle').textContent = i.evento || '—';
 
     const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
     const fmt = (v) => v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>';
@@ -2253,10 +2307,10 @@ async function apriDettaglioIntervento(id) {
     let posSegSection = '';
     if (posSegPosizioni.length || posSegSegnalazioni.length) {
       posSegSection = `<div class="vol-section">
-        <div class="vol-section-head">📍 Posizioni e segnalazioni</div>
+        <div class="vol-section-head">Posizioni e segnalazioni</div>
         <div class="vol-section-body">
-          ${posSegPosizioni.length ? `<div id="intDetailMap" style="height:280px;border-radius:12px;margin-bottom:0.6rem;position:relative;z-index:0;isolation:isolate"></div>
-          <div id="intDetailPosLista" style="margin-bottom:0.8rem"></div>` : ''}
+          ${posSegPosizioni.length ? `<div id="intDetailMap" class="mini-map tall"></div>
+          <div id="intDetailPosLista" class="mb12"></div>` : ''}
           ${posSegSegnalazioni.length ? `<div id="intDetailEmergContent"></div>` : ''}
         </div>
       </div>`;
@@ -2270,20 +2324,18 @@ async function apriDettaglioIntervento(id) {
       const nOre = figliMacro.reduce((s, f) => s + parseFloat(f.n_ore || 0), 0) + parseFloat(i.n_ore || 0);
       let figliHtml = figliMacro.map(f => {
         const fd = f.data ? new Date(f.data).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-        return '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:0.5px solid var(--border);cursor:pointer" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
-          + getTipoAttivitaAvatar(f.tipo_attivita, 26)
-          + '<div style="flex:1;font-size:0.8rem;color:var(--testo)">' + (f.evento||'—') + '</div>'
-          + '<div style="font-size:0.7rem;color:var(--testo-3)">' + fd + '</div>'
+        return '<div class="lr clk" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(' + f.id + ')">'
+          + getTipoAttivitaAvatar(f.tipo_attivita, 40)
+          + '<div class="mid"><b>' + (f.evento||'—') + '</b><span class="sub">' + fd + '</span></div>'
+          + '<span class="go">→</span>'
           + '</div>';
       }).join('');
       macroSection = `<div class="vol-section">
-        <div class="vol-section-head" style="display:flex;align-items:center;justify-content:space-between">
-          Interventi inclusi
-          <button class="btn-sm" style="font-size:0.7rem;padding:2px 8px" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button>
-        </div>
+        <div class="vol-section-head">Interventi inclusi</div>
         <div class="vol-section-body">
-          <div style="font-size:0.72rem;color:var(--testo-3);margin-bottom:0.5rem">${figliMacro.length} interventi | ${nVol} vol. tot. | ${Math.round(nOre*10)/10}h tot.</div>
-          ${figliHtml || '<div style="font-size:0.78rem;color:var(--testo-3)">Nessun intervento associato.</div>'}
+          <div class="bar mb6"><span class="sub grow">${figliMacro.length} interventi · ${nVol} vol. tot. · ${Math.round(nOre*10)/10} h tot.</span>
+          <button class="btn sm" onclick="chiudiDettaglioIntervento();apriFormIntervento(null,${i.id})">+ Aggiungi</button></div>
+          ${figliHtml || '<p class="note">Nessun intervento associato.</p>'}
         </div>
       </div>`;
     }
@@ -2295,42 +2347,36 @@ async function apriDettaglioIntervento(id) {
       macroParentSection = `<div class="vol-section">
         <div class="vol-section-head">Parte di macro-attività</div>
         <div class="vol-section-body">
-          <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(${i.macro_id})">
-            <span style="font-size:1rem">📦</span>
-            <span style="font-size:0.82rem;color:var(--green);font-weight:500">${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</span>
-          </div>
+          <button class="todo" onclick="chiudiDettaglioIntervento();apriDettaglioIntervento(${i.macro_id})">
+            <span class="grow"><b>${padre ? (padre.evento || '—') : 'Macro #' + i.macro_id}</b></span>
+            <span class="go">→</span>
+          </button>
         </div>
       </div>`;
     }
 
-    var _heroAvatar = getTipoAttivitaAvatar(i.tipo_attivita, 50);
+    var _heroAvatar = getTipoAttivitaAvatar(i.tipo_attivita, 56);
     body.innerHTML = `
       <div class="vol-detail-hero">
         ${_heroAvatar}
         <div>
-          <div class="vol-detail-name">${(i.is_macro ? '📦 ' : '') + (i.evento || '—')}</div>
-          <div class="vol-detail-role">${i.tipo_attivita || 'Intervento'} | ${dataFmt}</div>
+          <div class="vol-detail-name">${i.evento || '—'}</div>
+          <div class="vol-detail-role">${i.is_macro ? '<span class="pill p-sand">Macro</span> ' : ''}${intTipoPill(i.tipo_attivita)} ${dataFmt}</div>
         </div>
       </div>
       ${macroParentSection}
       ${i.stato_calcolato === 'PROGRAMMATO'
-        ? `<div style="background:rgba(217,164,0,0.12);border:1px solid #d9a400;border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
-            <span style="font-size:1.2rem">⏳</span>
-            <div style="flex:1">
-              <div style="font-size:0.82rem;font-weight:700;color:#a87800">Intervento PROGRAMMATO</div>
-              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore non vengono conteggiate fino al passaggio in SVOLTO.${i.stato_manuale === 'PROGRAMMATO' ? ' (Stato forzato manualmente)' : ''}</div>
-            </div>
+        ? `<div class="stato-box sand">
+            <span class="pill p-grey">Programmato</span>
+            <div class="grow"><span class="sub">Le ore non vengono conteggiate fino al passaggio in svolto.${i.stato_manuale === 'PROGRAMMATO' ? ' Stato forzato manualmente.' : ''}</span></div>
             ${i.stato_manuale === 'PROGRAMMATO'
-              ? `<button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
+              ? `<button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, null)">Sblocca</button>`
               : ''}
           </div>`
-        : `<div style="background:rgba(34,139,82,0.1);border:1px solid var(--green);border-radius:8px;padding:0.6rem 0.9rem;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.7rem">
-            <span style="font-size:1.2rem">✓</span>
-            <div style="flex:1">
-              <div style="font-size:0.82rem;font-weight:700;color:var(--green)">Intervento SVOLTO</div>
-              <div style="font-size:0.7rem;color:var(--testo-3)">Le ore vengono conteggiate nelle statistiche.</div>
-            </div>
-            <button class="btn-sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
+        : `<div class="stato-box">
+            <span class="pill p-blue">Svolto</span>
+            <div class="grow"><span class="sub">Le ore vengono conteggiate nelle statistiche.</span></div>
+            <button class="btn sm" onclick="cambiaStatoIntervento(${i.id}, 'PROGRAMMATO')">Riapri</button>
           </div>`
       }
       <div class="vol-section">
@@ -2354,19 +2400,19 @@ async function apriDettaglioIntervento(id) {
       <div class="vol-section">
         <div class="vol-section-head">Volontari intervenuti</div>
         <div class="vol-section-body">
-          <div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${volNomi}</div>
+          <p class="note-text">${volNomi}</p>
         </div>
       </div>
       ${posSegSection}
       ${macroSection}
       ${i.note ? `<div class="vol-section">
         <div class="vol-section-head">Note</div>
-        <div class="vol-section-body"><div style="font-size:0.75rem;color:var(--text-2);line-height:1.6">${i.note}</div></div>
+        <div class="vol-section-body"><p class="note-text">${i.note}</p></div>
       </div>` : ''}
       <div class="vol-section" id="intPosizioneSection" style="display:none">
         <div class="vol-section-head">Percorso GPS condiviso</div>
         <div class="vol-section-body">
-          <div id="intDetailMap" style="height:220px;border-radius:10px;overflow:hidden;position:relative;z-index:0;isolation:isolate"></div>
+          <div id="intDetailMap" class="mini-map"></div>
         </div>
       </div>
       <div class="vol-section" id="intFotoSection" style="display:none">
@@ -2375,17 +2421,17 @@ async function apriDettaglioIntervento(id) {
           <div class="gall-photos" id="intDetailGallery"></div>
         </div>
       </div>
-      <button class="btn-primary" style="width:100%;margin-top:0.8rem" onclick="apriFormIntervento(${i.id})">✏️ Modifica</button>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-top:0.5rem">
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="stampaIntervento(${i.id})">📄 Esporta CF</button>
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem" onclick="apriGeneratoreAttestati(${i.id})">📜 Attestati</button>
-        <button class="btn-sm" style="padding:0.5rem 0.3rem;text-align:center;font-size:0.72rem;background:var(--bg-2);border-color:#1a4a9a;color:#4a90d9" onclick="esportaModuloTerritoriale(${i.id})">📋 Territoriale</button>
+      <div class="int-azioni">
+        <button class="btn" onclick="stampaIntervento(${i.id})">Esporta CF</button>
+        <button class="btn" onclick="apriGeneratoreAttestati(${i.id})">Attestati</button>
+        <button class="btn" onclick="esportaModuloTerritoriale(${i.id})">Territoriale</button>
+        <button class="btn pri" onclick="apriFormIntervento(${i.id})">Modifica</button>
       </div>
-      <button class="vol-delete-btn" style="margin-top:0.8rem;font-size:0.72rem;opacity:0.6" onclick="eliminaIntervento()">elimina intervento</button>`;
+      <button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>`;
 
     if (posSegPosizioni.length) renderPosizioni(posSegPosizioni, 'intDetail', 'intDetailMap', 'intDetailPosLista');
     if (posSegSegnalazioni.length) renderEmergenze(posSegSegnalazioni, 'intDetailEmergContent', { azione: false });
-  } catch(e) { body.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { body.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
 }
 
 async function caricaDettaglioPosizioniEFoto(interventoId) {
@@ -2475,46 +2521,46 @@ async function apriFormIntervento(id, macroIdPreset) {
     <div class="vol-form-section">
       <div class="vol-form-section-title">Numeri</div>
       <div class="vol-form-grid">
-        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Calcolato automaticamente"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">N° ore <label class="vol-form-check" style="display:inline-flex;margin-left:0.4rem;font-size:0.7rem"><input type="checkbox" id="ifNOreOverride" onchange="toggleNOreOverride()"> manuale</label></label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5" readonly style="background:var(--bg-2);color:var(--testo-3)" title="Somma automatica dalle ore dei volontari"></div>
-        <div class="vol-form-field full"><label class="vol-form-check" style="margin-top:0.3rem"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
-        <div class="vol-form-field" style="grid-column:span 2;display:flex;align-items:center;gap:0.7rem;margin-top:0.2rem">
-          <label class="vol-form-check" style="flex-shrink:0"><input type="checkbox" id="ifVola"> VolA</label>
-          <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA" style="flex:1">
+        <div class="vol-form-field"><label class="vol-form-lbl">N° volontari</label><input class="vol-form-inp" type="number" id="ifNVol" placeholder="0" min="0" readonly title="Calcolato automaticamente"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl lbl-row">N° ore <label class="inline-chk"><input type="checkbox" id="ifNOreOverride" onchange="toggleNOreOverride()"> manuale</label></label><input class="vol-form-inp" type="number" id="ifNOre" placeholder="0" min="0" step="0.5" readonly title="Somma automatica dalle ore dei volontari"></div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifRadio"> Utilizzo radio</label></div>
+        <div class="vol-form-field full vola-row">
+          <label class="vol-form-check"><input type="checkbox" id="ifVola"> VolA</label>
+          <input class="vol-form-inp" id="ifVolaNum" placeholder="Numero VolA">
         </div>
         <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifVolter"> VolTer</label></div>
-        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifPostazioni"> 📍 Gestione Postazioni (mostra questo intervento nella pagina Postazioni)</label></div>
+        <div class="vol-form-field full"><label class="vol-form-check"><input type="checkbox" id="ifPostazioni"> Gestione postazioni (mostra questo intervento nella pagina Postazioni)</label></div>
       </div>
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Volontari intervenuti</div>
       <input class="vol-picker-search" id="volPickerSearch" placeholder="cerca volontario per aggiungerlo..." oninput="filtraVolPickerDropdown(this.value)">
       <div id="volPickerDropdown" class="vol-picker-dropdown" style="display:none"></div>
-      <div id="intVolList" style="margin-top:0.6rem"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.6rem;font-size:0.78rem;color:var(--testo-3)">
+      <div id="intVolList" class="mt10"></div>
+      <div class="kv mt6">
         <span>Volontari: <strong id="intVolCount">0</strong></span>
         <span>Somma ore: <strong id="intVolOreSum">0</strong></span>
       </div>
     </div>
     <div class="vol-form-section">
       <div class="vol-form-section-title">Note</div>
-      <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..." style="resize:vertical"></textarea>
+      <textarea class="vol-form-inp" id="ifNote" rows="3" placeholder="Note aggiuntive..."></textarea>
     </div>
-    <div class="vol-form-section" style="border:1px solid var(--border);border-radius:10px;padding:0.8rem">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.7rem">Raggruppamento</div>
-      <label class="vol-form-check" style="margin-bottom:0.7rem;display:flex;align-items:center;gap:0.5rem">
+    <div class="vol-form-section">
+      <div class="vol-form-section-title">Raggruppamento</div>
+      <label class="vol-form-check mb12">
         <input type="checkbox" id="ifIsMacro" onchange="toggleMacroMode()">
-        <span style="font-size:0.85rem;font-weight:500">📦 Questo è una macro-attività</span>
+        Questo è una macro-attività
       </label>
       <div id="ifMacroParentWrap">
         <label class="vol-form-lbl">Associa a macro esistente</label>
-        <select class="vol-form-inp" id="ifMacroId" style="margin-top:0.3rem">
+        <select class="vol-form-inp" id="ifMacroId">
           <option value="">— Nessuna (intervento singolo) —</option>
           ${macroOpts}
         </select>
       </div>
     </div>
-    ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">elimina intervento</button>' : ''}`;
+    ${id ? '<button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>' : ''}`;
 
   panel.classList.add('open');
   panel.scrollTop = 0;
@@ -2534,12 +2580,10 @@ function toggleMacroMode() {
   var selMacro   = document.getElementById('ifMacroId');
   if (isMacro) {
     // È una macro: nasconde il select padre e lo svuota
-    parentWrap.style.opacity = '0.4';
-    parentWrap.style.pointerEvents = 'none';
+    parentWrap.classList.add('is-off');
     selMacro.value = '';
   } else {
-    parentWrap.style.opacity = '';
-    parentWrap.style.pointerEvents = '';
+    parentWrap.classList.remove('is-off');
   }
 }
 
@@ -2577,7 +2621,7 @@ function filtraVolPickerDropdown(q) {
     ((v.cognome || '') + ' ' + (v.nome || '')).toLowerCase().includes(term)
   ).slice(0, 20);
   if (!filtered.length) {
-    dd.innerHTML = '<div style="padding:0.5rem;font-size:0.78rem;color:var(--testo-3)">nessun risultato</div>';
+    dd.innerHTML = '<div class="vp-dd-item muted">Nessun risultato</div>';
   } else {
     dd.innerHTML = filtered.map(v =>
       '<div class="vp-dd-item" onclick="aggiungiVolIntervento(' + v.id + ')">'
@@ -2640,7 +2684,7 @@ function renderIntVolList() {
   const list = document.getElementById('intVolList');
   if (!list) return;
   if (!intVolSelezionati.length) {
-    list.innerHTML = '<div style="padding:0.6rem;font-size:0.78rem;color:var(--testo-3);text-align:center;background:var(--bg-2);border-radius:6px">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
+    list.innerHTML = '<div class="empty sm">Nessun volontario aggiunto. Usa la ricerca sopra.</div>';
     aggiornaContatoriVolontari();
     return;
   }
@@ -2651,13 +2695,13 @@ function renderIntVolList() {
     return (a.nome || '').localeCompare(b.nome || '', 'it');
   });
   const applicaTuttiBtn = intVolSelezionati.length > 1
-    ? '<button type="button" class="btn-sm" style="width:100%;margin-bottom:0.5rem;background:var(--bg-2)" onclick="applicaOreATutti()">🕐 Applica le stesse ore a tutti</button>'
+    ? '<button type="button" class="btn sm full mb10" onclick="applicaOreATutti()">Applica le stesse ore a tutti</button>'
     : '';
   list.innerHTML = applicaTuttiBtn + intVolSelezionati.map(v =>
     '<div class="int-vol-card">'
     + '<div class="int-vol-card-head">'
     + '<strong>' + v.cognome + ' ' + v.nome + '</strong>'
-    + '<button type="button" class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="rimuoviVolIntervento(' + v.volontario_id + ')">✕</button>'
+    + '<button type="button" class="btn sm danger" aria-label="Rimuovi" onclick="rimuoviVolIntervento(' + v.volontario_id + ')">✕</button>'
     + '</div>'
     + '<div class="int-vol-card-grid">'
     +   '<label class="int-vol-field"><span>Ore</span><input type="number" min="0" step="0.5" value="' + (v.ore || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'ore\', parseFloat(this.value)||0)"></label>'
@@ -2665,7 +2709,7 @@ function renderIntVolList() {
     +   '<label class="int-vol-field"><span>Data fine</span><input type="date" value="' + (v.data_fine || '') + '" onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'data_fine\', this.value||null)"></label>'
     +   '<label class="int-vol-check"><input type="checkbox"' + (v.art_39 ? ' checked' : '') + ' onchange="aggiornaCampoVolIntervento(' + v.volontario_id + ', \'art_39\', this.checked)"> Art. 39</label>'
     + '</div>'
-    + (v.art_39 ? ('<button type="button" class="btn-sm" style="width:100%;margin-top:0.5rem;background:#1a4a9a;color:#fff;border-color:#1a4a9a" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">📄 Lettera attivazione</button>') : '')
+    + (v.art_39 ? ('<button type="button" class="btn sm full mt10" onclick="apriModalLetteraAttivazione(' + v.volontario_id + ')">Lettera di attivazione</button>') : '')
     + '</div>'
   ).join('');
   aggiornaContatoriVolontari();
@@ -2693,14 +2737,12 @@ function toggleNOreOverride() {
   if (cb.checked) {
     // Manuale
     nore.readOnly = false;
-    nore.style.background = '';
-    nore.style.color = '';
+
     nore.title = 'Valore manuale (override)';
   } else {
     // Auto
     nore.readOnly = true;
-    nore.style.background = 'var(--bg-2)';
-    nore.style.color = 'var(--testo-3)';
+
     nore.title = 'Somma automatica dalle ore dei volontari';
     aggiornaContatoriVolontari();
   }
@@ -2916,9 +2958,16 @@ function apriChatAgenteIntervento() {
   setTimeout(() => { if (inp) inp.focus(); }, 200);
 }
 
+// L'interfaccia dell'assistente sta nella pagina Interventi: "chiudere" significa
+// ripartire da una conversazione vuota (come quando si riapriva la finestra).
 function chiudiChatAgenteIntervento() {
-  const panel = document.getElementById('aicPanel');
-  if (panel) panel.classList.remove('open');
+  aicMessages = [];
+  aicLog = [];
+  aicDrafts = [];
+  aicLoading = false;
+  const inp = document.getElementById('aicInput');
+  if (inp) inp.value = '';
+  aicRender();
 }
 
 function aicKeydown(ev) {
@@ -2936,7 +2985,7 @@ function aicRender() {
   const box = document.getElementById('aicMsgs');
   if (!box) return;
   if (!aicLog.length) {
-    box.innerHTML = '<div class="aic-intro">Incolla qui il messaggio del report intervento: leggo chi è intervenuto e le ore, e preparo la scheda. Ti chiedo solo quello che manca o non è chiaro.</div>';
+    box.innerHTML = '';
   } else {
     box.innerHTML = aicLog.map(m => {
       if (m.type === 'user')  return '<div class="aic-bubble user">' + aicEscapeHtml(m.text) + '</div>';
@@ -2956,7 +3005,7 @@ function aicDraftHtml(draft, id) {
   const oreTot = vol.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
   return '<div class="aic-draft">'
     + '<div class="aic-draft-title">Bozza scheda intervento</div>'
-    + (draft.messaggio_riepilogo ? '<div style="margin-bottom:0.6rem">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</div>' : '')
+    + (draft.messaggio_riepilogo ? '<p class="note m0 mb6">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</p>' : '')
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Evento</span><span class="aic-draft-val">' + aicEscapeHtml(draft.evento || '—') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Data</span><span class="aic-draft-val">' + aicEscapeHtml(draft.data || '—') + (draft.data_fine ? ' → ' + aicEscapeHtml(draft.data_fine) : '') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Luogo</span><span class="aic-draft-val">' + aicEscapeHtml(draft.luogo || '—') + '</span></div>'
@@ -2965,8 +3014,8 @@ function aicDraftHtml(draft, id) {
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Ore totali</span><span class="aic-draft-val">' + (Math.round(oreTot * 10) / 10) + '</span></div>'
     + (draft.note ? '<div class="aic-draft-row"><span class="aic-draft-lbl">Note</span><span class="aic-draft-val">' + aicEscapeHtml(draft.note) + '</span></div>' : '')
     + '<div class="aic-draft-actions">'
-    +   '<button type="button" class="aic-btn-edit" onclick="aicCorreggi()">✏️ correggi</button>'
-    +   '<button type="button" class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">✅ conferma e salva</button>'
+    +   '<button type="button" class="aic-btn-edit" onclick="aicCorreggi()">Correggi</button>'
+    +   '<button type="button" class="aic-btn-confirm" onclick="aicConfermaBozza(' + id + ', this)">Conferma e salva</button>'
     + '</div></div>';
 }
 
@@ -2977,9 +3026,8 @@ function aicCorreggi() {
   if (!inp) return;
   inp.focus();
   inp.placeholder = 'Scrivi qui la correzione (es. "le ore di Mario sono 4")...';
-  inp.style.transition = 'box-shadow 0.15s ease';
-  inp.style.boxShadow = '0 0 0 2px var(--green)';
-  setTimeout(() => { inp.style.boxShadow = ''; }, 1000);
+  inp.classList.add('flash-ok');
+  setTimeout(() => { inp.classList.remove('flash-ok'); }, 1000);
 }
 
 async function aicInviaMessaggio() {
@@ -3025,7 +3073,7 @@ async function aicConfermaBozza(id, btnEl) {
   const draft = aicDrafts[id];
   if (!draft) return;
   const row = btnEl ? btnEl.closest('.aic-draft-actions') : null;
-  if (row) row.innerHTML = '<span style="font-size:0.78rem;color:var(--testo-3)">salvataggio in corso...</span>';
+  if (row) row.innerHTML = '<span class="note m0">Salvataggio in corso…</span>';
   try {
     await apriFormIntervento(null);
     const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val; };
@@ -3057,7 +3105,7 @@ async function aicConfermaBozza(id, btnEl) {
     // se è ancora aperto vuol dire che una validazione ha bloccato il salvataggio (errore già mostrato nel form).
     const formAncoraAperto = document.getElementById('intFormPanel').classList.contains('open');
     if (formAncoraAperto) {
-      if (row) row.innerHTML = '<span style="font-size:0.78rem;color:#ff3b30">Dati incompleti: controlla il form aperto e salva da lì.</span>';
+      if (row) row.innerHTML = '<span class="bad">Dati incompleti: controlla il form aperto e salva da lì.</span>';
       return;
     }
     chiudiChatAgenteIntervento();
@@ -3080,19 +3128,18 @@ async function apriGeneratoreAttestati(interventoId) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'attestatiOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay);z-index:500;display:flex;align-items:flex-end;justify-content:center';
+    overlay.className = 'ov';
     overlay.innerHTML =
-      '<div style="background:var(--bg);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:1.2rem 1rem 2rem">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">'
-      + '<div style="font-size:1rem;font-weight:700;color:var(--testo)">📜 Genera attestati</div>'
-      + '<button class="btn-sm" onclick="chiudiGeneratoreAttestati()">✕</button>'
+      '<div class="sheet" role="dialog" aria-modal="true" aria-label="Genera attestati">'
+      + '<div class="shead"><h2>Genera attestati</h2>'
+      + '<button class="x" onclick="chiudiGeneratoreAttestati()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'
       + '</div>'
-      + '<div id="attestatiBody"><div class="loading-msg">caricamento...</div></div>'
+      + '<div class="sbody" id="attestatiBody"><div class="loading-msg">Caricamento…</div></div>'
       + '</div>';
     document.body.appendChild(overlay);
   }
   overlay.style.display = 'flex';
-  document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">caricamento...</div>';
+  document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">Caricamento…</div>';
 
   try {
     // Carica dati intervento
@@ -3110,7 +3157,7 @@ async function apriGeneratoreAttestati(interventoId) {
 
     renderGeneratoreAttestati(intv);
   } catch(e) {
-    document.getElementById('attestatiBody').innerHTML = '<div style="color:var(--red);font-size:0.8rem">Errore: ' + e.message + '</div>';
+    document.getElementById('attestatiBody').innerHTML = '<p class="bad">Errore: ' + e.message + '</p>';
   }
 }
 
@@ -3120,36 +3167,32 @@ function renderGeneratoreAttestati(intv) {
 
   var volHtml = '';
   if (!attestatiVolontari.length) {
-    volHtml = '<div style="font-size:0.8rem;color:var(--testo-3);padding:0.5rem 0">Nessun volontario associato a questo intervento.<br>Modifica l\'intervento e seleziona i volontari partecipanti.</div>';
+    volHtml = '<p class="note">Nessun volontario associato a questo intervento.<br>Modifica l\'intervento e seleziona i volontari partecipanti.</p>';
   } else {
-    volHtml = '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem">'
-      + '<label style="font-size:0.78rem;color:var(--testo-3);cursor:pointer;display:flex;align-items:center;gap:0.4rem">'
-      + '<input type="checkbox" id="attestatiSelAll" onchange="toggleSelAll(this)" checked> Seleziona tutti</label>'
-      + '</div>';
-    volHtml += '<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden">';
-    attestatiVolontari.forEach(function(v, idx) {
-      volHtml += '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.8rem;border-bottom:0.5px solid var(--border)' + (idx === attestatiVolontari.length-1 ? ';border-bottom:none' : '') + '">'
-        + '<input type="checkbox" class="attestato-cb" data-id="' + v.id + '" checked style="accent-color:var(--green);width:16px;height:16px;flex-shrink:0">'
-        + '<div style="flex:1;font-size:0.85rem;font-weight:500;color:var(--testo)">' + v.cognome + ' ' + v.nome + '</div>'
-        + (v.codice_fiscale ? '<div style="font-size:0.7rem;color:var(--testo-3)">' + v.codice_fiscale + '</div>' : '<div style="font-size:0.7rem;color:var(--amber)">CF mancante</div>')
-        + '</div>';
+    volHtml = '<label class="inline-chk mb10"><input type="checkbox" id="attestatiSelAll" onchange="toggleSelAll(this)" checked> Seleziona tutti</label>';
+    volHtml += '<div class="att-list">';
+    attestatiVolontari.forEach(function(v) {
+      volHtml += '<label class="att-row">'
+        + '<input type="checkbox" class="attestato-cb" data-id="' + v.id + '" checked>'
+        + '<b class="grow">' + v.cognome + ' ' + v.nome + '</b>'
+        + (v.codice_fiscale ? '<span class="cf">' + v.codice_fiscale + '</span>' : '<span class="cf manca">CF mancante</span>')
+        + '</label>';
     });
     volHtml += '</div>';
   }
 
   document.getElementById('attestatiBody').innerHTML =
-    '<div style="background:var(--bg-2);border-radius:8px;padding:0.7rem 0.9rem;margin-bottom:1rem;font-size:0.82rem">'
-    + '<div style="font-weight:700;color:var(--testo);margin-bottom:0.2rem">' + (intv.evento || '—') + '</div>'
-    + '<div style="color:var(--testo-3)">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' | ' + intv.luogo : '') + '</div>'
+    '<div class="draft att-intv"><b>' + (intv.evento || '—') + '</b>'
+    + '<span class="sub">' + dataInizio + (dataFine !== dataInizio ? ' → ' + dataFine : '') + (intv.luogo ? ' · ' + intv.luogo : '') + '</span>'
     + '</div>'
-    + '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Volontari (' + attestatiVolontari.length + ')</div>'
+    + '<div class="grp">Volontari (' + attestatiVolontari.length + ')</div>'
     + volHtml
-    + (attestatiVolontari.length ? '<div id="attestatiStatus" style="font-size:0.75rem;color:var(--testo-3);margin:0.8rem 0 0;min-height:1.2rem"></div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.8rem">'
-      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem" onclick="generaAttestatiSelezionati(' + intv.id + ')">📜 Genera attestati</button>'
-      + '<button class="btn-primary" style="padding:0.6rem;font-size:0.82rem;background:var(--bg-3);color:var(--testo)" onclick="generaAttestatiSelezionati(' + intv.id + ',true)">📄 PDF unico (stampa)</button>'
+    + (attestatiVolontari.length ? '<p id="attestatiStatus" class="note att-status"></p>'
+      + '<div class="att-azioni">'
+      + '<button class="btn pri" onclick="generaAttestatiSelezionati(' + intv.id + ')">Genera attestati</button>'
+      + '<button class="btn" onclick="generaAttestatiSelezionati(' + intv.id + ',true)">PDF unico (stampa)</button>'
       + '</div>'
-      + '<div id="attestatiRisultati" style="margin-top:0.8rem"></div>' : '');
+      + '<div id="attestatiRisultati" class="mt14"></div>' : '');
 }
 
 function toggleSelAll(cb) {
@@ -3200,17 +3243,17 @@ async function generaAttestatiSelezionati(interventoId, unico) {
 
   // Mostra risultati con azioni per ognuno
   if (risultati) {
-    risultati.innerHTML = '<div style="font-size:0.72rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin-bottom:0.5rem">Risultati</div>';
+    risultati.innerHTML = '<div class="grp">Risultati</div>';
     righe.forEach(function(r, i) {
       var riga = document.createElement('div');
       riga.id  = 'att-riga-' + i;
-      riga.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0;border-bottom:0.5px solid var(--border)';
+      riga.className = 'lr';
       if (r.blob) {
-        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;font-weight:500;color:var(--testo)">' + r.v.cognome + ' ' + r.v.nome + '</div>'
-          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" onclick="scaricaAttestato(' + i + ')">⬇️ Scarica</button>'
-          + '<button class="btn-sm" style="font-size:0.72rem;padding:3px 8px;flex-shrink:0" id="att-archivia-' + i + '" onclick="archiviaAttestato(' + i + ',' + intv.id + ')">📁 Archivia</button>';
+        riga.innerHTML = '<b class="grow">' + r.v.cognome + ' ' + r.v.nome + '</b>'
+          + '<button class="btn sm" onclick="scaricaAttestato(' + i + ')">Scarica</button>'
+          + '<button class="btn sm" id="att-archivia-' + i + '" onclick="archiviaAttestato(' + i + ',' + intv.id + ')">Archivia</button>';
       } else {
-        riga.innerHTML = '<div style="flex:1;font-size:0.82rem;color:var(--red)">' + r.v.cognome + ' ' + r.v.nome + ' — errore: ' + r.errore + '</div>';
+        riga.innerHTML = '<span class="bad grow m0">' + r.v.cognome + ' ' + r.v.nome + ' — errore: ' + r.errore + '</span>';
       }
       risultati.appendChild(riga);
     });
@@ -3251,7 +3294,7 @@ async function archiviaAttestato(idx, interventoId) {
       body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url, data_carico: new Date().toISOString() })
     });
     await logAttivita('ha archiviato attestato per ' + r.v.cognome + ' ' + r.v.nome);
-    if (btn) { btn.textContent = '✓ Archiviato'; btn.style.color = 'var(--green)'; }
+    if (btn) { btn.textContent = '✓ Archiviato'; btn.classList.add('ok-txt'); }
     r.archiviato = true;
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = '📁 Archivia'; }
@@ -3568,17 +3611,16 @@ function renderDocVolontari(vols, docsPerVol) {
   list.innerHTML = '';
   vols.forEach(v => {
     const docs = docsPerVol[v.id] || [];
-    const [bg, fg] = avatarColor(v.cognome);
     const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
     const card = document.createElement('div');
-    card.className = 'doc-vol-card';
+    card.className = 'card doc-vol-card';
     card.id = 'docCard_' + v.id;
     card.innerHTML = '<div class="doc-vol-head" onclick="toggleDocVol(' + v.id + ')">'
       + (v.foto_url
-          ? '<img src="' + v.foto_url + '" class="doc-vol-avatar" style="object-fit:cover">'
-          : '<div class="doc-vol-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
+          ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
+          : '<span class="av s40">' + initials + '</span>')
       + '<span class="doc-vol-name">' + v.cognome + ' ' + v.nome + '</span>'
-      + '<span class="doc-vol-count">' + (docs.length ? docs.length + ' doc.' : 'nessun doc.') + '</span>'
+      + '<span class="pill ' + (docs.length ? 'p-blue' : 'p-grey') + '">' + (docs.length ? docs.length + ' documenti' : 'Nessun documento') + '</span>'
       + '<span class="doc-vol-arrow">▼</span>'
       + '</div>'
       + '<div class="doc-vol-body" id="docBody_' + v.id + '">'
@@ -3602,14 +3644,14 @@ function renderDocListHTML(volId, docs) {
         + '<div class="doc-item-meta">' + label + ' | ' + data + '</div>'
         + '</div>'
         + '<div class="doc-item-actions">'
-        + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaDoc(' + d.id + ',' + volId + ')">✕</button>'
+        + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+        + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDoc(' + d.id + ',' + volId + ')">✕</button>'
         + '</div>'
         + '</div>';
     });
   }
   html += '</div>';
-  html += '<button class="doc-add-btn" onclick="apriUploadDoc(' + volId + ')">+ aggiungi documento</button>';
+  html += '<button class="doc-add-btn" onclick="apriUploadDoc(' + volId + ')">+ Aggiungi documento</button>';
   return html;
 }
 
@@ -3632,7 +3674,7 @@ function apriUploadDoc(volId) {
   const v = docVolontariCache.find(v => v.id === volId);
   document.getElementById('docUploadTitle').textContent = 'Carica documento — ' + (v ? v.cognome + ' ' + v.nome : '');
   document.getElementById('docUploadErr').style.display = 'none';
-  document.getElementById('docDropText').innerHTML = '📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span>';
+  document.getElementById('docDropText').innerHTML = 'PDF, JPG o PNG — max 10MB';
   document.getElementById('docNome').value = '';
   document.getElementById('docProgress').style.display = 'none';
   document.getElementById('docProgressBar').style.width = '0%';
@@ -3760,11 +3802,11 @@ async function eliminaDoc(docId, volId) {
 async function caricaDocVolontario(volId) {
   const body = document.getElementById('volDocBody');
   if (!body) return;
-  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
     if (!res.ok) {
-      body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore caricamento (' + res.status + ')</div>';
+      body.innerHTML = '<p class="bad">Errore nel caricamento (' + res.status + ')</p>';
       return;
     }
     const docs = await res.json();
@@ -3772,8 +3814,8 @@ async function caricaDocVolontario(volId) {
     if (count) count.textContent = '(' + docs.length + ')';
 
     if (!docs.length) {
-      body.innerHTML = '<div style="font-size:0.72rem;color:var(--text-4);padding:0.3rem 0">Nessun documento.</div>'
-        + '<button class="doc-add-btn" style="margin-top:0.3rem" onclick="apriDocDaScheda(' + volId + ')">+ carica documento</button>';
+      body.innerHTML = '<p class="note">Nessun documento.</p>'
+        + '<button class="doc-add-btn mt10" onclick="apriDocDaScheda(' + volId + ')">+ Carica documento</button>';
       return;
     }
 
@@ -3788,45 +3830,40 @@ async function caricaDocVolontario(volId) {
       const nome  = d.nome_file
         ? d.nome_file.replace(/^[A-Z_]+_/, '').replace(/_/g, ' ').replace(/\.[a-z]{2,4}$/i, '')
         : tipoTxt;
-      const bg = evidenziato ? 'background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem' : '';
-      return '<div class="vol-field" style="' + bg + '">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-        + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-        + '<div style="font-size:0.65rem;color:var(--testo-3)">' + tipoTxt + ' · ' + data + '</div>'
-        + '</div>'
-        + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-        + '</div>'
+      return '<div class="doc-item' + (evidenziato ? ' hl' : '') + '">'
+        + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
+        + '<div class="doc-item-meta">' + tipoTxt + ' · ' + data + '</div></div>'
+        + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
         + '</div>';
     };
 
     const sectionLabel = (txt) =>
-      '<div style="font-size:0.68rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;margin:0.7rem 0 0.4rem">' + txt + '</div>';
+      '<div class="grp mt10">' + txt + '</div>';
 
     let html = '';
 
     // 📷 FOTO
     if (foto.length) {
-      html += sectionLabel('📷 Foto (' + foto.length + ')');
+      html += sectionLabel('Foto (' + foto.length + ')');
       html += foto.map(d => renderItem(d, true)).join('');
     }
 
     // 🪪 DOCUMENTI
     if (documenti.length) {
-      html += sectionLabel('🪪 Documenti (' + documenti.length + ')');
+      html += sectionLabel('Documenti (' + documenti.length + ')');
       html += documenti.map(d => renderItem(d, true)).join('');
     }
 
     // 📜 ATTESTATI
     if (attestati.length) {
-      html += sectionLabel('📜 Attestati (' + attestati.length + ')');
+      html += sectionLabel('Attestati (' + attestati.length + ')');
       html += attestati.map(d => renderItem(d, true)).join('');
     }
 
-    html += '<button class="doc-add-btn" style="margin-top:0.6rem" onclick="apriDocDaScheda(' + volId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn mt10" onclick="apriDocDaScheda(' + volId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore: ' + (e.message || e) + '</div>';
+    body.innerHTML = '<p class="bad">Errore: ' + (e.message || e) + '</p>';
   }
 }
 
@@ -3853,24 +3890,10 @@ function getTipoAttivitaIcon(tipo, size, color) {
   return icons[tipo] || '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 }
 
-var TIPO_ATTIVITA_COLORS = {
-  'EMERGENZA':            { bg:'#fde8e8', stroke:'#c0392b' },
-  'ESERCITAZIONE':        { bg:'#e8f0fb', stroke:'#185fa5' },
-  'CORSI':                { bg:'#eaf3de', stroke:'#3b6d11' },
-  'PREVENZIONE INFORTUNI':{ bg:'#faeeda', stroke:'#854f0b' },
-  'RAPPRESENTANZA':       { bg:'#eeedfe', stroke:'#534ab7' },
-  'ASSEMBLEE E RIUNIONI': { bg:'#e1f5ee', stroke:'#0f6e56' },
-  'CONTROLLO TERRITORIO': { bg:'#e6f1fb', stroke:'#185fa5' },
-  'SEGRETERIA':           { bg:'#f1efe8', stroke:'#5f5e5a' },
-  'MAGAZZINO':            { bg:'#faeeda', stroke:'#854f0b' },
-};
-
 function getTipoAttivitaAvatar(tipo, size) {
   size = size || 36;
-  var c = TIPO_ATTIVITA_COLORS[tipo] || { bg:'var(--green-pale)', stroke:'var(--green)' };
-  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:9px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-    + getTipoAttivitaIcon(tipo, Math.round(size*0.55), c.stroke)
-    + '</div>';
+  var cls = 'tipo-ic' + (/EMERG/i.test(tipo || '') ? ' em' : '') + (size >= 56 ? ' s56' : size <= 40 ? ' s40' : '');
+  return '<div class="' + cls + '">' + getTipoAttivitaIcon(tipo, Math.round(size*0.55), 'currentColor') + '</div>';
 }
 
 function toggleNuovoUtente() {
@@ -3896,13 +3919,13 @@ async function eseguiVerificaCF() {
   const box = document.getElementById('verCFRisultati');
   if (!box) return;
   box.style.display = 'block';
-  box.innerHTML = '<div class="db-loading" style="padding:0.6rem">verifica in corso...</div>';
+  box.innerHTML = '<div class="card vcf-card"><p class="note m0">Verifica in corso…</p></div>';
   let vols;
   try {
     const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
     vols = await r.json();
   } catch(e) {
-    box.innerHTML = '<div class="db-loading" style="color:var(--red)">errore caricamento volontari.</div>';
+    box.innerHTML = '<div class="card vcf-card"><p class="bad m0">Errore nel caricamento dei volontari.</p></div>';
     return;
   }
 
@@ -3928,30 +3951,24 @@ async function eseguiVerificaCF() {
   });
 
   const rigaTab = arr => {
-    let t = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Volontario</th>'
-      + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Dettaglio</th>'
-      + '</tr></thead><tbody>';
+    let t = '<div class="card tbl acc-log"><div class="irow ihead"><span>Volontario</span><span>Dettaglio</span><span></span></div>';
     arr.forEach(p => {
-      t += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500;white-space:nowrap">' + p.v + '</td>'
-        + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + p.msg + '</td>'
-        + '</tr>';
+      t += '<div class="irow"><b class="nowrap">' + p.v + '</b><span>' + p.msg + '</span><span></span></div>';
     });
-    return t + '</tbody></table>';
+    return t + '</div>';
   };
 
-  let out = '<div class="panel" style="padding:0.8rem">'
-    + '<div style="font-size:0.8rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center">'
+  let out = '<div class="card vcf-card">'
+    + '<div class="vcf-head">'
     + '<span><strong>' + vols.length + '</strong> volontari verificati — '
-    + '<span style="color:var(--green,#2e7d32)">✔ ' + ok + ' coerenti</span> · '
-    + '<span style="color:var(--red,#c62828)">⚠ ' + errori.length + ' discrepanze</span>'
-    + (info.length ? ' · <span style="color:var(--testo-3)">' + info.length + ' avvisi</span>' : '') + '</span>'
-    + '<button class="db-btn" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">✕ chiudi</button>'
+    + '<span class="pill p-blue">' + ok + ' coerenti</span> '
+    + '<span class="pill p-red">' + errori.length + ' discrepanze</span>'
+    + (info.length ? ' <span class="pill p-grey">' + info.length + ' avvisi</span>' : '') + '</span>'
+    + '<button class="btn sm" onclick="document.getElementById(\'verCFRisultati\').style.display=\'none\'">Chiudi</button>'
     + '</div>';
   if (errori.length) out += rigaTab(errori);
-  if (info.length) out += '<details style="margin-top:0.5rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
-  if (!errori.length && !info.length) out += '<div class="db-loading">nessuna discrepanza trovata 🎉</div>';
+  if (info.length) out += '<details class="vcf-avvisi"><summary>Avvisi non bloccanti (' + info.length + ')</summary>' + rigaTab(info) + '</details>';
+  if (!errori.length && !info.length) out += '<p class="note">Nessuna discrepanza trovata.</p>';
   out += '</div>';
   box.innerHTML = out;
 }
@@ -4072,7 +4089,7 @@ async function pstCaricaLista() {
 
     pstRenderLista();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento postazioni.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento postazioni.</div>';
   }
 }
 
@@ -4119,52 +4136,49 @@ function pstRenderLista() {
     const nVolAssegnati = p.volontari.length;
     const previsti = p.n_volontari_previsti;
     const contatore = previsti
-      ? '<span class="acc-badge ' + (nVolAssegnati < previsti ? 'acc-inactive' : 'acc-active') + '">' + nVolAssegnati + '/' + previsti + '</span>'
-      : '<span class="acc-badge acc-std">' + nVolAssegnati + '</span>';
+      ? '<span class="pill ' + (nVolAssegnati < previsti ? 'p-sand' : 'p-blue') + '">' + nVolAssegnati + '/' + previsti + '</span>'
+      : '<span class="pill p-grey">' + nVolAssegnati + '</span>';
 
     const infoRighe = [];
-    infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span style="color:var(--testo-3)">nessuna radio</span>');
-    infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span style="color:var(--testo-3)">nessun vigile</span>');
-    infoRighe.push(p.assegnata_ana === false ? '🏳️ <span style="color:#e08000">non assegnata a noi</span>' : '🏳️ ANA');
-    infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span style="color:var(--testo-3)">nessun mezzo</span>');
+    infoRighe.push(p.radio_id && radioById[p.radio_id] ? '📻 ' + _pstLabelRadio(radioById[p.radio_id]) : '📻 <span class="muted">nessuna radio</span>');
+    infoRighe.push(p.vigile_presente ? '👮 Vigile presente' : '👮 <span class="muted">nessun vigile</span>');
+    infoRighe.push(p.assegnata_ana === false ? '🏳️ <span class="pill p-sand">non assegnata a noi</span>' : '🏳️ ANA');
+    infoRighe.push(p.mezzo_id && mezzoById[p.mezzo_id] ? '🚛 ' + _pstLabelMezzo(mezzoById[p.mezzo_id]) : '🚛 <span class="muted">nessun mezzo</span>');
 
     const righeVol = p.volontari.length
       ? p.volontari.map(a => {
           const v = a.volontari || {};
           const altrove = (assegnatoIn[a.volontario_id] || []).filter(n => n !== (p.numero || p.indirizzo));
-          const warnAltrove = altrove.length ? '<span style="color:#e08000;font-size:0.68rem;display:block">⚠ anche a: ' + altrove.join(', ') + '</span>' : '';
+          const warnAltrove = altrove.length ? '<span class="pill p-sand mt6">anche a: ' + altrove.join(', ') + '</span>' : '';
           const tr = a.trasporto || 'piedi';
           const opt = (val, label) => '<option value="' + val + '"' + (tr === val ? ' selected' : '') + '>' + label + '</option>';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.6rem;background:var(--bg-2);border-radius:6px;margin-bottom:0.3rem;gap:0.4rem">'
-            + '<span style="font-size:0.8rem;flex:1;min-width:0">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + warnAltrove + '</span>'
-            + '<select class="form-inp" style="width:auto;font-size:0.72rem;padding:2px 4px" onchange="pstAggiornaTrasporto(' + a.id + ',this.value)">'
+          return '<div class="pst-vol">'
+            + '<span class="grow"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>' + (v.squadra ? '<span class="sub">' + v.squadra + '</span>' : '') + warnAltrove + '</span>'
+            + '<select aria-label="Trasporto" onchange="pstAggiornaTrasporto(' + a.id + ',this.value)">'
             + opt('piedi','🚶 a piedi') + opt('mezzo_fisso','🚗 con mezzo (resta)') + opt('trasportato','🚐 trasportato')
             + '</select>'
-            + '<button class="btn-sm btn-danger" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
+            + '<button class="btn sm danger" aria-label="Rimuovi" onclick="pstRimuoviVolontario(' + a.id + ')">✕</button>'
             + '</div>';
         }).join('')
-      : '<div class="loading-msg" style="padding:0.3rem 0;font-size:0.78rem">nessun volontario assegnato</div>';
+      : '<div class="loading-msg sm">nessun volontario assegnato</div>';
 
-    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span style="color:var(--testo-3);font-weight:400;font-size:0.75em">(' + p.nome + ')</span>' : '');
+    const titolo = (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + (p.nome ? ' <span class="sub">(' + p.nome + ')</span>' : '');
     const bodyId = 'pstCardBody' + p.id;
     const chevId = 'pstCardChev' + p.id;
 
-    return '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div class="vol-section-head" onclick="pstToggleCard(' + p.id + ')" style="gap:0.6rem">'
-      + '<h3 style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0">📍 ' + titolo + '</h3>'
-      + '<div style="display:flex;gap:0.3rem;align-items:center;flex-shrink:0">'
-      + '<button class="btn-sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">✏️ modifica</button>'
-      + '<button class="btn-sm btn-danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">elimina</button>'
-      + '<span id="' + chevId + '" style="font-size:0.7rem">▸</span>'
-      + '</div></div>'
-      + '<div id="' + bodyId + '" style="padding:0.6rem;display:none;grid-template-columns:180px 1fr;gap:1rem">'
-      + '<div style="font-size:0.78rem;color:var(--testo-2);display:flex;flex-direction:column;gap:0.35rem">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
-      + '<div style="border-left:0.5px solid var(--border);padding-left:1rem">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">'
-      + '<span style="font-size:0.72rem;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.3px">Volontari</span>' + contatore
+    return '<div class="card pst-card">'
+      + '<div class="pst-head" onclick="pstToggleCard(' + p.id + ')">'
+      + '<h3>' + titolo + '</h3>' + contatore
+      + '<button class="btn sm" onclick="event.stopPropagation();pstApriModificaPostazione(' + p.id + ')">Modifica</button>'
+      + '<button class="btn sm danger" onclick="event.stopPropagation();pstEliminaPostazione(' + p.id + ')">Elimina</button>'
+      + '<span id="' + chevId + '" class="pst-chev">▸</span>'
       + '</div>'
+      + '<div id="' + bodyId + '" class="pst-body" style="display:none">'
+      + '<div class="pst-info">' + infoRighe.map(r => '<div>' + r + '</div>').join('') + '</div>'
+      + '<div class="pst-vols">'
+      + '<div class="pst-vols-head"><span class="grp m0">Volontari</span></div>'
       + righeVol
-      + '<button class="btn-sm" style="margin-top:0.3rem" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.indirizzo||p.numero||'').replace(/'/g,"\\'") + '\')">+ aggiungi volontario</button>'
+      + '<button class="btn sm mt10" onclick="pstApriAggiungiVolontario(' + p.id + ',\'' + (p.indirizzo||p.numero||'').replace(/'/g,"\\'") + '\')">+ Aggiungi volontario</button>'
       + '</div></div></div>';
   }).join('');
 }
@@ -4338,11 +4352,11 @@ function pstRenderModalList() {
 
   box.innerHTML = filtrati.map(v => {
     const assegnato = giaQui.has(v.id);
-    return '<div class="acc-row" style="padding:0.4rem 0;border-bottom:0.5px solid var(--border-2)">'
-      + '<span class="acc-val">' + (v.cognome||'') + ' ' + (v.nome||'') + (v.squadra ? ' <span style="color:var(--testo-3);font-size:0.72rem">(' + v.squadra + ')</span>' : '') + '</span>'
+    return '<div class="lr">'
+      + '<span class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>' + (v.squadra ? '<span class="sub">' + v.squadra + '</span>' : '') + '</span>'
       + (assegnato
-          ? '<span class="acc-badge acc-active" style="margin-left:auto">✓ assegnato</span>'
-          : '<button class="btn-sm" style="margin-left:auto" onclick="pstAggiungiVolontarioA(' + v.id + ')">+ aggiungi</button>')
+          ? '<span class="pill p-blue">Assegnato</span>'
+          : '<button class="btn sm" onclick="pstAggiungiVolontarioA(' + v.id + ')">Aggiungi</button>')
       + '</div>';
   }).join('');
 }
@@ -4580,7 +4594,7 @@ async function pstImportaExcel(file) {
   const status = document.getElementById('pstImportStatus');
   status.style.display = 'block';
   status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
-  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
+  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg bad">impossibile caricare la libreria Excel.</div>'; return; }
 
   try {
     const buf = await file.arrayBuffer();
@@ -4603,7 +4617,7 @@ async function pstImportaExcel(file) {
       righe.push({ numero, nome, indirizzo, nvol: nvolRaw ? parseInt(nvolRaw, 10) : null, radioLabel, mezzoLabel, volontariRaw });
     });
 
-    if (!righe.length) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessuna riga valida trovata nel file.</div>'; return; }
+    if (!righe.length) { status.innerHTML = '<div class="loading-msg bad">nessuna riga valida trovata nel file.</div>'; return; }
 
     await _pstCaricaRadioMezzoOpts();
     if (!pstVolontariIntervento.length) await pstCaricaVolontariIntervento();
@@ -4664,14 +4678,14 @@ async function pstImportaExcel(file) {
 
     let html = '<div class="loading-msg">✔ ' + creati + ' postazioni create.' + (avvisi.length ? ' ⚠ ' + avvisi.length + ' avvisi.' : '') + '</div>';
     if (avvisi.length) {
-      html += '<details style="margin-top:0.4rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--testo-3)">Vedi avvisi</summary>'
-        + '<ul style="font-size:0.78rem;color:var(--testo-2);padding-left:1.2rem">' + avvisi.map(a => '<li>' + a + '</li>').join('') + '</ul></details>';
+      html += '<details class="pst-avvisi mt6"><summary>Vedi avvisi</summary>'
+        + '<ul>' + avvisi.map(a => '<li>' + a + '</li>').join('') + '</ul></details>';
     }
     status.innerHTML = html;
     document.getElementById('pstFileInput').value = '';
     await pstCaricaLista();
   } catch(e) {
-    status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante la lettura del file: ' + e.message + '</div>';
+    status.innerHTML = '<div class="loading-msg bad">errore durante la lettura del file: ' + e.message + '</div>';
   }
 }
 
@@ -4691,8 +4705,7 @@ let pstPanState = null;  // { startX, startY, scrollLeft, scrollTop, moved }
 function pstSetTabActive(id, active) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.style.background = active ? 'var(--green)' : '';
-  el.style.color = active ? '#fff' : '';
+  el.classList.toggle('on', !!active);
 }
 
 function pstMostraTab(tab) {
@@ -4804,7 +4817,7 @@ function pstRenderCanvasImmagine() {
   const puntiSvg = percorso.map(p => p.x + ',' + p.y).join(' ');
 
   const bandiera = (x, y, emoji, colore) => {
-    return '<div style="position:absolute;left:' + x + '%;top:' + y + '%;transform:translate(-50%,-100%);font-size:1.1rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))">' + emoji + '</div>';
+    return '<div class="pst-flag" style="left:' + x + '%;top:' + y + '%">' + emoji + '</div>';
   };
   const partenzaHtml = (pstMappaData.partenza_x != null) ? bandiera(pstMappaData.partenza_x, pstMappaData.partenza_y, '🚩') : '';
   const arrivoHtml = (pstMappaData.arrivo_x != null) ? bandiera(pstMappaData.arrivo_x, pstMappaData.arrivo_y, '🏁') : '';
@@ -4817,25 +4830,21 @@ function pstRenderCanvasImmagine() {
     const angolo = Math.atan2(dy, dx) * 180 / Math.PI;
     const haVol = p.volontari.length > 0;
     const haVigile = !!p.vigile_presente;
-    let bordo, outline = '';
-    if (haVigile && haVol) { bordo = '2px solid #16a34a'; outline = 'outline:2px solid #06b6d4;outline-offset:2px;'; }
-    else if (haVigile) { bordo = '2px solid #06b6d4'; }
-    else if (haVol) { bordo = '2px solid #16a34a'; }
-    else { bordo = '2px dashed #999'; }
-    const dashNonAna = p.assegnata_ana === false ? 'opacity:0.6;' : '';
+    const statoCls = (haVol ? ' vol' : '') + (haVigile ? ' vig' : '') + (p.assegnata_ana === false ? ' non-ana' : '');
 
-    return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="position:absolute;left:' + p.map_x + '%;top:' + p.map_y + '%">'
-      + '<div style="position:absolute;width:8px;height:8px;left:-4px;top:-4px;border-radius:50%;background:#333;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.5);z-index:2"></div>'
-      + '<div style="position:absolute;left:0;top:0;width:' + lunghezza + 'px;height:2px;background:#333;transform-origin:0 50%;transform:rotate(' + angolo + 'deg)"></div>'
-      + '<div class="pst-map-pin-label" style="position:absolute;left:' + dx + 'px;top:' + dy + 'px;transform:translate(0,-100%);cursor:grab;background:#fff;color:#111;font-size:0.72rem;font-weight:700;padding:2px 7px;border-radius:3px;border:' + bordo + ';' + outline + dashNonAna + 'white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.3);z-index:3">' + numero + '</div>'
+    // posizioni e angoli calcolati dai dati: restano inline, l'aspetto sta nelle classi pst-*
+    return '<div class="pst-map-pin" data-pid="' + p.id + '" data-dx="' + dx + '" data-dy="' + dy + '" style="left:' + p.map_x + '%;top:' + p.map_y + '%">'
+      + '<div class="pst-pin-dot"></div>'
+      + '<div class="pst-pin-line" style="width:' + lunghezza + 'px;transform:rotate(' + angolo + 'deg)"></div>'
+      + '<div class="pst-map-pin-label' + statoCls + '" style="left:' + dx + 'px;top:' + dy + 'px">' + numero + '</div>'
       + '</div>';
   }).join('');
 
   canvas.innerHTML =
-    '<div id="pstMapZoomWrap" style="position:relative;width:' + PST_IMG_BASE_WIDTH + 'px;transform-origin:0 0;transform:scale(' + pstImgZoom + ')">'
-    + '<img id="pstMapImgEl" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px;display:block;pointer-events:none" draggable="false">'
-    + '<svg id="pstMapSvg" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none">'
-    + (puntiSvg ? '<polyline points="' + puntiSvg + '" fill="none" stroke="#d92b2b" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
+    '<div id="pstMapZoomWrap" class="pst-zoomwrap" style="width:' + PST_IMG_BASE_WIDTH + 'px;transform:scale(' + pstImgZoom + ')">'
+    + '<img id="pstMapImgEl" class="pst-img" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px" draggable="false" alt="">'
+    + '<svg id="pstMapSvg" class="pst-svg" viewBox="0 0 100 100" preserveAspectRatio="none">'
+    + (puntiSvg ? '<polyline class="pst-route" points="' + puntiSvg + '" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
     + '</svg>'
     + partenzaHtml + arrivoHtml
     + pins
@@ -4876,7 +4885,7 @@ function pstRenderCanvasImmagine() {
         origDx: parseFloat(pinEl.getAttribute('data-dx')), origDy: parseFloat(pinEl.getAttribute('data-dy')),
         moved: false, el
       };
-      el.style.cursor = 'grabbing';
+      el.classList.add('dragging');
     });
   });
 }
@@ -4905,6 +4914,7 @@ async function pstGestisciPanEnd(e) {
   if (pstDragLabel) {
     const drag = pstDragLabel;
     pstDragLabel = null;
+    if (drag.el) drag.el.classList.remove('dragging');
     if (drag.moved) {
       const dx = (e.clientX - drag.startX) / pstImgZoom;
       const dy = (e.clientY - drag.startY) / pstImgZoom;
@@ -5405,15 +5415,15 @@ function pstRenderListePosizionamento() {
 
   boxDa.innerHTML = daPosizionare.length ? daPosizionare.map(p => {
     const attivo = pstMapArmedPostazioneId === p.id;
-    return '<button class="btn-sm" style="text-align:left' + (attivo ? ';background:var(--green);color:#fff' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
-  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">tutte posizionate</div>';
+    return '<button class="chip' + (attivo ? ' on' : '') + '" onclick="pstArmaPosizionamento(' + p.id + ')">📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || 'senza indirizzo') + '</button>';
+  }).join('') : '<div class="loading-msg sm">tutte posizionate</div>';
 
   boxOk.innerHTML = posizionate.length ? posizionate.map(p => {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.5rem;background:var(--bg-2);border-radius:6px;font-size:0.76rem">'
-      + '<span>📍 ' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
-      + '<button class="btn-sm btn-danger" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
+    return '<div class="pst-posizionata">'
+      + '<span>' + (p.numero ? p.numero + ' — ' : '') + (p.indirizzo || '—') + '</span>'
+      + '<button class="btn sm danger" aria-label="Togli dalla mappa" onclick="pstRimuoviDallaMappa(' + p.id + ')">✕</button>'
       + '</div>';
-  }).join('') : '<div class="loading-msg" style="font-size:0.72rem">nessuna postazione sulla mappa</div>';
+  }).join('') : '<div class="loading-msg sm">nessuna postazione sulla mappa</div>';
 }
 
 // -- DB AVANZATO (Supabase) --
@@ -5498,7 +5508,7 @@ async function caricaDb() {
     dbRenderBody();
     dbRenderPag();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="99" class="db-loading" style="color:var(--red)">Errore: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading bad">Errore: ' + e.message + '</td></tr>';
   }
 }
 
@@ -5506,12 +5516,12 @@ function dbRenderHead() {
   var thead = document.getElementById('dbThead');
   if (!thead) return;
   var cols = DB_ALL_COLS.filter(function(c){ return DB_VISIBLE_COLS.includes(c.key); });
-  thead.innerHTML = '<tr><th style="width:32px;text-align:center">#</th>'
+  thead.innerHTML = '<tr><th class="num">#</th>'
     + cols.map(function(c){
         var arrow = dbSortKey === c.key ? (dbSortAsc ? ' ↑' : ' ↓') : '';
         return '<th class="sortable" onclick="dbSort(\'' + c.key + '\')">' + c.label + arrow + '</th>';
       }).join('')
-    + '<th style="width:52px"></th></tr>';
+    + '<th class="act"></th></tr>';
 }
 
 function dbRenderBody() {
@@ -5525,7 +5535,7 @@ function dbRenderBody() {
   tbody.innerHTML = '';
   dbRecords.forEach(function(rec, idx) {
     var tr  = document.createElement('tr');
-    var tds = '<td style="color:var(--testo-3);font-size:0.65rem;text-align:center">' + (dbPage * dbPageSize + idx + 1) + '</td>';
+    var tds = '<td class="num">' + (dbPage * dbPageSize + idx + 1) + '</td>';
     cols.forEach(function(c) {
       var val = rec[c.key];
       var cell;
@@ -5534,14 +5544,14 @@ function dbRenderBody() {
       } else if (c.type === 'date') {
         cell = val ? new Date(val).toLocaleDateString('it-IT') : '<span class="db-empty">—</span>';
       } else if (c.type === 'select') {
-        var colors = { 'COMPLETATA':'var(--green)','DA FARE':'var(--red)','SOLO ESAMI':'var(--amber)','VERIFICA':'var(--blue)','ESONERO':'var(--testo-3)' };
-        cell = val ? '<span style="font-size:0.68rem;padding:2px 8px;border-radius:10px;background:var(--bg-2);color:' + (colors[val]||'var(--testo-2)') + '">' + val + '</span>' : '<span class="db-empty">—</span>';
+        var pills = { 'COMPLETATA':'p-blue','DA FARE':'p-red','SOLO ESAMI':'p-sand','VERIFICA':'p-yellow','ESONERO':'p-grey' };
+        cell = val ? '<span class="pill ' + (pills[val]||'p-grey') + '">' + val + '</span>' : '<span class="db-empty">—</span>';
       } else {
         cell = val ? '<span title="' + String(val).replace(/"/g,'') + '">' + String(val).substring(0,30) + (String(val).length > 30 ? '…' : '') + '</span>' : '<span class="db-empty">—</span>';
       }
       tds += '<td>' + cell + '</td>';
     });
-    tds += '<td><button class="db-btn" style="padding:2px 7px;font-size:0.62rem" onclick="dbApriModifica(' + JSON.stringify(rec.id) + ')">✏</button></td>';
+    tds += '<td><button class="btn sm" onclick="dbApriModifica(' + JSON.stringify(rec.id) + ')">Apri</button></td>';
     tr.innerHTML = tds;
     tbody.appendChild(tr);
   });
@@ -5727,8 +5737,16 @@ async function caricaTlc() {
     tlcDocsGenerali = await rDoc.json();
     renderTlc(tlcData);
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
+}
+
+// Chip del filtro tipo: scrivono nel select nascosto letto da filtraTlc()
+function tlcScegliTipo(btn, val) {
+  document.querySelectorAll('#tlcChips .chip').forEach(c => c.classList.toggle('on', c === btn));
+  const sel = document.getElementById('tlcFiltroTipo');
+  sel.value = val;
+  filtraTlc();
 }
 
 function renderTlc(data) {
@@ -5738,7 +5756,7 @@ function renderTlc(data) {
   let html = _renderTlcDocsGenerali();
 
   if (!data.length) {
-    html += '<div class="loading-msg">nessun apparato. Clicca "+ nuovo" per aggiungere.</div>';
+    html += '<div class="empty">Nessun apparato. Usa "Nuovo apparato" per aggiungerne uno.</div>';
     list.innerHTML = html;
     return;
   }
@@ -5750,11 +5768,10 @@ function renderTlc(data) {
     gruppi[k].push(t);
   });
 
-  html += '<div class="vol-list">';
+  html += '<div class="grid g3">';
   Object.keys(gruppi).forEach(k => {
     const info = TLC_TIPOLOGIE[k] || { label: k, icon: '📡' };
-    html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.7rem 1rem 0.4rem;border-top:0.5px solid var(--border)">'
-      + info.icon + ' ' + info.label + ' (' + gruppi[k].length + ')</div>';
+    html += '<div class="grp">' + info.label + ' (' + gruppi[k].length + ')</div>';
     gruppi[k].forEach(t => {
       const titolo  = [t.marca, t.modello].filter(Boolean).join(' ') || '—';
       const sub     = [];
@@ -5762,16 +5779,13 @@ function renderTlc(data) {
       if (t.selettiva)    sub.push('SEL ' + t.selettiva);
       if (t.frequenza)    sub.push(t.frequenza === 'DIGITALE' ? 'Digitale' : 'Analogica');
       const badge = t.assegnazione
-        ? '<span class="vol-badge vb-squadra">' + t.assegnazione + '</span>'
-        : '<span class="vol-badge vb-off">non assegnato</span>';
-      html += '<div class="vol-card" onclick="apriDettaglioTlc(' + t.id + ')">'
-        + '<div class="vol-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.1rem">' + info.icon + '</div>'
-        + '<div class="vol-card-info">'
-        + '<div class="vol-card-name">' + titolo + '</div>'
-        + '<div class="vol-card-sub"><span>' + (sub.join(' | ') || '—') + '</span></div>'
-        + '</div>'
-        + '<div class="vol-card-badges">' + badge + '</div>'
-        + '</div>';
+        ? '<span class="pill p-blue">' + t.assegnazione + '</span>'
+        : '<span class="pill p-grey">Non assegnato</span>';
+      html += '<button class="card vc tlc-card" onclick="apriDettaglioTlc(' + t.id + ')">'
+        + '<span class="av">' + info.icon + '</span>'
+        + '<span class="mid"><b>' + titolo + '</b><span class="sub">' + (sub.join(' · ') || '—') + '</span></span>'
+        + badge
+        + '</button>';
     });
   });
   html += '</div>';
@@ -5782,12 +5796,12 @@ function _renderTlcDocsGenerali() {
   const count = tlcDocsGenerali.length;
   const expanded = window._tlcDocsGenAperto === true;
 
-  let html = '<div class="vol-section" style="margin-bottom:0.8rem;background:var(--bg-card);border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden">'
-    + '<div class="vol-section-head" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="toggleTlcDocsGenerali()">'
-    + '<span>📁 Documenti generali TLC <span style="font-size:0.6rem;color:var(--green);margin-left:4px">(' + count + ')</span></span>'
-    + '<span id="tlcDocsGenChev" style="color:var(--testo-3);font-size:0.85rem">' + (expanded ? '▼' : '▶') + '</span>'
+  let html = '<div class="card tlc-docs">'
+    + '<div class="tlc-docs-head" onclick="toggleTlcDocsGenerali()">'
+    + '<h2>Documenti generali TLC <span class="pill p-blue">' + count + '</span></h2>'
+    + '<span id="tlcDocsGenChev" class="pst-chev">' + (expanded ? '▼' : '▶') + '</span>'
     + '</div>'
-    + '<div class="vol-section-body" id="tlcDocsGenBody" style="' + (expanded ? '' : 'display:none') + '">';
+    + '<div class="tlc-docs-body" id="tlcDocsGenBody"' + (expanded ? '' : ' style="display:none"') + '>';
 
   // Raggruppa per tipo
   const gruppi = { MANUALE: [], FREQUENZE: [], AMMINISTRATIVO: [], ALTRO: [] };
@@ -5797,30 +5811,27 @@ function _renderTlcDocsGenerali() {
   });
 
   if (!count) {
-    html += '<div style="font-size:0.75rem;color:var(--testo-3);padding:0.5rem 0">Nessun documento generale.</div>';
+    html += '<p class="note">Nessun documento generale.</p>';
   } else {
     TLC_DOC_TIPI_GENERALI.forEach(k => {
       const docs = gruppi[k];
       if (!docs.length) return;
       const lbl = TLC_DOC_TIPI[k] || k;
-      html += '<div style="font-size:0.65rem;font-weight:700;color:var(--testo-3);text-transform:uppercase;letter-spacing:0.5px;padding:0.6rem 0 0.3rem">' + lbl + ' (' + docs.length + ')</div>';
+      html += '<div class="grp mt10">' + lbl + ' (' + docs.length + ')</div>';
       docs.forEach(d => {
         const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
         const nome = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : lbl;
-        html += '<div style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button>'
-          + '</div></div>';
+        html += '<div class="doc-item">'
+          + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
+          + '<div class="doc-item-meta">' + data + '</div></div>'
+          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button></div>'
+          + '</div>';
       });
     });
   }
 
-  html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUploadGenerale()">+ aggiungi documento generale</button>';
+  html += '<button class="doc-add-btn mt10" onclick="apriTlcDocUploadGenerale()">+ Aggiungi documento generale</button>';
   html += '</div></div>';
   return html;
 }
@@ -5863,12 +5874,12 @@ function apriDettaglioTlc(id) {
 
   const body = document.getElementById('tlcDetailBody');
   let html = '<div class="vol-detail-hero">'
-    + '<div class="vol-detail-avatar" style="background:#e8f5ee;color:#1a7a4a;font-size:1.6rem">' + info.icon + '</div>'
+    + '<div class="vol-detail-avatar">' + info.icon + '</div>'
     + '<div><div class="vol-detail-name">' + ([t.marca, t.modello].filter(Boolean).join(' ') || '—') + '</div>'
     + '<div class="vol-detail-role">' + info.label + (t.assegnazione ? ' | ' + t.assegnazione : '') + '</div></div>'
     + '</div>';
 
-  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body" style="display:block">'
+  html += '<div class="vol-section"><div class="vol-section-head">Dati apparato</div><div class="vol-section-body">'
     + _tlcField('Tipologia', info.label)
     + _tlcField('Marca', t.marca)
     + _tlcField('Modello', t.modello)
@@ -5881,16 +5892,14 @@ function apriDettaglioTlc(id) {
 
   // Sezione documenti
   html += '<div class="vol-section">'
-    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleTlcDoc(' + id + ')">'
-    + 'Documenti <span id="tlcDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '<div class="vol-section-head" onclick="toggleTlcDoc(' + id + ')">'
+    + '<span>Documenti <span class="sec-count" id="tlcDocCount"></span></span>'
     + '</div>'
     + '<div class="vol-section-body" id="tlcDocBody" style="display:none"></div>'
     + '</div>';
 
   // Azioni
-  html += '<div style="padding:1rem 0">'
-    + '<button class="btn-sm btn-danger" style="width:100%" onclick="eliminaTlc(' + id + ')">🗑️ Elimina apparato</button>'
-    + '</div>';
+  html += '<button class="vol-delete-btn" onclick="eliminaTlc(' + id + ')">Elimina apparato</button>';
 
   body.innerHTML = html;
   tlcDocLoadedFor = null;
@@ -6023,7 +6032,7 @@ function toggleTlcDoc(tlcId) {
 async function caricaDocTlc(tlcId) {
   const body = document.getElementById('tlcDocBody');
   if (!body) return;
-  body.innerHTML = '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.5rem 0">caricamento...</div>';
+  body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const res  = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
     const docs = await res.json();
@@ -6032,28 +6041,24 @@ async function caricaDocTlc(tlcId) {
 
     let html = '';
     if (!docs.length) {
-      html += '<div style="font-size:0.72rem;color:var(--testo-3);padding:0.3rem 0">Nessun documento.</div>';
+      html += '<p class="note">Nessun documento.</p>';
     } else {
       docs.forEach(d => {
         const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
         const label = TLC_DOC_TIPI[d.tipo] || d.tipo;
         const nome  = d.nome_file ? d.nome_file.replace(/^[A-Z]+_/, '').replace(/_/g, ' ') : label;
-        html += '<div class="vol-field" style="background:var(--bg-2);border-radius:6px;padding:0.4rem 0.6rem;margin-bottom:0.3rem">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">'
-          + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:0.78rem;font-weight:500;color:var(--testo);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + nome + '</div>'
-          + '<div style="font-size:0.65rem;color:var(--testo-3)">' + label + ' · ' + data + '</div>'
-          + '</div>'
-          + '<a href="' + d.url + '" target="_blank" style="color:var(--green);font-size:0.75rem;font-weight:600;text-decoration:none;flex-shrink:0">⬇️ Apri</a>'
-          + '<button class="btn-sm btn-danger" style="padding:2px 8px;font-size:0.7rem" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button>'
-          + '</div>'
+        html += '<div class="doc-item">'
+          + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
+          + '<div class="doc-item-meta">' + label + ' · ' + data + '</div></div>'
+          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button></div>'
           + '</div>';
       });
     }
-    html += '<button class="doc-add-btn" style="margin-top:0.4rem" onclick="apriTlcDocUpload(' + tlcId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn mt10" onclick="apriTlcDocUpload(' + tlcId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.5rem 0">errore.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 
@@ -6221,38 +6226,7 @@ var dotManCache = {};
 var dotVistaLista = false;     // false = card (griglia), true = lista
 
 // palette colori per categoria principale, ciclica per hue (oklch)
-var DOT_PALETTE = [
-  { dotL:55, dotC:0.16, h:75  },
-  { dotL:55, dotC:0.18, h:25  },
-  { dotL:55, dotC:0.15, h:250 },
-  { dotL:55, dotC:0.15, h:300 },
-  { dotL:50, dotC:0.10, h:190 },
-  { dotL:55, dotC:0.16, h:140 },
-  { dotL:55, dotC:0.16, h:340 },
-  { dotL:55, dotC:0.16, h:10  }
-];
-var DOT_COLORE_NEUTRO = { dot: 'var(--border)', bg: 'var(--bg-2)', text: 'var(--testo-3)' };
-
-function _dotCategoriaPrincipaleId(catId) {
-  if (!catId) return null;
-  const nodo = dotCategorieAlbero.find(c => c.id === catId);
-  if (!nodo) return null;
-  return nodo.parent_id || nodo.id;
-}
-
-function _dotCategoriaColore(catId) {
-  const principaleId = _dotCategoriaPrincipaleId(catId);
-  if (principaleId === null) return null;
-  const principali = dotCategorieAlbero.filter(c => !c.parent_id);
-  const idx = principali.findIndex(c => c.id === principaleId);
-  if (idx < 0) return null;
-  const p = DOT_PALETTE[idx % DOT_PALETTE.length];
-  return {
-    dot:  'oklch(' + p.dotL + '% ' + p.dotC + ' ' + p.h + ')',
-    bg:   'oklch(96% 0.025 ' + p.h + ')',
-    text: 'oklch(45% 0.15 ' + p.h + ')'
-  };
-}
+function _dotIcona(s) { return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10"/></svg>'; }
 
 function _dotCategoriaNomeBreve(catId) {
   if (!catId) return '';
@@ -6264,8 +6238,8 @@ function dotRenderVistaToggle() {
   const el = document.getElementById('dotVistaToggle');
   if (!el) return;
   el.innerHTML =
-    '<button class="btn-sm' + (!dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a card" onclick="dotImpostaVista(false)">▦</button>'
-    + '<button class="btn-sm' + (dotVistaLista ? ' btn-primary' : '') + '" style="padding:0.3rem 0.55rem" title="vista a lista" onclick="dotImpostaVista(true)">☰</button>';
+    '<button class="' + (!dotVistaLista ? 'on' : '') + '" onclick="dotImpostaVista(false)">Card</button>'
+    + '<button class="' + (dotVistaLista ? 'on' : '') + '" onclick="dotImpostaVista(true)">Lista</button>';
 }
 
 function dotImpostaVista(lista) {
@@ -6276,7 +6250,7 @@ function dotImpostaVista(lista) {
 
 async function caricaDotazioni() {
   const lista = document.getElementById('dotLista');
-  lista.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  lista.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const [magRes, catRes, dotRes] = await Promise.all([
       fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?select=*&order=ordine.asc', { headers: H }),
@@ -6287,7 +6261,7 @@ async function caricaDotazioni() {
     dotCategorieAlbero = await catRes.json();
     dotAll = await dotRes.json();
   } catch(e) {
-    lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento dotazioni.</div>';
+    lista.innerHTML = '<div class="empty">Errore nel caricamento delle dotazioni.</div>';
     return;
   }
   dotRenderCategoriaTabs();
@@ -6303,11 +6277,11 @@ function dotRenderCategoriaTabs() {
   if (!el) return;
   const principali = dotCategorieAlbero.filter(c => !c.parent_id);
   if (!principali.length) { el.innerHTML = ''; return; }
-  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
-  html += '<button class="btn-sm' + (dotCategoriaAttiva === null ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
+  let html = '<span class="fl">Categoria</span><div class="chips">';
+  html += '<button class="chip' + (dotCategoriaAttiva === null ? ' on' : '') + '" onclick="dotSelezionaCategoria(null)">Tutte</button>';
   principali.forEach(c => {
     const attiva = dotCategoriaAttiva === c.id;
-    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" onclick="dotSelezionaCategoria(' + c.id + ')">' + c.nome + '</button>';
+    html += '<button class="chip' + (attiva ? ' on' : '') + '" onclick="dotSelezionaCategoria(' + c.id + ')">' + c.nome + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6322,14 +6296,14 @@ function dotSelezionaCategoria(id) {
 function dotRenderMagazziniTabs() {
   const el = document.getElementById('dotMagazzinoTabs');
   if (!el) return;
-  let html = '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">';
-  html += '<button class="btn-sm' + (dotMagazzinoAttivo === null ? ' btn-primary' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
+  let html = '<span class="fl">Magazzino</span><div class="chips">';
+  html += '<button class="chip' + (dotMagazzinoAttivo === null ? ' on' : '') + '" onclick="dotSelezionaMagazzino(null)">Tutti</button>';
   dotMagazzini.forEach((c, idx) => {
     const attiva = dotMagazzinoAttivo === c.nome;
-    html += '<span style="display:inline-flex;align-items:center;gap:0.15rem;border:1px solid var(--border);border-radius:8px;padding:0.15rem">';
-    if (idx > 0) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a sinistra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',-1)">◀</button>';
-    html += '<button class="btn-sm' + (attiva ? ' btn-primary' : '') + '" style="border:none" onclick="dotSelezionaMagazzino(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
-    if (idx < dotMagazzini.length - 1) html += '<button class="btn-sm" style="padding:0.15rem 0.4rem" title="sposta a destra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',1)">▶</button>';
+    html += '<span class="chip-grp">';
+    if (idx > 0) html += '<button class="chip-mv" title="sposta a sinistra" aria-label="Sposta a sinistra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',-1)">‹</button>';
+    html += '<button class="chip' + (attiva ? ' on' : '') + '" onclick="dotSelezionaMagazzino(\'' + c.nome.replace(/'/g,"\\'") + '\')">' + c.nome + '</button>';
+    if (idx < dotMagazzini.length - 1) html += '<button class="chip-mv" title="sposta a destra" aria-label="Sposta a destra" onclick="event.stopPropagation();dotSpostaMagazzino(' + c.id + ',1)">›</button>';
     html += '</span>';
   });
   html += '</div>';
@@ -6416,23 +6390,19 @@ function dotRenderLista() {
     );
   }
   if (!righe.length) {
-    el.innerHTML = '<div class="loading-msg">' + (dotAll.length ? 'nessun articolo trovato.' : 'nessun articolo registrato.') + '</div>';
+    el.innerHTML = '<div class="empty">' + (dotAll.length ? 'Nessun articolo trovato.' : 'Nessun articolo registrato.') + '</div>';
     return;
   }
 
   if (dotVistaLista) {
-    let html = '<div class="dotazioni-list">';
+    let html = '<div class="card dot-rows">';
     righe.forEach(r => {
       const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
       const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
-      const colore = _dotCategoriaColore(r.categoria_id) || DOT_COLORE_NEUTRO;
-      html += '<div class="dotazione-row" onclick="apriDettaglioDotazione(' + r.id + ')">'
-        + '<span class="dotazione-row-dot" style="background:' + colore.dot + '"></span>'
-        + '<div class="dotazione-row-info">'
-        + '<div class="dotazione-row-nome">' + r.articolo + '</div>'
-        + (nomeCat ? '<div class="dotazione-row-cat">' + nomeCat + '</div>' : '')
-        + '</div>'
-        + (qtaLbl !== null ? '<div class="dotazione-row-qta">' + qtaLbl + '</div>' : '')
+      html += '<div class="lr clk" onclick="apriDettaglioDotazione(' + r.id + ')">'
+        + '<div class="dt">' + _dotIcona(22) + '</div>'
+        + '<div class="mid"><b>' + r.articolo + '</b><span class="sub">' + [nomeCat, r.magazzino].filter(Boolean).join(' · ') + '</span></div>'
+        + (qtaLbl !== null ? '<span class="qty">' + qtaLbl + ' <small>pz</small></span>' : '')
         + '</div>';
     });
     html += '</div>';
@@ -6440,17 +6410,17 @@ function dotRenderLista() {
     return;
   }
 
-  let html = '<div class="dotazioni-grid">';
-  righe.forEach(r => {
+  let html = '<div class="grid g4">';
+  righe.forEach((r, i) => {
     const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
     const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
-    const colore = _dotCategoriaColore(r.categoria_id);
-    html += '<div class="dotazione-tile" onclick="apriDettaglioDotazione(' + r.id + ')">'
-      + '<div class="dotazione-tile-body">'
-      + '<div class="dotazione-tile-nome">' + r.articolo + '</div>'
-      + (colore ? '<div class="dotazione-tile-cat" style="background:' + colore.bg + ';color:' + colore.text + '"><span class="dotazione-tile-cat-dot" style="background:' + colore.dot + '"></span>' + nomeCat + '</div>' : '')
-      + (qtaLbl !== null ? '<div class="dotazione-tile-qta">' + qtaLbl + '</div>' : '')
-      + '</div></div>';
+    html += '<button class="card" onclick="apriDettaglioDotazione(' + r.id + ')">'
+      + '<div class="thumb sm ' + (i % 2 ? 'b' : 'y') + '">' + _dotIcona(36) + '</div>'
+      + '<b class="dot-nome">' + r.articolo + '</b>'
+      + '<span class="sub">' + [nomeCat, r.magazzino].filter(Boolean).join(' · ') + '</span>'
+      + '<div class="cfoot flat"><span class="qty">' + (qtaLbl !== null ? qtaLbl : '—') + ' <small>pz</small></span>'
+      + (r.codice ? '<span class="targa">' + r.codice + '</span>' : '') + '</div>'
+      + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6487,9 +6457,9 @@ function dotRenderDettaglioBody() {
   const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
   const catPath = _dotCategoriaPath(r.categoria_id);
 
-  let html = '<div style="display:flex;gap:0.4rem;margin-bottom:0.8rem">'
-    + '<button class="btn-sm' + (dotDetailTab==='dettagli'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
-    + '<button class="btn-sm' + (dotDetailTab==='manutenzione'?' btn-primary':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">🔧 Manutenzione</button>'
+  let html = '<div class="seg mb" role="group" aria-label="Sezione">'
+    + '<button class="' + (dotDetailTab==='dettagli'?'on':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
+    + '<button class="' + (dotDetailTab==='manutenzione'?'on':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">Manutenzione</button>'
     + '</div>';
 
   if (dotDetailTab === 'dettagli') {
@@ -6501,29 +6471,28 @@ function dotRenderDettaglioBody() {
       + '<div class="vol-field"><span class="vol-field-label">Descrizione</span><span class="vol-field-value' + (r.descrizione?'':' null') + '">' + (r.descrizione || '—') + '</span></div>'
       + '<div class="vol-field"><span class="vol-field-label">Note</span><span class="vol-field-value' + (r.note?'':' null') + '">' + (r.note || '—') + '</span></div>'
       + '</div></div>'
-      + '<button class="vol-delete-btn" onclick="dotEliminaArticolo(' + r.id + ')">elimina articolo</button>';
+      + '<button class="vol-delete-btn" onclick="dotEliminaArticolo(' + r.id + ')">Elimina articolo</button>';
   } else {
     const entries = dotManCache[r.id];
     if (!entries) {
-      html += '<div class="loading-msg">caricamento manutenzioni...</div>';
+      html += '<p class="note">Caricamento manutenzioni…</p>';
     } else {
-      if (!entries.length) html += '<div class="loading-msg">nessun intervento registrato.</div>';
+      if (!entries.length) html += '<p class="note">Nessun intervento di manutenzione registrato.</p>';
       else {
-        html += '<div style="display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.6rem">';
         entries.forEach(m => {
-          html += '<div style="display:flex;gap:0.5rem;align-items:flex-start;font-size:0.82rem;border-bottom:0.5px dashed var(--border);padding-bottom:0.3rem">'
-            + '<div style="white-space:nowrap;color:var(--testo-3)">' + (m.data ? new Date(m.data).toLocaleDateString('it-IT') : '') + '</div>'
-            + '<div style="flex:1"><b>' + (m.utente||'—') + '</b> — ' + (m.nota||'') + '</div>'
-            + '<button class="btn-sm btn-danger" style="padding:0.1rem 0.35rem" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
+          const d = m.data || '';
+          html += '<div class="lr">'
+            + (d ? '<div class="dt"><b>' + d.slice(8,10) + '</b><span>' + ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][parseInt(d.slice(5,7)) - 1] + '</span></div>' : '')
+            + '<div class="mid"><b>' + (m.nota||'') + '</b><span class="sub">' + (m.utente||'—') + '</span></div>'
+            + '<button class="btn sm danger" aria-label="Elimina" onclick="dotEliminaManutenzione(' + m.id + ',' + r.id + ')">✕</button>'
             + '</div>';
         });
-        html += '</div>';
       }
-      html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">'
-        + '<input class="form-inp" type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '" style="max-width:150px">'
-        + '<input class="form-inp" id="dotManUtente' + r.id + '" placeholder="Utente" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '" style="max-width:160px">'
-        + '<input class="form-inp" id="dotManNota' + r.id + '" placeholder="Intervento effettuato..." style="flex:1;min-width:160px">'
-        + '<button class="btn-sm" onclick="dotAggiungiManutenzione(' + r.id + ')">+ aggiungi</button>'
+      html += '<div class="form dot-man-form">'
+        + '<div class="row2"><label>Data<input type="date" id="dotManData' + r.id + '" value="' + new Date().toISOString().slice(0,10) + '"></label>'
+        + '<label>Utente<input id="dotManUtente' + r.id + '" value="' + ((window.currentUser && currentUser.nome) ? currentUser.nome : '') + '"></label></div>'
+        + '<label>Intervento effettuato<input id="dotManNota' + r.id + '"></label>'
+        + '<div class="actions"><button class="btn sm pri" onclick="dotAggiungiManutenzione(' + r.id + ')">Aggiungi intervento</button></div>'
         + '</div>';
     }
   }
@@ -6697,7 +6666,7 @@ async function dotImportaExcel(file) {
   const status = document.getElementById('dotImportStatus');
   status.style.display = 'block';
   status.innerHTML = '<div class="loading-msg">importazione in corso...</div>';
-  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg" style="color:var(--red)">impossibile caricare la libreria Excel.</div>'; return; }
+  try { await caricaExcelJS(); } catch(e) { status.innerHTML = '<div class="loading-msg bad">impossibile caricare la libreria Excel.</div>'; return; }
 
   const MAGAZZINI_VALIDI = { 'magazzino a':'Magazzino A', 'magazzino b':'Magazzino B', 'magazzino c':'Magazzino C' };
 
@@ -6740,14 +6709,14 @@ async function dotImportaExcel(file) {
     }
 
     if (!fogliUsati.length) {
-      status.innerHTML = '<div class="loading-msg" style="color:var(--red)">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
+      status.innerHTML = '<div class="loading-msg bad">nessun foglio "Magazzino A/B/C" trovato nel file.</div>';
       return;
     }
-    status.innerHTML = '<div class="loading-msg" style="color:var(--green)">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + '). Codice, descrizione e categoria vanno completati a mano.</div>';
+    status.innerHTML = '<div class="loading-msg ok">importati ' + totRighe + ' articoli (' + fogliUsati.join(', ') + '). Codice, descrizione e categoria vanno completati a mano.</div>';
     await logAttivita('ha importato dotazioni da Excel (' + fogliUsati.join(', ') + ')');
     await caricaDotazioni();
   } catch(e) {
-    status.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore durante l\'importazione: ' + e.message + '</div>';
+    status.innerHTML = '<div class="loading-msg bad">errore durante l\'importazione: ' + e.message + '</div>';
   }
 }
 
@@ -6759,7 +6728,7 @@ async function caricaCategorieDotazioni() {
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H });
     dotCategorieAlbero = await res.json();
-  } catch(e) { el.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento categorie.</div>'; return; }
+  } catch(e) { el.innerHTML = '<div class="loading-msg bad">errore caricamento categorie.</div>'; return; }
   catDotRenderList();
 }
 
@@ -6770,15 +6739,15 @@ function catDotRenderList() {
   if (!principali.length) { el.innerHTML = '<div class="loading-msg">nessuna categoria creata.</div>'; return; }
   let html = '';
   principali.forEach(p => {
-    html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.3rem 0.4rem;background:var(--bg-2);border-radius:6px">'
-      + '<div style="flex:1;font-weight:600">' + p.nome + '</div>'
-      + '<button class="btn-sm" style="padding:0.15rem 0.4rem" onclick="catDotAggiungiSottocategoria(' + p.id + ')">+ sottocategoria</button>'
-      + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + p.id + ')">🗑️</button>'
+    html += '<div class="cat-row">'
+      + '<b>' + p.nome + '</b>'
+      + '<button class="btn sm" onclick="catDotAggiungiSottocategoria(' + p.id + ')">+ Sottocategoria</button>'
+      + '<button class="btn sm danger" aria-label="Elimina" onclick="catDotElimina(' + p.id + ')">✕</button>'
       + '</div>';
     dotCategorieAlbero.filter(c => c.parent_id === p.id).forEach(f => {
-      html += '<div style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.4rem 0.25rem 1.4rem">'
-        + '<div style="flex:1;color:var(--testo-2)">— ' + f.nome + '</div>'
-        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="catDotElimina(' + f.id + ')">🗑️</button>'
+      html += '<div class="cat-row sub">'
+        + '<span>' + f.nome + '</span>'
+        + '<button class="btn sm danger" aria-label="Elimina" onclick="catDotElimina(' + f.id + ')">✕</button>'
         + '</div>';
     });
   });
@@ -6896,7 +6865,7 @@ async function pdcToggleComposizione(checked) {
 
 async function pdcCaricaMezzi() {
   const list = document.getElementById('pdcMezziList');
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   if (!mezziData || !mezziData.length) {
     try { const r = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
   }
@@ -6916,47 +6885,51 @@ function _pdcLabelMezzo(m) {
 
 function pdcRenderMezzi() {
   const list = document.getElementById('pdcMezziList');
-  if (!pdcMezzi.length) { list.innerHTML = '<div class="loading-msg">nessun mezzo aggiunto. Usa "+ Aggiungi mezzo".</div>'; return; }
+  if (!pdcMezzi.length) { list.innerHTML = '<div class="empty">Nessun mezzo aggiunto. Usa "Aggiungi mezzo".</div>'; return; }
   const etichetteMezzi = (mezziData || []).map(m => _pdcLabelMezzo(m));
   const datalistArticoli = '<datalist id="pdcDotazioniList">' +
     dotAll.map(d => '<option value="' + (d.articolo + (d.magazzino ? ' — ' + d.magazzino : '')).replace(/"/g,'&quot;') + '">').join('') +
     '</datalist>';
   const mostraOrdine = pdcPianoCorrente && pdcPianoCorrente.mostra_composizione;
-  let html = datalistArticoli;
+  let html = datalistArticoli + '<div class="grid wide">';
   pdcMezzi.forEach(m => {
     const isAltro = m.descrizione_mezzo && etichetteMezzi.indexOf(m.descrizione_mezzo) === -1;
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">'
-      + '<div style="padding:0.6rem 0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center">'
-      + (mostraOrdine ? '<input class="form-inp" type="number" style="width:56px;flex:none" title="Ordine in colonna" value="' + (m.ordine||0) + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'ordine\',parseInt(this.value)||0)">' : '')
-      + '<select class="form-inp" style="flex:2;min-width:180px" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
+    const caricati = m.voci.filter(v => v.spuntato).length;
+    html += '<div class="card pdc-mezzo">'
+      + '<div class="frow">'
+      + (mostraOrdine ? '<input class="pdc-ord" type="number" title="Ordine in colonna" aria-label="Ordine in colonna" value="' + (m.ordine||0) + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'ordine\',parseInt(this.value)||0)">' : '')
+      + '<select aria-label="Mezzo" onchange="pdcSelezionaMezzoVeicolo(' + m.id + ',this.value)">'
       + '<option value="">— seleziona mezzo —</option>'
       + etichetteMezzi.map(l => '<option value="' + l.replace(/"/g,'&quot;') + '"' + (m.descrizione_mezzo===l?' selected':'') + '>' + l + '</option>').join('')
-      + '<option value="__altro__"' + (isAltro?' selected':'') + '>✏️ Altro (testo libero)</option>'
+      + '<option value="__altro__"' + (isAltro?' selected':'') + '>Altro (testo libero)</option>'
       + '</select>'
-      + '<input class="form-inp" style="flex:2;min-width:180px' + (isAltro?'':';display:none') + '" id="pdcMezzoLibero' + m.id + '" placeholder="Descrizione mezzo (es. CARRELLO BIANCO)" value="' + (isAltro?(m.descrizione_mezzo||'').replace(/"/g,'&quot;'):'') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
-      + '<input class="form-inp" style="flex:1;min-width:140px" placeholder="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
-      + '<button class="btn-sm btn-danger" onclick="pdcEliminaMezzo(' + m.id + ')">🗑️ mezzo</button>'
+      + '<input id="pdcMezzoLibero' + m.id + '" placeholder="Descrizione mezzo (es. CARRELLO BIANCO)" value="' + (isAltro?(m.descrizione_mezzo||'').replace(/"/g,'&quot;'):'') + '"' + (isAltro?'':' style="display:none"') + ' onchange="pdcAggiornaMezzo(' + m.id + ',\'descrizione_mezzo\',this.value)">'
+      + '<input class="pdc-autista" placeholder="Autista" aria-label="Autista" value="' + (m.autista_nome||'').replace(/"/g,'&quot;') + '" onchange="pdcAggiornaMezzo(' + m.id + ',\'autista_nome\',this.value)">'
       + '</div>'
-      + '<div style="padding:0 0.8rem 0.6rem">';
+      + '<div class="progbar"><i style="width:' + Math.round(caricati / Math.max(1, m.voci.length) * 100) + '%"></i></div>'
+      + '<div class="cfoot flat"><span>Caricati</span><b>' + caricati + ' / ' + m.voci.length + '</b></div>';
 
     m.voci.forEach(v => {
-      html += '<div style="display:flex;gap:0.4rem;align-items:center;padding:0.25rem 0">'
-        + '<input type="checkbox" ' + (v.spuntato ? 'checked' : '') + ' onchange="pdcAggiornaVoce(' + v.id + ',\'spuntato\',this.checked)">'
-        + '<div style="flex:1' + (v.spuntato ? ';text-decoration:line-through;color:var(--testo-3)' : '') + '">' + v.descrizione + '</div>'
-        + '<input class="form-inp" type="number" step="0.01" style="width:80px" placeholder="Qta" value="' + (v.quantita===null||v.quantita===undefined?'':v.quantita) + '" onchange="pdcAggiornaVoce(' + v.id + ',\'quantita\',this.value===\'\'?null:parseFloat(this.value))">'
-        + '<button class="btn-sm btn-danger" style="padding:0.15rem 0.4rem" onclick="pdcEliminaVoce(' + v.id + ')">✕</button>'
+      html += '<div class="lr pdc-voce' + (v.spuntato ? ' ok' : '') + '">'
+        + '<input type="checkbox" aria-label="Caricato" ' + (v.spuntato ? 'checked' : '') + ' onchange="pdcAggiornaVoce(' + v.id + ',\'spuntato\',this.checked)">'
+        + '<span class="mid"><b>' + v.descrizione + '</b></span>'
+        + '<input type="number" step="0.01" placeholder="Qtà" aria-label="Quantità" value="' + (v.quantita===null||v.quantita===undefined?'':v.quantita) + '" onchange="pdcAggiornaVoce(' + v.id + ',\'quantita\',this.value===\'\'?null:parseFloat(this.value))">'
+        + '<button class="btn sm danger" aria-label="Elimina voce" onclick="pdcEliminaVoce(' + v.id + ')">✕</button>'
         + '</div>';
     });
 
-    html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap">'
-      + '<input class="form-inp" style="flex:1;min-width:160px" list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="🔍 cerca articolo per nome...">'
-      + '<button class="btn-sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">+ aggiungi</button>'
-      + '<input class="form-inp" style="flex:1;min-width:160px" placeholder="oppure voce libera..." id="pdcLiberaVoce' + m.id + '">'
-      + '<button class="btn-sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">+ aggiungi</button>'
-      + '</div>';
+    html += '<div class="pdc-add">'
+      + '<input list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="Cerca articolo per nome">'
+      + '<button class="btn sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">Aggiungi</button>'
+      + '</div><div class="pdc-add cont">'
+      + '<input placeholder="Oppure voce libera" id="pdcLiberaVoce' + m.id + '">'
+      + '<button class="btn sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">Aggiungi</button>'
+      + '</div>'
+      + '<button class="btn danger full mt14" onclick="pdcEliminaMezzo(' + m.id + ')">Elimina mezzo</button>';
 
-    html += '</div></div>';
+    html += '</div>';
   });
+  html += '</div>';
   list.innerHTML = html;
 }
 
@@ -7152,44 +7125,45 @@ async function pdcEsportaPDF() {
 async function caricaMezzi() {
   var list = document.getElementById('mezziList');
   if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  list.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     var res  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
     mezziData = await res.json();
     renderMezzi();
-  } catch(e) { list.innerHTML = '<div class="loading-msg">Errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
 }
 
 function renderMezzi() {
   var list = document.getElementById('mezziList');
   if (!list) return;
-  if (!mezziData.length) { list.innerHTML = '<div class="loading-msg">Nessun mezzo registrato.</div>'; return; }
+  if (!mezziData.length) { list.innerHTML = '<div class="empty">Nessun mezzo registrato.</div>'; return; }
 
-  var html = '<div class="mezzi-grid">';
-  mezziData.forEach(function(m) {
-    var rev   = getRevisioneStatus(m.revisione);
-    var revCls = rev.cls === 'scaduta' ? 'scad' : rev.cls === 'vicina' ? 'warn' : 'ok';
-    var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-    var sbCls  = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
-
+  var html = '<div class="grid g3">';
+  mezziData.forEach(function(m, i) {
+    var rev      = getRevisioneStatus(m.revisione);
+    var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{month:'2-digit',year:'numeric'}) : '—';
     var fotoHtml = m.foto_url
-      ? '<img src="' + m.foto_url + '" alt="' + m.automezzo + '">'
-      : '<div class="mezzo-tile-placeholder">' + getMezzoIcon(m.automezzo).replace('viewBox', 'style="width:48px;height:48px;stroke:var(--testo-4);stroke-width:1.2;fill:none;stroke-linecap:round;stroke-linejoin:round" viewBox') + '</div>';
+      ? '<img src="' + m.foto_url + '" alt="">'
+      : getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox');
+    var sub = [m.marca, m.modello].filter(Boolean).join(' ');
 
-    html += '<div class="mezzo-tile" onclick="apriDettaglioMezzo(' + m.id + ')">'
-      + '<div class="mezzo-tile-foto">'
-      + fotoHtml
-      + '<span class="mezzo-tile-stato ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span>'
-      + '</div>'
-      + '<div class="mezzo-tile-body">'
-      + '<div class="mezzo-tile-nome">' + m.automezzo + '</div>'
-      + '<div class="mezzo-tile-targa">' + (m.targa||'—') + '</div>'
-      + (m.revisione ? '<div class="mezzo-tile-rev ' + revCls + '">Rev. ' + revLabel + '</div>' : '')
-      + '</div>'
-      + '</div>';
+    html += '<button class="card" onclick="apriDettaglioMezzo(' + m.id + ')">'
+      + '<div class="thumb ' + (i % 2 ? 'b' : 'y') + '">' + fotoHtml + '</div>'
+      + '<div class="vc"><div class="mid"><b>' + m.automezzo + '</b>' + (sub ? '<span class="sub">' + sub + '</span>' : '') + '</div>' + mezzoStatoPill(m.stato) + '</div>'
+      + '<div class="cfoot"><span class="targa">' + (m.targa||'—') + '</span>'
+      + '<span>Revisione <b class="rev ' + rev.cls + '">' + revLabel + '</b></span></div>'
+      + '</button>';
   });
   html += '</div>';
   list.innerHTML = html;
+}
+
+// Pillola stato mezzo come nel riferimento: Operativo blu chiaro, Manutenzione gialla, Fermo grigia
+function mezzoStatoPill(stato) {
+  var s = stato || 'OPERATIVO';
+  var map = { 'OPERATIVO':['Operativo','p-blue'], 'IN MANUTENZIONE':['Manutenzione','p-yellow'], 'FERMO':['Fermo','p-grey'] };
+  var p = map[s] || [s, 'p-grey'];
+  return '<span class="pill ' + p[1] + '">' + p[0] + '</span>';
 }
 
 function apriDettaglioMezzo(id) {
@@ -7205,16 +7179,15 @@ function apriDettaglioMezzo(id) {
   var fmt = function(v) { return v ? '<span class="vol-field-value">' + v + '</span>' : '<span class="vol-field-value null">—</span>'; };
   var fmtDate = function(v) { return v ? fmt(new Date(v).toLocaleDateString('it-IT')) : fmt(null); };
   var rev = getRevisioneStatus(m.revisione);
-  var sbCls = m.stato === 'OPERATIVO' ? 'msb-ok' : m.stato === 'IN MANUTENZIONE' ? 'msb-warn' : 'msb-off';
 
   var _fotoHtml = m.foto_url
-    ? '<img src="' + m.foto_url + '" style="width:50px;height:50px;border-radius:12px;object-fit:cover;flex-shrink:0">'
-    : '<div class="mezzo-icon" style="width:50px;height:50px;border-radius:12px">' + getMezzoIcon(m.automezzo) + '</div>';
+    ? '<img src="' + m.foto_url + '" class="thumb hero-thumb" alt="">'
+    : '<div class="thumb y hero-thumb">' + getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox') + '</div>';
 
   body.innerHTML = '<div class="vol-detail-hero">'
     + _fotoHtml
     + '<div><div class="vol-detail-name">' + m.automezzo + '</div>'
-    + '<div class="vol-detail-role"><span class="mezzo-stato-badge ' + sbCls + '">' + (m.stato||'OPERATIVO') + '</span></div></div>'
+    + '<div class="vol-detail-role">' + mezzoStatoPill(m.stato) + (m.targa ? ' <span class="targa">' + m.targa + '</span>' : '') + '</div></div>'
     + '</div>'
     + '<div class="vol-section"><div class="vol-section-head">Identificazione</div><div class="vol-section-body">'
     + '<div class="vol-field"><span class="vol-field-label">Targa</span>' + fmt(m.targa) + '</div>'
@@ -7223,17 +7196,17 @@ function apriDettaglioMezzo(id) {
     + '<div class="vol-field"><span class="vol-field-label">Immatricolazione</span>' + fmtDate(m.immatricolazione) + '</div>'
     + '</div></div>'
     + '<div class="vol-section"><div class="vol-section-head">Scadenze</div><div class="vol-section-body">'
-    + '<div class="vol-field"><span class="vol-field-label">Revisione</span><span class="vol-field-value ' + rev.cls + '">' + (m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT') : '—') + '</span></div>'
+    + '<div class="vol-field"><span class="vol-field-label">Revisione</span><span class="vol-field-value rev ' + rev.cls + '">' + (m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT') : '—') + '</span></div>'
     + '<div class="vol-field"><span class="vol-field-label">Assicurazione</span>' + fmtDate(m.assicurazione) + '</div>'
     + '</div></div>'
-    + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><div class="vol-field"><span class="vol-field-value" style="text-align:left">' + m.note + '</span></div></div></div>' : '')
+    + (m.note ? '<div class="vol-section"><div class="vol-section-head">Note</div><div class="vol-section-body"><p class="note-text">' + m.note + '</p></div></div>' : '')
     + '<div class="vol-section">'
-    + '<div class="vol-section-head" style="cursor:pointer" onclick="toggleMezzoDoc(' + m.id + ')">'
-    + 'Documenti <span id="mezzoDocCount" style="font-size:0.6rem;color:var(--green);margin-left:4px"></span>'
+    + '<div class="vol-section-head" onclick="toggleMezzoDoc(' + m.id + ')">'
+    + '<span>Documenti <span class="sec-count" id="mezzoDocCount"></span></span>'
     + '</div>'
     + '<div class="vol-section-body" id="mezzoDocBody"></div>'
     + '</div>'
-    + '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>';
+    + '<button class="vol-delete-btn" onclick="eliminaMezzo()">Elimina mezzo</button>';
 
   caricaDocMezzo(m.id);
 }
@@ -7258,7 +7231,7 @@ function apriFormMezzo(id) {
     + '<div class="vol-form-section"><div class="vol-form-section-title">Identificazione</div>'
     + '<div class="vol-form-grid">'
     + '<div class="vol-form-field full"><label class="vol-form-lbl">Nome mezzo *</label><input class="vol-form-inp" id="mfNome" value="' + (m.automezzo||'') + '" placeholder="es. FURGONE BIANCO"></div>'
-    + '<div class="vol-form-field"><label class="vol-form-lbl">Targa</label><input class="vol-form-inp" id="mfTarga" value="' + (m.targa||'') + '" style="text-transform:uppercase"></div>'
+    + '<div class="vol-form-field"><label class="vol-form-lbl">Targa</label><input class="vol-form-inp upper" id="mfTarga" value="' + (m.targa||'') + '"></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Stato</label><select class="vol-form-inp" id="mfStato">' + statoOpts + '</select></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Marca</label><input class="vol-form-inp" id="mfMarca" value="' + (m.marca||'') + '"></div>'
     + '<div class="vol-form-field"><label class="vol-form-lbl">Modello</label><input class="vol-form-inp" id="mfModello" value="' + (m.modello||'') + '"></div>'
@@ -7270,9 +7243,9 @@ function apriFormMezzo(id) {
     + '<div class="vol-form-field full"><label class="vol-form-lbl">Assicurazione</label><input type="date" class="vol-form-inp" id="mfAss" value="' + (m.assicurazione||'') + '"></div>'
     + '</div></div>'
     + '<div class="vol-form-section"><div class="vol-form-section-title">Note</div>'
-    + '<textarea class="vol-form-inp" id="mfNote" rows="3" style="resize:vertical">' + (m.note||'') + '</textarea>'
+    + '<textarea class="vol-form-inp" id="mfNote" rows="3">' + (m.note||'') + '</textarea>'
     + '</div>'
-    + (id ? '<button class="vol-delete-btn" onclick="eliminaMezzo()">elimina mezzo</button>' : '');
+    + (id ? '<button class="vol-delete-btn" onclick="eliminaMezzo()">Elimina mezzo</button>' : '');
 
   panel.classList.add('open');
   panel.scrollTop = 0;
@@ -7328,7 +7301,7 @@ let accessiData = { admin: [], vol: [] };
 async function caricaAccessi() {
   const content = document.getElementById('accessiContent');
   if (!content) return;
-  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
 
   // Mostra/nascondi sezione nuovo utente e matrice permessi solo per master
   const nuovoSec = document.getElementById('accNuovoUtenteSection');
@@ -7351,7 +7324,7 @@ async function caricaAccessi() {
     renderAccessi();
     if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -7389,7 +7362,7 @@ function caricaMatricePermessi() {
 
   let html = '<thead><tr><th></th>';
   utenti.forEach(function(u) {
-    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' 🔑' : '') + '</th>';
+    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' · master' : '') + '</th>';
   });
   html += '</tr></thead><tbody>';
 
@@ -7434,7 +7407,7 @@ async function togglePermessoMatrice(userId, key, checked) {
 }
 
 function _accCollapsibleHead(label, id) {
-  return '<div class="vol-section-head" onclick="toggleVolSection(this)" style="margin-bottom:0;border-radius:var(--r-sm)">' + label + '</div>'
+  return '<div class="vol-section-head acc-head" onclick="toggleVolSection(this)">' + label + '</div>'
     + '<div id="' + id + '" class="acc-collapsible-body">';
 }
 
@@ -7449,46 +7422,43 @@ function renderAccessi() {
   // --- Amministratori ---
   if (tipo !== 'vol') {
     const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('🔐 Amministratori (' + admins.length + ')', 'accAdminBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Amministratori (' + admins.length + ')', 'accAdminBody');
     if (!admins.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun amministratore</div>';
+      html += '<div class="loading-msg sm">Nessun amministratore</div>';
     } else {
-      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
+      html += '<div class="grid g3">';
       admins.forEach(u => {
-        const stato  = u.attivo ? '<span class="acc-badge acc-active">ATTIVO</span>' : '<span class="acc-badge acc-inactive">DISATTIVATO</span>';
-        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="acc-badge acc-master">MASTER</span>' : '<span class="acc-badge acc-std">STANDARD</span>';
-        html += '<div class="acc-card">'
-          + '<div class="acc-row"><span class="acc-lbl">Nome</span><span class="acc-val"><strong>' + (u.nome||'—') + '</strong></span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Username</span><span class="acc-val acc-mono">' + (u.username||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Ruolo</span><span class="acc-val">' + (u.ruolo||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Tipo</span><span class="acc-val">' + tipoLbl + ' ' + stato + '</span></div>'
-          + (isMasterUser ? '<div class="acc-row"><button class="btn-sm" style="width:100%;margin-top:0.2rem" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏️ Modifica</button></div>' : '')
-          + '</div>';
+        const ini    = (u.nome || '?').split(' ').map(x => x[0] || '').join('').slice(0,2).toUpperCase();
+        const stato  = u.attivo ? '<span class="pill p-blue">Attivo</span>' : '<span class="pill p-grey">Disattivato</span>';
+        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="pill p-yellow">Master</span>' : '<span class="pill p-sand">Standard</span>';
+        html += '<div class="card">'
+          + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.username||'—') + ' · ' + (u.ruolo||'—') + '</span></div></div>'
+          + '<div class="cfoot"><span class="int-pills m0">' + tipoLbl + stato + '</span>'
+          + (isMasterUser ? '<button class="btn sm" onclick="apriModificaUtenteById(\'' + u.id + '\')">Modifica</button>' : '')
+          + '</div></div>';
       });
       html += '</div>';
     }
-    html += '</div></div>'; // chiude body + vol-section
+    html += '</div></div>'; // chiude body + sezione
   }
 
   // --- Volontari abilitati ---
   if (tipo !== 'admin') {
     const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('👤 Volontari abilitati (' + vols.length + ')', 'accVolBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Volontari abilitati (' + vols.length + ')', 'accVolBody');
     if (!vols.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun volontario</div>';
+      html += '<div class="loading-msg sm">Nessun volontario</div>';
     } else {
-      html += '<div class="accessi-grid" style="padding:0.4rem 0">';
+      html += '<div class="grid g3">';
       vols.forEach(v => {
         const dataNasc = v.data_nascita ? v.data_nascita.split('-').reverse().join('/') : '—';
         const avatar = v.foto_url
-          ? '<img src="' + v.foto_url + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover">'
-          : '<div style="width:28px;height:28px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;font-weight:700">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</div>';
-        html += '<div class="acc-card">'
-          + '<div class="acc-row" style="gap:0.4rem">' + avatar + '<span class="acc-val"><strong>' + (v.cognome||'') + ' ' + (v.nome||'') + '</strong></span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Codice Fiscale</span><span class="acc-val acc-mono">' + (v.codice_fiscale||'—') + '</span></div>'
-          + '<div class="acc-row"><span class="acc-lbl">Data nascita</span><span class="acc-val">' + dataNasc + '</span></div>'
+          ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
+          : '<span class="av s40">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</span>';
+        html += '<div class="card">'
+          + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">CF ' + (v.codice_fiscale||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
           + '</div>';
       });
       html += '</div>';
@@ -7499,56 +7469,38 @@ function renderAccessi() {
   // --- Log accessi recenti ---
   if (!q) {
     const logs = accessiData.log || [];
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('🕐 Log accessi (' + logs.length + ')', 'accLogBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Registro accessi (' + logs.length + ')', 'accLogBody');
     if (!logs.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessun accesso registrato</div>';
+      html += '<div class="loading-msg sm">Nessun accesso registrato</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;padding:0 0.4rem">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Tipo</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
-        + '</tr></thead><tbody>';
+      html += '<div class="card tbl acc-log"><div class="irow ihead"><span>Data e ora</span><span>Utente</span><span>Tipo</span></div>';
       logs.forEach(l => {
         const dt = new Date(l.accesso_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
         const badge = l.utente_tipo === 'admin'
-          ? '<span class="acc-badge acc-master" style="font-size:0.6rem">ADMIN</span>'
-          : '<span class="acc-badge acc-std" style="font-size:0.6rem">VOL</span>';
-        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo)">' + (l.utente_label||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem">' + badge + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
-          + '</tr>';
+          ? '<span class="pill p-yellow">Admin</span>'
+          : '<span class="pill p-blue">Volontario</span>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + (l.utente_label||'—') + '</b><span>' + badge + '</span></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
     }
     html += '</div></div>';
 
     // --- Log attività ---
     const atts = accessiData.att || [];
-    html += '<div class="vol-section" style="margin-bottom:0.6rem">';
-    html += _accCollapsibleHead('📋 Log attività (' + atts.length + ')', 'accAttBody');
+    html += '<div class="acc-sec">';
+    html += _accCollapsibleHead('Registro attività (' + atts.length + ')', 'accAttBody');
     if (!atts.length) {
-      html += '<div class="loading-msg" style="padding:0.6rem">nessuna attività registrata</div>';
+      html += '<div class="loading-msg sm">Nessuna attività registrata</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Utente</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Azione</th>'
-        + '<th style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--border);color:var(--testo-3);font-weight:600">Data e ora</th>'
-        + '</tr></thead><tbody>';
+      html += '<div class="card tbl acc-log"><div class="irow ihead"><span>Data e ora</span><span>Utente</span><span>Azione</span></div>';
       atts.forEach(a => {
         const dt = new Date(a.created_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
-        html += '<tr style="border-bottom:0.5px solid var(--border-2)">'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo);font-weight:500">' + (a.utente||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-2)">' + (a.azione||'—') + '</td>'
-          + '<td style="padding:0.45rem 0.6rem;color:var(--testo-3);font-variant-numeric:tabular-nums">' + dtStr + '</td>'
-          + '</tr>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + (a.utente||'—') + '</b><span>' + (a.azione||'—') + '</span></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
     }
     html += '</div></div>';
   }
@@ -7592,16 +7544,15 @@ async function caricaSchedaPersonale() {
     const v = arr[0];
     renderSchedaPersonale(v);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
 function renderSchedaPersonale(v) {
   const content = document.getElementById('schedaPersContent');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : '—';
-  const yes = (b) => b ? '<span style="color:var(--green);font-weight:600">✓ Sì</span>' : '<span style="color:var(--testo-3)">—</span>';
+  const yes = (b) => b ? '<span class="vol-bool-yes">✓ Sì</span>' : '<span class="muted">—</span>';
   const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-  const [bg, fg] = avatarColor(v.cognome);
 
   // Sezioni e campi (sola lettura)
   const sections = [
@@ -7630,22 +7581,23 @@ function renderSchedaPersonale(v) {
     ]},
   ];
 
-  let html = '<div class="schedapers-hero">'
+  let html = '<div class="card vc sp-hero">'
     + (v.foto_url
-        ? '<img src="' + v.foto_url + '" class="schedapers-avatar" style="object-fit:cover">'
-        : '<div class="schedapers-avatar" style="background:' + bg + ';color:' + fg + '">' + initials + '</div>')
-    + '<div><div class="schedapers-name">' + (v.cognome||'') + ' ' + (v.nome||'') + '</div>'
-    + '<div class="schedapers-role">' + (v.tipo_volontario||'Volontario') + ' | ' + (v.squadra||'—') + '</div></div>'
-    + '</div>'
-    + '<button class="btn-primary" style="margin-bottom:1rem" onclick="navTo(\'segnalazioni\',\'Segnalazioni\',null)">⚠️ Segnala un errore nei tuoi dati</button>';
+        ? '<img src="' + v.foto_url + '" class="av" alt="">'
+        : '<span class="av">' + initials + '</span>')
+    + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>'
+    + '<span class="sub">' + (v.tipo_volontario||'Volontario') + ' · ' + (v.squadra||'—') + '</span></div>'
+    + '<span class="pill ' + ((v.stato || 'ATTIVO') === 'ATTIVO' ? 'p-blue' : 'p-grey') + '">' + (v.stato || 'ATTIVO') + '</span>'
+    + '</div><div class="grid sp-grid">';
 
   sections.forEach(s => {
-    html += '<div class="schedapers-sec"><div class="schedapers-sec-title">' + s.titolo + '</div>';
+    html += '<div class="card"><h2>' + s.titolo + '</h2>';
     s.fields.forEach(f => {
-      html += '<div class="schedapers-field"><span class="schedapers-lbl">' + f[0] + '</span><span class="schedapers-val">' + (f[1] || '—') + '</span></div>';
+      html += '<div class="kv"><span>' + f[0] + '</span><b>' + (f[1] || '—') + '</b></div>';
     });
     html += '</div>';
   });
+  html += '</div>';
 
   content.innerHTML = html;
 }
@@ -7660,13 +7612,13 @@ async function caricaSegnalazioni() {
   if (isVol) {
     // Volontario: form per inviare + storico proprie segnalazioni
     sub.textContent = 'Segnala errori nella tua scheda. Verranno presi in carico dagli amministratori.';
-    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
       const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
       const arr = await res.json();
       renderSegnalazioniVolontario(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
     }
   } else if (!hasPerm('gestione_segnalazioni')) {
     sub.textContent = 'Segnalazioni ricevute dai volontari';
@@ -7674,36 +7626,37 @@ async function caricaSegnalazioni() {
   } else {
     // Admin: lista tutte le segnalazioni
     sub.textContent = 'Segnalazioni ricevute dai volontari';
-    content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+    content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
       const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
       const arr = await res.json();
       renderSegnalazioniAdmin(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
     }
   }
 }
 
 function renderSegnalazioniVolontario(list) {
   const content = document.getElementById('segnalazioniContent');
-  let html = '<div class="seg-form">'
-    + '<label class="form-lbl">Descrivi l\'errore o l\'aggiornamento necessario</label>'
-    + '<textarea class="form-inp" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea>'
-    + '<button class="btn-primary" style="margin-top:0.6rem" onclick="inviaSegnalazione()">📤 Invia segnalazione</button>'
+  let html = '<div class="card form mb18">'
+    + '<h2>Nuova segnalazione</h2>'
+    + '<label>Descrivi l\'errore o l\'aggiornamento necessario<textarea class="msg" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea></label>'
+    + '<div class="actions"><button class="btn pri" onclick="inviaSegnalazione()">Invia segnalazione</button></div>'
     + '</div>';
 
   if (list.length) {
-    html += '<div class="schedapers-sec-title" style="margin-top:1.4rem">Tue segnalazioni precedenti</div>';
+    html += '<div class="grp">Le tue segnalazioni</div><div class="grid g3">';
     list.forEach(s => {
       const data = new Date(s.data_creazione).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'});
-      const statoLbl = s.gestita ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>' : '<span style="color:#d9a400;font-weight:600">⏳ In attesa</span>';
-      html += '<div class="seg-card">'
-        + '<div class="seg-card-head"><span>' + data + '</span>' + statoLbl + '</div>'
-        + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
-        + (s.note_admin ? '<div class="seg-card-resp"><strong>Risposta:</strong> ' + s.note_admin + '</div>' : '')
+      const statoLbl = s.gestita ? '<span class="pill p-blue">Risolta</span>' : '<span class="pill p-yellow">In attesa</span>';
+      html += '<div class="card">'
+        + '<div class="vc"><div class="mid"><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
+        + '<p class="seg-text">' + (s.testo || '') + '</p>'
+        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note mt6">' + s.note_admin + '</p></div>' : '')
         + '</div>';
     });
+    html += '</div>';
   }
   content.innerHTML = html;
 }
@@ -7711,31 +7664,30 @@ function renderSegnalazioniVolontario(list) {
 function renderSegnalazioniAdmin(list) {
   const content = document.getElementById('segnalazioniContent');
   if (!list.length) {
-    content.innerHTML = '<div class="loading-msg">nessuna segnalazione.</div>';
+    content.innerHTML = '<div class="empty">Nessuna segnalazione.</div>';
     return;
   }
-  let html = '';
+  let html = '<div class="grid g3">';
   list.forEach(s => {
     const v    = s.volontario || {};
-    const data = new Date(s.data_creazione).toLocaleString('it-IT');
+    const data = new Date(s.data_creazione).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const ini  = ((v.cognome || '?')[0] + ((v.nome || ' ')[0])).toUpperCase();
     const statoLbl = s.gestita
-      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
-      : '<span style="color:#d9a400;font-weight:600">⏳ Da gestire</span>';
-    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : '#d9a400') + '">'
-      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
-      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</div>'
-      + '<div class="seg-card-text">' + (s.testo || '') + '</div>'
-      + '<div style="margin-top:0.6rem">'
-      + '<textarea class="form-inp" id="segNote_' + s.id + '" rows="2" placeholder="Risposta opzionale al volontario..." style="font-size:0.8rem">' + (s.note_admin || '') + '</textarea>'
-      + '<div style="display:flex;gap:0.4rem;margin-top:0.4rem">'
+      ? '<span class="pill p-blue">Risolta</span>'
+      : '<span class="pill p-yellow">Da gestire</span>';
+    html += '<div class="card">'
+      + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</span></div>' + statoLbl + '</div>'
+      + '<p class="seg-text">' + (s.testo || '') + '</p>'
+      + '<label class="seg-nota">Risposta al volontario<textarea id="segNote_' + s.id + '" rows="2" placeholder="Facoltativa">' + (s.note_admin || '') + '</textarea></label>'
+      + '<div class="em-azioni">'
       + (s.gestita
-          ? '<button class="btn-sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">↻ Riapri</button>'
-          : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">✓ Segna come gestita</button>')
-      + '<button class="btn-sm" onclick="salvaNoteSegnalazione(' + s.id + ')">💾 Salva nota</button>'
-      + '</div></div>'
+          ? '<button class="btn sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">Riapri</button>'
+          : '<button class="btn sm pri" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">Segna come risolta</button>')
+      + '<button class="btn sm" onclick="salvaNoteSegnalazione(' + s.id + ')">Salva nota</button>'
+      + '</div>'
       + '</div>';
   });
-  content.innerHTML = html;
+  content.innerHTML = html + '</div>';
 }
 
 async function inviaSegnalazione() {
@@ -7803,13 +7755,13 @@ async function caricaBadgeSegnalazioni() {
 async function caricaEmergenze() {
   const content = document.getElementById('emergenzeContent');
   if (!content) return;
-  content.innerHTML = '<div class="loading-msg">caricamento...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome),intervento:intervento_id(evento,data)&order=gestita.asc,creato_il.desc', { headers: H });
     const arr = await res.json();
     renderEmergenze(arr || []);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -7819,37 +7771,37 @@ function renderEmergenze(list, contentElId, opts) {
   const content = document.getElementById(contentElId);
   if (!content) return;
   if (!list.length) {
-    content.innerHTML = '<div class="loading-msg">nessuna segnalazione di emergenza.</div>';
+    content.innerHTML = '<div class="empty">Nessuna segnalazione di emergenza.</div>';
     return;
   }
-  let html = '';
+  let html = '<div class="grid g3">';
   list.forEach(s => {
     const v      = s.volontario || {};
-    const data   = new Date(s.creato_il).toLocaleString('it-IT');
+    const data   = new Date(s.creato_il).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     const statoLbl = s.gestita
-      ? '<span style="color:var(--green);font-weight:600">✓ Gestita</span>'
-      : '<span class="msb-off" style="padding:2px 8px;border-radius:10px;font-weight:700;font-size:0.65rem;text-transform:uppercase">⚠ Da gestire</span>';
+      ? '<span class="pill p-grey">Gestita</span>'
+      : '<span class="pill p-yellow">Da gestire</span>';
     const mapLink = (s.lat != null && s.lon != null)
-      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" class="btn-sm" style="text-decoration:none;display:inline-block">📍 vedi posizione</a>'
+      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" rel="noopener" class="btn sm">Vedi posizione</a>'
       : '';
     const intervento = s.intervento || null;
-    html += '<div class="seg-card" style="border-left:3px solid ' + (s.gestita ? 'var(--green)' : 'var(--red)') + '">'
-      + '<div class="seg-card-head"><strong>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</strong>' + statoLbl + '</div>'
-      + '<div style="font-size:0.7rem;color:var(--testo-3);margin-bottom:0.4rem">' + data + '</div>'
-      + (intervento ? '<div style="font-size:0.75rem;color:var(--testo-2);margin-bottom:0.4rem">Intervento: ' + (intervento.evento || '—') + '</div>' : '')
-      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank"><img src="' + s.foto_url + '" style="max-width:220px;max-height:220px;border-radius:8px;display:block;margin-bottom:0.5rem;cursor:pointer"></a>' : '')
-      + (s.descrizione ? '<div class="seg-card-text">' + s.descrizione + '</div>' : '')
-      + (mapLink ? '<div style="margin-top:0.5rem">' + mapLink + '</div>' : '')
-      + (mostraAzione
-        ? '<div style="margin-top:0.6rem">'
-          + (s.gestita
-              ? '<button class="btn-sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">↻ Riapri</button>'
-              : '<button class="btn-primary" style="padding:0.4rem 0.9rem;font-size:0.78rem" onclick="cambiaStatoEmergenza(' + s.id + ', true)">✓ Segna come gestita</button>')
+    html += '<div class="card em-card">'
+      + '<div class="vc"><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
+      + (intervento ? '<span class="sub mt10">Intervento: <b class="fg">' + (intervento.evento || '—') + '</b></span>' : '')
+      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank" rel="noopener" class="thumb em-foto"><img src="' + s.foto_url + '" alt=""></a>' : '')
+      + (s.descrizione ? '<p class="em-desc">' + s.descrizione + '</p>' : '')
+      + ((mapLink || mostraAzione)
+        ? '<div class="em-azioni">' + mapLink
+          + (mostraAzione
+            ? (s.gestita
+                ? '<button class="btn sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">Riapri</button>'
+                : '<button class="btn sm pri" onclick="cambiaStatoEmergenza(' + s.id + ', true)">Segna come gestita</button>')
+            : '')
           + '</div>'
         : '')
       + '</div>';
   });
-  content.innerHTML = html;
+  content.innerHTML = html + '</div>';
 }
 
 async function cambiaStatoEmergenza(id, gestita) {
@@ -7969,7 +7921,7 @@ async function caricaBotPermessi() {
     botPermessiAll = (volontari || []).map(v => Object.assign({}, v, { collegato: collegatiIds.has(v.id) }));
     botRenderPermessi();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -7990,18 +7942,19 @@ function botRenderPermessi() {
     );
   }
   if (!righe.length) {
-    list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
+    list.innerHTML = '<div class="loading-msg">Nessun volontario trovato.</div>';
     return;
   }
   let html = '';
   righe.forEach(v => {
     const collegatoLbl = v.collegato
-      ? '<span class="badge badge-std" style="font-size:0.6rem">collegato ✅</span>'
-      : '<span class="badge badge-off" style="font-size:0.6rem">non collegato</span>';
+      ? '<span class="pill p-blue">Collegato</span>'
+      : '<span class="pill p-grey">Non collegato</span>';
     html += '<div class="impo-u-row">'
       + '<div class="impo-u-info"><div class="impo-u-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="impo-u-role">' + (v.squadra || '—') + ' &nbsp; ' + collegatoLbl + '</div></div>'
-      + '<div class="impo-u-actions"><label class="vol-form-check" style="padding:0"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
+      + '<div class="impo-u-role">' + (v.squadra || '—') + '</div></div>'
+      + collegatoLbl
+      + '<div class="impo-u-actions"><label class="vol-form-check"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
       + '</div>';
   });
   list.innerHTML = html;
@@ -8139,7 +8092,7 @@ async function _posizioneCarica() {
     const arr = await res.json();
     renderPosizioni(arr || []);
   } catch(e) {
-    if (lista) lista.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore caricamento.</div>';
+    if (lista) lista.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
   }
 }
 
@@ -8219,16 +8172,18 @@ function renderPosizioni(list, ns, mapElId, listElId) {
     const attiva = g.punti.some(p => p.scade_il && new Date(p.scade_il).getTime() > now);
     const minFa = Math.max(0, Math.round((now - new Date(ultimo.creato_il).getTime()) / 60000));
     const statoTxt = attiva ? '🟢 Attiva' : '⚪ Terminata';
-    const statoColor = attiva ? 'var(--green)' : 'var(--testo-3)';
+    const statoCls = attiva ? 'p-blue' : 'p-grey';
 
     const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(ctx.map);
     marker.bindPopup('<strong>' + g.nome + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
     ctx.layers.push(marker);
 
-    legendHtml += '<div class="impo-u-row" style="cursor:pointer" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
-      + '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + colore + ';margin-right:0.6rem;flex-shrink:0"></span>'
+    // il pallino ha il colore della traccia GPS sulla mappa (dato, non tema)
+    legendHtml += '<div class="impo-u-row clk" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
+      + '<span class="pos-dot" style="background:' + colore + '"></span>'
       + '<div class="impo-u-info"><div class="impo-u-name">' + g.nome + '</div>'
-      + '<div class="impo-u-role"><span style="color:' + statoColor + ';font-weight:600">' + statoTxt + '</span> · aggiornato ' + minFa + 'm fa</div></div>'
+      + '<div class="impo-u-role">aggiornato ' + minFa + ' min fa</div></div>'
+      + '<span class="pill ' + statoCls + '">' + (attiva ? 'Attiva' : 'Terminata') + '</span>'
       + '</div>';
   });
   lista.innerHTML = legendHtml;
@@ -8271,7 +8226,7 @@ async function caricaGalleria() {
     return;
   }
 
-  content.innerHTML = '<div class="loading-msg">caricamento album...</div>';
+  content.innerHTML = '<div class="loading-msg">Caricamento album…</div>';
   try {
     // Lista sottocartelle (album) nella cartella principale
     const q = "'" + GALLERIA_FOLDER_ID + "' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
@@ -8312,14 +8267,14 @@ async function caricaGalleria() {
     galleriaAlbumsCache = albumsConCover;
     renderAlbums(albumsConCover);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore: ' + (e.message || 'caricamento fallito') + '</div>';
   }
 }
 
 function renderAlbums(albums) {
   const content = document.getElementById('gallContent');
   if (!albums.length) {
-    content.innerHTML = '<div class="loading-msg">nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
+    content.innerHTML = '<div class="empty">Nessun album trovato. Crea sottocartelle nella cartella Drive principale.</div>';
     return;
   }
   let html = '<div class="gall-albums">';
@@ -8328,12 +8283,10 @@ function renderAlbums(albums) {
     const cover = alb.coverId
       ? '<img src="https://lh3.googleusercontent.com/d/' + alb.coverId + '=w600" loading="lazy" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\'<span class=&quot;gall-folder-icon&quot;>📁</span>\'">'
       : '<span class="gall-folder-icon">📁</span>';
-    html += '<div class="gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
+    html += '<div class="card gall-album" onclick="apriAlbum(\'' + alb.id + '\', \'' + alb.name.replace(/'/g, "\\'") + '\')">'
       + '<div class="gall-album-cover">' + cover + '</div>'
-      + '<div class="gall-album-info">'
-      + '<div class="gall-album-name">' + alb.name + '</div>'
-      + (dateStr ? '<div class="gall-album-meta">' + dateStr + '</div>' : '')
-      + '</div>'
+      + '<b class="gall-album-name">' + alb.name + '</b>'
+      + (dateStr ? '<span class="sub">' + dateStr + '</span>' : '')
       + '</div>';
   });
   html += '</div>';
@@ -8394,7 +8347,7 @@ async function apriAlbum(folderId, nome) {
     html += '</div>';
     content.innerHTML = html;
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg" style="color:var(--red)">errore: ' + (e.message || 'caricamento fallito') + '</div>';
+    content.innerHTML = '<div class="loading-msg bad">errore: ' + (e.message || 'caricamento fallito') + '</div>';
   }
 }
 
@@ -8476,22 +8429,19 @@ function renderDashboardVisite() {
   });
   const currentFilter = document.getElementById('visiteFiltroStato') ? document.getElementById('visiteFiltroStato').value : '';
   const cards = [
-    { key: '',           label: 'Totale',     n: cnt.TOT,        color: '#222' },
-    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--green)' },
-    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: '#ff8c00' },
-    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: '#d9a400' },
-    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: '#4c8dff' },
-    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: '#9aa0a6' },
-    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: '#dc3545' },
+    { key: '',           label: 'Totale',     n: cnt.TOT,        color: 'var(--fg)' },
+    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--accent)' },
+    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: 'var(--yellow)' },
+    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: 'var(--red)' },
+    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: 'var(--accent-bg)' },
+    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: 'var(--muted)' },
+    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: 'var(--red)' },
   ];
+  // contatori come chip filtro con conteggio (stesso componente del riferimento)
   dash.innerHTML = cards.map(c => {
-    const pct = tot > 0 ? Math.round((c.n / tot) * 100) : 0;
-    const active = currentFilter === c.key ? ' vd-active' : '';
-    return '<div class="vd-card' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
-      + '<div class="vd-card-num" style="color:' + c.color + '">' + c.n + '</div>'
-      + '<div class="vd-card-lbl">' + c.label + '</div>'
-      + '<div class="vd-card-bar"><div class="vd-card-bar-fill" style="width:' + pct + '%;background:' + c.color + '"></div></div>'
-      + '</div>';
+    const active = currentFilter === c.key ? ' on' : '';
+    return '<button class="chip' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
+      + (c.key ? c.label : 'Tutti') + ' <span class="n">' + c.n + '</span></button>';
   }).join('');
 }
 
@@ -8511,11 +8461,11 @@ function renderVisite(data) {
     list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
     return;
   }
-  let html = '<div class="visite-table-wrap"><table class="visite-tbl">'
+  let html = '<div class="card tbl visite-wrap"><table class="visite-tbl">'
     + '<thead><tr>'
     + '<th>Cognome</th><th>Nome</th><th>Codice Fiscale</th>'
     + '<th>Stato Visita</th><th>Data Visita</th>'
-    + '<th style="text-align:center">CDC 1°</th><th style="text-align:center">CDC 2°</th>'
+    + '<th class="c">CDC 1°</th><th class="c">CDC 2°</th>'
     + '</tr></thead><tbody>';
 
   data.forEach(v => {
@@ -8540,8 +8490,8 @@ function renderVisite(data) {
       + '</select>'
       + '</td>'
       + '<td><input type="date" class="vt-date" value="' + (v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ', \'data_visita\', this.value)"></td>'
-      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
-      + '<td style="text-align:center"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
+      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
+      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
       + '</tr>';
   });
 
@@ -8703,16 +8653,16 @@ async function caricaDocMezzo(mezzoId) {
           + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' | ' + data + '</div>'
           + '</div>'
           + '<div class="doc-item-actions">'
-          + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
-          + '<button class="btn-sm btn-danger" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
+          + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
           + '</div></div>';
       });
       html += '</div>';
     }
-    html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 
@@ -8732,7 +8682,7 @@ function apriUploadDocMezzo(mezzoId) {
   var m = mezziData.find(function(x){ return x.id === mezzoId; });
   document.getElementById('mezzoUploadTitle').textContent = 'Carica documento — ' + (m ? m.automezzo : '');
   document.getElementById('mezzoUploadErr').style.display = 'none';
-  document.getElementById('mezzoDropText').innerHTML = '📎 Tocca per selezionare il file<br><span style="font-size:0.62rem;opacity:0.6">PDF, JPG, PNG — max 10MB</span>';
+  document.getElementById('mezzoDropText').innerHTML = 'PDF, JPG o PNG — max 10MB';
   document.getElementById('mezzoFileInput').value = '';
   document.getElementById('mezzoUploadOverlay').classList.add('open');
 }
@@ -8798,13 +8748,6 @@ var statsInterventi = [];
 var statsChartTipo  = null;
 var statsChartMesi  = null;
 
-var TIPO_COLORS = {
-  'EMERGENZA':'#c0392b','ESERCITAZIONE':'#185fa5','CORSI':'#3b6d11',
-  'PREVENZIONE INFORTUNI':'#854f0b','RAPPRESENTANZA':'#534ab7',
-  'ASSEMBLEE E RIUNIONI':'#0f6e56','CONTROLLO TERRITORIO':'#185fa5',
-  'SEGRETERIA':'#5f5e5a','MAGAZZINO':'#854f0b'
-};
-
 async function caricaStatistiche() {
   var anno = document.getElementById('statsAnno').value;
   var url  = SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data&stato_calcolato=eq.SVOLTO';
@@ -8835,46 +8778,39 @@ function renderStatCards() {
   var totInt  = statsInterventi.length;
   var totOre  = statsInterventi.reduce(function(s,i){ return s + parseFloat(i.n_ore||0); }, 0);
   var totVol  = statsInterventi.reduce(function(s,i){ return s + (i.n_volontari||0); }, 0);
+  var ic = function(n){ return navIc(n, 22); };
   el.innerHTML = [
-    ['Interventi', totInt, '#1a7a4a'],
-    ['Ore totali', Math.round(totOre*10)/10, '#185fa5'],
-    ['Presenze', totVol, '#854f0b']
+    ['Interventi', totInt, 'clock', 'y'],
+    ['Ore totali', Math.round(totOre*10)/10, 'clock', 'b'],
+    ['Presenze', totVol, 'users', 'y']
   ].map(function(c){
-    return '<div style="background:var(--bg-2);border-radius:var(--r);padding:0.7rem 0.8rem">'
-      + '<div style="font-size:0.65rem;color:var(--testo-3);margin-bottom:2px">'+c[0]+'</div>'
-      + '<div style="font-size:1.3rem;font-weight:600;color:'+c[2]+'">'+c[1]+'</div></div>';
+    return '<div class="card stat"><span class="ib ' + c[3] + '">' + ic(c[2]) + '</span><div><b>' + c[1] + '</b><span>' + c[0] + '</span></div></div>';
   }).join('');
 }
 
+// Interventi per tipo: righe con barra di avanzamento (componente progbar del riferimento)
 function renderChartTipo() {
-  var ctx = document.getElementById('chartStatsTipo');
-  if (!ctx) return;
+  var el = document.getElementById('chartStatsTipo');
+  if (!el) return;
   var contegg = {};
   statsInterventi.forEach(function(i){
     var t = i.tipo_attivita || 'ALTRO';
     contegg[t] = (contegg[t]||0) + 1;
   });
-  var labels = Object.keys(contegg);
-  var data   = labels.map(function(l){ return contegg[l]; });
-  var colors = labels.map(function(l){ return TIPO_COLORS[l] || '#888'; });
-
-  // Legenda
-  var leg = document.getElementById('statsLegendaTipo');
-  if (leg) leg.innerHTML = labels.map(function(l,i){
-    return '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:2px;background:'+colors[i]+'"></span>'+l+' '+data[i]+'</span>';
+  var labels = Object.keys(contegg).sort(function(a,b){ return contegg[b] - contegg[a]; });
+  if (!labels.length) { el.innerHTML = '<p class="note">Nessun intervento.</p>'; return; }
+  var max = Math.max.apply(null, labels.map(function(l){ return contegg[l]; }));
+  el.innerHTML = labels.map(function(l){
+    return '<div class="stat-row"><span class="lbl">' + l + '</span>'
+      + '<div class="progbar"><i style="width:' + Math.round(contegg[l] / max * 100) + '%"></i></div>'
+      + '<span class="val">' + contegg[l] + '</span></div>';
   }).join('');
-
-  if (statsChartTipo) statsChartTipo.destroy();
-  statsChartTipo = new Chart(ctx, {
-    type: 'doughnut',
-    data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
-  });
 }
 
+// Interventi per mese: colonne del riferimento (.bars), mese corrente in giallo
 function renderChartMesi(anno) {
-  var ctx = document.getElementById('chartStatsMesi');
-  if (!ctx) return;
+  var el = document.getElementById('chartStatsMesi');
+  if (!el) return;
   var mesi   = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
   var counts = new Array(12).fill(0);
   statsInterventi.forEach(function(i){
@@ -8882,22 +8818,13 @@ function renderChartMesi(anno) {
     var m = parseInt(i.data.slice(5,7)) - 1;
     if (m >= 0 && m < 12) counts[m]++;
   });
-  var isDark = matchMedia('(prefers-color-scheme: dark)').matches;
-  var grid   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  var txt    = isDark ? '#aaa' : '#666';
-  if (statsChartMesi) statsChartMesi.destroy();
-  statsChartMesi = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: mesi, datasets: [{ data: counts, backgroundColor: '#1a7a4a', borderRadius: 4, label: 'Interventi' }] },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales: {
-        x:{ ticks:{ color:txt, autoSkip:false, font:{size:10} }, grid:{ color:grid } },
-        y:{ ticks:{ color:txt, font:{size:10} }, grid:{ color:grid }, beginAtZero:true }
-      }
-    }
-  });
+  var top = Math.max.apply(null, counts.concat([1]));
+  var oggi = new Date();
+  var meseCorr = String(oggi.getFullYear()) === String(anno) ? oggi.getMonth() : -1;
+  el.innerHTML = counts.map(function(n, i){
+    var h = Math.round(n / top * 130) + 4;
+    return '<div class="c"><em>' + n + '</em><i class="' + (i === meseCorr ? 'cur' : '') + '" style="height:' + h + 'px"></i><small>' + mesi[i] + '</small></div>';
+  }).join('');
 }
 
 function renderOreTable() {
@@ -8917,7 +8844,7 @@ function renderOreTable() {
   });
   // Carica nomi volontari
   var ids = Object.keys(volMap);
-  if (!ids.length) { el.innerHTML = '<div style="font-size:0.75rem;color:var(--testo-3)">Nessun dato.</div>'; return; }
+  if (!ids.length) { el.innerHTML = '<div class="empty">Nessun dato.</div>'; return; }
   fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome,codice_fiscale', { headers: H })
     .then(function(r){ return r.json(); })
     .then(function(vols){
@@ -8926,20 +8853,11 @@ function renderOreTable() {
         return { nome: v.cognome + ' ' + v.nome, ore: Math.round(s.ore*10)/10, count: s.count };
       }).sort(function(a,b){ return b.ore - a.ore; });
 
-      var html = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem">'
-        + '<thead><tr style="border-bottom:0.5px solid var(--border)">'
-        + '<th style="text-align:left;padding:5px 4px;color:var(--testo-3);font-weight:500">Volontario</th>'
-        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Interventi</th>'
-        + '<th style="text-align:right;padding:5px 4px;color:var(--testo-3);font-weight:500">Ore</th>'
-        + '</tr></thead><tbody>';
+      var html = '<div class="card tbl stat-ore"><div class="irow ihead"><span>Volontario</span><span class="r">Interventi</span><span class="r">Ore</span></div>';
       rows.forEach(function(r, i){
-        html += '<tr style="border-bottom:0.5px solid var(--border)">'
-          + '<td style="padding:5px 4px;color:var(--testo)">' + (i+1) + '. ' + r.nome + '</td>'
-          + '<td style="padding:5px 4px;text-align:right;color:var(--testo-2)">' + r.count + '</td>'
-          + '<td style="padding:5px 4px;text-align:right;font-weight:500;color:var(--green)">' + r.ore + 'h</td>'
-          + '</tr>';
+        html += '<div class="irow"><b>' + (i+1) + '. ' + r.nome + '</b><span class="r">' + r.count + '</span><b class="r">' + r.ore + ' h</b></div>';
       });
-      html += '</tbody></table>';
+      html += '</div>';
       el.innerHTML = html;
     });
 }
@@ -9231,38 +9149,24 @@ async function apriModalLetteraAttivazione(volontarioId) {
 
   const overlay = document.createElement('div');
   overlay.id = 'letteraAttOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem;';
+  overlay.className = 'ov';
   overlay.innerHTML = `
-    <div style="background:var(--bg-card);border-radius:var(--r-lg);box-shadow:var(--shadow);max-width:420px;width:100%;max-height:90vh;overflow-y:auto;padding:1.2rem;">
-      <h3 style="font-size:1rem;font-weight:600;color:var(--testo);margin-bottom:0.2rem;">📄 Lettera attivazione</h3>
-      <p style="font-size:0.78rem;color:var(--testo-3);margin-bottom:1rem;">${v.cognome} ${v.nome} — Art. 39 D.Lgs 1/2018</p>
-
-      <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin:0.6rem 0 0.3rem;">Ragione sociale ditta *</label>
-      <input class="vol-form-inp login-input" id="latDatoreLavoro" value="${v.datore_lavoro || ''}" placeholder="es. EPTA SPA" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
-
-      <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin:0.6rem 0 0.3rem;">Indirizzo ditta</label>
-      <input class="vol-form-inp login-input" id="latIndirizzoLavoro" value="${v.indirizzo_lavoro || ''}" placeholder="es. Via Achille Grandi 43" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
-
-      <div style="display:flex;gap:0.5rem;margin-top:0.6rem;">
-        <div style="flex:1;">
-          <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.3rem;">CAP</label>
-          <input class="vol-form-inp login-input" id="latCapLavoro" value="${v.cap_lavoro || ''}" placeholder="15033" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Lettera di attivazione">
+      <div class="shead"><h2>Lettera di attivazione</h2><button class="x" onclick="document.getElementById('letteraAttOverlay').remove()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="sbody form">
+        <p class="note m0">${v.cognome} ${v.nome} — Art. 39 D.Lgs 1/2018</p>
+        <label>Ragione sociale ditta *<input id="latDatoreLavoro" value="${v.datore_lavoro || ''}" placeholder="es. EPTA SPA"></label>
+        <label>Indirizzo ditta<input id="latIndirizzoLavoro" value="${v.indirizzo_lavoro || ''}" placeholder="es. Via Achille Grandi 43"></label>
+        <div class="row2">
+          <label>CAP<input id="latCapLavoro" value="${v.cap_lavoro || ''}" placeholder="15033"></label>
+          <label>Città<input id="latCittaLavoro" value="${v.citta_lavoro || ''}" placeholder="Casale Monferrato"></label>
         </div>
-        <div style="flex:2;">
-          <label class="vol-form-lbl" style="display:block;font-size:0.72rem;font-weight:600;color:var(--testo-3);margin-bottom:0.3rem;">Città</label>
-          <input class="vol-form-inp login-input" id="latCittaLavoro" value="${v.citta_lavoro || ''}" placeholder="Casale Monferrato" style="width:100%;padding:0.65rem 0.8rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:0.9rem;color:var(--testo);">
+        <label class="chk${hasDataFine ? '' : ' lat-off'}"><input type="checkbox" id="latIncludiDataFine" ${hasDataFine ? '' : 'disabled'}> Includi data fine nel periodo di attivazione</label>
+        ${hasDataFine ? '' : '<p class="note m0">Data fine non impostata sull\'intervento.</p>'}
+        <div class="actions">
+          <button type="button" class="btn" onclick="document.getElementById('letteraAttOverlay').remove()">Annulla</button>
+          <button type="button" class="btn pri" onclick="generaLetteraAttivazione()">Genera PDF</button>
         </div>
-      </div>
-
-      <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.9rem;font-size:0.82rem;color:var(--testo-2);${hasDataFine ? '' : 'opacity:0.4;'}">
-        <input type="checkbox" id="latIncludiDataFine" ${hasDataFine ? '' : 'disabled'}>
-        Includi data fine nel periodo di attivazione
-      </label>
-      ${hasDataFine ? '' : '<p style="font-size:0.7rem;color:var(--testo-4);margin-top:0.2rem;">Data fine non impostata sull\'intervento.</p>'}
-
-      <div style="display:flex;gap:0.6rem;margin-top:1.2rem;">
-        <button type="button" class="btn-sm" style="flex:1;padding:0.7rem;" onclick="document.getElementById('letteraAttOverlay').remove()">Annulla</button>
-        <button type="button" class="btn-primary" style="flex:1;margin-top:0;" onclick="generaLetteraAttivazione()">Genera PDF</button>
       </div>
     </div>
   `;
