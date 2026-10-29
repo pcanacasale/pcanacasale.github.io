@@ -17,7 +17,7 @@
    Barra blu in alto con menu principale + "Altro"; su telefono barra in basso
    e pannello dal basso. Blu e giallo della Protezione Civile, angoli stondati. */
 :root{--bg:#F3F6FB;--surface:#FFFFFF;--line:#DCE5F2;--line2:#C5D3E8;--fg:#072F63;--muted:#44597D;--head:#0A4C9E;--head-fg:#FFFFFF;--head-muted:#C9DBF5;--accent:#0A4C9E;--accent-bg:#0A4C9E;--accent-fg:#FFFFFF;--soft:#DCE9FA;--yellow:#FFC20E;--yellow-soft:#FFF1BF;--on-yellow:#072F63;--grey-bg:#E7EAF0;--red:#B42318;--red-soft:#FDE4E1;--shadow:0 12px 40px rgba(7,47,99,.22);--font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px}
+  --paper:#FFFFFF;--on-red:#FFFFFF;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}
 
@@ -160,11 +160,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:250;background:var(--head);color:var(--head-fg)}
 .topin{height:var(--top-h);display:flex;align-items:center;gap:20px}
 .brand{display:flex;align-items:center;gap:12px;border:0;background:none;color:inherit;padding:0;text-align:left;flex-shrink:0}
-.brand-logo{width:40px;height:40px;border-radius:12px;background:#fff;object-fit:contain;padding:2px}
+.brand-logo{width:40px;height:40px;border-radius:12px;background:var(--paper);object-fit:contain;padding:2px}
 .brand b{display:block;font-size:16px;font-weight:800;line-height:1.15}
 .topnav{display:flex;gap:4px;flex:1;min-width:0}
 .tab{height:40px;padding:0 16px;border:0;border-radius:999px;background:transparent;color:var(--head-muted);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.tab:hover{background:rgba(255,255,255,.12);color:#fff}
+.tab:hover{background:rgba(255,255,255,.12);color:var(--head-fg)}
 .tab.on{background:var(--yellow);color:var(--on-yellow)}
 .emg{height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--yellow);background:transparent;color:var(--yellow);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .emg[hidden]{display:none}
@@ -185,7 +185,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .pitem.on{background:var(--yellow);color:var(--on-yellow);border-color:var(--yellow)}
 .pitem svg{flex-shrink:0;color:var(--accent)}
 .pitem.on svg{color:var(--on-yellow)}
-.nbadge{background:var(--red);color:#fff;border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.nbadge{background:var(--red);color:var(--on-red);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}
 /* barra bassa */
 .bottom{display:none;position:fixed;left:0;right:0;bottom:0;z-index:250;background:var(--surface);border-top:1px solid var(--line);padding:8px max(6px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
 .bt{flex:1;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--muted)}
@@ -270,7 +270,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .vol-filters label{font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:4px}
 .chip.active{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-fg)}
 .vista-wrap{position:relative;display:inline-flex}
-.vista-edit-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:2px solid var(--bg);background:var(--red);color:#fff;font-size:10px;line-height:1;padding:0;display:none;align-items:center;justify-content:center}
+.vista-edit-btn{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:2px solid var(--bg);background:var(--red);color:var(--on-red);font-size:10px;line-height:1;padding:0;display:none;align-items:center;justify-content:center}
 .vista-wrap:hover .vista-edit-btn{display:flex}
 .chip-add{border-style:dashed;color:var(--accent)}
 .vcard.off{opacity:.55}
@@ -709,6 +709,31 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .att-status{min-height:20px;margin-top:12px}
 .lat-off{opacity:.4}
 
+/* ── residui convertiti in classi ── */
+.full-row{grid-column:1 / -1}
+.dot.red{background:var(--red)}.dot.yellow{background:var(--yellow)}
+.thumb.sm{height:72px}
+.seg.mb{margin:4px 0 10px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.pdc-add.cont{border:0;padding-top:0;margin-top:8px}
+.irow b.sm{font-size:14px}
+.tipo-ic{width:46px;height:46px;border-radius:12px;background:var(--soft);color:var(--fg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tipo-ic.em{background:var(--yellow-soft)}
+.tipo-ic.s40{width:40px;height:40px}
+.tipo-ic.s56{width:56px;height:56px}
+.tipo-ic svg{width:55%;height:55%}
+.fg{color:var(--fg)}
+
+.sub.inl{display:inline}
+.flex-none{flex:none}
+.sheet-narrow{width:min(460px,100%)}
+.sheet-xs{width:min(400px,100%)}
+.note.list-count{margin:-8px 0 10px}
+.agg-comp.top{margin:4px 0 14px}
+.file-in{width:100%;margin-bottom:10px}
+.mt-14b{margin-top:14px}
+.bad.link-warn{margin:10px 0 12px}
+
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
@@ -846,7 +871,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
 
 <!-- LOGIN -->
-<div id="loginScreen" style="display:flex">
+<div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
       <img class="brand-logo" src="images/logo-ana.gif" alt="" onerror="this.style.display='none'">
@@ -870,7 +895,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- Tab Volontario -->
     <div id="loginFormVol" style="display:none">
       <label class="login-label">Codice Fiscale</label>
-      <input class="login-input" type="text" id="loginVolCF" placeholder="RSSMRA80A01H501U" maxlength="16" style="text-transform:uppercase">
+      <input class="login-input upper" type="text" id="loginVolCF" placeholder="RSSMRA80A01H501U" maxlength="16">
       <label class="login-label">Data di nascita</label>
       <input class="login-input" type="date" id="loginVolData">
       <button class="btn-login" onclick="doLoginVolontario()">Accedi come volontario</button>
@@ -935,7 +960,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <!-- nome/ruolo utente: compilati da avviaDashboard, mostrati nella barra alta -->
       <span id="homeWelcome" hidden></span><span id="homeUnit" hidden></span>
       <div class="card bday" id="bdayBanner" style="display:none">
-        <span class="dot" style="background:var(--yellow)"></span>
+        <span class="dot yellow"></span>
         <div id="bdayText"></div>
       </div>
       <div id="homeGrid"></div>
@@ -949,7 +974,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       </div>
       <div class="bar">
         <div class="chips" id="visteBar"></div>
-        <span style="flex:1"></span>
+        <span class="grow"></span>
         <label class="search" for="volSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="volSearch" placeholder="Cerca per nome o squadra" autocomplete="off" oninput="filtraVolontari()"></label>
         <button class="chip" id="volFilterBtn" onclick="toggleVolFiltri()">Filtri</button>
       </div>
@@ -1325,7 +1350,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
       <!-- Nuovo utente (spostato da Impostazioni) -->
       <div class="impo-section" id="accNuovoUtenteSection">
-        <button class="btn pri" style="margin-bottom:18px" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
+        <button class="btn pri mb18" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
         <div class="card form nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
           <h2>Nuovo utente</h2>
           <div class="form-err" id="nuovoUtenteErr"></div>
@@ -1337,7 +1362,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
             <label>Password<input type="password" id="nuovaPassword" placeholder="••••••••"></label>
             <label>Ruolo<input type="text" id="nuovoRuolo" placeholder="es. Volontario"></label>
           </div>
-          <div class="grp" style="margin:4px 0 0">Permessi</div>
+          <div class="grp m0">Permessi</div>
           <div class="perm-grid">
             <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
             <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
@@ -1390,7 +1415,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- SEGNALAZIONI (per volontari: invia; per admin: gestisci) -->
     <div class="panel" id="panelSegnalazioni">
       <div class="phead"><div><h1>Segnalazioni</h1></div></div>
-      <p class="note" id="segnalazioniSub" style="margin:-8px 0 16px">Segnala errori nella tua scheda</p>
+      <p class="note note-page" id="segnalazioniSub">Segnala errori nella tua scheda</p>
       <div id="segnalazioniContent"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
@@ -1480,15 +1505,15 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         </div>
       </div>
       <input type="file" id="dotFileInput" accept=".xlsx" hidden onchange="dotImportaExcel(this.files[0])">
-      <div id="dotImportStatus" style="display:none;margin-bottom:18px"></div>
+      <div id="dotImportStatus" class="mb18" style="display:none"></div>
 
       <div class="bar">
         <label class="search" for="dotSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="dotSearch" placeholder="Cerca articolo, categoria o magazzino" autocomplete="off" oninput="dotFiltraLista()"></label>
-        <span style="flex:1"></span>
+        <span class="grow"></span>
         <div class="seg" role="group" aria-label="Vista" id="dotVistaToggle"></div>
       </div>
       <div class="frow" id="dotCategoriaTabs"></div>
-      <div class="frow" id="dotMagazzinoTabs" style="margin-bottom:18px"></div>
+      <div class="frow mb18" id="dotMagazzinoTabs"></div>
 
       <div id="dotLista"><p class="note">Caricamento…</p></div>
     </div>
@@ -1496,7 +1521,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- MODALE NUOVO ARTICOLO DOTAZIONE -->
     <div class="vista-form-overlay" id="dotNuovoOverlay">
       <div class="vista-form-card">
-        <div class="shead" style="padding:0 0 10px"><h2 id="dotNuovoTitolo">Nuovo articolo</h2><button class="x" onclick="dotChiudiNuovo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="shead sheet-h"><h2 id="dotNuovoTitolo">Nuovo articolo</h2><button class="x" onclick="dotChiudiNuovo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="form">
           <div class="row2">
             <label>Codice<input id="dotNuovoCodice"></label>
@@ -1694,9 +1719,9 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <div class="grid g3 impo-grid">
       <div class="card impo-section">
         <h2>Campi volontari</h2>
-        <p class="note" style="margin:4px 0 14px">Gestisci i campi aggiuntivi della scheda volontario.</p>
+        <p class="note note-intro">Gestisci i campi aggiuntivi della scheda volontario.</p>
         <div class="schema-list" id="schemaList"><div class="loading-msg">Caricamento…</div></div>
-        <button class="btn pri" style="margin-top:14px" onclick="toggleNuovoCampo()">+ Nuovo campo</button>
+        <button class="btn pri mt14" onclick="toggleNuovoCampo()">+ Nuovo campo</button>
         <div class="form nuovo-campo-form" id="nuovoCampoForm" style="display:none">
           <div class="form-err" id="nuovoCampoErr"></div>
           <div class="row2">
@@ -1729,7 +1754,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
       <div class="card impo-section">
         <h2>Categorie dotazioni</h2>
-        <p class="note" style="margin:4px 0 14px">Gestisci categorie e sottocategorie dell'inventario.</p>
+        <p class="note note-intro">Gestisci categorie e sottocategorie dell'inventario.</p>
         <div id="catDotList"><div class="loading-msg">Caricamento…</div></div>
         <div class="pdc-add">
           <input id="catDotNuovaCategoria" placeholder="Nuova categoria (es. Elettroutensili)" aria-label="Nuova categoria">
@@ -1748,46 +1773,33 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
   <!-- Upload documento mezzo -->
   <div class="doc-upload-overlay" id="mezzoUploadOverlay">
     <div class="doc-upload-card">
-      <h4 id="mezzoUploadTitle">Carica documento</h4>
+      <div class="shead sheet-h"><h2 id="mezzoUploadTitle">Carica documento</h2><button class="x" onclick="chiudiUploadDocMezzo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="form-err" id="mezzoUploadErr"></div>
-      <div class="form-field" style="margin-bottom:0.6rem">
-        <label class="form-lbl">Categoria</label>
-        <select class="form-inp" id="mezzoDocTipo">
-          <option value="FOTO">📷 Foto mezzo</option>
-          <option value="LIBRETTO">📋 Libretto</option>
-          <option value="ASSICURAZIONE">📄 Assicurazione</option>
-          <option value="REVISIONE">🔧 Verbale revisione</option>
-          <option value="COLLAUDO">📋 Collaudo</option>
-          <option value="ALTRO">📄 Altro</option>
-        </select>
-      </div>
-      <div class="form-field" style="margin-bottom:0.6rem">
-        <label class="form-lbl">Nome documento (opz.)</label>
-        <input class="form-inp" id="mezzoDocNome" placeholder="es. Libretto 2024">
-      </div>
-      <div id="mezzoDropText" style="font-size:0.75rem;color:var(--testo-3);margin-bottom:0.6rem;min-height:1.2rem"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.6rem">
-        <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
-          <span style="font-size:1.4rem">📷</span>
-          Scatta foto
-          <input type="file" accept="image/*" capture="environment" style="display:none" onchange="mezzoFileSelected(this)">
+      <div class="form">
+        <label>Categoria
+          <select id="mezzoDocTipo">
+            <option value="FOTO">Foto mezzo</option>
+            <option value="LIBRETTO">Libretto</option>
+            <option value="ASSICURAZIONE">Assicurazione</option>
+            <option value="REVISIONE">Verbale revisione</option>
+            <option value="COLLAUDO">Collaudo</option>
+            <option value="ALTRO">Altro</option>
+          </select>
         </label>
-        <label style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;padding:0.9rem;background:var(--bg-2);border:0.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:0.78rem;color:var(--testo-2)">
-          <span style="font-size:1.4rem">📄</span>
-          Carica file
-          <input type="file" id="mezzoFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="mezzoFileSelected(this)">
-        </label>
-      </div>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn-sm btn-warn" onclick="chiudiUploadDocMezzo()" style="flex:1;padding:0.6rem">annulla</button>
-        <button class="btn-primary" id="mezzoUploadBtn" onclick="eseguiUploadDocMezzo()" style="padding:0.6rem">carica</button>
+        <label>Nome documento (facoltativo)<input id="mezzoDocNome" placeholder="es. Libretto 2024"></label>
+        <p id="mezzoDropText" class="note m0 doc-drop-text"></p>
+        <div class="doc-pick">
+          <label><span class="ic">📷</span>Scatta foto<input type="file" accept="image/*" capture="environment" hidden onchange="mezzoFileSelected(this)"></label>
+          <label><span class="ic">📄</span>Carica file<input type="file" id="mezzoFileInput" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="mezzoFileSelected(this)"></label>
+        </div>
+        <div class="actions"><button class="btn" onclick="chiudiUploadDocMezzo()">Annulla</button><button class="btn pri" id="mezzoUploadBtn" onclick="eseguiUploadDocMezzo()">Carica</button></div>
       </div>
     </div>
   </div>
   <!-- Modifica utente -->
   <div class="vista-form-overlay" id="modUtenteOverlay">
     <div class="vista-form-card">
-      <div class="shead" style="padding:0 0 10px"><h2>Modifica utente</h2><button class="x" onclick="chiudiModificaUtente()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="shead sheet-h"><h2>Modifica utente</h2><button class="x" onclick="chiudiModificaUtente()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <input type="hidden" id="modUtenteId">
       <div class="form-err" id="modUtenteErr"></div>
       <div class="form-field"><label class="form-lbl">Nome e Cognome *</label><input class="form-inp" id="modNome"></div>
@@ -1876,7 +1888,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=182"></script>
-<script src="aggiornamento-dati.js?v=10"></script>
+<script src="area-riservata.js?v=183"></script>
+<script src="aggiornamento-dati.js?v=11"></script>
 </body>
 </html>

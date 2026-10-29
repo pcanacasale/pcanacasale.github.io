@@ -495,7 +495,7 @@ async function caricaHomeDashboard() {
 
     // -- ULTIMI INTERVENTI -- (skip per volontari)
     if (!window.isVolUser) {
-      left += '<div class="card"><div class="phead" style="margin-bottom:6px"><h2>Ultimi interventi</h2>'
+      left += '<div class="card"><div class="phead mb6"><h2>Ultimi interventi</h2>'
         + '<button class="btn sm" onclick="navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;))">Vedi tutti →</button></div>';
       if (!interventi || !interventi.length) {
         left += '<p class="note">Nessun intervento registrato.</p>';
@@ -538,10 +538,10 @@ async function caricaHomeDashboard() {
           var d       = new Date(m.revisione);
           var scaduta = d < oggi2;
           right += '<button class="todo" onclick="navTo(&quot;mezzi&quot;,&quot;Mezzi&quot;,document.getElementById(&quot;siMezzi&quot;))">'
-            + '<span class="dot" style="background:var(' + (scaduta ? '--red' : '--yellow') + ')"></span>'
-            + '<span style="flex:1"><b>' + m.automezzo + '</b> <span class="targa">' + (m.targa||'—') + '</span>'
+            + '<span class="dot ' + (scaduta ? 'red' : 'yellow') + '"></span>'
+            + '<span class="grow"><b>' + m.automezzo + '</b> <span class="targa">' + (m.targa||'—') + '</span>'
             + '<span class="sub">' + (scaduta ? 'Scaduta il ' : 'Scade il ') + d.toLocaleDateString('it-IT') + '</span></span>'
-            + '<span style="color:var(--accent);font-weight:700">→</span></button>';
+            + '<span class="go">→</span></button>';
         });
         right += '</div>';
       }
@@ -688,20 +688,18 @@ async function caricaUtenti() {
       const row = document.createElement('div');
       row.className = 'impo-u-row' + (u.attivo ? '' : ' utente-disattivo');
       const initials = u.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-      const bgColor  = u.tipo_accesso === 'master' ? '#1a3a1f' : '#1c2a3a';
-      const fgColor  = u.tipo_accesso === 'master' ? '#3fb950' : '#58a6ff';
       const badgeClass = u.tipo_accesso === 'master' ? 'badge-master' : (u.attivo ? 'badge-std' : 'badge-off');
       const badgeText  = u.tipo_accesso === 'master' ? 'MASTER' : (u.attivo ? 'STD' : 'OFF');
       const p = u.permessi || {};
       const perms = u.tipo_accesso === 'master' ? '' :
-        '<div style="margin-top:0.2rem;display:flex;flex-wrap:wrap;gap:2px">'
-        + (p.volontari?'<span class="badge badge-std" style="font-size:0.5rem">Vol</span>':'')
-        + (p.interventi?'<span class="badge badge-std" style="font-size:0.5rem">Int</span>':'')
-        + (p.mezzi?'<span class="badge badge-std" style="font-size:0.5rem">Mez</span>':'')
-        + (p.richieste?'<span class="badge badge-std" style="font-size:0.5rem">Ric</span>':'')
-        + (p.visite?'<span class="badge badge-std" style="font-size:0.5rem">Vis</span>':'')
+        '<div class="int-pills">'
+        + (p.volontari?'<span class="badge badge-std">Vol</span>':'')
+        + (p.interventi?'<span class="badge badge-std">Int</span>':'')
+        + (p.mezzi?'<span class="badge badge-std">Mez</span>':'')
+        + (p.richieste?'<span class="badge badge-std">Ric</span>':'')
+        + (p.visite?'<span class="badge badge-std">Vis</span>':'')
         + '</div>';
-      row.innerHTML = '<div class="impo-u-avatar" style="background:' + bgColor + ';color:' + fgColor + '">' + initials + '</div>'
+      row.innerHTML = '<span class="av s40">' + initials + '</span>'
         + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' | ' + u.ruolo + '</div>' + perms + '</div>'
         + '<div class="impo-u-actions">'
         + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
@@ -901,14 +899,14 @@ async function caricaVolontari() {
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
-  } catch(e) { list.innerHTML = '<div class="empty" style="grid-column:1/-1">Errore nel caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty full-row">Errore nel caricamento.</div>'; }
 }
 
 function renderVolontari(data) {
   const list = document.getElementById('volList');
   if (!list) return;
   document.getElementById('volMostrati').textContent = data.length;
-  if (!data.length) { list.innerHTML = '<div class="empty" style="grid-column:1/-1">Nessun volontario trovato.</div>'; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty full-row">Nessun volontario trovato.</div>'; return; }
 
   // Separa attivi+sospesi da dimessi
   const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
@@ -937,7 +935,7 @@ function _volCardHtml(v, statoHtml, tags) {
     + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + (v.tipo_volontario||'—') + (v.mansione ? ' · ' + v.mansione : '') + '</span></div>'
     + statoHtml + '</div>'
     + '<div class="cfoot"><span class="vol-tags">' + (tags.length ? tags.join('') : '<span>' + (v.squadra || 'Nessuna squadra') + '</span>') + '</span>'
-    + '<b style="color:var(--accent)">Apri scheda →</b></div>';
+    + '<b class="go">Apri scheda →</b></div>';
 }
 
 function _renderVolCard(v) {
@@ -1236,7 +1234,7 @@ async function toggleVolInterventi(volId) {
       const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
       return '<div class="lr clk" onclick="' + onclick + '">'
         + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + dataFmt + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + '</span></div>'
-        + '<span style="color:var(--accent);font-weight:700">→</span>'
+        + '<span class="go">→</span>'
         + '</div>';
     }).join('');
   } catch(e) {
@@ -1304,7 +1302,7 @@ function apriFormVolontario(id) {
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp" id="fCF" placeholder="RSSMRA80A01F205X" style="text-transform:uppercase"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp upper" id="fCF" placeholder="RSSMRA80A01F205X"></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -1323,7 +1321,7 @@ function apriFormVolontario(id) {
         <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
         <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
       </div>
-      <div class="vol-form-grid" style="margin-top:0.5rem">
+      <div class="vol-form-grid mt12">
         <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Data visita</label><input class="vol-form-inp" type="date" id="fDataVisita"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Stato visita</label>
@@ -1643,7 +1641,7 @@ function renderCampiCustomForm() {
     html += '<div class="vol-form-section"><div class="vol-form-section-title" onclick="toggleFormSection(this)">' + sez + ' (custom)</div><div class="vol-form-grid">';
     campi.forEach(c => {
       if (c.tipo === 'boolean') {
-        html += '<label class="vol-form-check" style="grid-column:span 1"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
+        html += '<label class="vol-form-check"><input type="checkbox" id="fc_' + c.campo_id + '"> ' + c.etichetta + '</label>';
       } else {
         const inputType = c.tipo === 'date' ? 'date' : c.tipo === 'number' ? 'number' : 'text';
         html += '<div class="vol-form-field"><label class="vol-form-lbl">' + c.etichetta + '</label><input class="vol-form-inp" type="' + inputType + '" id="fc_' + c.campo_id + '"></div>';
@@ -1938,7 +1936,7 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
 
     const header = document.createElement('div');
     header.className = 'vol-group-header' + (isCollapsed ? ' collapsed' : '');
-    header.innerHTML = '<span class="grp" style="margin:0">' + headerLabel + '</span>'
+    header.innerHTML = '<span class="grp m0">' + headerLabel + '</span>'
       + '<span class="pill ' + pillCls + '">' + items.length + '</span>'
       + '<span class="vgh-arrow">' + (isCollapsed ? '▶' : '▼') + '</span>';
 
@@ -3007,7 +3005,7 @@ function aicDraftHtml(draft, id) {
   const oreTot = vol.reduce((s, v) => s + (parseFloat(v.ore) || 0), 0);
   return '<div class="aic-draft">'
     + '<div class="aic-draft-title">Bozza scheda intervento</div>'
-    + (draft.messaggio_riepilogo ? '<p class="note" style="margin:0 0 8px">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</p>' : '')
+    + (draft.messaggio_riepilogo ? '<p class="note m0 mb6">' + aicEscapeHtml(draft.messaggio_riepilogo) + '</p>' : '')
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Evento</span><span class="aic-draft-val">' + aicEscapeHtml(draft.evento || '—') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Data</span><span class="aic-draft-val">' + aicEscapeHtml(draft.data || '—') + (draft.data_fine ? ' → ' + aicEscapeHtml(draft.data_fine) : '') + '</span></div>'
     + '<div class="aic-draft-row"><span class="aic-draft-lbl">Luogo</span><span class="aic-draft-val">' + aicEscapeHtml(draft.luogo || '—') + '</span></div>'
@@ -3075,7 +3073,7 @@ async function aicConfermaBozza(id, btnEl) {
   const draft = aicDrafts[id];
   if (!draft) return;
   const row = btnEl ? btnEl.closest('.aic-draft-actions') : null;
-  if (row) row.innerHTML = '<span style="font-size:0.78rem;color:var(--testo-3)">salvataggio in corso...</span>';
+  if (row) row.innerHTML = '<span class="note m0">Salvataggio in corso…</span>';
   try {
     await apriFormIntervento(null);
     const set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val; };
@@ -3894,10 +3892,8 @@ function getTipoAttivitaIcon(tipo, size, color) {
 
 function getTipoAttivitaAvatar(tipo, size) {
   size = size || 36;
-  var c = { bg: /EMERG/i.test(tipo || '') ? 'var(--yellow-soft)' : 'var(--soft)', stroke: 'var(--fg)' };
-  return '<div style="width:'+size+'px;height:'+size+'px;border-radius:12px;background:'+c.bg+';display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-    + getTipoAttivitaIcon(tipo, Math.round(size*0.55), c.stroke)
-    + '</div>';
+  var cls = 'tipo-ic' + (/EMERG/i.test(tipo || '') ? ' em' : '') + (size >= 56 ? ' s56' : size <= 40 ? ' s40' : '');
+  return '<div class="' + cls + '">' + getTipoAttivitaIcon(tipo, Math.round(size*0.55), 'currentColor') + '</div>';
 }
 
 function toggleNuovoUtente() {
@@ -6419,7 +6415,7 @@ function dotRenderLista() {
     const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? null : r.quantita;
     const nomeCat = _dotCategoriaNomeBreve(r.categoria_id);
     html += '<button class="card" onclick="apriDettaglioDotazione(' + r.id + ')">'
-      + '<div class="thumb ' + (i % 2 ? 'b' : 'y') + '" style="height:72px">' + _dotIcona(36) + '</div>'
+      + '<div class="thumb sm ' + (i % 2 ? 'b' : 'y') + '">' + _dotIcona(36) + '</div>'
       + '<b class="dot-nome">' + r.articolo + '</b>'
       + '<span class="sub">' + [nomeCat, r.magazzino].filter(Boolean).join(' · ') + '</span>'
       + '<div class="cfoot flat"><span class="qty">' + (qtaLbl !== null ? qtaLbl : '—') + ' <small>pz</small></span>'
@@ -6461,7 +6457,7 @@ function dotRenderDettaglioBody() {
   const qtaLbl = (r.quantita === null || r.quantita === undefined || r.quantita === '') ? '—' : r.quantita;
   const catPath = _dotCategoriaPath(r.categoria_id);
 
-  let html = '<div class="seg" role="group" aria-label="Sezione" style="margin:4px 0 10px">'
+  let html = '<div class="seg mb" role="group" aria-label="Sezione">'
     + '<button class="' + (dotDetailTab==='dettagli'?'on':'') + '" onclick="dotMostraTabArticolo(\'dettagli\')">Dettagli</button>'
     + '<button class="' + (dotDetailTab==='manutenzione'?'on':'') + '" onclick="dotMostraTabArticolo(\'manutenzione\')">Manutenzione</button>'
     + '</div>';
@@ -6895,7 +6891,7 @@ function pdcRenderMezzi() {
     dotAll.map(d => '<option value="' + (d.articolo + (d.magazzino ? ' — ' + d.magazzino : '')).replace(/"/g,'&quot;') + '">').join('') +
     '</datalist>';
   const mostraOrdine = pdcPianoCorrente && pdcPianoCorrente.mostra_composizione;
-  let html = datalistArticoli + '<div class="grid g3" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">';
+  let html = datalistArticoli + '<div class="grid wide">';
   pdcMezzi.forEach(m => {
     const isAltro = m.descrizione_mezzo && etichetteMezzi.indexOf(m.descrizione_mezzo) === -1;
     const caricati = m.voci.filter(v => v.spuntato).length;
@@ -6925,11 +6921,11 @@ function pdcRenderMezzi() {
     html += '<div class="pdc-add">'
       + '<input list="pdcDotazioniList" id="pdcSelArticolo' + m.id + '" placeholder="Cerca articolo per nome">'
       + '<button class="btn sm" onclick="pdcAggiungiVoceDaDotazione(' + m.id + ')">Aggiungi</button>'
-      + '</div><div class="pdc-add" style="border:0;padding-top:0;margin-top:8px">'
+      + '</div><div class="pdc-add cont">'
       + '<input placeholder="Oppure voce libera" id="pdcLiberaVoce' + m.id + '">'
       + '<button class="btn sm" onclick="pdcAggiungiVoceLibera(' + m.id + ')">Aggiungi</button>'
       + '</div>'
-      + '<button class="btn danger full" style="margin-top:14px" onclick="pdcEliminaMezzo(' + m.id + ')">Elimina mezzo</button>';
+      + '<button class="btn danger full mt14" onclick="pdcEliminaMezzo(' + m.id + ')">Elimina mezzo</button>';
 
     html += '</div>';
   });
@@ -7438,7 +7434,7 @@ function renderAccessi() {
         const tipoLbl = u.tipo_accesso === 'master' ? '<span class="pill p-yellow">Master</span>' : '<span class="pill p-sand">Standard</span>';
         html += '<div class="card">'
           + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.username||'—') + ' · ' + (u.ruolo||'—') + '</span></div></div>'
-          + '<div class="cfoot"><span class="int-pills" style="margin:0">' + tipoLbl + stato + '</span>'
+          + '<div class="cfoot"><span class="int-pills m0">' + tipoLbl + stato + '</span>'
           + (isMasterUser ? '<button class="btn sm" onclick="apriModificaUtenteById(\'' + u.id + '\')">Modifica</button>' : '')
           + '</div></div>';
       });
@@ -7485,7 +7481,7 @@ function renderAccessi() {
         const badge = l.utente_tipo === 'admin'
           ? '<span class="pill p-yellow">Admin</span>'
           : '<span class="pill p-blue">Volontario</span>';
-        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b style="font-size:14px">' + (l.utente_label||'—') + '</b><span>' + badge + '</span></div>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + (l.utente_label||'—') + '</b><span>' + badge + '</span></div>';
       });
       html += '</div>';
     }
@@ -7502,7 +7498,7 @@ function renderAccessi() {
       atts.forEach(a => {
         const dt = new Date(a.created_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
-        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b style="font-size:14px">' + (a.utente||'—') + '</b><span>' + (a.azione||'—') + '</span></div>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + (a.utente||'—') + '</b><span>' + (a.azione||'—') + '</span></div>';
       });
       html += '</div>';
     }
@@ -7643,7 +7639,7 @@ async function caricaSegnalazioni() {
 
 function renderSegnalazioniVolontario(list) {
   const content = document.getElementById('segnalazioniContent');
-  let html = '<div class="card form" style="margin-bottom:18px">'
+  let html = '<div class="card form mb18">'
     + '<h2>Nuova segnalazione</h2>'
     + '<label>Descrivi l\'errore o l\'aggiornamento necessario<textarea class="msg" id="segText" rows="5" placeholder="Es. il mio telefono è cambiato in 333 1234567 oppure la mia mansione è errata..."></textarea></label>'
     + '<div class="actions"><button class="btn pri" onclick="inviaSegnalazione()">Invia segnalazione</button></div>'
@@ -7657,7 +7653,7 @@ function renderSegnalazioniVolontario(list) {
       html += '<div class="card">'
         + '<div class="vc"><div class="mid"><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
         + '<p class="seg-text">' + (s.testo || '') + '</p>'
-        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note" style="margin-top:4px">' + s.note_admin + '</p></div>' : '')
+        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note mt6">' + s.note_admin + '</p></div>' : '')
         + '</div>';
     });
     html += '</div>';
@@ -7791,7 +7787,7 @@ function renderEmergenze(list, contentElId, opts) {
     const intervento = s.intervento || null;
     html += '<div class="card em-card">'
       + '<div class="vc"><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
-      + (intervento ? '<span class="sub" style="margin-top:8px">Intervento: <b style="color:var(--fg)">' + (intervento.evento || '—') + '</b></span>' : '')
+      + (intervento ? '<span class="sub mt10">Intervento: <b class="fg">' + (intervento.evento || '—') + '</b></span>' : '')
       + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank" rel="noopener" class="thumb em-foto"><img src="' + s.foto_url + '" alt=""></a>' : '')
       + (s.descrizione ? '<p class="em-desc">' + s.descrizione + '</p>' : '')
       + ((mapLink || mostraAzione)
@@ -8657,16 +8653,16 @@ async function caricaDocMezzo(mezzoId) {
           + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' | ' + data + '</div>'
           + '</div>'
           + '<div class="doc-item-actions">'
-          + '<a href="' + d.url + '" target="_blank" class="btn-sm btn-ok">apri</a>'
-          + '<button class="btn-sm btn-danger" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
+          + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
           + '</div></div>';
       });
       html += '</div>';
     }
-    html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ aggiungi documento</button>';
+    html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<div style="font-size:0.72rem;color:var(--red);padding:0.3rem 0">Errore caricamento.</div>';
+    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
   }
 }
 

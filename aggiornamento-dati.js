@@ -174,7 +174,7 @@ function aggIniettaCSS() {
 .agg-photo-box{display:flex;align-items:center;gap:16px}
 .agg-photo-preview{width:98px;height:118px;border-radius:14px;object-fit:cover;background:var(--bg);flex-shrink:0;border:1px solid var(--line)}
 .agg-photo-preview.sm{width:49px;height:59px;border-radius:8px}
-.agg-firma{width:105px;height:35px;background:#fff;border-radius:6px;border:1px solid var(--line);object-fit:contain}
+.agg-firma{width:105px;height:35px;background:var(--paper);border-radius:6px;border:1px solid var(--line);object-fit:contain}
 .agg-photo-placeholder{width:98px;height:118px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);flex-shrink:0}
 .agg-crop-wrap{position:relative;width:245px;height:295px;margin:12px auto;border-radius:14px;overflow:hidden;background:#000;touch-action:none}
 .agg-crop-canvas{width:100%;height:100%;display:block;cursor:grab}
@@ -221,7 +221,7 @@ function aggInitUI() {
     <div class="bar">
       <label class="search" for="aggSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="aggSearch" placeholder="Cerca volontario" autocomplete="off" oninput="aggImpostaSearch(this.value)"></label>
       <button class="chip" id="aggFilterBtn" onclick="aggToggleFiltri()">Filtri</button>
-      <span style="flex:1"></span>
+      <span class="grow"></span>
       <button class="btn sm" onclick="aggApriCatalogo()">Catalogo DPI</button>
       <button class="btn sm" onclick="aggEsportaCSV()">Esporta CSV</button>
       <button class="btn sm" id="aggSyncBtn" onclick="aggSincronizzaNuovi()">Sincronizza nuovi volontari</button>
@@ -239,7 +239,7 @@ function aggInitUI() {
       </label>
     </div>
 
-    <div class="chips agg-chips" style="margin-bottom:18px">
+    <div class="chips agg-chips mb18">
       <button class="chip agg-counter" id="aggCntTot" onclick="aggImpostaMissing('')">Tutti <span class="n" id="aggCTot">0</span></button>
       <button class="chip agg-counter" id="aggCntFoto" onclick="aggImpostaMissing('foto')">Senza foto <span class="n" id="aggCFoto">0</span></button>
       <button class="chip agg-counter" id="aggCntDpi" onclick="aggImpostaMissing('dpi')">DPI da fare <span class="n" id="aggCDpi">0</span></button>
@@ -248,7 +248,7 @@ function aggInitUI() {
       <button class="chip agg-counter" id="aggCntProp" onclick="aggImpostaMissing('proposte')">Proposte <span class="n" id="aggCProp">0</span></button>
     </div>
 
-    <p class="sub" style="margin:-8px 0 10px"><span id="aggMostrati">0</span> risultati</p>
+    <p class="sub list-count note"><span id="aggMostrati">0</span> risultati</p>
 
     <div id="aggGrid" class="card tbl"><div class="loading-msg">Caricamento…</div></div>
   `;
@@ -273,9 +273,9 @@ function aggCostruisciOverlay() {
 
     <div class="doc-upload-overlay" id="aggCatalogoOverlay">
       <div class="doc-upload-card">
-        <div class="shead" style="padding:0 0 10px"><h2>Catalogo DPI</h2><button class="x" onclick="aggChiudiCatalogo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="shead sheet-h"><h2>Catalogo DPI</h2><button class="x" onclick="aggChiudiCatalogo()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div id="aggCatalogoList"></div>
-        <div class="vol-form-section" style="margin-top:14px">
+        <div class="vol-form-section mt14">
           <div class="vol-form-section-title">Nuovo capo</div>
           <div class="vol-form-grid">
             <div class="vol-form-field"><span class="vol-form-lbl">Categoria</span><input class="vol-form-inp" id="aggCatNuovaCategoria" list="aggCatCategorieList" placeholder="es. GENERICO"></div>
@@ -295,10 +295,10 @@ function aggCostruisciOverlay() {
     </div>
 
     <div class="doc-upload-overlay" id="aggFotoOverlay">
-      <div class="doc-upload-card" style="width:min(400px,100%)">
-        <div class="shead" style="padding:0 0 10px"><h2>Foto tessera PIA</h2><button class="x" onclick="aggChiudiEditorFoto()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-        <p class="note" style="margin:0 0 10px">Formato 196×236 px, JPG, &lt; 50 KB. Inquadra viso e spalle: il viso deve occupare il 70–80% della foto.</p>
-        <input type="file" accept="image/*" id="aggFotoInput" onchange="aggFotoFileSelezionato(this)" style="width:100%;margin-bottom:10px">
+      <div class="doc-upload-card sheet-xs">
+        <div class="shead sheet-h"><h2>Foto tessera PIA</h2><button class="x" onclick="aggChiudiEditorFoto()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <p class="note m0 mb10">Formato 196×236 px, JPG, &lt; 50 KB. Inquadra viso e spalle: il viso deve occupare il 70–80% della foto.</p>
+        <input type="file" accept="image/*" id="aggFotoInput" onchange="aggFotoFileSelezionato(this)" class="file-in">
         <div id="aggCropArea" style="display:none">
           <div class="agg-crop-wrap">
             <canvas class="agg-crop-canvas" id="aggCropCanvas" width="196" height="236"></canvas>
@@ -315,11 +315,11 @@ function aggCostruisciOverlay() {
     </div>
 
     <div class="doc-upload-overlay" id="aggLinkOverlay">
-      <div class="doc-upload-card" style="width:min(460px,100%)">
-        <div class="shead" style="padding:0 0 10px"><h2>Link personale</h2><button class="x" onclick="aggChiudiLinkOverlay()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-        <p class="note" style="margin:0 0 10px" id="aggLinkInfo"></p>
+      <div class="doc-upload-card sheet-narrow">
+        <div class="shead sheet-h"><h2>Link personale</h2><button class="x" onclick="aggChiudiLinkOverlay()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <p class="note m0 mb10" id="aggLinkInfo"></p>
         <input class="agg-link-url" id="aggLinkUrl" readonly onclick="this.select()">
-        <p class="bad" style="margin:10px 0 12px">Il link si vede solo adesso: copialo o invialo prima di chiudere. Se lo perdi, generane uno nuovo (il precedente smette di funzionare).</p>
+        <p class="bad link-warn">Il link si vede solo adesso: copialo o invialo prima di chiudere. Se lo perdi, generane uno nuovo (il precedente smette di funzionare).</p>
         <div class="agg-row2">
           <button class="btn" id="aggLinkCopiaBtn" onclick="aggLinkCopia()">Copia</button>
           <button class="btn pri" onclick="aggLinkWhatsApp()">Invia su WhatsApp</button>
@@ -333,14 +333,14 @@ function aggCostruisciOverlay() {
     </div>
 
     <div class="doc-upload-overlay" id="aggDocOverlay">
-      <div class="doc-upload-card" style="width:min(460px,100%)">
-        <div class="shead" style="padding:0 0 10px"><h2 id="aggDocOverlayTitle">Carica documento</h2><button class="x" onclick="aggChiudiUploadDoc()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="doc-upload-card sheet-narrow">
+        <div class="shead sheet-h"><h2 id="aggDocOverlayTitle">Carica documento</h2><button class="x" onclick="aggChiudiUploadDoc()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
         <div class="form">
           <label>Descrizione<input id="aggDocDescrizione" placeholder="es. Attestato corso antincendio"></label>
           <label>Scadenza (facoltativa)<input id="aggDocScadenza" type="date"></label>
           <input type="file" accept="application/pdf,image/*" id="aggDocFileInput" onchange="aggDocFileSelezionato(this)">
-          <p class="note" id="aggDocFileLabel" style="margin:0">PDF o JPG, max 10MB</p>
-          <p class="bad" id="aggDocUploadErr" style="display:none;margin:0"></p>
+          <p class="note m0" id="aggDocFileLabel">PDF o JPG, max 10MB</p>
+          <p class="bad m0" id="aggDocUploadErr" style="display:none"></p>
           <div class="actions"><button class="btn" onclick="aggChiudiUploadDoc()">Annulla</button><button class="btn pri" id="aggDocUploadBtn" onclick="aggEseguiUploadDoc()">Carica</button></div>
         </div>
       </div>
@@ -543,7 +543,7 @@ function aggRenderScheda() {
   const v = aggCorrente.volontario;
   const comp = aggCorrente.completezza;
 
-  body.innerHTML = '<div class="agg-comp" style="margin:4px 0 14px"><span>Completezza</span><div class="progbar"><i style="width:' + comp.percentuale + '%"></i></div>' + comp.percentuale + '%</div>'
+  body.innerHTML = '<div class="agg-comp top"><span>Completezza</span><div class="progbar"><i style="width:' + comp.percentuale + '%"></i></div>' + comp.percentuale + '%</div>'
     + aggBloccoProposta(v)
     + aggBloccoLink(v)
     + aggBloccoAnagrafica(v)
@@ -605,7 +605,7 @@ function aggBloccoLink(v) {
     + (!v.data_nascita ? '<div class="agg-cf-msg err">Per generare il link serve la data di nascita in anagrafica.</div>' : '')
     + '<div class="agg-row2">'
     + '<button class="btn sm pri" onclick="aggLinkGenera(' + v.id + ')">' + (l ? 'Genera nuovo link' : 'Genera link') + '</button>'
-    + (l && l.attivo ? '<button class="btn sm danger" style="flex:none" onclick="aggLinkRevoca(' + v.id + ')">Revoca</button>' : '')
+    + (l && l.attivo ? '<button class="btn sm danger flex-none" onclick="aggLinkRevoca(' + v.id + ')">Revoca</button>' : '')
     + '</div></div></div>';
 }
 
@@ -694,7 +694,7 @@ async function aggLinkRevoca(id) {
 
 // -- BLOCCO PROPOSTA --
 function aggFmtValProp(campo, val) {
-  if (val === null || val === undefined || String(val).trim() === '') return '<span class="sub" style="display:inline">—</span>';
+  if (val === null || val === undefined || String(val).trim() === '') return '<span class="sub inl">—</span>';
   if (campo === 'data_nascita' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) return new Date(String(val).slice(0, 10) + 'T00:00:00').toLocaleDateString('it-IT');
   return aggEsc(val);
 }
@@ -812,7 +812,7 @@ function aggCampoHtml(key, label, v, tipo) {
   } else {
     input = '<input class="vol-form-inp' + (vuoto ? ' agg-field-missing' : '') + '" id="aggF_' + key + '" type="' + tipo + '" value="' + String(val).replace(/"/g, '&quot;') + '" ' + onchange + '>';
   }
-  return '<div class="vol-form-field" style="margin-bottom:12px">'
+  return '<div class="vol-form-field mb12">'
     + '<span class="vol-form-lbl">' + label + (obbligatorio ? ' *' : '') + '</span>'
     + input
     + (diverso ? '<div class="agg-orig-hint">originale: ' + origVal + '</div>' : '')
@@ -848,7 +848,7 @@ function aggBloccoAnagrafica(v) {
     + aggCampoHtml('pia_matricola', 'Matricola PIA', v)
     + '</div>'
     + '<div id="aggCFCheck"></div>'
-    + '<div class="vol-form-field" style="margin-top:12px"><span class="vol-form-lbl">Note</span>'
+    + '<div class="vol-form-field mt12"><span class="vol-form-lbl">Note</span>'
     + '<textarea class="vol-form-inp" id="aggF_note" rows="2" oninput="aggAnagraficaCambiata(\'note\',this.value)">' + (v.note || '') + '</textarea></div>'
     + '<label class="vol-form-check"><input type="checkbox" id="aggF_pia_badge" ' + (v.pia_badge ? 'checked' : '') + ' onchange="aggAnagraficaCambiata(\'pia_badge\',this.checked)"> Badge PIA consegnato</label>'
     + '<button class="btn pri full agg-mt" onclick="aggSalvaAnagrafica()">salva anagrafica</button>'
@@ -1102,7 +1102,7 @@ async function aggDpiCampo(volontarioId, dpiId, campo, valore) {
 function aggBloccoVerifica(v) {
   const fmtData = v.verificato_il ? new Date(v.verificato_il).toLocaleDateString('it-IT') : '—';
   return '<div class="vol-section"><div class="vol-section-head" onclick="toggleVolSection(this)">Verifica</div><div class="vol-section-body">'
-    + '<div class="vol-form-field" style="margin-bottom:12px"><span class="vol-form-lbl">Stato verifica</span>'
+    + '<div class="vol-form-field mb12"><span class="vol-form-lbl">Stato verifica</span>'
     + '<select class="vol-form-inp" onchange="aggSetVerifica(' + v.id + ',this.value)">'
     + AGG_STATI_VERIFICA.map(s => '<option value="' + s + '"' + (v.stato_verifica === s ? ' selected' : '') + '>' + s.replace('_', ' ') + '</option>').join('')
     + '</select></div>'
@@ -1281,7 +1281,7 @@ function aggRenderCatalogo() {
     html += '<div class="agg-cat-head">' + cat + '</div>';
     aggCatalogoCache.filter(c => c.categoria === cat).sort((a, b) => (a.ordine || 0) - (b.ordine || 0)).forEach(c => {
       html += '<div class="agg-cat-list-row' + (c.attivo === false ? ' inattivo' : '') + '">'
-        + '<div style="flex:1">' + c.nome + ' <span class="sub" style="display:inline">(' + c.tipo_taglia + ')</span></div>'
+        + '<div class="grow">' + c.nome + ' <span class="sub inl">(' + c.tipo_taglia + ')</span></div>'
         + '<button class="btn-sm" onclick="aggCatalogoToggleAttivo(' + c.id + ')">' + (c.attivo === false ? 'riattiva' : 'disattiva') + '</button>'
         + '</div>';
     });
