@@ -17,7 +17,7 @@
    Barra blu in alto con menu principale + "Altro"; su telefono barra in basso
    e pannello dal basso. Blu e giallo della Protezione Civile, angoli stondati. */
 :root{--bg:#F3F6FB;--surface:#FFFFFF;--line:#DCE5F2;--line2:#C5D3E8;--fg:#072F63;--muted:#44597D;--head:#0A4C9E;--head-fg:#FFFFFF;--head-muted:#C9DBF5;--accent:#0A4C9E;--accent-bg:#0A4C9E;--accent-fg:#FFFFFF;--soft:#DCE9FA;--yellow:#FFC20E;--yellow-soft:#FFF1BF;--on-yellow:#072F63;--grey-bg:#E7EAF0;--red:#B42318;--red-soft:#FDE4E1;--shadow:0 12px 40px rgba(7,47,99,.22);--font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --paper:#FFFFFF;--on-red:#FFFFFF;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px}
+  --paper:#FFFFFF;--on-red:#FFFFFF;--inchiostro:#16256E;--carta-testo:#000000;--paper-muted-ep:#7A869A;--ep-campo:rgba(255,194,14,.16);--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}
 
@@ -651,6 +651,51 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* ── chip con conteggio (filtri a contatore) ── */
 .chip .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700}
 .chip.on .n{background:rgba(255,255,255,.2);color:inherit}
+/* ── editor PDF ── */
+.ep-apri{display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px 16px;text-align:center;border:2px dashed var(--line2);border-radius:20px;background:var(--surface);color:var(--accent);cursor:pointer}
+.ep-apri:hover{border-color:var(--accent)}
+.ep-apri b{font-size:17px;font-weight:800}
+.ep-apri .sub{color:var(--muted)}
+.ep-docs{display:grid;gap:12px}
+.ep-doc-az{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ep-ed{position:fixed;inset:0;z-index:700;display:flex;flex-direction:column;background:var(--bg)}
+.ep-ed[hidden]{display:none}
+.ep-top{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:calc(10px + var(--safe-t)) 16px 10px;background:var(--surface);border-bottom:1px solid var(--line)}
+.ep-top b{font-size:16px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ep-tools{flex-shrink:0;flex-wrap:nowrap;overflow-x:auto;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);scrollbar-width:none}
+.ep-tools .chip{flex-shrink:0}
+.ep-avviso{flex-shrink:0;margin:0;padding:8px 16px;background:var(--yellow-soft);color:var(--fg);font-size:14px;font-weight:600}
+.ep-avviso[hidden],.ep-prop[hidden]{display:none}
+.ep-prop{flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.ep-prop input{min-width:150px;height:38px}
+.ep-prop input[hidden],.ep-prop-g[hidden]{display:none}
+.ep-prop-g{display:inline-flex;gap:4px}
+.ep-pagine{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.ep-pag{max-width:calc(820px*var(--z,1));width:calc(100%*var(--z,1));margin:0 auto 18px}
+.ep-pag-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.ep-foglio{position:relative;background:var(--paper);border:1px solid var(--line2);box-shadow:var(--shadow);user-select:none}
+.ep-foglio canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ep-strato{position:absolute;inset:0}
+.ep-el{position:absolute;box-sizing:border-box;cursor:move;touch-action:none;color:var(--carta-testo);border:1px dashed transparent;line-height:1.15;font-family:Helvetica,Arial,sans-serif;font-size:calc(var(--s,1)*var(--d,12)*1px);overflow:hidden}
+.ep-el.on{border-color:var(--accent-bg);overflow:visible}
+.ep-el img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.ep-t{display:block;white-space:pre-wrap;overflow-wrap:anywhere}
+.ep-t i{color:var(--paper-muted-ep);font-style:normal}
+.ep-testo,.ep-data{background:var(--ep-campo)}
+.ep-campo_firma{display:flex;align-items:center;justify-content:center;border:2px solid var(--yellow);background:var(--ep-campo)}
+.ep-c{font-family:var(--font);font-size:12px;font-weight:700;color:var(--on-yellow);text-align:center}
+.ep-h{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:50%;background:var(--accent-bg);border:2px solid var(--paper);cursor:nwse-resize;touch-action:none}
+.ep-pad{height:190px;margin:10px 0;border:1px solid var(--line2);border-radius:14px;background:var(--paper);touch-action:none;overflow:hidden}
+.ep-pad canvas{width:100%;height:100%;display:block}
+.ep-foot{flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;padding:10px 16px calc(12px + var(--safe-b));background:var(--surface);border-top:1px solid var(--line)}
+@media (max-width:899px){
+ .ep-top{padding-inline:12px;gap:6px}
+ .ep-top .btn{padding:0 10px}
+ .ep-pagine{padding:12px}
+ .ep-foot{display:grid;grid-template-columns:1fr 1fr}
+ .ep-foot .btn{padding:0 8px;font-size:14px}
+}
+
 /* ── la mia scheda ── */
 .sp-hero{margin-bottom:18px}
 .sp-hero .av{width:64px;height:64px;font-size:20px}
@@ -959,6 +1004,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <button id="siInterventi" class="sidebar-item" onclick="navTo('interventi','Interventi',this)" style="display:none"></button>
     <button id="siSchedaPersonale" class="sidebar-item" onclick="navTo('schedapers','La mia scheda',this)" style="display:none"></button>
     <button id="siGalleria" class="sidebar-item" onclick="navTo('galleria','Galleria',this)" style="display:none"></button>
+    <button id="siEditorPdf" class="sidebar-item" onclick="navTo('editorPdf','Editor PDF',this)" style="display:none"></button>
     <button id="siPostazioni" class="sidebar-item" onclick="navTo('postazioni','Postazioni',this)" style="display:none"></button>
     <button id="siTlc" class="sidebar-item" onclick="navTo('tlc','TLC',this)" style="display:none"></button>
     <button id="siPianiCarico" class="sidebar-item" onclick="navTo('pianiCarico','Piani di Carico',this)" style="display:none"></button>
@@ -1057,6 +1103,92 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         <div class="sv-foot" id="svFoot" hidden>
           <button class="btn" id="svAnnulla" onclick="svAnnulla()">Annulla</button>
           <button class="btn pri" id="svSalva" onclick="svSalva()">Salva</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITOR PDF: schermo intero e finestre -->
+    <div class="ep-ed" id="epEditor" hidden>
+      <div class="ep-top">
+        <b class="grow" id="epNome"></b>
+        <button class="btn sm" id="epBtnAnnulla" onclick="epAnnulla()">Annulla</button>
+        <button class="btn sm" id="epBtnRipeti" onclick="epRipeti()">Ripeti</button>
+        <button class="btn sm" onclick="epZoom(-0.2)" aria-label="Riduci">−</button>
+        <button class="btn sm" onclick="epZoom(0.2)" aria-label="Ingrandisci">+</button>
+        <button class="x" onclick="epChiudi()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="chips ep-tools" id="epTools" role="toolbar" aria-label="Strumenti">
+        <button class="chip" data-tipo="testo" onclick="epArma('testo')">Testo</button>
+        <button class="chip" data-tipo="data" onclick="epArma('data')">Data</button>
+        <button class="chip" data-tipo="x" onclick="epArma('x')">X</button>
+        <button class="chip" data-tipo="v" onclick="epArma('v')">Spunta</button>
+        <button class="chip" data-tipo="firma" onclick="epApriFirma()">Firma</button>
+        <button class="chip" data-tipo="campo_firma" onclick="epArma('campo_firma')">Firma a distanza</button>
+      </div>
+      <p class="ep-avviso" id="epAvviso" hidden>Tocca il punto del foglio dove metterlo.</p>
+      <div class="ep-prop" id="epProp" hidden>
+        <input class="grow" id="epValore" oninput="epCambiaValore(this.value)" aria-label="Valore">
+        <input type="date" id="epValoreData" onchange="epCambiaValore(this.value)" aria-label="Data">
+        <span class="ep-prop-g" id="epDimensioni"><button class="btn sm" onclick="epDimensione(-1)" aria-label="Testo più piccolo">A−</button><button class="btn sm" onclick="epDimensione(1)" aria-label="Testo più grande">A+</button></span>
+        <button class="btn sm" onclick="epDuplica()">Duplica</button>
+        <button class="btn sm danger" onclick="epElimina()">Elimina</button>
+      </div>
+      <div class="ep-pagine" id="epPagine"></div>
+      <div class="ep-foot">
+        <button class="btn" onclick="epApriModelloDialogo()">Salva modello</button>
+        <button class="btn" id="epBtnInvia" onclick="epInvia()">Invia in firma</button>
+        <button class="btn" onclick="epStampa()">Stampa</button>
+        <button class="btn pri" onclick="epScarica()">Scarica PDF</button>
+      </div>
+    </div>
+
+    <div class="doc-upload-overlay" id="epFirmaOverlay">
+      <div class="doc-upload-card sheet-narrow">
+        <div class="shead sheet-h"><h2>Firma</h2><button class="x" onclick="epChiudiFirma()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <p class="note m0">Firma con il dito o con il mouse, oppure carica un'immagine.</p>
+        <div class="ep-pad"><canvas id="epPad" aria-label="Riquadro firma"></canvas></div>
+        <p class="bad m0 mb10" id="epFirmaErr" hidden></p>
+        <div class="actions">
+          <button class="btn sm" onclick="epPadCancella()">Cancella</button>
+          <label class="btn sm">Carica immagine<input type="file" accept="image/png,image/jpeg" hidden onchange="epFirmaImmagine(this)"></label>
+          <button class="btn pri sm" onclick="epConfermaFirma()">Usa questa firma</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-upload-overlay" id="epModelloOverlay">
+      <div class="doc-upload-card sheet-narrow">
+        <div class="shead sheet-h"><h2 id="epModelloTitolo">Salvare come modello?</h2></div>
+        <div class="form">
+          <p class="note m0">Lo ritrovi in Modelli per compilarlo altre volte. Le firme disegnate non vengono salvate.</p>
+          <label>Nome del modello<input id="epModelloNome" maxlength="200"></label>
+          <p class="bad m0" id="epModelloErr" hidden></p>
+          <div class="actions"><button class="btn" onclick="epChiudiModello()">No</button><button class="btn pri" id="epModelloSalva" onclick="epSalvaModello()">Salva modello</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-upload-overlay" id="epLinkOverlay">
+      <div class="doc-upload-card sheet-narrow">
+        <div class="shead sheet-h"><h2>Link di firma</h2><button class="x" onclick="epChiudiLink()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="form" id="epLinkForm">
+          <label>Chi deve firmare<input id="epLinkNome" placeholder="Nome e cognome"></label>
+          <label>Contatto (facoltativo)<input id="epLinkContatto" placeholder="Telefono o email"></label>
+          <label>Il link vale per
+            <select id="epLinkOre"><option value="24">24 ore</option><option value="48">48 ore</option><option value="72">72 ore</option><option value="168">7 giorni</option></select>
+          </label>
+          <p class="bad m0" id="epLinkErr" hidden></p>
+          <div class="actions"><button class="btn" onclick="epChiudiLink()">Più tardi</button><button class="btn pri" onclick="epCreaLink()">Crea link</button></div>
+        </div>
+        <div class="form" id="epLinkFatto" hidden>
+          <p class="bad m0">Il link si vede solo adesso: copialo o invialo prima di chiudere.</p>
+          <input id="epLinkUrl" readonly onclick="this.select()" aria-label="Link di firma">
+          <div class="actions">
+            <button class="btn sm" id="epLinkCopiaBtn" onclick="epLinkCopia(this)">Copia</button>
+            <button class="btn sm" onclick="epLinkEmail()">Email</button>
+            <button class="btn sm" onclick="epLinkCondividi()">Condividi</button>
+            <button class="btn pri sm" onclick="epLinkWhatsApp()">WhatsApp</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1385,6 +1517,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
             <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
+            <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF</label>
             <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti</label>
             <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
             <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni</label>
@@ -1486,6 +1619,18 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     </div>
 
     <!-- GALLERIA -->
+    <!-- EDITOR PDF (logica in editor-pdf.js) -->
+    <div class="panel" id="panelEditorPdf">
+      <div class="phead"><div><h1>Editor PDF</h1></div></div>
+      <label class="ep-apri mb18"><input type="file" accept="application/pdf,.pdf" hidden onchange="epFileScelto(this)"><b>Apri un PDF</b><span class="sub">Aggiungi testi, date, segni e firme, gira le pagine, poi scarica. Massimo 20 MB.</span></label>
+      <div class="chips mb18" id="epTabs">
+        <button class="chip" data-tab="modelli" onclick="epMostraTab('modelli')">Modelli</button>
+        <button class="chip" data-tab="firme" onclick="epMostraTab('firme')">Firme</button>
+      </div>
+      <div id="epLista"></div>
+      <p class="note">Firma elettronica semplice: va bene per moduli interni, prestiti e prese visione. Per atti formali verso enti serve la firma digitale. Il testo già presente nel PDF non si modifica.</p>
+    </div>
+
     <div class="panel" id="panelGalleria">
       <div class="phead">
         <div><h1 id="gallTitle">Galleria</h1><span class="sub" id="gallSub">Album fotografici degli eventi</span></div>
@@ -1831,6 +1976,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti</label>
           <label class="perm-check"><input type="checkbox" id="modPermVisite"> Visite Mediche</label>
           <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
@@ -1898,8 +2044,9 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=187"></script>
+<script src="area-riservata.js?v=188"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=1"></script>
+<script src="editor-pdf.js?v=1"></script>
 </body>
 </html>

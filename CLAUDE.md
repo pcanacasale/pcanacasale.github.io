@@ -13,6 +13,7 @@ There is no test suite, linter, or dev server configured. To check a change, ope
 - `index.html` — public marketing site (chi siamo, attività, galleria, contatti).
 - `area-riservata.html` + `area-riservata.js` — the reserved-area web app for volunteers (see below). `area-riservata.js` is a large (~8.5k line) monolithic script; grep for the function or panel name you need rather than reading it top to bottom.
 - `scheda-volontario.js` — finestra della scheda volontario (prefisso `sv*`): schede Dati, Documenti, Visita medica, Formazione, Dotazioni, Interventi, regole "Da sistemare" usate anche dall'elenco Volontari e dalla dashboard.
+- `editor-pdf.js` — pagina Editor PDF (prefisso `ep*`, permesso `editor_pdf`): il PDF si modifica nel browser, sul server vanno solo modelli e PDF in firma tramite la Edge Function `editor-pdf-firma`. `firma.html` è la pagina pubblica di firma a distanza.
 - `configuratore.html` — standalone tool ("Piano Acquisti Informatica"), self-contained, no backend calls.
 - `belfiore-comuni.js` — static lookup data (Italian comuni / Belfiore codes) used for codice fiscale validation.
 - `manifest.json`, `sw.js` — PWA manifest and service worker, scoped to `area-riservata.html` (cache name `pcana-vN`; bump the version when changing cached assets so old caches are evicted).
