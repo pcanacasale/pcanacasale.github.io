@@ -279,6 +279,70 @@ async function svSalvaCampi() {
   }
 }
 
+// -- FILTRI "DA SISTEMARE" DELL'ELENCO VOLONTARI --
+const SV_FILTRI = [
+  { id: 'visita',     label: 'Visita in scadenza',  test: p => p.visita },
+  { id: 'formazione', label: 'Formazione mancante', test: p => p.formazione.length > 0 },
+  { id: 'documenti',  label: 'Documenti mancanti',  test: p => p.docMancanti.length > 0 },
+  { id: 'foto',       label: 'Foto mancante',       test: p => p.foto },
+];
+let svFiltro = null;        // id del filtro attivo
+let svProblemiPerVol = {};  // volontario_id → esito di svProblemi
+
+// Prepara le regole per tutto l'elenco. Chi ha il permesso vede anche i documenti d'archivio.
+async function svCaricaProblemi(vols) {
+  const [docs, lista] = await Promise.all([
+    fetch(SUPA_URL + '/rest/v1/documenti?select=volontario_id,tipo', { headers: H }).then(r => r.ok ? r.json() : []).catch(() => []),
+    svHaAgg() ? aggCall('list', {}).catch(() => null) : null,
+  ]);
+  const docsPerVol = {};
+  docs.forEach(d => { (docsPerVol[d.volontario_id] = docsPerVol[d.volontario_id] || []).push(d); });
+  const cardPerVol = {};
+  ((lista && lista.cards) || []).forEach(c => { cardPerVol[c.id] = c; });
+  svProblemiPerVol = {};
+  vols.forEach(v => {
+    const card = cardPerVol[v.id] || null;
+    const p = svProblemi(v, card, docsPerVol[v.id] || []);
+    p.incompleta = card ? card.completezza < 100 : (p.foto || p.visita || p.formazione.length > 0 || p.docMancanti.length > 0);
+    svProblemiPerVol[v.id] = p;
+  });
+}
+
+function svConteggi(vols) {
+  const c = {};
+  SV_FILTRI.forEach(f => { c[f.id] = 0; });
+  c.incompleta = 0;
+  vols.filter(v => v.stato !== 'DIMESSO').forEach(v => {
+    const p = svProblemiPerVol[v.id];
+    if (!p) return;
+    SV_FILTRI.forEach(f => { if (f.test(p)) c[f.id]++; });
+    if (p.incompleta) c.incompleta++;
+  });
+  return c;
+}
+
+function svRenderFiltri() {
+  const box = document.getElementById('volChipsProblemi');
+  if (!box) return;
+  const c = svConteggi(volontariData);
+  box.innerHTML = SV_FILTRI.concat(svFiltro === 'incompleta' ? [{ id: 'incompleta', label: 'Schede incomplete' }] : []).map(f =>
+    '<button class="chip' + (svFiltro === f.id ? ' on' : '') + '" onclick="svImpostaFiltro(\'' + f.id + '\')">' + f.label + ' <span class="n">' + c[f.id] + '</span></button>').join('');
+}
+
+function svImpostaFiltro(id) {
+  svFiltro = svFiltro === id ? null : id;
+  svRenderFiltri();
+  filtraVolontari();
+}
+
+function svPassaFiltro(v) {
+  if (!svFiltro) return true;
+  const p = svProblemiPerVol[v.id];
+  if (!p || v.stato === 'DIMESSO') return false;
+  const f = SV_FILTRI.find(x => x.id === svFiltro);
+  return f ? f.test(p) : p.incompleta;
+}
+
 // -- REGOLE "DA SISTEMARE" (uguali per scheda, elenco Volontari e dashboard) --
 // Visita: stessa regola della vista "visita non completata"; l'esonero non è da sistemare.
 function svVisitaDaSistemare(v) { return !['COMPLETATA', 'ESONERO'].includes(visitaStatoNorm(v)); }

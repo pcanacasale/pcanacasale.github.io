@@ -895,7 +895,9 @@ async function caricaVolontari() {
     const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
-    renderVolontari(volontariData);
+    await svCaricaProblemi(volontariData);
+    svRenderFiltri();
+    if (svFiltro) filtraVolontari(); else renderVolontari(volontariData);
   } catch(e) { list.innerHTML = '<div class="empty full-row">Errore nel caricamento.</div>'; }
 }
 
@@ -1017,7 +1019,7 @@ function filtraVolontari() {
     if (attivo === 'true' && !v.attivo) return false;
     if (attivo === 'false' && v.attivo) return false;
     if (visita && (visitaStatoNorm(v) || 'VUOTO') !== visita) return false;
-    return true;
+    return svPassaFiltro(v);
   });
   renderVolontari(filtered);
 }
@@ -1611,6 +1613,8 @@ function renderVisteBar() {
 
 function applicaVista(v) {
   vistaAttiva = v.id;
+  svFiltro = null;
+  svRenderFiltri();
   renderVisteBar();
   const filtri = v.filtri || {};
 
