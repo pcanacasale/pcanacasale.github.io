@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.agg-pub]
 verify_jwt = false
+
+[functions.editor-pdf-firma]
+verify_jwt = false
