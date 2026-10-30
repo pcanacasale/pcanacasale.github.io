@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.agg-pub]
 verify_jwt = false
+
+[functions.allerta-arpa]
+verify_jwt = false
