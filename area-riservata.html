@@ -220,6 +220,37 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .vol-detail-body,.vol-form-body{padding:6px 20px 20px;border-top:0;border-bottom:0}
 .vol-detail-body{border-bottom:1px solid var(--line);border-radius:0 0 24px 24px}
 .vol-form-foot{position:sticky;bottom:0;display:flex;gap:10px;justify-content:flex-end;padding:12px 20px calc(16px + var(--safe-b));border-top:1px solid var(--line);border-radius:0 0 24px 24px}
+/* ── scheda volontario: finestra su desktop, sheet a tutta altezza su telefono ── */
+body.sv-open{overflow:hidden}
+.sheet.sv{width:min(760px,100%);height:min(860px,calc(100% - 8px));display:flex;flex-direction:column;overflow:hidden}
+.sv-grab{display:none;flex-shrink:0;width:44px;height:5px;margin:10px auto 0;border-radius:999px;background:var(--line2)}
+.sv-head{display:flex;align-items:flex-start;gap:12px;flex-shrink:0;padding:18px 20px 12px}
+.sv-testa{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+.sv-testa .mid{flex:1;min-width:0}
+.sv-testa h2{margin:0;font-size:20px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+.sv-testa .sub{display:block}
+.sv-bar{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--yellow-soft);color:var(--fg);font-size:14px}
+.sv-bar[hidden],.sv-foot[hidden]{display:none}
+.sv-bar>b{flex-shrink:0}
+.sv-bar .chips{flex:1;min-width:0}
+.sv-bar .chip{height:34px;padding:0 12px;font-size:13px}
+.sv-tabs{flex-shrink:0;padding:12px 20px}
+.sv-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 20px 20px}
+.sv-foot{flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;padding:12px 20px calc(14px + var(--safe-b));border-top:1px solid var(--line);background:var(--surface)}
+.sv-panel>.vol-section:first-child,.sv-panel>.vol-form-section:first-child{border-top:0}
+@media (max-width:899px){
+ .sv-ov{padding:0}
+ .sheet.sv{height:100%;max-height:100%;border:0;border-radius:24px 24px 0 0;padding-top:var(--safe-t)}
+ .sv-grab{display:block}
+ .sv-head{padding:10px 16px 10px}
+ .sv-bar{align-items:flex-start;flex-direction:column;gap:6px;padding:10px 16px}
+ .sv-bar .chips{flex-wrap:nowrap;overflow-x:auto;width:calc(100% + 16px);padding-right:16px;scrollbar-width:none}
+ .sv-tabs{flex-wrap:nowrap;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
+ .sv-tabs .chip,.sv-bar .chip{flex-shrink:0}
+ .sv-body{padding:2px 16px 16px}
+ .sv-foot{padding:10px 16px calc(12px + var(--safe-b))}
+ .sv-foot .btn{flex:1}
+}
 /* finestre storiche (vista-form-overlay) → .ov/.sheet */
 .vista-form-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(5,15,35,.55);align-items:center;justify-content:center;padding:16px}
 .vista-form-overlay.open{display:flex}
@@ -1013,14 +1044,22 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <div class="grid g3" id="volList"><p class="note">Caricamento…</p></div>
     </div>
 
-    <!-- SCHEDA VOLONTARIO -->
-    <div class="vol-detail" id="volDetail">
-      <div class="vol-detail-top">
-        <h2 class="vol-detail-title" id="volDetailTitle">—</h2>
-        <button class="btn sm" id="btnModificaVolontario" onclick="apriFormVolontario(volCorrenteId)" style="display:none">Modifica</button>
-        <button class="x" onclick="chiudiDettaglio()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <!-- SCHEDA VOLONTARIO (logica in scheda-volontario.js) -->
+    <div class="ov sv-ov" id="volDetail" hidden>
+      <div class="sheet sv" role="dialog" aria-modal="true" aria-labelledby="volDetailTitle">
+        <span class="sv-grab" aria-hidden="true"></span>
+        <div class="sv-head">
+          <div class="sv-testa" id="svTesta"></div>
+          <button class="x" onclick="svAnnulla()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="sv-bar" id="svBar" hidden></div>
+        <div class="chips sv-tabs" id="svTabs" role="tablist" aria-label="Sezioni della scheda"></div>
+        <div class="sv-body" id="svBody"></div>
+        <div class="sv-foot" id="svFoot" hidden>
+          <button class="btn" id="svAnnulla" onclick="svAnnulla()">Annulla</button>
+          <button class="btn pri" id="svSalva" onclick="svSalva()">Salva</button>
+        </div>
       </div>
-      <div class="vol-detail-body" id="volDetailBody"></div>
     </div>
 
     <!-- FORM VOLONTARIO -->
@@ -1894,5 +1933,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="belfiore-comuni.js?v=1"></script>
 <script src="area-riservata.js?v=185"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
+<script src="scheda-volontario.js?v=1"></script>
 </body>
 </html>
