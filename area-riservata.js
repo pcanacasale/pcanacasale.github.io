@@ -199,11 +199,34 @@ function hasPerm(key) {
 }
 
 // -- MENU (barra alta, barra bassa su telefono, pannello "Altro") --
-// Le voci stanno nel registro nascosto #navRegistry: avviaDashboard ne decide la
-// visibilità per ruolo e showPanel la voce attiva; qui le disegniamo soltanto.
-const NAV_DESK = ['siHome','siVolontari','siMezzi','siDotazioni','siInterventi'];
-const NAV_MOB  = ['siHome','siVolontari','siMezzi','siInterventi'];
-const NAV_GRUPPI = ['Persone','Risorse','Operativo','Gestione'];
+// NAV_VOCI è l'unica lista: l'ordine è questo, sez vuota = barra alta e bassa, altrimenti
+// sezione del pannello "Altro"; ruoli = tipi di accesso abilitati. Dentro i ruoli contano
+// ancora i permessi: il registro nascosto #navRegistry conserva onclick, visibilità
+// (avviaDashboard, aggiornamento-dati.js), badge e voce attiva (showPanel).
+const NAV_RUOLI_STAFF = ['master','standard'];
+const NAV_RUOLI_TUTTI = ['master','standard','volontario'];
+const NAV_VOCI = [
+  { id:'siHome',            label:'Home',               ic:'home',    sez:'',                ruoli:NAV_RUOLI_TUTTI },
+  { id:'siSchedaPersonale', label:'La mia scheda',      ic:'user',    sez:'',                ruoli:['volontario'] },
+  { id:'siVolontari',       label:'Volontari',          ic:'users',   sez:'',                ruoli:NAV_RUOLI_STAFF },
+  { id:'siInterventi',      label:'Interventi',         ic:'clock',   sez:'',                ruoli:NAV_RUOLI_STAFF },
+  { id:'siMezzi',           label:'Mezzi',              ic:'truck',   sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siDotazioni',       label:'Dotazioni',          ic:'box',     sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siPianiCarico',     label:'Piani di carico',    ic:'clip',    sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siTlc',             label:'TLC',                ic:'radio',   sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siPostazioni',      label:'Postazioni',         ic:'pin',     sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siGalleria',        label:'Galleria',           ic:'image',   sez:'Strumenti',       ruoli:NAV_RUOLI_TUTTI },
+  { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:NAV_RUOLI_TUTTI },
+  { id:'siRichieste',       label:'Richieste',          ic:'inbox',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siDb',              label:'DB',                 ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siAccessi',         label:'Registro accessi',   ic:'shield',  sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siImpostazioni',    label:'Impostazioni',       ic:'gear',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siBot',             label:'Bot',                ic:'send',    sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
+  { id:'siPosizione',       label:'Posizione',          ic:'pin',     sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
+  { id:'siEmergenze',       label:'Emergenze',          ic:'alert',   sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
+];
 const NAV_IC = {
   home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
   user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
@@ -219,24 +242,26 @@ const NAV_IC = {
   more:'M5 12h.01M12 12h.01M19 12h.01', logout:'M9 21H5V3h4M16 17l5-5-5-5M21 12H9', close:'M6 6l12 12M18 6L6 18'
 };
 function navIc(n, s) { s = s || 22; return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(NAV_IC[n]||NAV_IC.more)+'"/></svg>'; }
+function _navRuolo() {
+  if (!currentUser) return '';
+  return currentUser.tipo_accesso === 'volontario' || currentUser.tipo_accesso === 'master' ? currentUser.tipo_accesso : 'standard';
+}
 function _navVoci() {
-  return Array.prototype.slice.call(document.querySelectorAll('#navRegistry > button'))
-    .filter(function(b){ return b.style.display !== 'none'; });
+  var ruolo = _navRuolo();
+  return NAV_VOCI.filter(function(x) {
+    var b = document.getElementById(x.id);
+    return b && b.style.display !== 'none' && x.ruoli.indexOf(ruolo) >= 0;
+  });
 }
-function _navLabel(b) { return b.firstChild ? b.firstChild.textContent.trim() : ''; }
-function _navBadge(b) { var s = b.querySelector('.si-badge.show'); return s && s.textContent ? '<span class="nbadge">'+s.textContent+'</span>' : ''; }
-function _navAltroOn(main) {
-  var a = document.querySelector('#navRegistry > button.active');
-  return !!a && main.indexOf(a.id) < 0;
-}
-function _navAltroHtml(main) {
-  var voci = _navVoci().filter(function(b){ return main.indexOf(b.id) < 0; });
+function _navAttiva(x) { return document.getElementById(x.id).classList.contains('active'); }
+function _navBadge(x) { var s = document.getElementById(x.id).querySelector('.si-badge.show'); return s && s.textContent ? '<span class="nbadge">'+s.textContent+'</span>' : ''; }
+function _navAltroOn() { return _navVoci().some(function(x){ return x.sez && _navAttiva(x); }); }
+function _navAltroHtml() {
+  var voci = _navVoci().filter(function(x){ return x.sez; });
   var h = '';
-  NAV_GRUPPI.forEach(function(g) {
-    var items = voci.filter(function(b){ return b.dataset.g === g; });
-    if (!items.length) return;
-    h += '<div class="grp">'+g+'</div><div class="pgrid">' + items.map(function(b) {
-      return '<button class="pitem'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+b.id+'\')">'+navIc(b.dataset.ic,20)+'<span>'+_navLabel(b)+'</span>'+_navBadge(b)+'</button>';
+  voci.map(function(x){ return x.sez; }).filter(function(g, i, a){ return a.indexOf(g) === i; }).forEach(function(g) {
+    h += '<div class="grp">'+g+'</div><div class="pgrid">' + voci.filter(function(x){ return x.sez === g; }).map(function(x) {
+      return '<button class="pitem'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')">'+navIc(x.ic,20)+'<span>'+x.label+'</span>'+_navBadge(x)+'</button>';
     }).join('') + '</div>';
   });
   h += '<div class="grp">Account</div><div class="pgrid"><button class="pitem" onclick="chiudiAltro();logout()">'+navIc('logout',20)+'<span>Esci</span></button></div>';
@@ -245,35 +270,26 @@ function _navAltroHtml(main) {
 function renderNav() {
   var top = document.getElementById('topnav'), bot = document.getElementById('bottomnav');
   if (!top || !bot) return;
-  var voci = _navVoci();
-  var vis = function(id){ return voci.filter(function(b){ return b.id === id; })[0]; };
-  var t = '';
-  NAV_DESK.forEach(function(id){ var b = vis(id); if (b) t += '<button class="tab'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')">'+_navLabel(b)+'</button>'; });
-  t += '<button class="tab'+(_navAltroOn(NAV_DESK)?' on':'')+'" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>';
-  top.innerHTML = t;
-  var m = '';
-  NAV_MOB.forEach(function(id){ var b = vis(id); if (b) m += '<button class="bt'+(b.classList.contains('active')?' on':'')+'" onclick="navVai(\''+id+'\')"><span class="pill-i">'+navIc(b.dataset.ic)+'</span>'+_navLabel(b)+'</button>'; });
-  m += '<button class="bt'+(_navAltroOn(NAV_MOB)?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
-  bot.innerHTML = m;
-  var emg = document.getElementById('emgBtn'), siE = document.getElementById('siEmergenze');
-  if (emg && siE) {
-    emg.hidden = siE.style.display === 'none';
-    var n = siE.querySelector('.si-badge.show');
-    emg.innerHTML = navIc('alert',18) + '<span class="t">Emergenze</span>' + (n && n.textContent ? '<span class="n">'+n.textContent+'</span>' : '');
-  }
+  var barra = _navVoci().filter(function(x){ return !x.sez; });
+  top.innerHTML = barra.map(function(x) {
+    return '<button class="tab'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')">'+x.label+'</button>';
+  }).join('') + '<button class="tab'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>';
+  bot.innerHTML = barra.map(function(x) {
+    return '<button class="bt'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')"><span class="pill-i">'+navIc(x.ic)+'</span>'+x.label+'</button>';
+  }).join('') + '<button class="bt'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
   var pop = document.getElementById('altroPop');
-  if (pop && !pop.hidden) pop.innerHTML = _navAltroHtml(NAV_DESK);
+  if (pop && !pop.hidden) pop.innerHTML = _navAltroHtml();
 }
 function navVai(id) { chiudiAltro(); var b = document.getElementById(id); if (b) b.click(); window.scrollTo(0, 0); }
 function toggleAltro() {
   if (window.matchMedia('(max-width:899px)').matches) {
     var s = document.getElementById('altroSheet');
-    s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Altro"><div class="shead"><h2>Altro</h2><button class="x" onclick="chiudiAltro()" aria-label="Chiudi">'+navIc('close',18)+'</button></div><div class="sbody">'+_navAltroHtml(NAV_MOB)+'</div></div>';
+    s.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Altro"><div class="shead"><h2>Altro</h2><button class="x" onclick="chiudiAltro()" aria-label="Chiudi">'+navIc('close',18)+'</button></div><div class="sbody">'+_navAltroHtml()+'</div></div>';
     s.hidden = false;
     return;
   }
   var p = document.getElementById('altroPop');
-  if (p.hidden) { p.innerHTML = _navAltroHtml(NAV_DESK); p.hidden = false; } else p.hidden = true;
+  if (p.hidden) { p.innerHTML = _navAltroHtml(); p.hidden = false; } else p.hidden = true;
 }
 function chiudiAltro() {
   var p = document.getElementById('altroPop'), s = document.getElementById('altroSheet');
@@ -380,7 +396,6 @@ function avviaDashboard() {
   // Badge richieste (solo per non-volontari)
   if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
   if (!isVol && hasPerm('gestione_segnalazioni')) caricaBadgeSegnalazioni();
-  if (hasPerm('emergenze')) caricaBadgeEmergenze();
 
   // Compleanno
   verificaCompleanni();
@@ -418,7 +433,7 @@ function showPanel(name, btn) {
   if (panel) panel.classList.add('active');
   // Aggiorna active sidebar
   document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
-  var siId = 'si' + name.charAt(0).toUpperCase() + name.slice(1);
+  var siId = name === 'schedapers' ? 'siSchedaPersonale' : 'si' + name.charAt(0).toUpperCase() + name.slice(1);
   var si = document.getElementById(siId);
   if (si) si.classList.add('active');
   else { var siH = document.getElementById('siHome'); if(siH) siH.classList.add('active'); }
@@ -7450,23 +7465,7 @@ async function cambiaStatoEmergenza(id, gestita) {
     });
     if (!res.ok) throw new Error('errore');
     caricaEmergenze();
-    caricaBadgeEmergenze();
   } catch(e) { alert('Errore.'); }
-}
-
-async function caricaBadgeEmergenze() {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?gestita=eq.false&select=id', {
-      headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
-    });
-    const cr = res.headers.get('Content-Range') || '';
-    const tot = parseInt(cr.split('/')[1] || '0');
-    const b = document.getElementById('siBadgeEmergenze');
-    if (b) {
-      if (tot > 0) { b.textContent = tot; b.classList.add('show'); }
-      else { b.classList.remove('show'); b.textContent = ''; }
-    }
-  } catch(e) {}
 }
 
 // -- BOT TELEGRAM (permessi + broadcast + intervento attivo) --

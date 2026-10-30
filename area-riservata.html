@@ -166,11 +166,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .tab{height:40px;padding:0 12px;flex-shrink:0;border:0;border-radius:999px;background:transparent;color:var(--head-muted);font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .tab:hover{background:rgba(255,255,255,.12);color:var(--head-fg)}
 .tab.on{background:var(--yellow);color:var(--on-yellow)}
-.emg{height:40px;padding:0 14px;flex-shrink:0;border-radius:999px;border:2px solid var(--yellow);background:transparent;color:var(--yellow);font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.emg[hidden]{display:none}
-.emg:hover{background:var(--yellow);color:var(--on-yellow)}
-.emg .n{background:var(--yellow);color:var(--on-yellow);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
-.emg:hover .n{background:var(--on-yellow);color:var(--yellow)}
 .who{display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:13px;font-weight:600}
 .who .av{width:38px;height:38px;background:var(--yellow);color:var(--on-yellow);font-size:13px}
 .who small{display:block;color:var(--head-muted);font-weight:500}
@@ -196,8 +191,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .main-content{width:100%;padding-block:28px 48px;min-height:70vh}
 @media (max-width:1099px){
  .topin{gap:14px}
- .emg{padding:0 10px}
- .emg .t,#whoName{display:none}
+ #whoName{display:none}
 }
 @media (max-width:899px){
  .topnav{display:none}
@@ -947,7 +941,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         <b>PC ANA Casale</b>
       </button>
       <nav class="topnav" id="topnav" aria-label="Menu principale"></nav>
-      <button class="emg" id="emgBtn" onclick="document.getElementById('siEmergenze').click()" aria-label="Emergenze" hidden></button>
       <div class="who"><span class="av" id="whoAv" aria-hidden="true">—</span><span id="whoName"></span></div>
     </div>
   </header>
@@ -955,30 +948,30 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
   <div class="pop" id="altroPop" hidden></div>
   <div class="ov" id="altroSheet" hidden onclick="if(event.target===this)chiudiAltro()"></div>
 
-  <!-- Registro voci di menu: id, onclick, visibilità per ruolo e badge sono quelli storici
-       (impostati da avviaDashboard / aggiornamento-dati.js). Il menu visibile viene disegnato
-       da renderNav() leggendo questo registro. -->
+  <!-- Registro voci di menu: solo onclick, visibilità e badge (impostati da avviaDashboard /
+       aggiornamento-dati.js). Etichette, icone, sezioni, ruoli e ordine stanno in NAV_VOCI
+       (area-riservata.js), da cui renderNav() disegna barra alta, barra bassa e pannello. -->
   <div id="navRegistry" hidden>
-    <button id="siHome" class="sidebar-item active" data-ic="home" onclick="navTo('home','Home',this)">Home</button>
-    <button id="siVolontari" class="sidebar-item" data-ic="users" onclick="navTo('volontari','Volontari',this)" style="display:none">Volontari</button>
-    <button id="siMezzi" class="sidebar-item" data-ic="truck" onclick="navTo('mezzi','Mezzi',this)" style="display:none">Mezzi</button>
-    <button id="siDotazioni" class="sidebar-item" data-ic="box" data-g="Risorse" onclick="navTo('dotazioni','Dotazioni',this)" style="display:none">Dotazioni</button>
-    <button id="siInterventi" class="sidebar-item" data-ic="clock" onclick="navTo('interventi','Interventi',this)" style="display:none">Interventi</button>
-    <button id="siSchedaPersonale" class="sidebar-item" data-ic="user" data-g="Persone" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">La mia scheda</button>
-    <button id="siGalleria" class="sidebar-item" data-ic="image" data-g="Persone" onclick="navTo('galleria','Galleria',this)" style="display:none">Galleria</button>
-    <button id="siPostazioni" class="sidebar-item" data-ic="pin" data-g="Risorse" onclick="navTo('postazioni','Postazioni',this)" style="display:none">Postazioni</button>
-    <button id="siTlc" class="sidebar-item" data-ic="radio" data-g="Risorse" onclick="navTo('tlc','TLC',this)" style="display:none">TLC</button>
-    <button id="siPianiCarico" class="sidebar-item" data-ic="clip" data-g="Operativo" onclick="navTo('pianiCarico','Piani di Carico',this)" style="display:none">Piani di carico</button>
-    <button id="siEmergenze" class="sidebar-item" data-ic="alert" data-g="Operativo" onclick="navTo('emergenze','Emergenze',this)" style="display:none">Emergenze<span class="si-badge" id="siBadgeEmergenze"></span></button>
-    <button id="siPosizione" class="sidebar-item" data-ic="pin" data-g="Operativo" onclick="navTo('posizione','Posizione',this)" style="display:none">Posizione</button>
-    <button id="siBot" class="sidebar-item" data-ic="send" data-g="Operativo" onclick="navTo('bot','Bot',this)" style="display:none">Bot Telegram</button>
-    <button id="siSegnalazioni" class="sidebar-item" data-ic="flag" data-g="Gestione" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none">Segnalazioni<span class="si-badge" id="siBadgeSegnalazioni"></span></button>
-    <button id="siRichieste" class="sidebar-item" data-ic="inbox" data-g="Gestione" onclick="navTo('richieste','Richieste',this)" style="display:none">Richieste adesione<span class="si-badge" id="siBadgeRichieste"></span></button>
-    <button id="siAggDati" class="sidebar-item" data-ic="refresh" data-g="Gestione" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none">Aggiornamento dati</button>
-    <button id="siAccessi" class="sidebar-item" data-ic="shield" data-g="Gestione" onclick="navTo('accessi','Accessi',this)" style="display:none">Accessi</button>
-    <button id="siStatistiche" class="sidebar-item" data-ic="chart" data-g="Gestione" onclick="navTo('statistiche','Statistiche',this)" style="display:none">Statistiche</button>
-    <button id="siDb" class="sidebar-item" data-ic="table" data-g="Gestione" onclick="navTo('db','DB Avanzato',this)" style="display:none">DB avanzato</button>
-    <button id="siImpostazioni" class="sidebar-item" data-ic="gear" data-g="Gestione" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none">Impostazioni</button>
+    <button id="siHome" class="sidebar-item active" onclick="navTo('home','Home',this)"></button>
+    <button id="siVolontari" class="sidebar-item" onclick="navTo('volontari','Volontari',this)" style="display:none"></button>
+    <button id="siMezzi" class="sidebar-item" onclick="navTo('mezzi','Mezzi',this)" style="display:none"></button>
+    <button id="siDotazioni" class="sidebar-item" onclick="navTo('dotazioni','Dotazioni',this)" style="display:none"></button>
+    <button id="siInterventi" class="sidebar-item" onclick="navTo('interventi','Interventi',this)" style="display:none"></button>
+    <button id="siSchedaPersonale" class="sidebar-item" onclick="navTo('schedapers','La mia scheda',this)" style="display:none"></button>
+    <button id="siGalleria" class="sidebar-item" onclick="navTo('galleria','Galleria',this)" style="display:none"></button>
+    <button id="siPostazioni" class="sidebar-item" onclick="navTo('postazioni','Postazioni',this)" style="display:none"></button>
+    <button id="siTlc" class="sidebar-item" onclick="navTo('tlc','TLC',this)" style="display:none"></button>
+    <button id="siPianiCarico" class="sidebar-item" onclick="navTo('pianiCarico','Piani di Carico',this)" style="display:none"></button>
+    <button id="siEmergenze" class="sidebar-item" onclick="navTo('emergenze','Emergenze',this)" style="display:none"></button>
+    <button id="siPosizione" class="sidebar-item" onclick="navTo('posizione','Posizione',this)" style="display:none"></button>
+    <button id="siBot" class="sidebar-item" onclick="navTo('bot','Bot',this)" style="display:none"></button>
+    <button id="siSegnalazioni" class="sidebar-item" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none"><span class="si-badge" id="siBadgeSegnalazioni"></span></button>
+    <button id="siRichieste" class="sidebar-item" onclick="navTo('richieste','Richieste',this)" style="display:none"><span class="si-badge" id="siBadgeRichieste"></span></button>
+    <button id="siAggDati" class="sidebar-item" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none"></button>
+    <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Accessi',this)" style="display:none"></button>
+    <button id="siStatistiche" class="sidebar-item" onclick="navTo('statistiche','Statistiche',this)" style="display:none"></button>
+    <button id="siDb" class="sidebar-item" onclick="navTo('db','DB Avanzato',this)" style="display:none"></button>
+    <button id="siImpostazioni" class="sidebar-item" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none"></button>
   </div>
 
   <div class="main-content wrap">
@@ -1905,7 +1898,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=186"></script>
+<script src="area-riservata.js?v=187"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=1"></script>
 </body>
