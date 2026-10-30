@@ -216,7 +216,7 @@ const NAV_VOCI = [
   { id:'siTlc',             label:'TLC',                ic:'radio',   sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
   { id:'siPostazioni',      label:'Postazioni',         ic:'pin',     sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siGalleria',        label:'Galleria',           ic:'image',   sez:'Strumenti',       ruoli:NAV_RUOLI_TUTTI },
-  { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF }, // nascosta: non ha ancora il pulsante in #navRegistry
+  { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:NAV_RUOLI_TUTTI },
@@ -350,7 +350,7 @@ function avviaDashboard() {
     var allSidebarIds = [
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
-      'siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
+      'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
       'siEmergenze','siBot','siPosizione'
     ];
     allSidebarIds.forEach(function(id) {
@@ -380,6 +380,7 @@ function avviaDashboard() {
     if (hasPerm('mezzi'))        showSi('siMezzi');
     if (hasPerm('tlc'))          showSi('siTlc');
     if (hasPerm('galleria'))     showSi('siGalleria');
+    if (hasPerm('editor_pdf'))   showSi('siEditorPdf');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
@@ -450,6 +451,7 @@ function showPanel(name, btn) {
   if (name === 'mezzi') caricaMezzi();
   if (name === 'tlc') caricaTlc();
   if (name === 'galleria') caricaGalleria();
+  if (name === 'editorPdf') caricaEditorPdf();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
@@ -751,6 +753,7 @@ async function salvaUtente() {
     documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
     visite:       document.getElementById('permVisite') ? document.getElementById('permVisite').checked : false,
     galleria:     document.getElementById('permGalleria') ? document.getElementById('permGalleria').checked : false,
+    editor_pdf:   document.getElementById('permEditorPdf') ? document.getElementById('permEditorPdf').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
@@ -795,7 +798,7 @@ function apriModificaUtente(u) {
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria',
+    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Galleria':'galleria','EditorPdf':'editor_pdf',
     'Impostazioni':'impostazioni','Statistiche':'statistiche',
     'Convocazioni':'convocazioni','Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
     'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione','AggDati':'aggiornamento_dati'
@@ -838,6 +841,7 @@ async function salvaModificaUtente() {
     documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
     visite:       document.getElementById('modPermVisite') ? document.getElementById('modPermVisite').checked : false,
     galleria:     document.getElementById('modPermGalleria') ? document.getElementById('modPermGalleria').checked : false,
+    editor_pdf:   document.getElementById('modPermEditorPdf') ? document.getElementById('modPermEditorPdf').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
@@ -6996,6 +7000,7 @@ const PERMESSI_PAGINE = [
   { key: 'richieste',              label: 'Richieste' },
   { key: 'visite',                 label: 'Visite Mediche' },
   { key: 'galleria',               label: 'Galleria' },
+  { key: 'editor_pdf',             label: 'Editor PDF' },
   { key: 'documenti',              label: 'Documenti' },
   { key: 'statistiche',            label: 'Statistiche' },
   { key: 'convocazioni',           label: 'Convocazioni' },

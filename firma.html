@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0A4C9E" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E2F5C" media="(prefers-color-scheme: dark)">
+<title>Firma documento — PC ANA Casale</title>
+<!--
+  Pagina PUBBLICA di firma a distanza (Editor PDF). Autonoma: CSS e JS inline,
+  nessuna dipendenza dall'area riservata, nessun service worker. Parla solo con
+  la Edge Function editor-pdf-firma, che verifica il token monouso a ogni chiamata.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══ DESIGN SYSTEM (fonte: riferimento-grafica.html, come area-riservata.html) ══ */
+:root{--bg:#F3F6FB;--surface:#FFFFFF;--line:#DCE5F2;--line2:#C5D3E8;--fg:#072F63;--muted:#44597D;--head:#0A4C9E;--head-fg:#FFFFFF;--head-muted:#C9DBF5;--accent:#0A4C9E;--accent-bg:#0A4C9E;--accent-fg:#FFFFFF;--soft:#DCE9FA;--yellow:#FFC20E;--yellow-soft:#FFF1BF;--on-yellow:#072F63;--grey-bg:#E7EAF0;--red:#B42318;--red-soft:#FDE4E1;--shadow:0 12px 40px rgba(7,47,99,.22);--font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --paper:#FFFFFF;--paper-line:#C5D3E8;--paper-muted:#44597D;--photo-bg:#000000;--safe-b:env(safe-area-inset-bottom,0px);--col:640px;--inchiostro:#16256E;--target:rgba(255,194,14,.16)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}
+
+/* ── base ── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--head)}
+button{font:inherit;color:inherit;cursor:pointer}
+h1,h2,p{margin:0}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.wrap{max-width:var(--col);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* ── barra alta ── */
+.top{background:var(--head);color:var(--head-fg);padding-top:env(safe-area-inset-top,0px)}
+.topin{height:68px;display:flex;align-items:center;gap:12px}
+.top img{width:40px;height:40px;border-radius:12px;background:var(--paper);object-fit:contain;flex-shrink:0}
+.top b{display:block;font-size:16px;font-weight:800;line-height:1.2}
+.top span{display:block;font-size:12px;color:var(--head-muted)}
+
+/* ── componenti ── */
+main{padding-block:18px calc(32px + var(--safe-b))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;margin-bottom:14px}
+h1{font-size:22px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+h2{font-size:17px;font-weight:800;margin-bottom:4px}
+.sub{font-size:13px;color:var(--muted)}
+.mt{margin-top:8px}
+.btn{height:46px;padding:0 20px;border-radius:14px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.sm{height:38px;padding:0 14px;font-size:14px;border-radius:12px}
+.btn.pri{background:var(--yellow);border-color:var(--yellow);color:var(--on-yellow);font-weight:800}
+.btn.full{width:100%}
+.btn:disabled{opacity:.5;cursor:default}
+.bad{color:var(--red);font-size:14px;font-weight:600;margin-top:10px}
+
+/* ── documento ── */
+.pages{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.page{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.page canvas{display:block;width:100%;height:auto}
+.target{position:absolute;border:2px solid var(--yellow);background:var(--target);border-radius:4px;animation:pulse 1.6s ease-in-out 3}
+.target span{position:absolute;left:-2px;bottom:100%;background:var(--yellow);color:var(--on-yellow);font-size:11px;font-weight:700;line-height:1;padding:4px 7px 3px;border-radius:4px 4px 0 0;white-space:nowrap}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--target)}}
+@media (prefers-reduced-motion:reduce){.target{animation:none}}
+
+/* ── riquadro firma: sempre su carta chiara, anche nel tema scuro ── */
+.pad{position:relative;height:200px;border:1px solid var(--line2);border-radius:14px;background:var(--paper);touch-action:none;margin:12px 0 10px;overflow:hidden}
+.pad canvas{position:absolute;inset:0;width:100%;height:100%}
+.pad .linea{position:absolute;left:22px;right:22px;bottom:44px;border-bottom:1px solid var(--paper-line);pointer-events:none}
+.consenso{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:14px 0;cursor:pointer}
+.consenso input{width:22px;height:22px;margin:0;flex:none;accent-color:var(--accent-bg)}
+.legale{font-size:13px;color:var(--muted);background:var(--bg);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+
+/* ── esito ── */
+.esito{text-align:center;padding:32px 18px}
+.ic{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.ic svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ok .ic{background:var(--soft);color:var(--accent)}
+.ko .ic{background:var(--red-soft);color:var(--red)}
+.esito .sub{margin-top:6px;font-size:14px}
+.hash{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap topin">
+  <img src="icons/icon-192x192.png" alt="" onerror="this.hidden=true">
+  <div><b>PC ANA Casale</b><span>Protezione Civile ANA</span></div>
+</div></header>
+
+<main class="wrap">
+  <div id="vCarico" class="card esito"><p class="sub">Sto aprendo il documento…</p></div>
+  <div id="vEsito" class="card esito" hidden></div>
+
+  <div id="vFirma" hidden>
+    <div class="card">
+      <h1 id="titolo"></h1>
+      <p class="mt" id="intro"></p>
+      <p class="sub mt" id="scadenza"></p>
+    </div>
+    <div class="card">
+      <h2>Documento</h2>
+      <p class="sub">Leggilo fino in fondo. Il riquadro giallo indica dove verrà messa la tua firma.</p>
+      <div class="pages" id="pages"><p class="sub">Sto caricando il documento…</p></div>
+    </div>
+    <div class="card" id="boxFirma" hidden>
+      <h2>La tua firma</h2>
+      <p class="sub">Firma con il dito o con il mouse nel riquadro.</p>
+      <div class="pad"><span class="linea"></span><canvas id="pad" aria-label="Riquadro firma"></canvas></div>
+      <button type="button" class="btn sm" id="bCancella">Cancella</button>
+      <label class="consenso"><input type="checkbox" id="consenso"><span>Ho letto il documento e lo firmo elettronicamente. So che la firma, la data, l’ora e i dati del dispositivo verranno registrati.</span></label>
+      <p class="legale">È una firma elettronica semplice: va bene per moduli interni, prestiti e prese visione. Per atti formali verso enti serve la firma digitale.</p>
+      <button type="button" class="btn pri full" id="bFirma" disabled>Firma il documento</button>
+      <p class="bad" id="errore" hidden></p>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"></script>
+<script>
+(function(){
+'use strict';
+const FUNZIONE = 'https://pggtmyarpuztfewqgwyc.supabase.co/functions/v1/editor-pdf-firma';
+
+const $ = s => document.querySelector(s);
+// il token resta solo in questa scheda: tolto dalla barra dell'indirizzo, ma una ricarica funziona ancora
+let token = new URLSearchParams(location.search).get('t');
+try {
+  if (token) { sessionStorage.setItem('firma_t', token); history.replaceState(null, '', location.pathname); }
+  else token = sessionStorage.getItem('firma_t');
+} catch(e) {}
+
+const ICO_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+const ICO_KO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>';
+const MESSAGGI = {
+  non_valido: ['Link non valido', 'Controlla di aver aperto il link completo che ti è stato inviato.'],
+  usato:      ['Documento già firmato', 'Questo link è già stato usato. Se pensi sia un errore, contatta chi te l’ha inviato.'],
+  scaduto:    ['Link scaduto', 'Chiedi a chi te l’ha inviato di generarne uno nuovo.'],
+  revocato:   ['Link non più attivo', 'La richiesta di firma è stata annullata. Chiedi a chi te l’ha inviata un nuovo link.'],
+  rete:       ['Connessione assente', 'Controlla la connessione e ricarica la pagina.'],
+  errore:     ['Qualcosa non ha funzionato', 'Riprova tra qualche minuto. Se il problema resta, contatta chi ti ha inviato il link.']
+};
+
+function esito(tipo, titolo, testo, impronta) {
+  $('#vCarico').hidden = true; $('#vFirma').hidden = true;
+  const e = $('#vEsito'); e.hidden = false; e.className = 'card esito ' + tipo;
+  e.innerHTML = '<div class="ic">' + (tipo === 'ok' ? ICO_OK : ICO_KO) + '</div><h1></h1><p class="sub"></p>'
+    + (impronta ? '<p class="sub">Impronta del documento firmato (SHA-256)</p><p class="hash"></p>' : '');
+  e.querySelector('h1').textContent = titolo;
+  e.querySelector('p').textContent = testo;
+  if (impronta) e.querySelector('.hash').textContent = impronta;
+  window.scrollTo(0, 0);
+}
+function errore(code) { const m = MESSAGGI[code] || MESSAGGI.errore; esito('ko', m[0], m[1]); }
+
+async function chiama(azione, dati) {
+  let res;
+  try {
+    res = await fetch(FUNZIONE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ azione, token }, dati || {})) });
+  } catch(e) { throw Object.assign(new Error('rete'), { code: 'rete' }); }
+  let body = {}; try { body = await res.json(); } catch(e) {}
+  if (!res.ok) throw Object.assign(new Error(body.errore || 'errore'), { code: body.errore || 'errore' });
+  return body;
+}
+
+// ---------- firma ----------
+let pad = null;
+function preparaPad() {
+  const cv = $('#pad');
+  pad = new SignaturePad(cv, { penColor: getComputedStyle(document.documentElement).getPropertyValue('--inchiostro').trim(), minWidth: 0.8, maxWidth: 2.6 });
+  const resize = () => {
+    const data = pad.toData(); const r = Math.max(window.devicePixelRatio || 1, 1);
+    cv.width = cv.offsetWidth * r; cv.height = cv.offsetHeight * r; cv.getContext('2d').scale(r, r);
+    pad.clear(); if (data.length) pad.fromData(data); aggiorna();
+  };
+  window.addEventListener('resize', resize); resize();
+  pad.addEventListener('endStroke', aggiorna);
+  $('#bCancella').onclick = () => { pad.clear(); aggiorna(); };
+  $('#consenso').onchange = aggiorna;
+}
+function aggiorna() { $('#bFirma').disabled = !(pad && !pad.isEmpty() && $('#consenso').checked); }
+
+function firmaRitagliata() {
+  const cv = $('#pad'); const ctx = cv.getContext('2d'); const w = cv.width, h = cv.height;
+  const d = ctx.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const p = 8; x0 = Math.max(0, x0 - p); y0 = Math.max(0, y0 - p); x1 = Math.min(w - 1, x1 + p); y1 = Math.min(h - 1, y1 + p);
+  const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+  o.getContext('2d').drawImage(cv, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+  return o.toDataURL('image/png');
+}
+
+async function invia() {
+  const png = firmaRitagliata(); if (!png) return;
+  const b = $('#bFirma'); b.disabled = true; b.textContent = 'Sto firmando…'; $('#errore').hidden = true;
+  try {
+    const r = await chiama('firma', { firma_png: png, consenso: true });
+    esito('ok', 'Documento firmato', 'Grazie, la tua firma è stata registrata. Puoi chiudere questa pagina.', r.sha256);
+    try { sessionStorage.removeItem('firma_t'); } catch(e) {}
+  } catch (e) {
+    if (['usato', 'scaduto', 'revocato', 'non_valido'].includes(e.code)) { errore(e.code); return; }
+    b.disabled = false; b.textContent = 'Firma il documento';
+    const x = $('#errore'); x.hidden = false;
+    x.textContent = e.code === 'firma_non_valida' ? 'La firma non è stata accettata. Cancellala e rifalla.'
+      : 'La firma non è stata salvata. Controlla la connessione e riprova.';
+  }
+}
+
+// ---------- anteprima documento ----------
+async function mostraPdf(url, campo) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ url, isEvalSupported: false }).promise;
+  const box = $('#pages'); const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const larg = Math.min(box.clientWidth || 600, 760);
+  box.innerHTML = '';
+  let bersaglio = null;
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i); const v1 = page.getViewport({ scale: 1 }); // misure della pagina come si vede, anche se girata
+    const vp = page.getViewport({ scale: Math.min(3, (larg * dpr) / v1.width) });
+    const wrap = document.createElement('div'); wrap.className = 'page';
+    const cv = document.createElement('canvas'); cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+    wrap.appendChild(cv);
+    if (campo && campo.pagina === i) {
+      const t = document.createElement('div'); t.className = 'target';
+      t.style.left = (campo.x / v1.width * 100) + '%'; t.style.top = (campo.y / v1.height * 100) + '%';
+      t.style.width = (campo.larghezza / v1.width * 100) + '%'; t.style.height = (campo.altezza / v1.height * 100) + '%';
+      t.innerHTML = '<span>La tua firma</span>'; wrap.appendChild(t); bersaglio = wrap;
+    }
+    box.appendChild(wrap);
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+  }
+  return bersaglio;
+}
+
+// ---------- avvio ----------
+async function avvio() {
+  if (!token) { errore('non_valido'); return; }
+  let dati;
+  try { dati = await chiama('apri'); }
+  catch (e) { errore(e.code); return; }
+
+  $('#titolo').textContent = dati.titolo;
+  $('#intro').textContent = 'Ciao ' + dati.firmatario_nome + ', ti è stato chiesto di firmare: ' + (dati.campo ? dati.campo.nome : 'questo documento') + '.';
+  const sc = new Date(dati.scade_il);
+  $('#scadenza').textContent = 'Il link è valido fino al ' + sc.toLocaleDateString('it-IT') + ' alle ' + sc.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + ' e si può usare una sola volta.';
+  $('#vCarico').hidden = true; $('#vFirma').hidden = false;
+
+  // Si firma solo un documento che si è potuto leggere
+  try { await mostraPdf(dati.pdf_url, dati.campo); }
+  catch (e) { $('#pages').innerHTML = '<p class="bad">Non riesco a mostrare il documento, quindi per ora non puoi firmarlo. Ricarica la pagina per riprovare.</p>'; return; }
+
+  $('#boxFirma').hidden = false;
+  preparaPad();
+  $('#bFirma').onclick = invia;
+}
+avvio();
+})();
+</script>
+</body>
+</html>

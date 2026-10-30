@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.allerta-arpa]
 verify_jwt = false
+
+[functions.editor-pdf-firma]
+verify_jwt = false
