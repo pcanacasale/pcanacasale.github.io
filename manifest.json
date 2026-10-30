@@ -5,8 +5,8 @@
   "start_url": "/area-riservata.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a7a4a",
+  "background_color": "#0A4C9E",
+  "theme_color": "#0A4C9E",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [
