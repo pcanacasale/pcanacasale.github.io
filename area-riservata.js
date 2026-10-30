@@ -216,6 +216,7 @@ const NAV_VOCI = [
   { id:'siTlc',             label:'TLC',                ic:'radio',   sez:'Logistica',       ruoli:NAV_RUOLI_STAFF },
   { id:'siPostazioni',      label:'Postazioni',         ic:'pin',     sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siGalleria',        label:'Galleria',           ic:'image',   sez:'Strumenti',       ruoli:NAV_RUOLI_TUTTI },
+  { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF }, // nascosta: non ha ancora il pulsante in #navRegistry
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:NAV_RUOLI_TUTTI },
