@@ -3460,10 +3460,13 @@ function filtraDocVolontari() {
   });
 }
 
-function apriUploadDoc(volId) {
+function apriUploadDoc(volId, tipo) {
   docUploadVolId = volId;
   docUploadFile  = null;
-  const v = docVolontariCache.find(v => v.id === volId);
+  const v = sv && sv.id === volId ? sv.v : null;
+  // Con l'archivio PIA la foto passa dall'editor (196×236, JPG, nome COGNOME_NOME_PIA.jpg)
+  document.querySelector('#docTipo option[value="FOTO"]').disabled = !!sv && !!sv.agg;
+  document.getElementById('docTipo').value = tipo || 'IDENTITA';
   document.getElementById('docUploadTitle').textContent = 'Carica documento — ' + (v ? v.cognome + ' ' + v.nome : '');
   document.getElementById('docUploadErr').style.display = 'none';
   document.getElementById('docDropText').innerHTML = 'PDF, JPG o PNG — max 10MB';
@@ -3543,12 +3546,12 @@ async function eseguiUploadDoc() {
 
     await logAttivita('ha caricato documento: ' + nomeDoc + ' per volontario ' + docUploadVolId);
     chiudiUploadDoc();
-    caricaDocumenti();
+    await svRicaricaDocumenti();
   } catch(e) {
     errEl.textContent = 'Errore: ' + e.message;
     errEl.style.display = 'block';
   }
-  btn.disabled = false; btn.textContent = 'carica';
+  btn.disabled = false; btn.textContent = 'Carica';
 }
 
 async function eliminaDoc(docId, volId) {
@@ -3587,7 +3590,7 @@ async function eliminaDoc(docId, volId) {
   }
 
   await logAttivita('ha eliminato un documento');
-  caricaDocumenti();
+  await svRicaricaDocumenti();
 }
 
 // Mostra documenti nella scheda volontario
