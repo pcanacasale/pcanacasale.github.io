@@ -438,6 +438,7 @@ function showPanel(name, btn) {
   var si = document.getElementById(siId);
   if (si) si.classList.add('active');
   else { var siH = document.getElementById('siHome'); if(siH) siH.classList.add('active'); }
+  if (name === 'home') caricaAllerta();
   if (name === 'richieste') caricaRichieste();
   if (name === 'volontari') caricaVolontari();
   if (name === 'interventi') caricaInterventi();
@@ -471,6 +472,7 @@ function toggleMore(){} function closeMore(){}
 
 // -- HOME CARDS --
 function buildHomeCards(isMaster, p) {
+  caricaAllerta();
   caricaHomeDashboard();
 }
 
