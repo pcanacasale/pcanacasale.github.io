@@ -614,13 +614,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .doc-item .go{text-decoration:none}
 
 /* ── documenti ── */
-.doc-vols{display:flex;flex-direction:column;gap:12px}
-.doc-vol-head{display:flex;align-items:center;gap:14px;cursor:pointer}
-.doc-vol-name{flex:1;min-width:0;font-weight:700;font-size:16px}
-.doc-vol-arrow{color:var(--muted);font-size:12px;transition:transform .2s}
-.doc-vol-card.open .doc-vol-arrow{transform:rotate(180deg)}
-.doc-vol-body{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
-.doc-vol-card.open .doc-vol-body{display:block}
 .doc-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .doc-pick label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;border:1px dashed var(--line2);border-radius:16px;background:var(--bg);color:var(--fg);font-size:14px;font-weight:700;cursor:pointer}
 .doc-pick label:hover{border-color:var(--accent)}
@@ -664,27 +657,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 /* ── chip con conteggio (filtri a contatore) ── */
 .chip .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:700}
 .chip.on .n{background:rgba(255,255,255,.2);color:inherit}
-/* ── visite mediche ── */
-.visite-wrap{overflow-x:auto;padding:0}
-.visite-tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
-.visite-tbl th{text-align:left;padding:12px 14px;background:var(--bg);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);white-space:nowrap}
-.visite-tbl td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:middle}
-.visite-tbl tbody tr:hover td{background:var(--bg)}
-.visite-tbl .c{text-align:center}
-.vt-nome{font-weight:700}
-.vt-cf{font-family:monospace;font-size:13px;color:var(--muted)}
-.vt-sel,.vt-date{height:38px;font-size:14px}
-.vt-sel{min-width:150px}
-.vt-chk{margin:0 auto;display:block}
-.visite-stato{display:inline-flex;align-items:center;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
-.vs-completata{background:var(--soft);color:var(--accent)}
-.vs-da_fare{background:var(--red-soft);color:var(--red)}
-.vs-verifica{background:var(--yellow);color:var(--on-yellow)}
-.vs-solo_esami{background:var(--yellow-soft);color:var(--fg)}
-.vs-esonero{background:var(--grey-bg);color:var(--muted)}
-.vs-vuoto{background:var(--red-soft);color:var(--red)}
-.visite-saving{opacity:.5;pointer-events:none}
-
 /* ── la mia scheda ── */
 .sp-hero{margin-bottom:18px}
 .sp-hero .av{width:64px;height:64px;font-size:20px}
@@ -993,8 +965,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <button id="siDotazioni" class="sidebar-item" data-ic="box" data-g="Risorse" onclick="navTo('dotazioni','Dotazioni',this)" style="display:none">Dotazioni</button>
     <button id="siInterventi" class="sidebar-item" data-ic="clock" onclick="navTo('interventi','Interventi',this)" style="display:none">Interventi</button>
     <button id="siSchedaPersonale" class="sidebar-item" data-ic="user" data-g="Persone" onclick="navTo('schedapers','La mia scheda',this)" style="display:none">La mia scheda</button>
-    <button id="siDocumenti" class="sidebar-item" data-ic="file" data-g="Persone" onclick="navTo('documenti','Documenti',this)" style="display:none">Documenti</button>
-    <button id="siVisite" class="sidebar-item" data-ic="heart" data-g="Persone" onclick="navTo('visite','Visite Mediche',this)" style="display:none">Visite mediche</button>
     <button id="siGalleria" class="sidebar-item" data-ic="image" data-g="Persone" onclick="navTo('galleria','Galleria',this)" style="display:none">Galleria</button>
     <button id="siPostazioni" class="sidebar-item" data-ic="pin" data-g="Risorse" onclick="navTo('postazioni','Postazioni',this)" style="display:none">Postazioni</button>
     <button id="siTlc" class="sidebar-item" data-ic="radio" data-g="Risorse" onclick="navTo('tlc','TLC',this)" style="display:none">TLC</button>
@@ -1029,12 +999,12 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <div class="panel" id="panelVolontari">
       <div class="phead">
         <div><h1>Volontari</h1><span class="sub"><span id="volMostrati">—</span> mostrati su <span id="volTot">—</span></span></div>
-        <div class="pact"><button class="btn pri" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo volontario</button></div>
+        <div class="pact"><button class="btn" id="btnExportVisite" onclick="apriExportVisite()" hidden>Esporta visite PDF</button><button class="btn pri" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo volontario</button></div>
       </div>
       <div class="bar">
         <div class="chips" id="visteBar"></div>
         <span class="grow"></span>
-        <label class="search" for="volSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="volSearch" placeholder="Cerca per nome o squadra" autocomplete="off" oninput="filtraVolontari()"></label>
+        <label class="search" for="volSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="volSearch" placeholder="Cerca per nome, squadra o CF" autocomplete="off" oninput="filtraVolontari()"></label>
         <button class="chip" id="volFilterBtn" onclick="toggleVolFiltri()">Filtri</button>
       </div>
       <div class="card vol-filters" id="volFiltri">
@@ -1062,6 +1032,17 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
             <option value="">Tutti</option>
             <option value="true">Attivi</option>
             <option value="false">Non attivi</option>
+          </select>
+        </label>
+        <label>Stato visita
+          <select id="filtroVisita" onchange="filtraVolontari()">
+            <option value="">Tutti gli stati</option>
+            <option value="COMPLETATA">Completata</option>
+            <option value="VERIFICA">Verifica</option>
+            <option value="DA_FARE">Da Fare</option>
+            <option value="SOLO_ESAMI">Solo Esami</option>
+            <option value="ESONERO">Esonero</option>
+            <option value="VUOTO">Non impostato</option>
           </select>
         </label>
       </div>
@@ -1288,15 +1269,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <div class="vol-form-foot"><button class="btn" onclick="chiudiFormIntervento()">Annulla</button><button class="btn pri" onclick="salvaIntervento()">Salva</button></div>
     </div>
 
-    <!-- DOCUMENTI -->
-    <div class="panel" id="panelDocumenti">
-      <div class="phead"><div><h1>Documenti</h1></div></div>
-      <div class="bar">
-        <label class="search" for="docSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="docSearch" placeholder="Cerca volontario" autocomplete="off" oninput="filtraDocVolontari()"></label>
-      </div>
-      <div id="docVolList" class="doc-vols"><div class="loading-msg">Caricamento…</div></div>
-    </div>
-
     <!-- UPLOAD DOCUMENTO -->
     <div class="doc-upload-overlay" id="docUploadOverlay">
       <div class="doc-upload-card">
@@ -1377,29 +1349,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         <div class="actions"><button class="btn" onclick="document.getElementById('dbRecordOverlay').classList.remove('open')">Annulla</button><button class="btn pri" onclick="dbSalvaRecord()">Salva</button></div>
         <button class="vol-delete-btn" onclick="dbEliminaRecord()" id="dbDelBtn">Elimina</button>
       </div>
-    </div>
-
-    <!-- VISITE MEDICHE -->
-    <div class="panel" id="panelVisite">
-      <div class="phead">
-        <div><h1>Visite mediche</h1></div>
-        <div class="pact"><button class="btn" onclick="apriExportVisite()">Esporta PDF</button></div>
-      </div>
-      <div class="bar">
-        <div id="visiteDashboard" class="chips"></div>
-        <span class="grow"></span>
-        <label class="search" for="visiteSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="visiteSearch" placeholder="Cerca cognome, nome, CF" autocomplete="off" oninput="filtraVisite()"></label>
-        <select id="visiteFiltroStato" hidden onchange="filtraVisite()" aria-hidden="true">
-          <option value="">tutti gli stati</option>
-          <option value="ESONERO">Esonero</option>
-          <option value="DA_FARE">Da Fare</option>
-          <option value="VERIFICA">Verifica</option>
-          <option value="SOLO_ESAMI">Solo Esami</option>
-          <option value="COMPLETATA">Completata</option>
-          <option value="VUOTO">Non impostato</option>
-        </select>
-      </div>
-      <div id="visiteList"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- ACCESSI (per master) -->

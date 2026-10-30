@@ -331,8 +331,8 @@ function avviaDashboard() {
   if (isVol) {
     // Reset esplicito di TUTTE le voci sidebar (per evitare residui)
     var allSidebarIds = [
-      'siVolontari','siInterventi','siMezzi','siTlc','siDb','siDocumenti',
-      'siVisite','siRichieste','siStatistiche','siImpostazioni','siAccessi',
+      'siVolontari','siInterventi','siMezzi','siTlc','siDb',
+      'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
       'siEmergenze','siBot','siPosizione'
     ];
@@ -349,11 +349,13 @@ function avviaDashboard() {
     var spers = document.getElementById('siSchedaPersonale');
     if (spers) spers.style.display = 'none';
 
-    if (hasPerm('volontari'))    showSi('siVolontari');
+    // Documenti e visite ora stanno nella scheda: chi aveva solo quelle pagine entra da Volontari
+    if (hasPerm('volontari') || hasPerm('documenti') || hasPerm('visite')) showSi('siVolontari');
     if (canModificaVolontari()) {
       var btnNuovo = document.getElementById('btnNuovoVolontario');
       if (btnNuovo) btnNuovo.style.display = '';
     }
+    if (hasPerm('visite')) document.getElementById('btnExportVisite').hidden = false;
     if (hasPerm('interventi'))   showSi('siInterventi');
     if (hasPerm('postazioni'))   showSi('siPostazioni');
     if (hasPerm('dotazioni'))    showSi('siDotazioni');
@@ -361,8 +363,6 @@ function avviaDashboard() {
     if (hasPerm('mezzi'))        showSi('siMezzi');
     if (hasPerm('tlc'))          showSi('siTlc');
     if (hasPerm('galleria'))     showSi('siGalleria');
-    if (hasPerm('documenti'))    showSi('siDocumenti');
-    if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
@@ -429,11 +429,9 @@ function showPanel(name, btn) {
   if (name === 'dotazioni') caricaDotazioni();
   if (name === 'pianiCarico') caricaPianiCarico();
   if (name === 'impostazioni') caricaCategorieDotazioni();
-  if (name === 'documenti') caricaDocumenti();
   if (name === 'db') caricaDb();
   if (name === 'mezzi') caricaMezzi();
   if (name === 'tlc') caricaTlc();
-  if (name === 'visite') caricaVisite();
   if (name === 'galleria') caricaGalleria();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
@@ -894,7 +892,7 @@ async function caricaVolontari() {
   list.innerHTML = '<p class="note">Caricamento…</p>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url&order=cognome', { headers: H });
+    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     renderVolontari(volontariData);
@@ -1009,14 +1007,16 @@ function filtraVolontari() {
   const tipo    = document.getElementById('filtroTipo').value;
   const mansione = document.getElementById('filtroMansione').value;
   const attivo  = document.getElementById('filtroAttivo').value;
+  const visita  = document.getElementById('filtroVisita').value;
   const filtered = volontariData.filter(v => {
-    const nome = (v.cognome + ' ' + v.nome + ' ' + (v.squadra||'')).toLowerCase();
+    const nome = (v.cognome + ' ' + v.nome + ' ' + (v.squadra||'') + ' ' + (v.codice_fiscale||'')).toLowerCase();
     if (q && !nome.includes(q)) return false;
     if (squadra && v.squadra !== squadra) return false;
     if (tipo && v.tipo_volontario !== tipo) return false;
     if (mansione && v.mansione !== mansione) return false;
     if (attivo === 'true' && !v.attivo) return false;
     if (attivo === 'false' && v.attivo) return false;
+    if (visita && (visitaStatoNorm(v) || 'VUOTO') !== visita) return false;
     return true;
   });
   renderVolontari(filtered);
@@ -1620,6 +1620,7 @@ function applicaVista(v) {
   document.getElementById('filtroTipo').value = '';
   document.getElementById('filtroMansione').value = '';
   document.getElementById('filtroAttivo').value = '';
+  document.getElementById('filtroVisita').value = '';
 
   if (filtri._group === 'squadra') {
     renderVolontariGrouped('squadra', null, null);
@@ -3348,7 +3349,6 @@ function chiudiGeneratoreAttestati() {
 
 
 // -- DOCUMENTI --
-let docVolontariCache = [];
 let docUploadVolId = null;
 let docUploadFile  = null;
 
@@ -3369,95 +3369,6 @@ function bucketPerDocTipo(tipo) {
   if (tipo === 'FOTO') return 'foto-volontari';
   if (DOC_TIPI_ATTESTATO.indexOf(tipo) >= 0) return 'attestati';
   return 'documenti';
-}
-
-async function caricaDocumenti() {
-  const list = document.getElementById('docVolList');
-  if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
-  try {
-    // Carica volontari con count documenti
-    const [vRes, dRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,foto_url&order=cognome&attivo=eq.true', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/documenti?select=id,volontario_id,tipo,nome_file,url,data_carico', { headers: H })
-    ]);
-    const vols = await vRes.json();
-    const docs = await dRes.json();
-    docVolontariCache = vols;
-
-    // Raggruppa documenti per volontario
-    const docsPerVol = {};
-    docs.forEach(d => {
-      if (!docsPerVol[d.volontario_id]) docsPerVol[d.volontario_id] = [];
-      docsPerVol[d.volontario_id].push(d);
-    });
-
-    renderDocVolontari(vols, docsPerVol);
-    window._docsPerVol = docsPerVol;
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
-}
-
-function renderDocVolontari(vols, docsPerVol) {
-  const list = document.getElementById('docVolList');
-  if (!list) return;
-  list.innerHTML = '';
-  vols.forEach(v => {
-    const docs = docsPerVol[v.id] || [];
-    const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-    const card = document.createElement('div');
-    card.className = 'card doc-vol-card';
-    card.id = 'docCard_' + v.id;
-    card.innerHTML = '<div class="doc-vol-head" onclick="toggleDocVol(' + v.id + ')">'
-      + (v.foto_url
-          ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
-          : '<span class="av s40">' + initials + '</span>')
-      + '<span class="doc-vol-name">' + v.cognome + ' ' + v.nome + '</span>'
-      + '<span class="pill ' + (docs.length ? 'p-blue' : 'p-grey') + '">' + (docs.length ? docs.length + ' documenti' : 'Nessun documento') + '</span>'
-      + '<span class="doc-vol-arrow">▼</span>'
-      + '</div>'
-      + '<div class="doc-vol-body" id="docBody_' + v.id + '">'
-      + renderDocListHTML(v.id, docs)
-      + '</div>';
-    list.appendChild(card);
-  });
-}
-
-function renderDocListHTML(volId, docs) {
-  let html = '<div class="doc-list">';
-  if (docs.length) {
-    docs.forEach(d => {
-      const data = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
-      const nome  = d.nome_file || label;
-      html += '<div class="doc-item">'
-        + '<span class="doc-item-icon">' + (label.split(' ')[0]) + '</span>'
-        + '<div class="doc-item-info">'
-        + '<div class="doc-item-name">' + nome + '</div>'
-        + '<div class="doc-item-meta">' + label + ' | ' + data + '</div>'
-        + '</div>'
-        + '<div class="doc-item-actions">'
-        + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
-        + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDoc(' + d.id + ',' + volId + ')">✕</button>'
-        + '</div>'
-        + '</div>';
-    });
-  }
-  html += '</div>';
-  html += '<button class="doc-add-btn" onclick="apriUploadDoc(' + volId + ')">+ Aggiungi documento</button>';
-  return html;
-}
-
-function toggleDocVol(volId) {
-  const card = document.getElementById('docCard_' + volId);
-  if (card) card.classList.toggle('open');
-}
-
-function filtraDocVolontari() {
-  const q = (document.getElementById('docSearch').value || '').toLowerCase().trim();
-  document.querySelectorAll('.doc-vol-card').forEach(card => {
-    const nome = card.querySelector('.doc-vol-name').textContent.toLowerCase();
-    card.style.display = !q || nome.includes(q) ? '' : 'none';
-  });
 }
 
 function apriUploadDoc(volId, tipo) {
@@ -3592,82 +3503,6 @@ async function eliminaDoc(docId, volId) {
   await logAttivita('ha eliminato un documento');
   await svRicaricaDocumenti();
 }
-
-// Mostra documenti nella scheda volontario
-async function caricaDocVolontario(volId) {
-  const body = document.getElementById('volDocBody');
-  if (!body) return;
-  body.innerHTML = '<p class="note">Caricamento…</p>';
-  try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=*&order=data_carico.desc', { headers: H });
-    if (!res.ok) {
-      body.innerHTML = '<p class="bad">Errore nel caricamento (' + res.status + ')</p>';
-      return;
-    }
-    const docs = await res.json();
-    const count = document.getElementById('volDocCount');
-    if (count) count.textContent = '(' + docs.length + ')';
-
-    if (!docs.length) {
-      body.innerHTML = '<p class="note">Nessun documento.</p>'
-        + '<button class="doc-add-btn mt10" onclick="apriDocDaScheda(' + volId + ')">+ Carica documento</button>';
-      return;
-    }
-
-    const attestati = docs.filter(d => DOC_TIPI_ATTESTATO.indexOf(d.tipo) >= 0);
-    const foto      = docs.filter(d => d.tipo === 'FOTO');
-    const documenti = docs.filter(d => d.tipo !== 'FOTO' && DOC_TIPI_ATTESTATO.indexOf(d.tipo) < 0);
-
-    const renderItem = (d, evidenziato) => {
-      const data  = d.data_carico ? new Date(d.data_carico).toLocaleDateString('it-IT') : '—';
-      const label = DOC_TIPO_LABEL[d.tipo] || d.tipo;
-      const tipoTxt = label.replace(/^[^ ]+ /, '');
-      const nome  = d.nome_file
-        ? d.nome_file.replace(/^[A-Z_]+_/, '').replace(/_/g, ' ').replace(/\.[a-z]{2,4}$/i, '')
-        : tipoTxt;
-      return '<div class="doc-item' + (evidenziato ? ' hl' : '') + '">'
-        + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
-        + '<div class="doc-item-meta">' + tipoTxt + ' · ' + data + '</div></div>'
-        + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
-        + '</div>';
-    };
-
-    const sectionLabel = (txt) =>
-      '<div class="grp mt10">' + txt + '</div>';
-
-    let html = '';
-
-    // 📷 FOTO
-    if (foto.length) {
-      html += sectionLabel('Foto (' + foto.length + ')');
-      html += foto.map(d => renderItem(d, true)).join('');
-    }
-
-    // 🪪 DOCUMENTI
-    if (documenti.length) {
-      html += sectionLabel('Documenti (' + documenti.length + ')');
-      html += documenti.map(d => renderItem(d, true)).join('');
-    }
-
-    // 📜 ATTESTATI
-    if (attestati.length) {
-      html += sectionLabel('Attestati (' + attestati.length + ')');
-      html += attestati.map(d => renderItem(d, true)).join('');
-    }
-
-    html += '<button class="doc-add-btn mt10" onclick="apriDocDaScheda(' + volId + ')">+ Aggiungi documento</button>';
-    body.innerHTML = html;
-  } catch(e) {
-    body.innerHTML = '<p class="bad">Errore: ' + (e.message || e) + '</p>';
-  }
-}
-
-function apriDocDaScheda(volId) {
-  chiudiDettaglio();
-  showPanel('documenti', null);
-  setTimeout(() => apriUploadDoc(volId), 400);
-}
-
 
 function getTipoAttivitaIcon(tipo, size, color) {
   size = size || 20;
@@ -8188,8 +8023,6 @@ document.addEventListener('keydown', function(e) {
 });
 
 // -- VISITE MEDICHE --
-let visiteData = [];
-
 function visitaStatoNorm(v) { return (v.stato_visita || '').replace(' ', '_'); }
 
 const VISITA_STATI = {
@@ -8200,122 +8033,8 @@ const VISITA_STATI = {
   'COMPLETATA': { label: 'Completata', cls: 'vs-completata' }
 };
 
-async function caricaVisite() {
-  const list = document.getElementById('visiteList');
-  if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_visita,stato_visita,cdc_1_step,cdc_2_step,stato&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
-    visiteData = await res.json();
-    renderDashboardVisite();
-    renderVisite(visiteData);
-  } catch(e) {
-    list.innerHTML = '<div class="loading-msg">errore caricamento.</div>';
-  }
-}
-
-function renderDashboardVisite() {
-  const dash = document.getElementById('visiteDashboard');
-  if (!dash) return;
-  const tot = visiteData.length;
-  // Conteggi per stato
-  const cnt = { TOT: tot, VUOTO: 0, ESONERO: 0, DA_FARE: 0, VERIFICA: 0, SOLO_ESAMI: 0, COMPLETATA: 0 };
-  visiteData.forEach(v => {
-    const k = v.stato_visita || 'VUOTO';
-    if (cnt[k] !== undefined) cnt[k]++;
-  });
-  const currentFilter = document.getElementById('visiteFiltroStato') ? document.getElementById('visiteFiltroStato').value : '';
-  const cards = [
-    { key: '',           label: 'Totale',     n: cnt.TOT,        color: 'var(--fg)' },
-    { key: 'COMPLETATA', label: 'Completata', n: cnt.COMPLETATA, color: 'var(--accent)' },
-    { key: 'VERIFICA',   label: 'Verifica',   n: cnt.VERIFICA,   color: 'var(--yellow)' },
-    { key: 'DA_FARE',    label: 'Da Fare',    n: cnt.DA_FARE,    color: 'var(--red)' },
-    { key: 'SOLO_ESAMI', label: 'Solo Esami', n: cnt.SOLO_ESAMI, color: 'var(--accent-bg)' },
-    { key: 'ESONERO',    label: 'Esonero',    n: cnt.ESONERO,    color: 'var(--muted)' },
-    { key: 'VUOTO',      label: 'Non impostato', n: cnt.VUOTO,   color: 'var(--red)' },
-  ];
-  // contatori come chip filtro con conteggio (stesso componente del riferimento)
-  dash.innerHTML = cards.map(c => {
-    const active = currentFilter === c.key ? ' on' : '';
-    return '<button class="chip' + active + '" onclick="filtraVisitePerStato(\'' + c.key + '\')">'
-      + (c.key ? c.label : 'Tutti') + ' <span class="n">' + c.n + '</span></button>';
-  }).join('');
-}
-
-function filtraVisitePerStato(stato) {
-  const sel = document.getElementById('visiteFiltroStato');
-  if (!sel) return;
-  // Click sulla card già attiva = togli filtro
-  if (sel.value === stato) sel.value = '';
-  else sel.value = stato;
-  filtraVisite();
-  renderDashboardVisite();
-}
-
-function renderVisite(data) {
-  const list = document.getElementById('visiteList');
-  if (!data.length) {
-    list.innerHTML = '<div class="loading-msg">nessun volontario trovato.</div>';
-    return;
-  }
-  let html = '<div class="card tbl visite-wrap"><table class="visite-tbl">'
-    + '<thead><tr>'
-    + '<th>Cognome</th><th>Nome</th><th>Codice Fiscale</th>'
-    + '<th>Stato Visita</th><th>Data Visita</th>'
-    + '<th class="c">CDC 1°</th><th class="c">CDC 2°</th>'
-    + '</tr></thead><tbody>';
-
-  data.forEach(v => {
-    const statoKey = v.stato_visita || '';
-    const statoInfo = VISITA_STATI[statoKey] || null;
-    const statoBadge = statoInfo
-      ? '<span class="visite-stato ' + statoInfo.cls + '">' + statoInfo.label + '</span>'
-      : '<span class="visite-stato vs-vuoto">—</span>';
-
-    let selOptions = '<option value="">—</option>';
-    Object.keys(VISITA_STATI).forEach(k => {
-      selOptions += '<option value="' + k + '"' + (statoKey === k ? ' selected' : '') + '>' + VISITA_STATI[k].label + '</option>';
-    });
-
-    html += '<tr id="vtr_' + v.id + '">'
-      + '<td class="vt-nome">' + (v.cognome || '') + '</td>'
-      + '<td>' + (v.nome || '') + '</td>'
-      + '<td class="vt-cf">' + (v.codice_fiscale || '—') + '</td>'
-      + '<td>'
-      + '<select class="vt-sel" onchange="cambiaVisitaCampo(' + v.id + ', \'stato_visita\', this.value)" title="' + (statoInfo ? statoInfo.label : 'Non impostato') + '">'
-      + selOptions
-      + '</select>'
-      + '</td>'
-      + '<td><input type="date" class="vt-date" value="' + (v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ', \'data_visita\', this.value)"></td>'
-      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_1_step\', this.checked)"></td>'
-      + '<td class="c"><input type="checkbox" class="vt-chk"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ', \'cdc_2_step\', this.checked)"></td>'
-      + '</tr>';
-  });
-
-  html += '</tbody></table></div>';
-  list.innerHTML = html;
-}
-
-function filtraVisite() {
-  const q     = (document.getElementById('visiteSearch').value || '').toLowerCase().trim();
-  const stato = document.getElementById('visiteFiltroStato').value;
-  const filtered = visiteData.filter(v => {
-    if (q) {
-      const hay = ((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '')).toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    if (stato) {
-      if (stato === 'VUOTO') {
-        if (v.stato_visita) return false;
-      } else if (v.stato_visita !== stato) return false;
-    }
-    return true;
-  });
-  renderVisite(filtered);
-}
-
 function apriExportVisite() {
-  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('visiteSearch').value || '(vuoto)';
+  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('volSearch').value || '(vuoto)';
   document.getElementById('visiteExportErr').textContent = '';
   document.getElementById('visiteExportOverlay').classList.add('open');
 }
@@ -8330,10 +8049,11 @@ function generaExportVisitePDF() {
   const dataDa = document.getElementById('vexpDataDa').value;
   const dataA = document.getElementById('vexpDataA').value;
   const usaTesto = document.getElementById('vexpSoloTestoRicerca').checked;
-  const testo = usaTesto ? document.getElementById('visiteSearch').value.toLowerCase() : '';
+  const testo = usaTesto ? document.getElementById('volSearch').value.toLowerCase() : '';
 
-  let dati = visiteData.filter(v => {
-    if (!statiSel.includes(v.stato_visita || 'VUOTO')) return false;
+  let dati = volontariData.filter(v => {
+    if (v.stato === 'DIMESSO') return false;
+    if (!statiSel.includes(visitaStatoNorm(v) || 'VUOTO')) return false;
     if (dataDa && (!v.data_visita || v.data_visita < dataDa)) return false;
     if (dataA && (!v.data_visita || v.data_visita > dataA)) return false;
     if (usaTesto && testo) {
@@ -8355,7 +8075,7 @@ function generaExportVisitePDF() {
   if (colSel.includes('data')) colonne.push('Data');
 
   const righe = dati.map(v => {
-    const statoInfo = VISITA_STATI[v.stato_visita || ''];
+    const statoInfo = VISITA_STATI[visitaStatoNorm(v)];
     const r = [];
     if (colSel.includes('nome')) r.push(((v.cognome || '') + ' ' + (v.nome || '')).trim());
     if (colSel.includes('cf')) r.push(v.codice_fiscale || '—');
@@ -8379,38 +8099,6 @@ function generaExportVisitePDF() {
   doc.save('visite-mediche-export.pdf');
   chiudiExportVisite();
 }
-
-async function cambiaVisitaCampo(volId, campo, valore) {
-  const v = visiteData.find(x => x.id === volId);
-  if (!v) return;
-  const tr = document.getElementById('vtr_' + volId);
-  if (tr) tr.classList.add('visite-saving');
-
-  // Normalizza data vuota a null
-  if (campo === 'data_visita' && !valore) valore = null;
-  if (campo === 'stato_visita' && !valore) valore = null;
-
-  const body = {};
-  body[campo] = valore;
-
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error('errore');
-    v[campo] = valore;
-    if (campo === 'stato_visita') renderDashboardVisite();
-  } catch(e) {
-    alert('Errore salvataggio. Ricarico i dati.');
-    caricaVisite();
-    return;
-  } finally {
-    if (tr) tr.classList.remove('visite-saving');
-  }
-}
-
 
 var mezzoDocLoaded = false;
 
