@@ -1029,218 +1029,13 @@ function toggleVolFiltri() {
   btn.classList.toggle('active');
 }
 
-async function apriDettaglio(id) {
-  volCorrenteId = id;
-  volInterventiLoaded = false;
-  volDocLoaded = false;
-  const detail = document.getElementById('volDetail');
-  const body   = document.getElementById('volDetailBody');
-  // Mostra/nascondi pulsante modifica in base al permesso
-  var btnMod = document.getElementById('btnModificaVolontario');
-  if (btnMod) btnMod.style.display = canModificaVolontari() ? '' : 'none';
-  detail.classList.add('open');
-  detail.scrollTop = 0;
-  body.innerHTML = '<p class="note">Caricamento…</p>';
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
-    const data = await res.json();
-    const v    = data[0];
-    if (!v) { body.innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
-    document.getElementById('volDetailTitle').textContent = v.cognome + ' ' + v.nome;
-    const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-
-    const fmt = (val) => val ? '<span class="vol-field-value">' + val + '</span>' : '<span class="vol-field-value null">—</span>';
-    const fmtBool = (val) => val ? '<span class="vol-field-value vol-bool-yes">✓ Sì</span>' : '<span class="vol-field-value vol-bool-no">—</span>';
-    const fmtDate = (val) => {
-      if (!val) return '<span class="vol-field-value null">—</span>';
-      const d = new Date(val); return '<span class="vol-field-value">' + d.toLocaleDateString('it-IT') + '</span>';
-    };
-
-    body.innerHTML = `
-      <div class="vol-detail-hero">
-        ${v.foto_url
-          ? '<img src="' + v.foto_url + '" class="vol-detail-avatar" alt="">'
-          : '<div class="vol-detail-avatar">'+initials+'</div>'}
-        <div>
-          <div class="vol-detail-name">${v.cognome} ${v.nome}</div>
-          <div class="vol-detail-role">${v.tipo_volontario||'Volontario'} · ${v.squadra||'—'}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Anagrafica</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Codice Fiscale</span>${fmt(v.codice_fiscale)}</div>
-          <div class="vol-field"><span class="vol-field-label">Data nascita</span>${fmtDate(v.data_nascita)}</div>
-          <div class="vol-field"><span class="vol-field-label">Luogo nascita</span>${fmt(v.luogo_nascita)}</div>
-          <div class="vol-field"><span class="vol-field-label">Indirizzo</span>${fmt(v.indirizzo ? v.indirizzo + (v.citta ? ', ' + v.citta : '') : null)}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Unità</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Squadra</span>${fmt(v.squadra)}</div>
-          <div class="vol-field"><span class="vol-field-label">Tipo</span>${fmt(v.tipo_volontario)}</div>
-          <div class="vol-field"><span class="vol-field-label">Mansione</span>${fmt(v.mansione)}</div>
-          <div class="vol-field"><span class="vol-field-label">Specializzazione</span>${fmt(v.specializzazione)}</div>
-          <div class="vol-field"><span class="vol-field-label">Gruppo Alpini</span>${fmt(v.gruppo_alpini)}</div>
-          <div class="vol-field"><span class="vol-field-label">Professione</span>${fmt(v.professione)}</div>
-          <div class="vol-field"><span class="vol-field-label">Patenti</span>${fmt(v.patenti)}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Contatti</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Telefono</span>${v.telefono ? '<a href="tel:' + v.telefono + '">' + v.telefono + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
-          <div class="vol-field"><span class="vol-field-label">Email</span>${v.email ? '<a href="mailto:' + v.email + '">' + v.email + '</a>' : '<span class="vol-field-value null">—</span>'}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Abilitazioni</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Comm. Unità</span>${fmtBool(v.comm_unita)}</div>
-          <div class="vol-field"><span class="vol-field-label">Radio ANA</span>${fmtBool(v.radio_ana)}</div>
-          <div class="vol-field"><span class="vol-field-label">EMERCOM</span>${fmtBool(v.emercom)}</div>
-          <div class="vol-field"><span class="vol-field-label">Cod. EMERCOM</span>${fmt(v.cod_emercom)}</div>
-          <div class="vol-field"><span class="vol-field-label">DAE</span>${fmtBool(v.dae)}</div>
-          <div class="vol-field"><span class="vol-field-label">Scad. DAE</span>${fmtDate(v.scad_dae)}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Formazione</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">4 Ore</span>${fmtBool(v.quattro_ore)}</div>
-          <div class="vol-field"><span class="vol-field-label">12 Ore</span>${fmtBool(v.dodici_ore)}</div>
-          <div class="vol-field"><span class="vol-field-label">Corso Caposq.</span>${fmtBool(v.corso_caposq)}</div>
-          <div class="vol-field"><span class="vol-field-label">CDC 1° Step</span>${fmtBool(v.cdc_1_step)}</div>
-          <div class="vol-field"><span class="vol-field-label">CDC 2° Step</span>${fmtBool(v.cdc_2_step)}</div>
-          <div class="vol-field"><span class="vol-field-label">Data visita</span>${fmtDate(v.data_visita)}</div>
-          <div class="vol-field"><span class="vol-field-label">Stato visita</span>${fmt(v.stato_visita)}</div>
-        </div>
-      </div>
-
-      ${await renderCampiCustomDettaglio(v)}
-
-      <div class="vol-section" id="volInterventiSection">
-        <div class="vol-section-head collapsed" onclick="toggleVolInterventi(${v.id})">
-          <span>Interventi <span class="sec-count" id="volInterventiCount"></span></span>
-        </div>
-        <div class="vol-section-body" id="volInterventiBody" style="display:none"></div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head collapsed" onclick="toggleVolDoc(${v.id})">
-          <span>Documenti <span class="sec-count" id="volDocCount"></span></span>
-        </div>
-        <div class="vol-section-body" id="volDocBody" style="display:none"></div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Amministrativo</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Iscrizione</span>${fmtBool(v.iscrizione)}</div>
-          <div class="vol-field"><span class="vol-field-label">Tutela legale CAP</span>${fmtBool(v.tutela_legale_cap)}</div>
-          <div class="vol-field"><span class="vol-field-label">Disponibilità</span>${fmt(v.dispon)}</div>
-          <div class="vol-field"><span class="vol-field-label">Note dispon.</span>${fmt(v.note_dispon)}</div>
-          <div class="vol-field"><span class="vol-field-label">Varchi</span>${fmt(v.varchi)}</div>
-          <div class="vol-field"><span class="vol-field-label">Attivo</span>${fmtBool(v.attivo)}</div>
-        </div>
-      </div>
-
-      <div class="vol-section">
-        <div class="vol-section-head" onclick="toggleVolSection(this)">Datore di lavoro (Art. 39)</div>
-        <div class="vol-section-body">
-          <div class="vol-field"><span class="vol-field-label">Ragione sociale</span>${fmt(v.datore_lavoro)}</div>
-          <div class="vol-field"><span class="vol-field-label">Indirizzo ditta</span>${fmt(v.indirizzo_lavoro)}</div>
-          <div class="vol-field"><span class="vol-field-label">CAP ditta</span>${fmt(v.cap_lavoro)}</div>
-          <div class="vol-field"><span class="vol-field-label">Città ditta</span>${fmt(v.citta_lavoro)}</div>
-        </div>
-      </div>`;
-  } catch(e) { body.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
-}
-
 function toggleVolSection(headEl) {
   headEl.classList.toggle('collapsed');
   const body = headEl.nextElementSibling;
   if (body) body.style.display = headEl.classList.contains('collapsed') ? 'none' : '';
 }
 
-function chiudiDettaglio() {
-  document.getElementById('volDetail').classList.remove('open');
-  document.body.style.overflow = '';
-  volCorrenteId = null;
-  volDocLoadedFor = null;
-  volInterventiLoadedFor = null;
-}
-
-let volDocLoadedFor = null;
-
-function toggleVolDoc(volId) {
-  const body = document.getElementById('volDocBody');
-  const head = body ? body.previousElementSibling : null;
-  if (!body) return;
-  if (body.style.display !== 'none') {
-    body.style.display = 'none';
-    if (head) head.classList.add('collapsed');
-    return;
-  }
-  body.style.display = 'block';
-  if (head) head.classList.remove('collapsed');
-  // Ricarica se cambio volontario O se il body è vuoto (scheda riaperta)
-  if (volDocLoadedFor !== volId || !body.innerHTML.trim()) {
-    volDocLoadedFor = volId;
-    caricaDocVolontario(volId);
-  }
-}
-
-let volInterventiLoadedFor = null;
-async function toggleVolInterventi(volId) {
-  const body  = document.getElementById('volInterventiBody');
-  const count = document.getElementById('volInterventiCount');
-  const head  = body ? body.previousElementSibling : null;
-  if (!body) return;
-
-  // Toggle visibilità
-  if (body.style.display !== 'none') {
-    body.style.display = 'none';
-    if (head) head.classList.add('collapsed');
-    return;
-  }
-  body.style.display = 'block';
-  if (head) head.classList.remove('collapsed');
-
-  if (volInterventiLoadedFor === volId && body.innerHTML.trim()) return;
-  volInterventiLoadedFor = volId;
-
-  try {
-    // Cerca interventi dove volontari_ids contiene questo id
-    const res = await fetch(
-      SUPA_URL + '/rest/v1/interventi_con_stato?volontari_ids=cs.[' + volId + ']&select=id,evento,data,tipo_attivita,stato_calcolato&order=data.desc',
-      { headers: H }
-    );
-    const interventi = await res.json();
-    if (count) count.textContent = '(' + interventi.length + ')';
-    if (!interventi.length) {
-      body.innerHTML = '<p class="note">Nessun intervento registrato.</p>';
-      return;
-    }
-    body.innerHTML = interventi.map(i => {
-      const dataFmt = i.data ? new Date(i.data).toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
-      const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
-      return '<div class="lr clk" onclick="' + onclick + '">'
-        + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + dataFmt + (i.tipo_attivita ? ' · ' + i.tipo_attivita : '') + '</span></div>'
-        + '<span class="go">→</span>'
-        + '</div>';
-    }).join('');
-  } catch(e) {
-    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
-  }
-}
-
+// Solo per il nuovo volontario: la modifica avviene dentro la scheda (scheda-volontario.js)
 function apriFormVolontario(id) {
   if (!canModificaVolontari()) {
     alert('Non hai i permessi per modificare i volontari.');
@@ -1249,13 +1044,17 @@ function apriFormVolontario(id) {
   volCorrenteId = id;
   const panel = document.getElementById('volFormPanel');
   const body  = document.getElementById('volFormBody');
-  document.getElementById('volFormTitle').textContent = id ? 'Modifica volontario' : 'Nuovo volontario';
+  document.getElementById('volFormTitle').textContent = 'Nuovo volontario';
   panel.classList.add('open');
   panel.scrollTop = 0;
+  body.innerHTML = '<div class="vol-form-err" id="volFormErr"></div>' + volFormSezioniHtml(false);
+  if (!schemaCache.length) caricaSchema();
+}
 
-  // Campi del form
-  body.innerHTML = `
-    <div class="vol-form-err" id="volFormErr"></div>
+// Sezioni del form. perScheda: corsi e visita stanno nelle schede Formazione e Visita medica,
+// con gli stessi id, così salvaVolontario li legge senza distinzioni.
+function volFormSezioniHtml(perScheda) {
+  return `
     <div class="vol-form-section">
       <div class="vol-form-section-title" onclick="toggleFormSection(this)">Anagrafica</div>
       <div class="vol-form-grid">
@@ -1301,34 +1100,30 @@ function apriFormVolontario(id) {
       <div class="vol-form-grid">
         <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Codice fiscale</label><input class="vol-form-inp upper" id="fCF" placeholder="RSSMRA80A01F205X"></div>
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Abilitazioni e formazione</div>
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">${perScheda ? 'Abilitazioni' : 'Abilitazioni e formazione'}</div>
       <div class="vol-form-checks">
         <label class="vol-form-check"><input type="checkbox" id="fCommUnita"> Comm. Unità</label>
         <label class="vol-form-check"><input type="checkbox" id="fRadioAna"> Radio ANA</label>
         <label class="vol-form-check"><input type="checkbox" id="fEmercom"> EMERCOM</label>
-        <label class="vol-form-check"><input type="checkbox" id="fDae"> DAE</label>
+        ${perScheda ? '' : `<label class="vol-form-check"><input type="checkbox" id="fDae"> DAE</label>
         <label class="vol-form-check"><input type="checkbox" id="f4Ore"> 4 Ore</label>
         <label class="vol-form-check"><input type="checkbox" id="f12Ore"> 12 Ore</label>
         <label class="vol-form-check"><input type="checkbox" id="fCorsoCaposq"> Corso Caposq.</label>
         <label class="vol-form-check"><input type="checkbox" id="fCdc1"> CDC 1° Step</label>
-        <label class="vol-form-check"><input type="checkbox" id="fCdc2"> CDC 2° Step</label>
+        <label class="vol-form-check"><input type="checkbox" id="fCdc2"> CDC 2° Step</label>`}
         <label class="vol-form-check"><input type="checkbox" id="fIscrizione"> Iscrizione</label>
         <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
         <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
       </div>
       <div class="vol-form-grid mt12">
-        <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
+        ${perScheda ? '' : `<div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Data visita</label><input class="vol-form-inp" type="date" id="fDataVisita"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Stato visita</label>
-          <select class="vol-form-inp" id="fStatoVisita">
-            <option value="">—</option><option>DA FARE</option><option>SOLO ESAMI</option>
-            <option>VERIFICA</option><option>COMPLETATA</option><option>ESONERO</option>
-          </select>
-        </div>
+          <select class="vol-form-inp" id="fStatoVisita">${visitaOpzioniHtml('')}</select>
+        </div>`}
         <div class="vol-form-field"><label class="vol-form-lbl">Cod. EMERCOM</label><input class="vol-form-inp" id="fCodEmercom"></div>
       </div>
     </div>
@@ -1350,12 +1145,12 @@ function apriFormVolontario(id) {
       </div>
     </div>
     ${renderCampiCustomForm()}
-    ${id ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">Elimina volontario</button>' : ''}`;
+    ${perScheda ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">Elimina volontario</button>' : ''}`;
+}
 
-  // Se modifica, carica i dati
-  // Precarica schema se vuoto
-  if (!schemaCache.length) caricaSchema().then(() => { if (id) caricaDatiForm(id); });
-  else if (id) caricaDatiForm(id);
+function visitaOpzioniHtml(selezionato) {
+  return '<option value="">—</option>' + Object.keys(VISITA_STATI).map(k =>
+    '<option value="' + k + '"' + (selezionato === k ? ' selected' : '') + '>' + VISITA_STATI[k].label + '</option>').join('');
 }
 
 function toggleFormSection(titleEl) {
@@ -1368,11 +1163,7 @@ function toggleFormSection(titleEl) {
   }
 }
 
-async function caricaDatiForm(id) {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
-    const data = await res.json();
-    const v = data[0]; if (!v) return;
+function riempiFormVolontario(v) {
     const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
     const setChk = (elId, val) => { const el = document.getElementById(elId); if (el) el.checked = !!val; };
     setVal('fCognome', v.cognome); setVal('fNome', v.nome); setVal('fCF', v.codice_fiscale);
@@ -1390,7 +1181,7 @@ async function caricaDatiForm(id) {
     setChk('fCdc2', v.cdc_2_step); setChk('fIscrizione', v.iscrizione);
     setChk('fTutela', v.tutela_legale_cap); setChk('fAttivo', v.attivo);
     setVal('fScadDae', v.scad_dae); setVal('fDataVisita', v.data_visita);
-    setVal('fStatoVisita', v.stato_visita); setVal('fCodEmercom', v.cod_emercom);
+    setVal('fStatoVisita', visitaStatoNorm(v)); setVal('fCodEmercom', v.cod_emercom);
     setVal('fDispon', v.dispon); setVal('fVarchi', v.varchi); setVal('fNoteDispon', v.note_dispon);
     setVal('fDatoreLavoro', v.datore_lavoro); setVal('fIndirizzoLavoro', v.indirizzo_lavoro);
     setVal('fCapLavoro', v.cap_lavoro); setVal('fCittaLavoro', v.citta_lavoro);
@@ -1402,7 +1193,6 @@ async function caricaDatiForm(id) {
       if (c.tipo === 'boolean') el.checked = !!extra[c.campo_id];
       else el.value = extra[c.campo_id] || '';
     });
-  } catch(e) {}
 }
 
 // Valida un codice fiscale italiano: formato + carattere di controllo
@@ -1593,6 +1383,7 @@ async function eliminaVolontario() {
 
 function chiudiForm() {
   document.getElementById('volFormPanel').classList.remove('open');
+  document.getElementById('volFormBody').innerHTML = '';
   document.body.style.overflow = '';
 }
 
@@ -1868,7 +1659,9 @@ function applicaVista(v) {
 const STATO_VISITA_PILL = {
   'COMPLETATA':  'p-blue',
   'DA FARE':     'p-red',
+  'DA_FARE':     'p-red',
   'SOLO ESAMI':  'p-sand',
+  'SOLO_ESAMI':  'p-sand',
   'VERIFICA':    'p-yellow',
   'ESONERO':     'p-grey',
 };
@@ -8393,6 +8186,8 @@ document.addEventListener('keydown', function(e) {
 
 // -- VISITE MEDICHE --
 let visiteData = [];
+
+function visitaStatoNorm(v) { return (v.stato_visita || '').replace(' ', '_'); }
 
 const VISITA_STATI = {
   'ESONERO':    { label: 'Esonero',    cls: 'vs-esonero' },
