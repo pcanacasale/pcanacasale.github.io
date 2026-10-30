@@ -13,6 +13,7 @@ There is no test suite, linter, or dev server configured. To check a change, ope
 - `index.html` — public marketing site (chi siamo, attività, galleria, contatti).
 - `area-riservata.html` + `area-riservata.js` — the reserved-area web app for volunteers (see below). `area-riservata.js` is a large (~8.5k line) monolithic script; grep for the function or panel name you need rather than reading it top to bottom.
 - `scheda-volontario.js` — finestra della scheda volontario (prefisso `sv*`): schede Dati, Documenti, Visita medica, Formazione, Dotazioni, Interventi, regole "Da sistemare" usate anche dall'elenco Volontari e dalla dashboard.
+- `allerta-home.js` — card "Stato allerta" in Home (prefisso `al*`), solo lettura: legge `allerta_cache`, che la Edge Function `allerta-arpa` riempie dal CAP-XML di ARPA Piemonte (zona Piem-I).
 - `configuratore.html` — standalone tool ("Piano Acquisti Informatica"), self-contained, no backend calls.
 - `belfiore-comuni.js` — static lookup data (Italian comuni / Belfiore codes) used for codice fiscale validation.
 - `manifest.json`, `sw.js` — PWA manifest and service worker, scoped to `area-riservata.html` (cache name `pcana-vN`; bump the version when changing cached assets so old caches are evicted).
