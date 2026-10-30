@@ -509,6 +509,9 @@ async function caricaHomeDashboard() {
       left += '</div>';
     }
 
+    // -- DA SISTEMARE (volontari) --
+    try { right += await svCardDashboard(); } catch(e) {}
+
     // -- REVISIONI IN SCADENZA -- (skip per volontari)
     if (!window.isVolUser) try {
       var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });

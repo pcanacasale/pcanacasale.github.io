@@ -343,6 +343,32 @@ function svPassaFiltro(v) {
   return f ? f.test(p) : p.incompleta;
 }
 
+// -- DASHBOARD: CARD "DA SISTEMARE" --
+async function svCardDashboard() {
+  if (window.isVolUser || !(hasPerm('volontari') || hasPerm('documenti') || hasPerm('visite'))) return '';
+  const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,stato,stato_visita,quattro_ore,dodici_ore,dae,scad_dae,foto_url', { headers: H });
+  const vols = await res.json();
+  await svCaricaProblemi(vols);
+  const c = svConteggi(vols);
+  const righe = [
+    ['visita', c.visita, c.visita === 1 ? 'visita in scadenza' : 'visite in scadenza'],
+    ['formazione', c.formazione, 'con formazione mancante'],
+    ['documenti', c.documenti, 'con documenti mancanti'],
+    ['incompleta', c.incompleta, c.incompleta === 1 ? 'scheda incompleta' : 'schede incomplete'],
+  ].filter(r => r[1] > 0);
+  if (!righe.length) return '';
+  return '<div class="card"><h2>Da sistemare</h2>' + righe.map(r =>
+    '<button class="todo" onclick="svApriElencoFiltrato(&quot;' + r[0] + '&quot;)"><span class="dot yellow"></span><span class="grow"><b>' + r[1] + '</b> ' + r[2] + '</span><span class="go">→</span></button>').join('') + '</div>';
+}
+
+function svApriElencoFiltrato(id) {
+  svFiltro = id;
+  vistaAttiva = null;
+  ['volSearch', 'filtroSquadra', 'filtroTipo', 'filtroMansione', 'filtroAttivo', 'filtroVisita'].forEach(x => { document.getElementById(x).value = ''; });
+  if (visteCache.length) renderVisteBar();
+  navVai('siVolontari');
+}
+
 // -- REGOLE "DA SISTEMARE" (uguali per scheda, elenco Volontari e dashboard) --
 // Visita: stessa regola della vista "visita non completata"; l'esonero non è da sistemare.
 function svVisitaDaSistemare(v) { return !['COMPLETATA', 'ESONERO'].includes(visitaStatoNorm(v)); }
