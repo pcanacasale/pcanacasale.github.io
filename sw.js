@@ -16,7 +16,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
   // Lascia passare tutto tranne i file statici locali
-  if (url.includes('/aggiorna.html') || // pagina pubblica dei volontari: mai gestita dal service worker
+  if (url.includes('/aggiorna.html') || url.includes('/firma.html') || // pagine pubbliche: mai gestite dal service worker
       url.includes('supabase.co') ||
       url.includes('teable.ai') ||
       url.includes('fonts.googleapis') ||
