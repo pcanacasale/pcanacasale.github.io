@@ -237,7 +237,7 @@ body.sv-open{overflow:hidden}
 .sv-tabs{flex-shrink:0;padding:12px 20px}
 .sv-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px 20px 20px}
 .sv-foot{flex-shrink:0;display:flex;gap:10px;justify-content:flex-end;padding:12px 20px calc(14px + var(--safe-b));border-top:1px solid var(--line);background:var(--surface)}
-.sv-panel>.vol-section:first-child,.sv-panel>.vol-form-section:first-child{border-top:0}
+.sv-panel>.vol-section:first-child,.sv-panel>#svTaglie>.vol-section,.sv-panel>#svTaglie:empty+.vol-section,.sv-panel>#svTaglie:empty+.vol-form-section{border-top:0}
 @media (max-width:899px){
  .sv-ov{padding:0}
  .sheet.sv{height:100%;max-height:100%;border:0;border-radius:24px 24px 0 0;padding-top:var(--safe-t)}
@@ -1905,7 +1905,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=185"></script>
+<script src="area-riservata.js?v=186"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=1"></script>
 </body>
