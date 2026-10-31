@@ -258,9 +258,8 @@ async function svSalvaCampi() {
   const val = (id) => { const el = document.getElementById(id); return el && el.value ? el.value : null; };
   const chk = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
   const body = {};
-  if (sv.dirty.has('visita')) { body.data_visita = val('fDataVisita'); body.stato_visita = val('fStatoVisita'); }
+  if (sv.dirty.has('visita')) { body.data_visita = val('fDataVisita'); body.stato_visita = val('fStatoVisita'); body.cdc_1_step = chk('fCdc1'); body.cdc_2_step = chk('fCdc2'); }
   if (sv.dirty.has('formazione')) {
-    body.cdc_1_step = chk('fCdc1'); body.cdc_2_step = chk('fCdc2');
     if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq'), dae: chk('fDae'), scad_dae: val('fScadDae') });
   }
   try {
@@ -550,6 +549,12 @@ function svCaricaAnteprime() {
 }
 
 // -- SCHEDA VISITA MEDICA --
+// CDC 1° e 2° Step sono controlli sanitari: stanno con la visita, non tra i corsi
+const SV_CDC = [
+  { id: 'fCdc1', campo: 'cdc_1_step', label: 'CDC 1° Step', tipo: 'CDC_1' },
+  { id: 'fCdc2', campo: 'cdc_2_step', label: 'CDC 2° Step', tipo: 'CDC_2' },
+];
+
 function svRenderVisita() {
   const box = document.getElementById('svP_visita');
   const v = sv.v;
@@ -567,6 +572,13 @@ function svRenderVisita() {
   } else {
     html += '<div class="sv-mt">' + svCampo('Data ultima visita', svData(v.data_visita)) + svCampo('Esito', info ? info.label : '') + '</div>';
   }
+  html += '<div class="grp sv-mt">Controlli sanitari</div>' + SV_CDC.map(c => {
+    const pill = v[c.campo] ? '<span class="pill p-blue">Svolto</span>' : '<span class="pill p-grey">Non svolto</span>';
+    const titolo = svPuoVisita()
+      ? '<label class="sv-corso-t"><input type="checkbox" id="' + c.id + '"' + (v[c.campo] ? ' checked' : '') + '> ' + c.label + '</label>'
+      : '<b class="sv-corso-t">' + c.label + '</b>';
+    return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + pill + '</div><div id="svAll_' + c.tipo + '"></div></div>';
+  }).join('');
   html += '<div class="grp sv-mt">Allegato</div><div id="svAllVisita"></div>';
   box.innerHTML = html;
   svRenderAllegatiVisita();
@@ -579,6 +591,11 @@ function svRenderAllegatiVisita() {
   const righe = sv.docs.filter(d => d.tipo === 'VISITA').map(svRigaDaDocumenti);
   box.innerHTML = (righe.length ? righe.map(svRigaAllegato).join('') : '<p class="note m0 mb10">Nessun allegato.</p>')
     + (svPuoDoc() ? '<button class="doc-add-btn" onclick="apriUploadDoc(' + sv.id + ',\'VISITA\')">+ Carica allegato</button>' : '');
+  SV_CDC.forEach(c => {
+    const all = document.getElementById('svAll_' + c.tipo);
+    if (all) all.innerHTML = sv.docs.filter(d => d.tipo === c.tipo).map(svRigaDaDocumenti).map(svRigaAllegato).join('')
+      + (svPuoDoc() ? '<button class="btn sm sv-allega" onclick="apriUploadDoc(' + sv.id + ',\'' + c.tipo + '\')">Allega documento</button>' : '');
+  });
 }
 
 // -- SCHEDA FORMAZIONE --
@@ -587,8 +604,6 @@ const SV_CORSI = [
   { id: 'f4Ore',        campo: 'quattro_ore',  label: 'Corso 4 ore',       tipo: '4_ORE',  storico: 'quattro_ore_att' },
   { id: 'f12Ore',       campo: 'dodici_ore',   label: 'Corso 12 ore',      tipo: '12_ORE', storico: 'dodici_ore_att' },
   { id: 'fCorsoCaposq', campo: 'corso_caposq', label: 'Corso Caposquadra', tipo: 'CAPOSQ', storico: 'caposq_att' },
-  { id: 'fCdc1',        campo: 'cdc_1_step',   label: 'CDC 1° Step',       tipo: 'CDC_1',  perVisite: true },
-  { id: 'fCdc2',        campo: 'cdc_2_step',   label: 'CDC 2° Step',       tipo: 'CDC_2',  perVisite: true },
   { id: 'fDae',         campo: 'dae',          label: 'DAE',               tipo: 'DAE',    scadenza: 'scad_dae' },
 ];
 
@@ -597,7 +612,7 @@ function svRenderFormazione() {
   const v = sv.v;
   box.innerHTML = '<div class="grp">Registro corsi e abilitazioni</div><div id="svRegistro"><p class="note m0 mb10">Caricamento…</p></div>'
     + '<div class="grp sv-mt">Corsi obbligatori</div><div class="sv-corsi">' + SV_CORSI.map(c => {
-    const puo = svPuoDati() || (c.perVisite && svPuoVisita());
+    const puo = svPuoDati();
     const st = c.scadenza && v[c.campo] ? svStatoScadenza(v[c.scadenza]) : '';
     const pill = st ? svPillScadenza(st) : (v[c.campo] ? '<span class="pill p-blue">Svolto</span>' : '<span class="pill p-grey">Non svolto</span>');
     const titolo = puo

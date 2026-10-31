@@ -101,8 +101,6 @@ const FZ_CORSI_FISSI = {
   '4_ORE':  { titolo: 'Corso 4 ore',       campo: 'quattro_ore' },
   '12_ORE': { titolo: 'Corso 12 ore',      campo: 'dodici_ore' },
   'CAPOSQ': { titolo: 'Corso Caposquadra', campo: 'corso_caposq' },
-  'CDC_1':  { titolo: 'CDC 1° Step',       campo: 'cdc_1_step' },
-  'CDC_2':  { titolo: 'CDC 2° Step',       campo: 'cdc_2_step' },
   'DAE':    { titolo: 'DAE',               campo: 'dae', scadenza: 'scad_dae' },
 };
 const FZ_FILTRI = [
