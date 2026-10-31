@@ -30,7 +30,7 @@ function svTabVisibile(tab) {
   if (hasPerm('volontari')) return true;
   if (tab === 'documenti') return hasPerm('documenti');
   if (tab === 'visita') return hasPerm('visite');
-  if (tab === 'formazione') return hasPerm('documenti') || hasPerm('visite');
+  if (tab === 'formazione') return hasPerm('documenti') || hasPerm('visite') || hasPerm('formazione');
   return false;
 }
 
@@ -595,7 +595,8 @@ const SV_CORSI = [
 function svRenderFormazione() {
   const box = document.getElementById('svP_formazione');
   const v = sv.v;
-  box.innerHTML = '<div class="sv-corsi">' + SV_CORSI.map(c => {
+  box.innerHTML = '<div class="grp">Registro corsi e abilitazioni</div><div id="svRegistro"><p class="note m0 mb10">Caricamento…</p></div>'
+    + '<div class="grp sv-mt">Corsi obbligatori</div><div class="sv-corsi">' + SV_CORSI.map(c => {
     const puo = svPuoDati() || (c.perVisite && svPuoVisita());
     const st = c.scadenza && v[c.campo] ? svStatoScadenza(v[c.scadenza]) : '';
     const pill = st ? svPillScadenza(st) : (v[c.campo] ? '<span class="pill p-blue">Svolto</span>' : '<span class="pill p-grey">Non svolto</span>');
@@ -611,6 +612,7 @@ function svRenderFormazione() {
   }).join('') + '</div>'
     + '<div class="grp sv-mt">Altri corsi e attestati</div><div id="svAltriCorsi"></div>';
   svRenderAllegatiFormazione();
+  fzRenderScheda();
   svOsservaModifiche(box);
 }
 

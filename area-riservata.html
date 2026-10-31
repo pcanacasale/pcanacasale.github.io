@@ -830,6 +830,22 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .mt-14b{margin-top:14px}
 .bad.link-warn{margin:10px 0 12px}
 
+/* ── visite e formazione ── */
+.btn[hidden]{display:none}
+.visite-tbl td{overflow:visible;max-width:none}
+.visite-tbl select{min-width:150px}
+.visite-tbl input[type=date]{min-width:150px}
+.fz-row{display:grid;grid-template-columns:96px minmax(0,1fr) minmax(0,1.5fr) 100px 110px;gap:12px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.fz-row.ihead{border-top:0}
+.fz-row.clk{cursor:pointer}
+.fz-row.clk:hover{background:var(--bg)}
+.fz-ov{z-index:760}
+.fz-picker{display:flex;flex-direction:column;max-height:200px;overflow:auto;padding:4px 12px;border:1px solid var(--line2);border-radius:12px}
+.fz-picker .chk{min-height:40px;flex-shrink:0}
+.fz-picker .sub{margin-left:auto}
+#fzLibero[hidden]{display:none}
+@media (max-width:860px){.fz-row{grid-template-columns:1fr 1fr;gap:6px 12px}.fz-row.ihead{display:none}.fz-row>.minw0{grid-column:1 / -1;grid-row:2}}
+
 /* ── schermi larghi: sotto i 1100px non cambia nulla; le finestre (.sheet, scheda volontario) restano fuori ── */
 @media (min-width:1100px){
  .panel>.note,.note-page,.seg-text,.em-desc,.ric-msg{max-width:var(--larghezza-testo)}
@@ -1062,6 +1078,8 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <button id="siBot" class="sidebar-item" onclick="navTo('bot','Bot',this)" style="display:none"></button>
     <button id="siSegnalazioni" class="sidebar-item" onclick="navTo('segnalazioni','Segnalazioni',this)" style="display:none"><span class="si-badge" id="siBadgeSegnalazioni"></span></button>
     <button id="siRichieste" class="sidebar-item" onclick="navTo('richieste','Richieste',this)" style="display:none"><span class="si-badge" id="siBadgeRichieste"></span></button>
+    <button id="siVisite" class="sidebar-item" onclick="navTo('visite','Visite mediche',this)" style="display:none"></button>
+    <button id="siFormazione" class="sidebar-item" onclick="navTo('formazione','Formazione',this)" style="display:none"></button>
     <button id="siAggDati" class="sidebar-item" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none"></button>
     <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Accessi',this)" style="display:none"></button>
     <button id="siStatistiche" class="sidebar-item" onclick="navTo('statistiche','Statistiche',this)" style="display:none"></button>
@@ -1566,6 +1584,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
             <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
             <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
             <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
+            <label class="perm-check"><input type="checkbox" id="permFormazione"> Formazione</label>
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
             <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF</label>
             <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti</label>
@@ -1911,6 +1930,35 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <div id="richiesteList" class="grid g3"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
+    <!-- VISITE MEDICHE e FORMAZIONE (logica in formazione.js) -->
+    <div class="panel" id="panelVisite">
+      <div class="phead">
+        <div><h1>Visite mediche</h1></div>
+        <div class="pact"><button class="btn" onclick="apriExportVisitePagina()">Esporta PDF</button></div>
+      </div>
+      <div class="bar">
+        <div id="visiteDashboard" class="chips"></div>
+        <span class="grow"></span>
+        <label class="search" for="visiteSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="visiteSearch" placeholder="Cerca per nome o CF" autocomplete="off" oninput="filtraVisite()"></label>
+        <input type="hidden" id="visiteFiltroStato" value="">
+      </div>
+      <p class="bad" id="visiteErr" hidden></p>
+      <div id="visiteList"><div class="loading-msg">Caricamento…</div></div>
+    </div>
+
+    <div class="panel" id="panelFormazione">
+      <div class="phead">
+        <div><h1>Formazione</h1><span class="sub"><span id="fzMostrati">0</span> registrazioni</span></div>
+        <div class="pact"><button class="btn pri" id="fzBtnNuovo" onclick="fzApriForm()" hidden>Registra corso</button></div>
+      </div>
+      <div class="bar">
+        <div id="fzChips" class="chips"></div>
+        <span class="grow"></span>
+        <label class="search" for="fzSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="fzSearch" placeholder="Cerca volontario, corso o ente" autocomplete="off" oninput="fzRenderLista()"></label>
+      </div>
+      <div id="fzList"><div class="loading-msg">Caricamento…</div></div>
+    </div>
+
     <!-- AGGIORNAMENTO DATI (solo master — tutta la UI è generata da aggiornamento-dati.js) -->
     <div class="panel" id="panelAggDati">
       <div class="phead"><div><h1>Aggiornamento dati</h1></div></div>
@@ -2025,6 +2073,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
           <label class="perm-check"><input type="checkbox" id="modPermDb"> DB Avanzato</label>
           <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti</label>
           <label class="perm-check"><input type="checkbox" id="modPermVisite"> Visite Mediche</label>
+          <label class="perm-check"><input type="checkbox" id="modPermFormazione"> Formazione</label>
           <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
           <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
@@ -2042,6 +2091,8 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       <div class="actions"><button class="btn" onclick="chiudiModificaUtente()">Annulla</button><button class="btn pri" onclick="salvaModificaUtente()">Salva</button></div>
     </div>
   </div>
+  <div class="ov fz-ov" id="fzOv" hidden onclick="if(event.target===this)fzChiudiForm()"></div>
+
   <!-- Export PDF visite mediche -->
   <div class="vista-form-overlay" id="visiteExportOverlay">
     <div class="vista-form-card">
@@ -2094,10 +2145,11 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=190"></script>
+<script src="area-riservata.js?v=191"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
-<script src="scheda-volontario.js?v=1"></script>
+<script src="scheda-volontario.js?v=2"></script>
 <script src="allerta-home.js?v=1"></script>
 <script src="editor-pdf.js?v=1"></script>
+<script src="formazione.js?v=1"></script>
 </body>
 </html>
