@@ -157,6 +157,8 @@ async function doLoginVolontario() {
         id: 'vol_' + v.id,
         volontario_id: v.id,
         nome: v.cognome + ' ' + v.nome,
+        nomeProprio: v.nome,
+        cognome: v.cognome,
         ruolo: 'Volontario',
         tipo_accesso: 'volontario',
         permessi: { galleria: true, scheda_personale: true, segnalazioni: true }
@@ -304,9 +306,18 @@ function chiudiAltro() {
 function renderWho() {
   var n = document.getElementById('whoName'), a = document.getElementById('whoAv');
   if (!n || !currentUser) return;
-  var nome = currentUser.nome || '';
-  a.textContent = nome.split(' ').map(function(x){ return x[0] || ''; }).join('').slice(0,2).toUpperCase() || '—';
-  n.innerHTML = '<span>' + escapeHtmlNav(nome.split(' ')[0]) + '<small>' + escapeHtmlNav(currentUser.ruolo || '') + '</small></span>';
+  // nome + cognome quando sono separati; il vecchio accesso ha un solo campo
+  var proprio = whoMaiuscole(currentUser.nomeProprio), cognome = whoMaiuscole(currentUser.cognome);
+  var nome = (proprio + ' ' + cognome).trim() || whoMaiuscole(currentUser.nome);
+  var iniziali = proprio && cognome ? proprio[0] + cognome[0] : nome.split(' ').map(function(x){ return x[0] || ''; }).join('').slice(0,2);
+  var ruolo = { master:'Master', standard:'Staff', volontario:'Volontario' }[_navRuolo()];
+  a.textContent = iniziali.toUpperCase() || '—';
+  n.innerHTML = '<span>' + escapeHtmlNav(nome) + '<small>' + ruolo + '</small></span>';
+}
+function whoMaiuscole(s) {
+  s = String(s || '').trim();
+  if (s.indexOf('@') !== -1) return s; // email al posto del nome
+  return s.toLowerCase().replace(/(^|[\s'’-])(\p{L})/gu, function(m, p, c) { return p + c.toUpperCase(); });
 }
 function escapeHtmlNav(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 document.addEventListener('click', function(e) {

@@ -86,6 +86,13 @@ function auImpostaToken(session) {
   HJ.Authorization = bearer;
 }
 
+// Token aggiornato per le funzioni protette; null con il vecchio accesso
+async function auToken() {
+  if (!auClient) return null;
+  const { data } = await auClient.auth.getSession();
+  return data.session ? data.session.access_token : null;
+}
+
 function auAvviso(testo, riprova) {
   auEl('auAvvisoTesto').textContent = testo;
   auEl('auBtnRiprova').hidden = !riprova;
@@ -100,7 +107,9 @@ function auUtenteDaProfilo(p, session) {
     volontario_id: volontarioId,   // nome usato dal resto dell'app
     volontarioId,
     nome: [p.cognome, p.nome].filter(Boolean).join(' ') || session.user.email,
-    ruolo: p.ruolo || (vol ? 'Volontario' : p.tipo === 'master' ? 'Master' : 'Standard'),
+    nomeProprio: p.nome,
+    cognome: p.cognome,
+    ruolo: p.ruolo || (vol ? 'Volontario' : p.tipo === 'master' ? 'Master' : 'Staff'),
     tipo_accesso: p.tipo,
     permessi: vol ? { galleria: true, scheda_personale: true, segnalazioni: true } : (p.permessi || {}),
   };
@@ -145,7 +154,7 @@ async function auEsci() {
   auCambiaEmail();
   auVista('nuovo');
   if (!auClient) { auVista('vecchio'); return; }
-  const { error } = await auClient.auth.signOut();
+  const { error } = await auClient.auth.signOut({ scope: 'local' });
   if (error) { try { localStorage.removeItem(AU_CHIAVE); } catch(e) {} }  // senza rete la sessione non resta sul dispositivo
 }
 

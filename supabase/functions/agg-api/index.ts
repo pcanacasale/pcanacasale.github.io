@@ -9,18 +9,20 @@
 // automaticamente da Supabase in ogni Edge Function come SUPABASE_SERVICE_ROLE_KEY,
 // nessun secret da configurare a mano) e la espone SOLO dopo aver verificato
 // server-side che chi chiama abbia il permesso "aggiornamento_dati" (master di
-// default, oppure concesso dalla Matrice permessi), riautenticando username+password
-// contro la tabella utenti esattamente come fa doLogin() in area-riservata.js.
+// default, oppure concesso dalla Matrice permessi): il token della sessione arriva
+// nell'header Authorization e il profilo viene letto con mio_profilo.
 // Non ci si fida mai di un flag "tipo_accesso" mandato dal client.
 //
 // Ogni azione che legge o scrive dati sensibili (schede, documenti, foto)
 // viene registrata in log_attivita / log_accessi, come fa il resto dell'app.
 //
-// Body richiesta: { username, password, action, payload }
+// Header richiesta: Authorization: Bearer <token della sessione>
+// Body richiesta: { action, payload }
 // Risposta: { ok: true, ...dati } oppure { ok: false, error }
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "jsr:@supabase/server@^1";
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const BUCKET = 'agg-privato';
 
@@ -117,8 +119,9 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
 
   const SUPA_URL = Deno.env.get('SUPABASE_URL');
   const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!SUPA_URL || !SERVICE_KEY) {
-    console.error('Secrets mancanti: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
+  const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!SUPA_URL || !SERVICE_KEY || !ANON_KEY) {
+    console.error('Secrets mancanti: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY');
     return jsonResponse({ ok: false, error: 'configurazione server mancante' }, 500);
   }
   const HSRV = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` };
@@ -127,27 +130,29 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
   let body: any;
   try { body = await req.json(); } catch { return jsonResponse({ ok: false, error: 'body non valido' }, 400); }
 
-  const { username, password, action, payload } = body || {};
-  if (!username || !password) return jsonResponse({ ok: false, error: 'credenziali mancanti' }, 401);
+  const { action, payload } = body || {};
+  const authHeader = req.headers.get('authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return jsonResponse({ ok: false, error: 'credenziali mancanti' }, 401);
 
-  // -- Verifica server-side che l'utente abbia il permesso "aggiornamento_dati",
-  // riusando lo stesso meccanismo di identificazione di doLogin() in
-  // area-riservata.js e la stessa regola di hasPerm(): master sì di default
-  // (salvo permesso esplicitamente false), standard solo se permesso true,
-  // volontari mai. (La variabile si chiama ancora "master" per storia: è
-  // l'utente autorizzato che esegue l'azione, usato in log e campi *_da.)
-  let master: { id: number; nome: string } | null = null;
+  // -- Verifica server-side del permesso "aggiornamento_dati" con il profilo
+  // restituito da mio_profilo e la regola di public.ho_permesso: master sì di
+  // default (salvo permesso esplicitamente false), standard solo se permesso
+  // true, volontari mai. Il service role si usa solo dopo questo controllo.
+  // (La variabile si chiama ancora "master" per storia: è l'utente autorizzato
+  // che esegue l'azione, usato in log e campi *_da.)
+  let master: { id: string | null; nome: string } | null = null;
   try {
-    const r = await fetch(
-      `${SUPA_URL}/rest/v1/utenti?username=eq.${encodeURIComponent(username)}&password=eq.${encodeURIComponent(password)}&attivo=eq.true&select=id,nome,tipo_accesso,permessi`,
-      { headers: HSRV }
-    );
-    const arr = await r.json();
-    const u = Array.isArray(arr) && arr.length ? arr[0] : null;
-    if (u && u.tipo_accesso !== 'volontario') {
+    const utente = createClient(SUPA_URL, ANON_KEY, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data, error } = await utente.rpc('mio_profilo');
+    if (error) throw error;
+    const u = Array.isArray(data) ? data[0] : data;
+    if (u && u.tipo && u.tipo !== 'volontario') {
       const p = (u.permessi && typeof u.permessi === 'object') ? u.permessi : {};
-      const autorizzato = p.aggiornamento_dati === false ? false : (u.tipo_accesso === 'master' || p.aggiornamento_dati === true);
-      if (autorizzato) master = { id: u.id, nome: u.nome };
+      const autorizzato = p.aggiornamento_dati === false ? false : (u.tipo === 'master' || p.aggiornamento_dati === true);
+      if (autorizzato) master = { id: u.id ?? null, nome: [u.cognome, u.nome].filter(Boolean).join(' ') };
     }
   } catch (e) { console.error('verifica permesso fallita', e); }
   if (!master) return jsonResponse({ ok: false, error: 'non autorizzato' }, 403);

@@ -35,10 +35,11 @@ let epDocs = [], epRichieste = [], epLinkCtx = null, epLinkUrl = null;
 
 // -- SERVER --
 async function epCall(azione, dati) {
-  const username = sessionStorage.getItem('ar_user'), password = sessionStorage.getItem('ar_pass');
+  const token = await auToken();
+  if (!token) throw new Error('Per questa pagina entra con Google o con il codice email.');
   let res;
   try {
-    res = await fetch(EP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ azione, username, password }, dati || {})) });
+    res = await fetch(EP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(Object.assign({ azione }, dati || {})) });
   } catch(e) { throw new Error('Connessione assente: riprova.'); }
   let body = {};
   try { body = await res.json(); } catch(e) {}

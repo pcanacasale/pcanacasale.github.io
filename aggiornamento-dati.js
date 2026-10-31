@@ -101,13 +101,12 @@ function aggHaAccesso() {
 // CHIAMATA ALLA EDGE FUNCTION
 // ============================================================
 async function aggCall(action, payload) {
-  const u = sessionStorage.getItem('ar_user');
-  const p = sessionStorage.getItem('ar_pass');
-  if (!u || !p) throw new Error('sessione non valida, effettua di nuovo il login');
+  const token = await auToken();
+  if (!token) throw new Error('Per questa pagina entra con Google o con il codice email.');
   const res = await fetch(AGG_API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY },
-    body: JSON.stringify({ username: u, password: p, action, payload: payload || {} }),
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': SUPA_KEY },
+    body: JSON.stringify({ action, payload: payload || {} }),
   });
   let data;
   try { data = await res.json(); } catch (e) { throw new Error('risposta non valida dal server'); }
