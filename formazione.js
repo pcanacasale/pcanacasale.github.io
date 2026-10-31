@@ -115,6 +115,8 @@ const FZ_FILTRI = [
 let fzRighe = [];
 let fzVolontari = [];
 let fzFiltro = '';
+let fzGruppi = [];
+let fzAperti = new Set(); // corsi aperti, restano tali tra un salvataggio e l'altro
 let fzForm = null;   // { id, volFisso, scelti }
 
 function fzPuoScrivere() { return canModificaVolontari() || hasPerm('formazione'); }
@@ -163,21 +165,55 @@ function fzDettaglio(r) {
   return [r.tipo === 'ABILITAZIONE' ? 'Abilitazione' : '', r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).map(aggEsc).join(' · ');
 }
 
+// Un blocco per corso: quelli fissi per codice, gli altri per titolo. Si apre sui partecipanti.
+function fzRaggruppa(righe) {
+  const gruppi = new Map();
+  righe.forEach(r => {
+    const k = r.codice || r.titolo.trim().toLowerCase();
+    if (!gruppi.has(k)) gruppi.set(k, { k, titolo: r.titolo, tipo: r.tipo, codice: r.codice, righe: [] });
+    gruppi.get(k).righe.push(r);
+  });
+  const fissi = Object.keys(FZ_CORSI_FISSI);
+  const pos = g => g.codice ? fissi.indexOf(g.codice) : fissi.length;
+  return [...gruppi.values()].sort((a, b) => pos(a) - pos(b) || a.titolo.localeCompare(b.titolo, 'it'));
+}
+
+function fzGruppoHtml(g, i, aperto, scrive) {
+  const date = g.righe.map(r => r.data_corso).filter(Boolean).sort();
+  const scad = g.righe.filter(r => svStatoScadenza(r.scadenza)).length;
+  const info = [g.tipo === 'ABILITAZIONE' ? 'Abilitazione' : 'Corso', g.righe.length + (g.righe.length === 1 ? ' volontario' : ' volontari'),
+    date.length ? 'ultimo il ' + svData(date[date.length - 1]) : ''].filter(Boolean).join(' · ');
+  const righe = g.righe.slice().sort((a, b) => (b.data_corso || '').localeCompare(a.data_corso || '') || fzNomeVol(a.volontario_id).localeCompare(fzNomeVol(b.volontario_id), 'it'));
+  return '<div class="card fz-gruppo"><div class="fz-gruppo-h"><button class="fz-gruppo-t" aria-expanded="' + aperto + '" onclick="fzApriGruppo(' + i + ')">'
+    + '<span class="pst-chev" aria-hidden="true">' + (aperto ? '▾' : '▸') + '</span><span class="mid"><b>' + aggEsc(g.titolo) + '</b><span class="sub">' + info + '</span></span>'
+    + (scad ? '<span class="pill p-yellow">' + scad + ' in scadenza</span>' : '') + '</button>'
+    + (scrive ? '<button class="btn sm" onclick="fzApriForm(null,null,' + i + ')">Aggiungi</button>' : '') + '</div>'
+    + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Ente o docente</span><span>Origine</span><span>Scadenza</span></div>'
+      + righe.map(r => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
+        + '<span>' + (svData(r.data_corso) || '—') + '</span>'
+        + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
+        + '<span class="sub minw0">' + aggEsc([r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
+        + '<span>' + fzPillOrigine(r) + '</span>'
+        + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
+}
+
 function fzRenderLista() {
   const list = document.getElementById('fzList');
   const q = document.getElementById('fzSearch').value.toLowerCase().trim();
   const filtro = FZ_FILTRI.find(f => f[0] === fzFiltro)[2];
   const righe = fzRighe.filter(r => filtro(r) && (!q || (fzNomeVol(r.volontario_id) + ' ' + r.titolo + ' ' + (r.ente || '')).toLowerCase().includes(q)));
-  document.getElementById('fzMostrati').textContent = righe.length;
+  fzGruppi = fzRaggruppa(righe);
+  document.getElementById('fzMostrati').textContent = fzGruppi.length + (fzGruppi.length === 1 ? ' corso' : ' corsi') + ' · ' + righe.length + (righe.length === 1 ? ' registrazione' : ' registrazioni');
   if (!righe.length) { list.innerHTML = '<div class="empty">' + (fzRighe.length ? 'Nessuna registrazione trovata.' : 'Nessun corso registrato.') + '</div>'; return; }
   const scrive = fzPuoScrivere();
-  list.innerHTML = '<div class="card tbl"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Corso</span><span>Origine</span><span>Scadenza</span></div>'
-    + righe.map(r => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
-      + '<span>' + (svData(r.data_corso) || '—') + '</span>'
-      + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
-      + '<div class="minw0"><b>' + aggEsc(r.titolo) + '</b><span class="sub">' + fzDettaglio(r) + '</span></div>'
-      + '<span>' + fzPillOrigine(r) + '</span>'
-      + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>';
+  // cercando, i corsi trovati si aprono da soli: altrimenti il nome cercato resterebbe nascosto
+  list.innerHTML = fzGruppi.map((g, i) => fzGruppoHtml(g, i, !!q || fzAperti.has(g.k), scrive)).join('');
+}
+
+function fzApriGruppo(i) {
+  const k = fzGruppi[i].k;
+  if (fzAperti.has(k)) fzAperti.delete(k); else fzAperti.add(k);
+  fzRenderLista();
 }
 
 // -- FINESTRA REGISTRA / MODIFICA --
@@ -186,11 +222,14 @@ function fzCatalogoHtml(codice) {
     + '<option value=""' + (codice ? '' : ' selected') + '>Altro corso o abilitazione</option>';
 }
 
-// id: riga da modificare; volFisso: volontario già scelto (dalla scheda volontario)
-async function fzApriForm(id, volFisso) {
+// id: riga da modificare; volFisso: volontario già scelto (dalla scheda volontario);
+// gruppo: indice in fzGruppi del corso da precompilare
+async function fzApriForm(id, volFisso, gruppo) {
   const ov = document.getElementById('fzOv');
   const r = id ? fzRighe.find(x => x.id === id) : null;
   if (id && !r) return;
+  const g = gruppo != null ? fzGruppi[gruppo] : null;
+  const base = r || g;
   if (!fzVolontari.length) { try { await fzCaricaVolontari(); } catch(e) {} }
   fzForm = { id: id || null, volFisso: r ? r.volontario_id : (volFisso || null), scelti: new Set() };
   const titoli = [...new Set(fzRighe.filter(x => !x.codice).map(x => x.titolo))];
@@ -201,9 +240,9 @@ async function fzApriForm(id, volFisso) {
     + (fzForm.volFisso ? '<div class="kv"><span>Volontario</span><b>' + aggEsc(fzNomeVol(fzForm.volFisso)) + '</b></div>'
       : '<label>Volontari<input type="search" id="fzVolCerca" placeholder="Cerca per cognome o squadra" autocomplete="off" oninput="fzRenderPicker()"></label>'
         + '<div class="fz-picker" id="fzPicker"></div><span class="sub" id="fzSceltiN"></span>')
-    + '<label>Corso<select id="fzCodice" onchange="fzAggiornaCatalogo()">' + fzCatalogoHtml(r ? r.codice : '') + '</select></label>'
-    + '<div id="fzLibero"><div class="row2"><label>Titolo<input id="fzTitolo" list="fzTitoli" value="' + aggEsc(r && !r.codice ? r.titolo : '') + '"><datalist id="fzTitoli">' + titoli.map(t => '<option value="' + aggEsc(t) + '">').join('') + '</datalist></label>'
-    + '<label>Tipo<select id="fzTipo">' + opz('CORSO', 'Corso', r ? r.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', r ? r.tipo : '') + '</select></label></div></div>'
+    + '<label>Corso<select id="fzCodice" onchange="fzAggiornaCatalogo()">' + fzCatalogoHtml(base ? base.codice : '') + '</select></label>'
+    + '<div id="fzLibero"><div class="row2"><label>Titolo<input id="fzTitolo" list="fzTitoli" value="' + aggEsc(base && !base.codice ? base.titolo : '') + '"><datalist id="fzTitoli">' + titoli.map(t => '<option value="' + aggEsc(t) + '">').join('') + '</datalist></label>'
+    + '<label>Tipo<select id="fzTipo">' + opz('CORSO', 'Corso', base ? base.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', base ? base.tipo : '') + '</select></label></div></div>'
     + '<div class="row2"><label>Origine<select id="fzOrigine">' + opz('INTERNO', 'Interno (nostro)', r ? r.origine : 'INTERNO') + opz('ESTERNO', 'Esterno', r ? r.origine : '') + '</select></label>'
     + '<label>Ente o docente<input id="fzEnte" value="' + aggEsc(r ? r.ente || '' : '') + '"></label></div>'
     + '<div class="row2"><label>Data<input type="date" id="fzData" value="' + aggEsc(r ? r.data_corso || '' : '') + '"></label>'

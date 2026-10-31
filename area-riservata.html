@@ -844,6 +844,14 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .fz-picker .chk{min-height:40px;flex-shrink:0}
 .fz-picker .sub{margin-left:auto}
 #fzLibero[hidden]{display:none}
+#fzList{display:flex;flex-direction:column;gap:12px}
+.fz-gruppo{padding:0;overflow:hidden}
+.fz-gruppo-h{display:flex;align-items:center;gap:10px;padding-right:18px}
+.fz-gruppo-t{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:14px 0 14px 18px;border:0;background:none;color:inherit;text-align:left}
+.fz-gruppo-t .mid{flex:1;min-width:0}
+.fz-gruppo-t b{display:block;font-size:16px;font-weight:800}
+.fz-gruppo-t .pst-chev{font-size:18px}
+.fz-gruppo-b{border-top:1px solid var(--line)}
 @media (max-width:860px){.fz-row{grid-template-columns:1fr 1fr;gap:6px 12px}.fz-row.ihead{display:none}.fz-row>.minw0{grid-column:1 / -1;grid-row:2}}
 
 /* ── schermi larghi: sotto i 1100px non cambia nulla; le finestre (.sheet, scheda volontario) restano fuori ── */
@@ -1948,7 +1956,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
     <div class="panel" id="panelFormazione">
       <div class="phead">
-        <div><h1>Formazione</h1><span class="sub"><span id="fzMostrati">0</span> registrazioni</span></div>
+        <div><h1>Formazione</h1><span class="sub" id="fzMostrati"></span></div>
         <div class="pact"><button class="btn pri" id="fzBtnNuovo" onclick="fzApriForm()" hidden>Registra corso</button></div>
       </div>
       <div class="bar">
@@ -2150,6 +2158,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="scheda-volontario.js?v=3"></script>
 <script src="allerta-home.js?v=1"></script>
 <script src="editor-pdf.js?v=1"></script>
-<script src="formazione.js?v=2"></script>
+<script src="formazione.js?v=3"></script>
 </body>
 </html>
