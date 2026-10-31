@@ -17,7 +17,8 @@
    Barra blu in alto con menu principale + "Altro"; su telefono barra in basso
    e pannello dal basso. Blu e giallo della Protezione Civile, angoli stondati. */
 :root{--bg:#F3F6FB;--surface:#FFFFFF;--line:#DCE5F2;--line2:#C5D3E8;--fg:#072F63;--muted:#44597D;--head:#0A4C9E;--head-fg:#FFFFFF;--head-muted:#C9DBF5;--accent:#0A4C9E;--accent-bg:#0A4C9E;--accent-fg:#FFFFFF;--soft:#DCE9FA;--yellow:#FFC20E;--yellow-soft:#FFF1BF;--on-yellow:#072F63;--grey-bg:#E7EAF0;--red:#B42318;--red-soft:#FDE4E1;--shadow:0 12px 40px rgba(7,47,99,.22);--font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --paper:#FFFFFF;--on-red:#FFFFFF;--inchiostro:#16256E;--carta-testo:#000000;--paper-muted-ep:#7A869A;--ep-campo:rgba(255,194,14,.16);--al-verde:#1E7B34;--al-on-verde:#FFFFFF;--al-giallo:#FFC20E;--al-on-giallo:#072F63;--al-arancione:#F08A00;--al-on-arancione:#072F63;--al-rosso:#C62828;--al-on-rosso:#FFFFFF;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px}
+  --paper:#FFFFFF;--on-red:#FFFFFF;--inchiostro:#16256E;--carta-testo:#000000;--paper-muted-ep:#7A869A;--ep-campo:rgba(255,194,14,.16);--al-verde:#1E7B34;--al-on-verde:#FFFFFF;--al-giallo:#FFC20E;--al-on-giallo:#072F63;--al-arancione:#F08A00;--al-on-arancione:#072F63;--al-rosso:#C62828;--al-on-rosso:#FFFFFF;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);--top-h:68px;--larghezza-max:1680px;--pad-lat:16px;--larghezza-testo:75ch}
+@media (min-width:1100px){:root{--pad-lat:clamp(16px,2.5vw,40px)}}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0B1424;--surface:#121E33;--line:#243553;--line2:#33466B;--fg:#E6EEFB;--muted:#9DB0CF;--head:#0E2F5C;--head-fg:#FFFFFF;--head-muted:#B5C9EA;--accent:#8DBBF7;--accent-bg:#2F6FC4;--accent-fg:#FFFFFF;--soft:#1B2F52;--yellow-soft:#3A3012;--grey-bg:#26324A;--red:#FF8A80;--red-soft:#3B1A1A;--shadow:0 12px 40px rgba(0,0,0,.55);color-scheme:dark}
 
@@ -32,7 +33,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 h1,h2,h3,p{margin:0}
 :focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
-.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:var(--larghezza-max);margin:0 auto;padding-left:max(var(--pad-lat),env(safe-area-inset-left,0px));padding-right:max(var(--pad-lat),env(safe-area-inset-right,0px))}
 
 /* ── pagina ── */
 .phead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
@@ -170,7 +171,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .who .av{width:38px;height:38px;background:var(--yellow);color:var(--on-yellow);font-size:13px}
 .who small{display:block;color:var(--head-muted);font-weight:500}
 /* menu altro */
-.pop{position:fixed;z-index:255;right:max(16px,env(safe-area-inset-right,0px));top:calc(var(--top-h) + 8px + env(safe-area-inset-top,0px));width:min(520px,calc(100vw - 32px));max-height:calc(100vh - var(--top-h) - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:18px}
+.pop{position:fixed;z-index:255;right:max(var(--pad-lat),calc((100vw - var(--larghezza-max))/2 + var(--pad-lat)),env(safe-area-inset-right,0px));top:calc(var(--top-h) + 8px + env(safe-area-inset-top,0px));width:min(520px,calc(100vw - 32px));max-height:calc(100vh - var(--top-h) - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:18px}
 .pop[hidden]{display:none}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
 .pgrid:last-child{margin-bottom:0}
@@ -828,6 +829,29 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .file-in{width:100%;margin-bottom:10px}
 .mt-14b{margin-top:14px}
 .bad.link-warn{margin:10px 0 12px}
+
+/* ── schermi larghi: sotto i 1100px non cambia nulla; le finestre (.sheet, scheda volontario) restano fuori ── */
+@media (min-width:1100px){
+ .panel>.note,.note-page,.seg-text,.em-desc,.ric-msg{max-width:var(--larghezza-testo)}
+}
+@media (min-width:1280px){
+ .grid>button.card{display:flex;flex-direction:column}
+ .grid>button.card>.cfoot{margin-top:auto}
+ .home-cols{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .home-cols>.card{grid-column:span 2}
+ .home-cols>.card .lr .mid,.dot-rows .lr .mid,#epLista .lr .mid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);column-gap:18px;align-items:center}
+ .impo-grid,.sp-grid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+ .bot-grid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+ #panelInterventi>.cols{grid-template-columns:minmax(0,1fr) 400px}
+ .pst-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));align-items:start}
+ .ep-docs{grid-template-columns:repeat(auto-fill,minmax(420px,1fr))}
+ .al-riga,.al-corpo .kv{max-width:640px}
+}
+@media (min-width:1440px){
+ #intList .irow>.minw0{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:18px;align-items:center}
+ #intList .irow>.minw0>b,#intList .irow>.minw0>.sub{grid-column:1}
+ #intList .int-pills{grid-column:2;grid-row:1 / span 2;margin-top:0}
+}
 
 /* ══ CSS STORICO: viene eliminato pagina per pagina man mano che passa ai componenti sopra ══ */
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -2069,7 +2093,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=189"></script>
+<script src="area-riservata.js?v=190"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=1"></script>
 <script src="allerta-home.js?v=1"></script>

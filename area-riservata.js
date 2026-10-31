@@ -587,7 +587,7 @@ async function caricaHomeDashboard() {
     right += '</div>';
 
     grid.innerHTML = left
-      ? '<div class="cols">' + left + '<div class="stack">' + right + '</div></div>'
+      ? '<div class="cols home-cols">' + left + '<div class="stack">' + right + '</div></div>'
       : '<div class="stack">' + right + '</div>';
 
   } catch(e) {
