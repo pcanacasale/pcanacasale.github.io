@@ -855,6 +855,26 @@ body.ep-base .ep-completo{display:none}
 .fz-gruppo-b{border-top:1px solid var(--line)}
 @media (max-width:860px){.fz-row{grid-template-columns:1fr 1fr;gap:6px 12px}.fz-row.ihead{display:none}.fz-row>.minw0{grid-column:1 / -1;grid-row:2}}
 
+/* ── generatore convocazioni ── */
+.cv-campi{border:1px solid var(--line);min-width:0}
+.cv-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.cv-prev{position:sticky;top:calc(var(--top-h) + 16px);min-width:0}
+.cv-fogli{display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - var(--top-h) - 120px);overflow:auto;margin-bottom:12px}
+.cv-fogli canvas{display:block;width:100%;height:auto;border:1px solid var(--line2);border-radius:8px;background:var(--paper)}
+.cv-odg{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.cv-odg-n{width:24px;flex-shrink:0;font-weight:700;text-align:right}
+.cv-odg .btn{flex-shrink:0;padding:0 10px}
+.cv-liste{display:flex;flex-direction:column;gap:12px}
+.cv-membri{padding:6px 18px 14px}
+.cv-agg{display:flex;flex-direction:column;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.cv-agg label{font-size:12px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.cv-agg .fz-picker[hidden]{display:none}
+.cv-vol{display:flex;justify-content:space-between;gap:10px;width:100%;min-height:40px;align-items:center;border:0;background:none;color:inherit;text-align:left;flex-shrink:0}
+.cv-vol:hover{color:var(--accent)}
+#cvListe[hidden],#cvModulo[hidden]{display:none}
+body.cv-solo-vede .cv-gestione{display:none}
+@media (max-width:1099px){.cv-layout{grid-template-columns:1fr}.cv-prev{position:static}.cv-fogli{max-height:none}}
+
 /* ── schermi larghi: sotto i 1100px non cambia nulla; le finestre (.sheet, scheda volontario) restano fuori ── */
 @media (min-width:1100px){
  .panel>.note,.note-page,.seg-text,.em-desc,.ric-msg{max-width:var(--larghezza-testo)}
@@ -1077,6 +1097,7 @@ body.ep-base .ep-completo{display:none}
     <button id="siDotazioni" class="sidebar-item" onclick="navTo('dotazioni','Dotazioni',this)" style="display:none"></button>
     <button id="siInterventi" class="sidebar-item" onclick="navTo('interventi','Interventi',this)" style="display:none"></button>
     <button id="siSchedaPersonale" class="sidebar-item" onclick="navTo('schedapers','La mia scheda',this)" style="display:none"></button>
+    <button id="siConvocazioni" class="sidebar-item" onclick="navTo('convocazioni','Generatore convocazioni',this)" style="display:none"></button>
     <button id="siGalleria" class="sidebar-item" onclick="navTo('galleria','Galleria',this)" style="display:none"></button>
     <button id="siEditorPdf" class="sidebar-item" onclick="navTo('editorPdf','Editor PDF',this)" style="display:none"></button>
     <button id="siPostazioni" class="sidebar-item" onclick="navTo('postazioni','Postazioni',this)" style="display:none"></button>
@@ -1597,6 +1618,8 @@ body.ep-base .ep-completo{display:none}
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
             <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF base</label>
             <label class="perm-check"><input type="checkbox" id="permEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
+            <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni (vede)</label>
+            <label class="perm-check"><input type="checkbox" id="permConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
             <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti volontari</label>
             <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
             <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
@@ -1707,6 +1730,59 @@ body.ep-base .ep-completo{display:none}
       </div>
       <div id="epLista"></div>
       <p class="note">Firma elettronica semplice: va bene per moduli interni, prestiti e prese visione. Per atti formali verso enti serve la firma digitale. Il testo già presente nel PDF non si modifica.</p>
+    </div>
+
+    <!-- GENERATORE CONVOCAZIONI (logica in convocazioni.js) -->
+    <div class="panel" id="panelConvocazioni">
+      <div class="phead">
+        <div><h1>Generatore convocazioni</h1></div>
+        <div class="pact"><button class="btn cv-gestione" onclick="cvNuova()">Nuova convocazione</button></div>
+      </div>
+      <div class="chips mb18" id="cvTabs">
+        <button class="chip" data-tab="modulo" onclick="cvMostraTab('modulo')">Convocazione</button>
+        <button class="chip" data-tab="liste" onclick="cvMostraTab('liste')">Liste destinatari</button>
+      </div>
+      <p class="bad" id="cvAvviso" hidden></p>
+      <div id="cvModulo">
+        <div class="cv-layout">
+          <div class="stack">
+            <fieldset class="card form cv-campi" id="cvCampi">
+              <label>Oggetto<input id="cv_oggetto" oninput="cvAggiorna()"></label>
+              <div class="row2"><label>Data lettera<input id="cv_dataLettera" oninput="cvAggiorna()" type="date"></label><label>A: (destinatari)<input id="cv_destinatari" oninput="cvAggiorna()"></label></div>
+              <label class="chk"><input type="checkbox" id="cv_llss" onchange="cvAggiorna()"> Aggiungi "LL.SS."</label>
+              <div class="row2"><label>Data evento<input id="cv_dataEvento" oninput="cvAggiorna()" type="date"></label><label>Ora<input id="cv_ora" oninput="cvAggiorna()" type="time"></label></div>
+              <label>Luogo<input id="cv_luogo" oninput="cvAggiorna()"></label>
+              <label>Testo introduttivo <span class="sub inl">({luogo} viene sostituito dal luogo)</span><textarea id="cv_intro" rows="2" oninput="cvAggiorna()"></textarea></label>
+              <label>Testo dopo la data<textarea id="cv_dopoData" rows="2" oninput="cvAggiorna()"></textarea></label>
+              <div><span class="form-lbl">Ordine del giorno</span><div id="cvOdg"></div><button class="btn sm cv-gestione" onclick="cvAggiungiOdg()">+ Aggiungi punto</button></div>
+              <label>Testo di chiusura<textarea id="cv_chiusura" rows="2" oninput="cvAggiorna()"></textarea></label>
+              <div class="row2"><label>Nome firmatario<input id="cv_firmatario" oninput="cvAggiorna()"></label><label>Ruolo<input id="cv_ruolo" oninput="cvAggiorna()"></label></div>
+              <label>Firma<select id="cv_firma" disabled><option>Nessuna firma</option></select></label>
+              <p class="note m0">Nell'Editor PDF non c'è ancora una Libreria firme: lo spazio sul foglio resta vuoto per la firma a mano.</p>
+            </fieldset>
+            <div class="card form">
+              <h2>Invitati e calendario</h2>
+              <label>Lista destinatari<select id="cvLista" onchange="cvInfoInvitati()"><option value="">Nessuna lista</option></select></label>
+              <span class="sub" id="cvInvitatiInfo"></span>
+              <label>Durata in ore<input id="cv_durata" oninput="cvAggiorna()" type="number" min="0.5" step="0.5"></label>
+            </div>
+          </div>
+          <div class="cv-prev">
+            <div class="cv-fogli" id="cvAnteprima"><p class="note">Preparazione anteprima…</p></div>
+            <div class="actions">
+              <button class="btn" onclick="cvGoogleCalendar()">Aggiungi a Google Calendar</button>
+              <button class="btn" onclick="cvScaricaIcs()">Scarica .ics</button>
+              <button class="btn pri" id="cvBtnPdf" onclick="cvScaricaPdf()">Scarica PDF</button>
+            </div>
+            <p class="note" id="cvEsito"></p>
+          </div>
+        </div>
+        <div class="card mt18"><h2>Convocazioni recenti</h2><div id="cvRecenti"></div></div>
+      </div>
+      <div id="cvListe" hidden>
+        <div class="bar"><button class="btn pri" id="cvBtnNuovaLista" onclick="cvNuovaLista()" hidden>Nuova lista</button></div>
+        <div class="cv-liste" id="cvListeBox"></div>
+      </div>
     </div>
 
     <div class="panel" id="panelGalleria">
@@ -2086,6 +2162,8 @@ body.ep-base .ep-completo{display:none}
           <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
           <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF base</label>
           <label class="perm-check"><input type="checkbox" id="modPermEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
+          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> Convocazioni (vede)</label>
+          <label class="perm-check"><input type="checkbox" id="modPermConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
@@ -2154,11 +2232,12 @@ body.ep-base .ep-completo{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=192"></script>
+<script src="area-riservata.js?v=193"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=3"></script>
 <script src="allerta-home.js?v=1"></script>
 <script src="editor-pdf.js?v=2"></script>
 <script src="formazione.js?v=3"></script>
+<script src="convocazioni.js?v=1"></script>
 </body>
 </html>

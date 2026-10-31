@@ -217,6 +217,7 @@ const NAV_VOCI = [
   { id:'siPostazioni',      label:'Postazioni',         ic:'pin',     sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siGalleria',        label:'Galleria',           ic:'image',   sez:'Strumenti',       ruoli:NAV_RUOLI_TUTTI },
   { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siConvocazioni',    label:'Generatore convocazioni', ic:'send', sez:'Strumenti',      ruoli:NAV_RUOLI_STAFF },
   { id:'siVisite',          label:'Visite mediche',     ic:'heart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siFormazione',      label:'Formazione',         ic:'clip',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
@@ -353,7 +354,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siEmergenze','siBot','siPosizione','siVisite','siFormazione'
+      'siEmergenze','siBot','siPosizione','siVisite','siFormazione','siConvocazioni'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -385,6 +386,7 @@ function avviaDashboard() {
     if (hasPerm('tlc'))          showSi('siTlc');
     if (hasPerm('galleria'))     showSi('siGalleria');
     if (hasPerm('editor_pdf'))   showSi('siEditorPdf');
+    if (hasPerm('convocazioni')) showSi('siConvocazioni');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
@@ -458,6 +460,7 @@ function showPanel(name, btn) {
   if (name === 'tlc') caricaTlc();
   if (name === 'galleria') caricaGalleria();
   if (name === 'editorPdf') caricaEditorPdf();
+  if (name === 'convocazioni') caricaConvocazioni();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
@@ -762,6 +765,8 @@ async function salvaUtente() {
     galleria:     document.getElementById('permGalleria') ? document.getElementById('permGalleria').checked : false,
     editor_pdf:   document.getElementById('permEditorPdf') ? document.getElementById('permEditorPdf').checked : false,
     editor_pdf_completo: document.getElementById('permEditorPdfCompleto') ? document.getElementById('permEditorPdfCompleto').checked : false,
+    convocazioni: document.getElementById('permConvocazioni') ? document.getElementById('permConvocazioni').checked : false,
+    convocazioni_gestione: document.getElementById('permConvocazioniGestione') ? document.getElementById('permConvocazioniGestione').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
@@ -805,7 +810,7 @@ function apriModificaUtente(u) {
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo',
+    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo','Convocazioni':'convocazioni','ConvocazioniGestione':'convocazioni_gestione',
     'Impostazioni':'impostazioni','Statistiche':'statistiche',
     'Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
     'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione','AggDati':'aggiornamento_dati'
@@ -851,6 +856,8 @@ async function salvaModificaUtente() {
     galleria:     document.getElementById('modPermGalleria') ? document.getElementById('modPermGalleria').checked : false,
     editor_pdf:   document.getElementById('modPermEditorPdf') ? document.getElementById('modPermEditorPdf').checked : false,
     editor_pdf_completo: document.getElementById('modPermEditorPdfCompleto') ? document.getElementById('modPermEditorPdfCompleto').checked : false,
+    convocazioni: document.getElementById('modPermConvocazioni') ? document.getElementById('modPermConvocazioni').checked : false,
+    convocazioni_gestione: document.getElementById('modPermConvocazioniGestione') ? document.getElementById('modPermConvocazioniGestione').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
@@ -7011,6 +7018,8 @@ const PERMESSI_PAGINE = [
   { key: 'galleria',               label: 'Galleria' },
   { key: 'editor_pdf',             label: 'Editor PDF base' },
   { key: 'editor_pdf_completo',    label: 'Editor PDF completo' },
+  { key: 'convocazioni',           label: 'Convocazioni (vede)' },
+  { key: 'convocazioni_gestione',  label: 'Convocazioni: crea e gestisce liste' },
   { key: 'documenti',              label: 'Documenti volontari' },
   { key: 'statistiche',            label: 'Statistiche' },
   { key: 'db',                     label: 'DB Avanzato' },
@@ -7266,10 +7275,11 @@ function renderSchedaPersonale(v) {
     });
     html += '</div>';
   });
-  html += '<div class="card" id="spFormazione" hidden></div></div>';
+  html += '<div class="card" id="spFormazione" hidden></div><div class="card" id="spListe" hidden></div></div>';
 
   content.innerHTML = html;
   fzRenderPersonale(v.id);
+  cvRenderPersonale();
 }
 
 // -- SEGNALAZIONI --
