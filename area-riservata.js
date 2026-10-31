@@ -25,6 +25,7 @@ function avviaSplash() {
 
 // -- WELCOME SCREEN --
 function mostraWelcome(utente) {
+  if (sessionStorage.getItem('au_entrato')) return; // ricaricamento con sessione attiva
   var ws       = document.getElementById('welcomeScreen');
   var avatar   = document.getElementById('welcomeAvatar');
   var text     = document.getElementById('welcomeText');
@@ -422,6 +423,9 @@ function logout() {
   currentUser = null;
   sessionStorage.removeItem('ar_user');
   sessionStorage.removeItem('ar_pass');
+  sessionStorage.removeItem('ar_vol_cf');
+  sessionStorage.removeItem('ar_vol_data');
+  auEsci();
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   isMasterUser = false;
@@ -3119,7 +3123,7 @@ async function archiviaAttestato(idx, interventoId) {
     var path = r.v.id + '/ATTESTATO_' + interventoId + '_' + Date.now() + '.pdf';
     var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/attestati/' + path, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/pdf' },
+      headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': 'application/pdf' },
       body: r.blob
     });
     if (!uploadRes.ok) throw new Error('Errore upload');
@@ -3475,7 +3479,7 @@ async function eseguiUploadDoc() {
     bar.style.width = '30%';
     const uploadRes = await fetch(
       SUPA_URL + '/storage/v1/object/' + bucket + '/' + path,
-      { method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': docUploadFile.type }, body: docUploadFile }
+      { method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': docUploadFile.type }, body: docUploadFile }
     );
     bar.style.width = '70%';
     if (!uploadRes.ok) throw new Error('Errore upload storage');
@@ -4451,7 +4455,7 @@ async function pstCaricaImmagineMappa(file) {
   try {
     const path = pstIntervento.id + '/mappa_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const up = await fetch(SUPA_URL + '/storage/v1/object/mappe-postazioni/' + path, {
-      method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': file.type }, body: file
+      method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': file.type }, body: file
     });
     if (!up.ok) throw new Error('upload fallito');
     const url = SUPA_URL + '/storage/v1/object/public/mappe-postazioni/' + path;
@@ -8238,7 +8242,7 @@ async function eseguiUploadDocMezzo() {
   btn.disabled = true; btn.textContent = 'caricamento...';
   try {
     var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/documenti-mezzi/' + path, {
-      method:'POST', headers:{ 'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
+      method:'POST', headers:{ 'apikey':SUPA_KEY,'Authorization':H.Authorization,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
     });
     if (!uploadRes.ok) throw new Error('Errore upload storage');
     var url = SUPA_URL + '/storage/v1/object/public/documenti-mezzi/' + path;

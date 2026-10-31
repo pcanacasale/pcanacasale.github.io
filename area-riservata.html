@@ -528,6 +528,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .btn-login{width:100%;height:46px;margin-top:18px;border-radius:14px;border:1px solid var(--yellow);background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:15px}
 .btn-login:hover{filter:brightness(.96)}
 .btn-login:disabled{opacity:.5}
+.au-sep{margin:20px 0 0;font-size:13px;font-weight:700;color:var(--muted);text-align:center}
+.au-link{display:block;margin:16px auto 0;background:none;border:0;padding:6px;color:var(--muted);font-size:13px;font-weight:600;text-decoration:underline}
+.au-testo{font-size:15px;line-height:1.45}
+.au-info{margin-top:14px;font-size:14px;color:var(--muted)}
 .login-error{display:none;margin-top:12px;background:var(--red-soft);color:var(--red);padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600}
 
 /* ── utilità condivise (al posto degli stili inline) ── */
@@ -1043,6 +1047,35 @@ body.cv-solo-vede .cv-gestione{display:none}
       <h1>PC ANA Casale</h1>
     </div>
 
+    <!-- Nuovo accesso (accesso.js) -->
+    <div id="auNuovo">
+      <button class="btn-login" onclick="auGoogle()">Entra con Google</button>
+      <p class="au-sep">Oppure ricevi un codice via email</p>
+      <div id="auPassoEmail">
+        <label class="login-label" for="auEmail">Email</label>
+        <input class="login-input" type="email" id="auEmail" placeholder="nome@esempio.it" autocomplete="email" onkeydown="if(event.key==='Enter')auInviaCodice()">
+        <button class="btn-login" id="auBtnInvia" onclick="auInviaCodice()">Invia il codice</button>
+      </div>
+      <div id="auPassoCodice" hidden>
+        <p class="au-info" id="auCodiceInfo"></p>
+        <label class="login-label" for="auCodice">Codice a 6 cifre</label>
+        <input class="login-input" type="text" id="auCodice" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')auVerificaCodice()">
+        <button class="btn-login" id="auBtnVerifica" onclick="auVerificaCodice()">Accedi</button>
+        <button class="au-link" onclick="auCambiaEmail()">Cambia email o richiedi un nuovo codice</button>
+      </div>
+      <button class="au-link" onclick="auVista('vecchio')">Accesso con password (temporaneo)</button>
+    </div>
+
+    <div id="auAttesa" hidden><p class="au-testo">Verifica dell'accesso…</p></div>
+
+    <div id="auAvviso" hidden>
+      <p class="au-testo" id="auAvvisoTesto"></p>
+      <button class="btn-login" id="auBtnRiprova" onclick="auRiprova()" hidden>Riprova</button>
+      <button class="btn-login" onclick="auEsci()">Esci</button>
+    </div>
+
+    <!-- Vecchio accesso con password, temporaneo -->
+    <div id="auVecchio" hidden>
     <div class="seg login-tabs" role="group" aria-label="Tipo di accesso">
       <button class="login-tab active" id="ltabAdmin" onclick="switchLoginTab('admin')">Amministratori</button>
       <button class="login-tab" id="ltabVol" onclick="switchLoginTab('vol')">Volontari</button>
@@ -1064,6 +1097,8 @@ body.cv-solo-vede .cv-gestione{display:none}
       <label class="login-label">Data di nascita</label>
       <input class="login-input" type="date" id="loginVolData">
       <button class="btn-login" onclick="doLoginVolontario()">Accedi come volontario</button>
+    </div>
+    <button class="au-link" onclick="auVista('nuovo')">Torna all'accesso con Google o email</button>
     </div>
 
     <div class="login-error" id="loginError"></div>
@@ -2231,13 +2266,15 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=193"></script>
+<script src="area-riservata.js?v=194"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=3"></script>
 <script src="allerta-home.js?v=1"></script>
 <script src="editor-pdf.js?v=2"></script>
 <script src="formazione.js?v=3"></script>
 <script src="convocazioni.js?v=1"></script>
+<script src="accesso.js?v=1"></script>
 </body>
 </html>
