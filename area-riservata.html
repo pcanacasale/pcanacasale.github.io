@@ -677,6 +677,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .al-piede .go{font-weight:700;color:var(--accent);text-decoration:none}
 @media (max-width:420px){.al-riga{grid-template-columns:1fr 84px 84px}}
 /* ── editor PDF ── */
+body.ep-base .ep-completo{display:none}
 .ep-apri{display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px 16px;text-align:center;border:2px dashed var(--line2);border-radius:20px;background:var(--surface);color:var(--accent);cursor:pointer}
 .ep-apri:hover{border-color:var(--accent)}
 .ep-apri b{font-size:17px;font-weight:800}
@@ -1199,7 +1200,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
         <button class="chip" data-tipo="x" onclick="epArma('x')">X</button>
         <button class="chip" data-tipo="v" onclick="epArma('v')">Spunta</button>
         <button class="chip" data-tipo="firma" onclick="epApriFirma()">Firma</button>
-        <button class="chip" data-tipo="campo_firma" onclick="epArma('campo_firma')">Firma a distanza</button>
+        <button class="chip ep-completo" data-tipo="campo_firma" onclick="epArma('campo_firma')">Firma a distanza</button>
       </div>
       <p class="ep-avviso" id="epAvviso" hidden>Tocca il punto del foglio dove metterlo.</p>
       <div class="ep-prop" id="epProp" hidden>
@@ -1211,8 +1212,8 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
       </div>
       <div class="ep-pagine" id="epPagine"></div>
       <div class="ep-foot">
-        <button class="btn" onclick="epApriModelloDialogo()">Salva modello</button>
-        <button class="btn" id="epBtnInvia" onclick="epInvia()">Invia in firma</button>
+        <button class="btn ep-completo" onclick="epApriModelloDialogo()">Salva modello</button>
+        <button class="btn ep-completo" id="epBtnInvia" onclick="epInvia()">Invia in firma</button>
         <button class="btn" onclick="epStampa()">Stampa</button>
         <button class="btn pri" onclick="epScarica()">Scarica PDF</button>
       </div>
@@ -1594,10 +1595,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
             <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
             <label class="perm-check"><input type="checkbox" id="permFormazione"> Formazione</label>
             <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
-            <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF</label>
-            <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti</label>
+            <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF base</label>
+            <label class="perm-check"><input type="checkbox" id="permEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
+            <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti volontari</label>
             <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
-            <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni</label>
             <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
             <label class="perm-check"><input type="checkbox" id="permAccessi"> Accessi</label>
             <label class="perm-check"><input type="checkbox" id="permGestioneSegnalazioni"> Gestione Segnalazioni</label>
@@ -1699,10 +1700,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
     <!-- EDITOR PDF (logica in editor-pdf.js) -->
     <div class="panel" id="panelEditorPdf">
       <div class="phead"><div><h1>Editor PDF</h1></div></div>
-      <label class="ep-apri mb18"><input type="file" accept="application/pdf,.pdf" hidden onchange="epFileScelto(this)"><b>Apri un PDF</b><span class="sub">Aggiungi testi, date, segni e firme, gira le pagine, poi scarica. Massimo 20 MB.</span></label>
+      <label class="ep-apri mb18 ep-completo"><input type="file" accept="application/pdf,.pdf" hidden onchange="epFileScelto(this)"><b>Apri un PDF</b><span class="sub">Aggiungi testi, date, segni e firme, gira le pagine, poi scarica. Massimo 20 MB.</span></label>
       <div class="chips mb18" id="epTabs">
         <button class="chip" data-tab="modelli" onclick="epMostraTab('modelli')">Modelli</button>
-        <button class="chip" data-tab="firme" onclick="epMostraTab('firme')">Firme</button>
+        <button class="chip ep-completo" data-tab="firme" onclick="epMostraTab('firme')">Firme</button>
       </div>
       <div id="epLista"></div>
       <p class="note">Firma elettronica semplice: va bene per moduli interni, prestiti e prese visione. Per atti formali verso enti serve la firma digitale. Il testo già presente nel PDF non si modifica.</p>
@@ -2079,15 +2080,15 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
           <label class="perm-check"><input type="checkbox" id="modPermMezzi"> Mezzi</label>
           <label class="perm-check"><input type="checkbox" id="modPermTlc"> TLC</label>
           <label class="perm-check"><input type="checkbox" id="modPermDb"> DB Avanzato</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti</label>
+          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti volontari</label>
           <label class="perm-check"><input type="checkbox" id="modPermVisite"> Visite Mediche</label>
           <label class="perm-check"><input type="checkbox" id="modPermFormazione"> Formazione</label>
           <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF base</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> Convocazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermAccessi"> Accessi</label>
           <label class="perm-check"><input type="checkbox" id="modPermGestioneSegnalazioni"> Gestione Segnalazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermBot"> Bot</label>
@@ -2153,11 +2154,11 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=191"></script>
+<script src="area-riservata.js?v=192"></script>
 <script src="aggiornamento-dati.js?v=11"></script>
 <script src="scheda-volontario.js?v=3"></script>
 <script src="allerta-home.js?v=1"></script>
-<script src="editor-pdf.js?v=1"></script>
+<script src="editor-pdf.js?v=2"></script>
 <script src="formazione.js?v=3"></script>
 </body>
 </html>

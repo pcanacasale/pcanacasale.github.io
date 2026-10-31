@@ -64,7 +64,15 @@ function epCaricaLibrerie() {
 }
 
 // -- PAGINA: MODELLI E FIRME --
-function caricaEditorPdf() { epMostraTab(epTab); }
+// Base: compila i modelli e scarica. Completo (editor_pdf_completo): crea modelli e manda in firma.
+// Stessa regola in editor-pdf-firma: qui nasconde soltanto i comandi.
+function epCompleto() { return hasPerm('editor_pdf_completo'); }
+
+function caricaEditorPdf() {
+  document.body.classList.toggle('ep-base', !epCompleto());
+  if (!epCompleto()) epTab = 'modelli';
+  epMostraTab(epTab);
+}
 
 function epMostraTab(tab) {
   epTab = tab;
@@ -81,7 +89,7 @@ async function epCaricaModelli() {
     box.innerHTML = modelli.length ? '<div class="card">' + modelli.map(m => '<div class="lr"><div class="mid"><b>' + aggEsc(m.nome) + '</b>'
         + '<span class="sub">' + (m.elementi || []).length + ' elementi · ' + new Date(m.aggiornato_il).toLocaleDateString('it-IT') + '</span></div>'
         + '<button class="btn sm" onclick="epApriModello(\'' + m.id + '\')">Compila</button>'
-        + '<button class="btn sm danger" aria-label="Elimina modello" onclick="epEliminaModello(\'' + m.id + '\')">✕</button></div>').join('') + '</div>'
+        + '<button class="btn sm danger ep-completo" aria-label="Elimina modello" onclick="epEliminaModello(\'' + m.id + '\')">✕</button></div>').join('') + '</div>'
       : '<div class="empty">Nessun modello. Apri un PDF, prepara i campi e salvalo come modello.</div>';
   } catch(e) { box.innerHTML = '<p class="bad">' + aggEsc(e.message) + '</p>'; }
 }

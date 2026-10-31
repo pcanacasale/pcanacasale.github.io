@@ -68,7 +68,7 @@ const ampiezzaValida = (c: any) =>
   c && typeof c.id === "string" && c.id && Number(c.pagina) >= 1 &&
   [c.x, c.y, c.larghezza, c.altezza].every((n) => Number.isFinite(Number(n))) && Number(c.larghezza) > 0 && Number(c.altezza) > 0;
 
-type Utente = { id: string; nome: string };
+type Utente = { id: string; nome: string; completo: boolean };
 
 // Stessa regola di hasPerm(): master sì salvo permesso tolto, standard solo se concesso, volontari mai
 async function utenteAutorizzato(b: any): Promise<Utente | null> {
@@ -79,7 +79,9 @@ async function utenteAutorizzato(b: any): Promise<Utente | null> {
   if (!u || u.tipo_accesso === "volontario") return null;
   const p = u.permessi?.editor_pdf;
   if (p === false) return null;
-  return u.tipo_accesso === "master" || p ? { id: u.id, nome: u.nome } : null;
+  if (u.tipo_accesso !== "master" && !p) return null;
+  const c = u.permessi?.editor_pdf_completo;
+  return { id: u.id, nome: u.nome, completo: c === false ? false : u.tipo_accesso === "master" || !!c };
 }
 
 type Richiesta = {
@@ -372,6 +374,8 @@ async function modelloElimina(u: Utente, b: any) {
 }
 
 // ---------- router ----------
+// Livello base: legge i modelli e li compila nel browser. Tutto il resto richiede editor_pdf_completo.
+const AZIONI_BASE = new Set(["modelli_lista", "modello_url"]);
 const RISERVATE: Record<string, (u: Utente, b: any) => Promise<Response>> = {
   crea, revoca,
   documento_nuovo: documentoNuovo, documento_conferma: documentoConferma,
@@ -392,7 +396,7 @@ Deno.serve(async (req) => {
     const azione = RISERVATE[b?.azione];
     if (!azione) return json({ errore: "azione_sconosciuta" }, 400);
     const u = await utenteAutorizzato(b);
-    if (!u) return json({ errore: "non_autorizzato" }, 401);
+    if (!u || (!u.completo && !AZIONI_BASE.has(b.azione))) return json({ errore: "non_autorizzato" }, 401);
     return await azione(u, b);
   } catch (e) {
     console.error(e);
