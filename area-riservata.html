@@ -836,6 +836,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 }
 @media (min-width:1280px){
  .grid>button.card{display:flex;flex-direction:column}
+ .grid>button.card>:has(+.cfoot){margin-bottom:14px}
  .grid>button.card>.cfoot{margin-top:auto}
  .home-cols{grid-template-columns:repeat(3,minmax(0,1fr))}
  .home-cols>.card{grid-column:span 2}
