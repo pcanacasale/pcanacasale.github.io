@@ -44,9 +44,11 @@ function cvGestisce() { return hasPerm('convocazioni_gestione'); }
 function cvEl(id) { return document.getElementById(id); }
 
 async function cvApi(azione, dati) {
+  const token = await auToken();
+  if (!token) throw new Error('Liste e storico richiedono l\'accesso con Google o con il codice email.');
   const res = await fetch(SUPA_URL + '/rest/v1/rpc/conv_api', {
-    method: 'POST', headers: HJ,
-    body: JSON.stringify({ p_username: sessionStorage.getItem('ar_user'), p_password: sessionStorage.getItem('ar_pass'), p_azione: azione, p_dati: dati || {} }),
+    method: 'POST', headers: Object.assign({}, HJ, { 'Authorization': 'Bearer ' + token }),
+    body: JSON.stringify({ p_azione: azione, p_dati: dati || {} }),
   });
   if (!res.ok) throw new Error('Archivio non disponibile. Se è la prima apertura, va eseguito supabase/convocazioni.sql.');
   const r = await res.json();
@@ -523,10 +525,10 @@ function cvAggiungiEsterno() {
 // -- LISTE IN "LA MIA SCHEDA" (sola lettura) --
 async function cvRenderPersonale() {
   const box = cvEl('spListe');
-  const cf = sessionStorage.getItem('ar_vol_cf'), data = sessionStorage.getItem('ar_vol_data');
-  if (!box || !cf || !data) return;
+  const token = await auToken();
+  if (!box || !token) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/rpc/conv_mie_liste', { method: 'POST', headers: HJ, body: JSON.stringify({ p_cf: cf, p_data_nascita: data }) });
+    const res = await fetch(SUPA_URL + '/rest/v1/rpc/conv_mie_liste', { method: 'POST', headers: Object.assign({}, HJ, { 'Authorization': 'Bearer ' + token }), body: '{}' });
     if (!res.ok) throw new Error('errore');
     const r = await res.json();
     if (!r.liste || !r.liste.length) return;

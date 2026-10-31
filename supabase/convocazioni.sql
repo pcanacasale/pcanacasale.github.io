@@ -1,18 +1,16 @@
--- Generatore convocazioni: liste destinatari e storico. Solo tabelle e funzioni nuove,
--- nessuna modifica alle esistenti. Eseguire una volta dall'SQL Editor di Supabase;
+-- Generatore convocazioni: liste destinatari e storico. Eseguire una volta dall'SQL Editor di Supabase;
 -- si può rieseguire.
 --
--- Il sito non usa l'autenticazione di Supabase: ogni richiesta arriva con la stessa
--- chiave anonima, quindi una policy RLS non può sapere chi sta chiedendo. Per questo RLS è
--- attiva SENZA policy (la chiave anonima non legge né scrive nulla) e si passa solo dalle
--- funzioni qui sotto, che ricontrollano ogni volta le credenziali:
+-- RLS è attiva SENZA policy: nessuno legge o scrive le tabelle direttamente. Si passa
+-- solo dalle funzioni qui sotto, che riconoscono chi chiama dal token della sessione:
 --   conv_api       -> utenti dell'area riservata, secondo i permessi
 --   conv_mie_liste -> volontario: sola lettura delle liste di cui fa parte
 --
--- Permessi, con la stessa regola di hasPerm() (master sì salvo permesso tolto,
--- standard solo se concesso, volontari mai):
+-- Permessi, verificati con public.ho_permesso (volontari mai):
 --   convocazioni           -> vede convocazioni e liste
 --   convocazioni_gestione  -> crea convocazioni e gestisce le liste (richiede anche l'altra)
+--
+-- Richiede mio_profilo, mio_tipo, mio_volontario_id e ho_permesso, già nel database.
 
 create table if not exists public.liste_convocazioni (
   id        bigint generated always as identity primary key,
@@ -48,37 +46,35 @@ alter table public.liste_convocazioni_membri enable row level security;
 alter table public.convocazioni enable row level security;
 revoke all on public.liste_convocazioni, public.liste_convocazioni_membri, public.convocazioni from anon, authenticated;
 
+-- Versioni precedenti, con username e password o codice fiscale e data di nascita
+drop function if exists public.conv_api(text, text, text, jsonb);
+drop function if exists public.conv_livello(text, text);
+drop function if exists public.conv_mie_liste(text, date);
+
 -- 0 nessun accesso, 1 vede, 2 crea e gestisce. Non esposta: la usa solo conv_api.
-create or replace function public.conv_livello(p_username text, p_password text, out livello int, out nome text)
-language plpgsql stable security definer set search_path = public as $$
+create or replace function public.conv_livello(out livello int, out nome text)
+language plpgsql security definer set search_path = public as $$
 declare
-  u record;
-  v jsonb;
-  g jsonb;
+  p jsonb;
 begin
   livello := 0;
-  select * into u from public.utenti
-    where username = p_username and password = p_password and attivo = true limit 1;
-  if not found or u.tipo_accesso = 'volontario' then return; end if;
-  nome := u.nome;
-  v := u.permessi -> 'convocazioni';
-  g := u.permessi -> 'convocazioni_gestione';
-  if v = 'false'::jsonb then return; end if;
-  if u.tipo_accesso <> 'master' and v is distinct from 'true'::jsonb then return; end if;
-  livello := 1;
-  if g = 'false'::jsonb then return; end if;
-  if u.tipo_accesso = 'master' or g = 'true'::jsonb then livello := 2; end if;
+  if coalesce(public.mio_tipo(), 'volontario') = 'volontario' then return; end if;
+  if not coalesce(public.ho_permesso('convocazioni'), false) then return; end if;
+  select to_jsonb(x) into p from public.mio_profilo() x limit 1;
+  p := coalesce(p -> 'x', p);   -- mio_profilo può restituire righe o un singolo json
+  nome := nullif(concat_ws(' ', p ->> 'cognome', p ->> 'nome'), '');
+  livello := case when coalesce(public.ho_permesso('convocazioni_gestione'), false) then 2 else 1 end;
 end $$;
-revoke all on function public.conv_livello(text, text) from public, anon, authenticated;
+revoke all on function public.conv_livello() from public, anon, authenticated;
 
-create or replace function public.conv_api(p_username text, p_password text, p_azione text, p_dati jsonb default '{}')
+create or replace function public.conv_api(p_azione text, p_dati jsonb default '{}')
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   u record;
   nuovo bigint;
   esito bigint;
 begin
-  select * into u from public.conv_livello(p_username, p_password);
+  select * into u from public.conv_livello();
   if u.livello < 1 then return jsonb_build_object('errore', 'non_autorizzato'); end if;
 
   -- lettura
@@ -149,16 +145,14 @@ begin
   return jsonb_build_object('errore', 'azione_sconosciuta');
 end $$;
 
--- Volontario: stesse credenziali del login. Vede nomi di liste e membri, mai le email.
-create or replace function public.conv_mie_liste(p_cf text, p_data_nascita date)
+-- Volontario collegato alla sessione. Vede nomi di liste e membri, mai le email.
+create or replace function public.conv_mie_liste()
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare
   vol bigint;
 begin
   select id into vol from public.volontari
-    where upper(codice_fiscale) = upper(p_cf) and data_nascita = p_data_nascita
-      and coalesce(stato, 'ATTIVO') <> 'DIMESSO'
-    limit 1;
+    where id = public.mio_volontario_id() and coalesce(stato, 'ATTIVO') <> 'DIMESSO';
   if vol is null then return jsonb_build_object('errore', 'non_autorizzato'); end if;
   return jsonb_build_object('liste', coalesce((
     select jsonb_agg(jsonb_build_object('nome', l.nome, 'membri', (
@@ -171,7 +165,7 @@ begin
   ), '[]'::jsonb));
 end $$;
 
-revoke all on function public.conv_api(text, text, text, jsonb) from public;
-revoke all on function public.conv_mie_liste(text, date) from public;
-grant execute on function public.conv_api(text, text, text, jsonb) to anon, authenticated;
-grant execute on function public.conv_mie_liste(text, date) to anon, authenticated;
+revoke all on function public.conv_api(text, jsonb) from public, anon, authenticated;
+revoke all on function public.conv_mie_liste() from public, anon, authenticated;
+grant execute on function public.conv_api(text, jsonb) to authenticated;
+grant execute on function public.conv_mie_liste() to authenticated;

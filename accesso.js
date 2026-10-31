@@ -86,6 +86,13 @@ function auImpostaToken(session) {
   HJ.Authorization = bearer;
 }
 
+// Token aggiornato per le funzioni protette; null con il vecchio accesso
+async function auToken() {
+  if (!auClient) return null;
+  const { data } = await auClient.auth.getSession();
+  return data.session ? data.session.access_token : null;
+}
+
 function auAvviso(testo, riprova) {
   auEl('auAvvisoTesto').textContent = testo;
   auEl('auBtnRiprova').hidden = !riprova;
