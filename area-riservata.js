@@ -229,16 +229,13 @@ const NAV_VOCI = [
   { id:'siDb',              label:'DB',                 ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAccessi',         label:'Registro accessi',   ic:'shield',  sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siImpostazioni',    label:'Impostazioni',       ic:'gear',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
-  { id:'siBot',             label:'Bot',                ic:'send',    sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
-  { id:'siPosizione',       label:'Posizione',          ic:'pin',     sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
-  { id:'siEmergenze',       label:'Emergenze',          ic:'alert',   sez:'S.G.E.',          ruoli:NAV_RUOLI_STAFF },
 ];
 const NAV_IC = {
   home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
   user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
   truck:'M2 6h12v10H2zM14 10h4l4 3v3h-8M6 19a1 1 0 1 0 .01 0M18 19a1 1 0 1 0 .01 0',
   box:'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10', clock:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2',
-  clip:'M8 4h8v3H8zM6 5H5v16h14V5h-1M9 12h6M9 16h6', alert:'M12 3l10 18H2zM12 10v5M12 18v.5',
+  clip:'M8 4h8v3H8zM6 5H5v16h14V5h-1M9 12h6M9 16h6',
   flag:'M5 21V4M5 4h12l-2 4 2 4H5', refresh:'M20 11a8 8 0 0 0-14-4M4 4v4h4M4 13a8 8 0 0 0 14 4M20 20v-4h-4',
   shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', gear:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
   file:'M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h4', heart:'M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11',
@@ -365,7 +362,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siEmergenze','siBot','siPosizione','siVisite','siFormazione','siConvocazioni'
+      'siVisite','siFormazione','siConvocazioni'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -402,9 +399,6 @@ function avviaDashboard() {
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
     showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
-    if (hasPerm('emergenze'))    showSi('siEmergenze');
-    if (hasPerm('bot'))          showSi('siBot');
-    if (hasPerm('posizione'))    showSi('siPosizione');
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (hasPerm('impostazioni')) showSi('siImpostazioni');
   }
@@ -478,9 +472,6 @@ function showPanel(name, btn) {
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
-  if (name === 'emergenze') caricaEmergenze();
-  if (name === 'bot') caricaBot();
-  if (name === 'posizione') caricaPosizioni();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -786,9 +777,6 @@ async function salvaUtente() {
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
     accessi:      document.getElementById('permAccessi') ? document.getElementById('permAccessi').checked : false,
     gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
-    bot:          document.getElementById('permBot') ? document.getElementById('permBot').checked : false,
-    emergenze:    document.getElementById('permEmergenze') ? document.getElementById('permEmergenze').checked : false,
-    posizione:    document.getElementById('permPosizione') ? document.getElementById('permPosizione').checked : false,
     aggiornamento_dati: document.getElementById('permAggDati') ? document.getElementById('permAggDati').checked : false,
   };
   const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
@@ -827,7 +815,7 @@ function apriModificaUtente(u) {
     'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo','Convocazioni':'convocazioni','ConvocazioniGestione':'convocazioni_gestione',
     'Impostazioni':'impostazioni','Statistiche':'statistiche',
     'Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
-    'Bot':'bot','Emergenze':'emergenze','Posizione':'posizione','AggDati':'aggiornamento_dati'
+    'AggDati':'aggiornamento_dati'
   };
   // Come nella Matrice permessi: un master ha accesso di default, quindi la
   // casella è spuntata salvo permesso esplicitamente false (altrimenti salvando
@@ -877,9 +865,6 @@ async function salvaModificaUtente() {
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
     accessi:        document.getElementById('modPermAccessi') ? document.getElementById('modPermAccessi').checked : false,
     gestione_segnalazioni: document.getElementById('modPermGestioneSegnalazioni') ? document.getElementById('modPermGestioneSegnalazioni').checked : false,
-    bot:            document.getElementById('modPermBot') ? document.getElementById('modPermBot').checked : false,
-    emergenze:      document.getElementById('modPermEmergenze') ? document.getElementById('modPermEmergenze').checked : false,
-    posizione:      document.getElementById('modPermPosizione') ? document.getElementById('modPermPosizione').checked : false,
     aggiornamento_dati: document.getElementById('modPermAggDati') ? document.getElementById('modPermAggDati').checked : false,
   };
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
@@ -2148,25 +2133,6 @@ async function apriDettaglioIntervento(id) {
       } catch(e) {}
     }
 
-    // Posizioni tracciate e segnalazioni di emergenza agganciate a questo intervento (sezione mostrata solo se presenti)
-    let posSegPosizioni = [], posSegSegnalazioni = [];
-    try {
-      const psr = await caricaPosizioniSegnalazioniIntervento(i.id);
-      posSegPosizioni = psr.posizioni;
-      posSegSegnalazioni = psr.segnalazioni;
-    } catch(e) {}
-    let posSegSection = '';
-    if (posSegPosizioni.length || posSegSegnalazioni.length) {
-      posSegSection = `<div class="vol-section">
-        <div class="vol-section-head">Posizioni e segnalazioni</div>
-        <div class="vol-section-body">
-          ${posSegPosizioni.length ? `<div id="intDetailMap" class="mini-map tall"></div>
-          <div id="intDetailPosLista" class="mb12"></div>` : ''}
-          ${posSegSegnalazioni.length ? `<div id="intDetailEmergContent"></div>` : ''}
-        </div>
-      </div>`;
-    }
-
     // Se è una macro, carica i figli
     let macroSection = '';
     if (i.is_macro) {
@@ -2254,24 +2220,11 @@ async function apriDettaglioIntervento(id) {
           <p class="note-text">${volNomi}</p>
         </div>
       </div>
-      ${posSegSection}
       ${macroSection}
       ${i.note ? `<div class="vol-section">
         <div class="vol-section-head">Note</div>
         <div class="vol-section-body"><p class="note-text">${i.note}</p></div>
       </div>` : ''}
-      <div class="vol-section" id="intPosizioneSection" style="display:none">
-        <div class="vol-section-head">Percorso GPS condiviso</div>
-        <div class="vol-section-body">
-          <div id="intDetailMap" class="mini-map"></div>
-        </div>
-      </div>
-      <div class="vol-section" id="intFotoSection" style="display:none">
-        <div class="vol-section-head">Foto segnalazioni</div>
-        <div class="vol-section-body">
-          <div class="gall-photos" id="intDetailGallery"></div>
-        </div>
-      </div>
       <div class="int-azioni">
         <button class="btn" onclick="stampaIntervento(${i.id})">Esporta CF</button>
         <button class="btn" onclick="apriGeneratoreAttestati(${i.id})">Attestati</button>
@@ -2280,61 +2233,7 @@ async function apriDettaglioIntervento(id) {
       </div>
       <button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>`;
 
-    if (posSegPosizioni.length) renderPosizioni(posSegPosizioni, 'intDetail', 'intDetailMap', 'intDetailPosLista');
-    if (posSegSegnalazioni.length) renderEmergenze(posSegSegnalazioni, 'intDetailEmergContent', { azione: false });
   } catch(e) { body.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
-}
-
-async function caricaDettaglioPosizioniEFoto(interventoId) {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId, { headers: H });
-    const arr = await res.json();
-    const sezione = document.getElementById('intPosizioneSection');
-    const mapEl = document.getElementById('intDetailMap');
-    if (sezione && mapEl && arr && arr.length && typeof L !== 'undefined') {
-      sezione.style.display = '';
-      const map = L.map('intDetailMap');
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-      }).addTo(map);
-      const gruppi = new Map();
-      arr.forEach(p => {
-        const v = p.volontario || {};
-        const key = p.volontario_id != null ? p.volontario_id : ((v.cognome || '') + '|' + (v.nome || ''));
-        if (!gruppi.has(key)) gruppi.set(key, []);
-        gruppi.get(key).push([p.lat, p.lon]);
-      });
-      const bounds = [];
-      let colorIdx = 0;
-      gruppi.forEach(latlngs => {
-        const colore = POSIZIONE_PALETTE[colorIdx % POSIZIONE_PALETTE.length];
-        colorIdx++;
-        latlngs.forEach(ll => bounds.push(ll));
-        if (latlngs.length > 1) L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(map);
-        L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(map);
-      });
-      setTimeout(() => {
-        map.invalidateSize();
-        if (bounds.length === 1) map.setView(bounds[0], 15);
-        else if (bounds.length > 1) map.fitBounds(bounds, { padding: [20, 20] });
-      }, 0);
-    }
-  } catch(e) {}
-
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=foto_url,descrizione,creato_il&intervento_id=eq.' + interventoId + '&foto_url=not.is.null&order=creato_il.desc', { headers: H });
-    const arr = await res.json();
-    const sezione = document.getElementById('intFotoSection');
-    const gall = document.getElementById('intDetailGallery');
-    if (sezione && gall && arr && arr.length) {
-      sezione.style.display = '';
-      gall.innerHTML = arr.map(f =>
-        '<div class="gall-photo" onclick="window.open(\'' + f.foto_url + '\',\'_blank\')">'
-        + '<img src="' + f.foto_url + '" loading="lazy" alt="' + (f.descrizione ? f.descrizione.replace(/"/g,'&quot;') : '') + '">'
-        + '</div>'
-      ).join('');
-    }
-  } catch(e) {}
 }
 
 function chiudiDettaglioIntervento() {
@@ -7046,9 +6945,6 @@ const PERMESSI_PAGINE = [
   { key: 'db',                     label: 'DB Avanzato' },
   { key: 'accessi',                label: 'Accessi' },
   { key: 'gestione_segnalazioni',  label: 'Gestione Segnalazioni' },
-  { key: 'bot',                    label: 'Bot' },
-  { key: 'emergenze',              label: 'Emergenze' },
-  { key: 'posizione',              label: 'Posizione' },
   { key: 'impostazioni',           label: 'Impostazioni' },
   { key: 'aggiornamento_dati',     label: 'Aggiornamento dati' },
 ];
@@ -7451,439 +7347,6 @@ async function caricaBadgeSegnalazioni() {
     }
   } catch(e) {}
 }
-
-// -- EMERGENZE (segnalazioni di emergenza dal bot Telegram) --
-async function caricaEmergenze() {
-  const content = document.getElementById('emergenzeContent');
-  if (!content) return;
-  content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?select=*,volontario:volontario_id(cognome,nome),intervento:intervento_id(evento,data)&order=gestita.asc,creato_il.desc', { headers: H });
-    const arr = await res.json();
-    renderEmergenze(arr || []);
-  } catch(e) {
-    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
-  }
-}
-
-function renderEmergenze(list, contentElId, opts) {
-  contentElId = contentElId || 'emergenzeContent';
-  const mostraAzione = !opts || opts.azione !== false;
-  const content = document.getElementById(contentElId);
-  if (!content) return;
-  if (!list.length) {
-    content.innerHTML = '<div class="empty">Nessuna segnalazione di emergenza.</div>';
-    return;
-  }
-  let html = '<div class="grid g3">';
-  list.forEach(s => {
-    const v      = s.volontario || {};
-    const data   = new Date(s.creato_il).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    const statoLbl = s.gestita
-      ? '<span class="pill p-grey">Gestita</span>'
-      : '<span class="pill p-yellow">Da gestire</span>';
-    const mapLink = (s.lat != null && s.lon != null)
-      ? '<a href="https://maps.google.com/?q=' + s.lat + ',' + s.lon + '" target="_blank" rel="noopener" class="btn sm">Vedi posizione</a>'
-      : '';
-    const intervento = s.intervento || null;
-    html += '<div class="card em-card">'
-      + '<div class="vc"><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
-      + (intervento ? '<span class="sub mt10">Intervento: <b class="fg">' + (intervento.evento || '—') + '</b></span>' : '')
-      + (s.foto_url ? '<a href="' + s.foto_url + '" target="_blank" rel="noopener" class="thumb em-foto"><img src="' + s.foto_url + '" alt=""></a>' : '')
-      + (s.descrizione ? '<p class="em-desc">' + s.descrizione + '</p>' : '')
-      + ((mapLink || mostraAzione)
-        ? '<div class="em-azioni">' + mapLink
-          + (mostraAzione
-            ? (s.gestita
-                ? '<button class="btn sm" onclick="cambiaStatoEmergenza(' + s.id + ', false)">Riapri</button>'
-                : '<button class="btn sm pri" onclick="cambiaStatoEmergenza(' + s.id + ', true)">Segna come gestita</button>')
-            : '')
-          + '</div>'
-        : '')
-      + '</div>';
-  });
-  content.innerHTML = html + '</div>';
-}
-
-async function cambiaStatoEmergenza(id, gestita) {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?id=eq.' + id, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ gestita: gestita })
-    });
-    if (!res.ok) throw new Error('errore');
-    caricaEmergenze();
-  } catch(e) { alert('Errore.'); }
-}
-
-// -- BOT TELEGRAM (permessi + broadcast + intervento attivo) --
-function caricaBot() {
-  caricaBotPermessi();
-  caricaBotInterventoAttivo();
-}
-
-let botPermessiAll = [];
-let botInterventoAttivoId = null;
-
-async function caricaInterventiRecenti() {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=id,evento,data&order=data.desc&limit=30', { headers: H });
-    return await res.json() || [];
-  } catch(e) { return []; }
-}
-
-async function caricaBotInterventoAttivo() {
-  const sel = document.getElementById('botInterventoAttivo');
-  if (!sel) return;
-  const interventi = await caricaInterventiRecenti();
-  let html = '<option value="">— nessuno —</option>';
-  interventi.forEach(i => {
-    const dataLbl = i.data ? new Date(i.data).toLocaleDateString('it-IT') : '';
-    html += '<option value="' + i.id + '">' + (i.evento || '—') + (dataLbl ? ' (' + dataLbl + ')' : '') + '</option>';
-  });
-  sel.innerHTML = html;
-  // Best-effort: rileggi lo stato corrente da bot_config, se presente
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/bot_config?select=intervento_attivo_id&limit=1', { headers: H });
-    const arr = await res.json();
-    const row = (arr || [])[0];
-    if (row && row.intervento_attivo_id) {
-      botInterventoAttivoId = row.intervento_attivo_id;
-      sel.value = String(botInterventoAttivoId);
-    }
-  } catch(e) {}
-  botRenderInterventoAttivoLbl();
-}
-
-function botRenderInterventoAttivoLbl() {
-  const sel = document.getElementById('botInterventoAttivo');
-  const lbl = document.getElementById('botInterventoAttivoLbl');
-  if (!lbl) return;
-  if (botInterventoAttivoId && sel) {
-    const opt = sel.querySelector('option[value="' + botInterventoAttivoId + '"]');
-    lbl.textContent = 'Attivo: ' + (opt ? opt.textContent : botInterventoAttivoId);
-  } else {
-    lbl.textContent = 'Nessun intervento attivo';
-  }
-}
-
-async function botImpostaInterventoAttivo() {
-  const sel = document.getElementById('botInterventoAttivo');
-  if (!sel) return;
-  const val = sel.value || null;
-  try {
-    const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
-      method: 'POST', headers: await headersFunzioneProtetta(),
-      body: JSON.stringify({ action: 'set_intervento_attivo', intervento_id: val })
-    });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(out.error || 'riprova.');
-    botInterventoAttivoId = val;
-    botRenderInterventoAttivoLbl();
-    alert(val ? 'Intervento attivo impostato.' : 'Nessun intervento attivo impostato.');
-  } catch(e) {
-    alert('Errore impostazione intervento attivo: ' + e.message);
-  }
-}
-
-async function botInterrompiInterventoAttivo() {
-  document.getElementById('botInterventoAttivo').value = '';
-  await botImpostaInterventoAttivo(); // scrive NULL nella stessa riga di configurazione
-}
-
-async function caricaBotPermessi() {
-  const list = document.getElementById('botPermessiList');
-  if (!list) return;
-  list.innerHTML = '<div class="loading-msg">caricamento...</div>';
-  try {
-    const [resVol, resTg] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,bot_registra_interventi&attivo=eq.true&order=cognome', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/telegram_volontari?select=volontario_id', { headers: H })
-    ]);
-    const volontari = await resVol.json();
-    const collegati = await resTg.json();
-    const collegatiIds = new Set((collegati || []).map(c => c.volontario_id));
-    botPermessiAll = (volontari || []).map(v => Object.assign({}, v, { collegato: collegatiIds.has(v.id) }));
-    botRenderPermessi();
-  } catch(e) {
-    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
-  }
-}
-
-function botFiltraPermessi() {
-  botRenderPermessi();
-}
-
-function botRenderPermessi() {
-  const list = document.getElementById('botPermessiList');
-  if (!list) return;
-  const q = (document.getElementById('botPermSearch').value || '').trim().toLowerCase();
-  let righe = botPermessiAll.slice();
-  if (q) {
-    righe = righe.filter(v =>
-      (v.cognome||'').toLowerCase().includes(q) ||
-      (v.nome||'').toLowerCase().includes(q) ||
-      (v.squadra||'').toLowerCase().includes(q)
-    );
-  }
-  if (!righe.length) {
-    list.innerHTML = '<div class="loading-msg">Nessun volontario trovato.</div>';
-    return;
-  }
-  let html = '';
-  righe.forEach(v => {
-    const collegatoLbl = v.collegato
-      ? '<span class="pill p-blue">Collegato</span>'
-      : '<span class="pill p-grey">Non collegato</span>';
-    html += '<div class="impo-u-row">'
-      + '<div class="impo-u-info"><div class="impo-u-name">' + v.cognome + ' ' + v.nome + '</div>'
-      + '<div class="impo-u-role">' + (v.squadra || '—') + '</div></div>'
-      + collegatoLbl
-      + '<div class="impo-u-actions"><label class="vol-form-check"><input type="checkbox" ' + (v.bot_registra_interventi ? 'checked' : '') + ' onchange="botToggleRegistraInterventi(\'' + v.id + '\', this.checked)"> Registra interventi</label></div>'
-      + '</div>';
-  });
-  list.innerHTML = html;
-}
-
-async function botToggleRegistraInterventi(id, checked) {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ bot_registra_interventi: checked })
-    });
-    if (!res.ok) throw new Error('errore');
-    const v = botPermessiAll.find(x => x.id === id);
-    if (v) v.bot_registra_interventi = checked;
-  } catch(e) {
-    alert('Errore salvataggio.');
-    caricaBotPermessi();
-  }
-}
-
-async function botAbilitaTutti() {
-  await botImpostaTuttiVisibili(true);
-}
-
-async function botDisabilitaTutti() {
-  await botImpostaTuttiVisibili(false);
-}
-
-async function botImpostaTuttiVisibili(valore) {
-  const q = (document.getElementById('botPermSearch').value || '').trim().toLowerCase();
-  let righe = botPermessiAll.slice();
-  if (q) {
-    righe = righe.filter(v =>
-      (v.cognome||'').toLowerCase().includes(q) ||
-      (v.nome||'').toLowerCase().includes(q) ||
-      (v.squadra||'').toLowerCase().includes(q)
-    );
-  }
-  if (!righe.length) return;
-  if (!confirm((valore ? 'Abilitare' : 'Disabilitare') + ' "registra interventi da bot" per ' + righe.length + ' volontari?')) return;
-  try {
-    const ids = righe.map(v => v.id).join(',');
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids + ')', {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ bot_registra_interventi: valore })
-    });
-    if (!res.ok) throw new Error('errore');
-    righe.forEach(v => v.bot_registra_interventi = valore);
-    botRenderPermessi();
-  } catch(e) {
-    alert('Errore salvataggio.');
-    caricaBotPermessi();
-  }
-}
-
-async function tgInviaBroadcast() {
-  const errEl = document.getElementById('tgBroadcastErr');
-  const txt = (document.getElementById('tgBroadcastTesto').value || '').trim();
-  if (errEl) errEl.style.display = 'none';
-  if (!txt) { if (errEl) { errEl.textContent = 'Scrivi un messaggio.'; errEl.style.display = 'block'; } return; }
-  if (!confirm('Inviare questo messaggio a tutti i volontari registrati sul bot Telegram?')) return;
-  try {
-    const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
-      method: 'POST', headers: await headersFunzioneProtetta(),
-      body: JSON.stringify({ action: 'broadcast', testo: txt })
-    });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(out.error || 'errore invio');
-    document.getElementById('tgBroadcastTesto').value = '';
-    alert('Messaggio inviato a ' + (out.inviati != null ? out.inviati : '?') + ' destinatari.');
-  } catch(e) {
-    if (errEl) { errEl.textContent = 'Errore invio: ' + (e.message || 'riprova.'); errEl.style.display = 'block'; }
-  }
-}
-
-// -- POSIZIONE (percorsi tracciati per volontario, via Leaflet/OSM) --
-// posizioneContesti: una mappa Leaflet + i suoi layer per "namespace" (es. 'posizione' per la
-// pagina generale, 'intDetail' per la sezione dentro la scheda intervento), così renderPosizioni
-// è riusabile ovunque serva un mini-mappa dei percorsi senza mescolare le istanze Leaflet.
-const posizioneContesti = {};
-let posizioneRefreshTimer = null;
-const POSIZIONE_PALETTE = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#469990','#dcbeff','#9a6324','#800000','#aaffc3','#808000'];
-
-function _posizioneGetCtx(ns) {
-  if (!posizioneContesti[ns]) posizioneContesti[ns] = { map: null, layers: [] };
-  return posizioneContesti[ns];
-}
-
-function caricaPosizioni() {
-  _posizioneCarica();
-  if (posizioneRefreshTimer) clearInterval(posizioneRefreshTimer);
-  posizioneRefreshTimer = setInterval(() => {
-    const panel = document.getElementById('panelPosizione');
-    if (panel && panel.classList.contains('active')) {
-      _posizioneCarica();
-    } else {
-      clearInterval(posizioneRefreshTimer);
-      posizioneRefreshTimer = null;
-    }
-  }, 30000);
-}
-
-async function _posizioneInterventoAttivoCorrente() {
-  try {
-    const res = await fetch(SUPA_URL + '/rest/v1/bot_config?select=valore&chiave=eq.intervento_attivo_id&limit=1', { headers: H });
-    const arr = await res.json();
-    const v = (arr || [])[0] && (arr[0].valore || null);
-    return v || null;
-  } catch(e) { return null; }
-}
-
-async function _posizioneCarica() {
-  const vuoto = document.getElementById('posizioneStatoVuoto');
-  const attiva = document.getElementById('posizioneAttiva');
-  const lbl = document.getElementById('posizioneInterventoLbl');
-  const lista = document.getElementById('posizioneLista');
-  const interventoId = await _posizioneInterventoAttivoCorrente();
-  if (!interventoId) {
-    if (vuoto) vuoto.style.display = 'block';
-    if (attiva) attiva.style.display = 'none';
-    return;
-  }
-  if (vuoto) vuoto.style.display = 'none';
-  if (attiva) attiva.style.display = 'block';
-  try {
-    if (lbl) {
-      const interventi = await caricaInterventiRecenti();
-      const i = (interventi || []).find(x => String(x.id) === String(interventoId));
-      lbl.textContent = i ? (i.evento || '—') : ('Intervento #' + interventoId);
-    }
-    const url = SUPA_URL + '/rest/v1/posizioni_tracciate?select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc&intervento_id=eq.' + interventoId;
-    const res = await fetch(url, { headers: H });
-    const arr = await res.json();
-    renderPosizioni(arr || []);
-  } catch(e) {
-    if (lista) lista.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
-  }
-}
-
-// Posizioni tracciate + segnalazioni di emergenza scoped a un singolo intervento, per la
-// sezione "📍 Posizioni e segnalazioni" nella scheda intervento (apriDettaglioIntervento).
-async function caricaPosizioniSegnalazioniIntervento(interventoId) {
-  let posizioni = [], segnalazioni = [];
-  try {
-    const rp = await fetch(SUPA_URL + '/rest/v1/posizioni_tracciate?intervento_id=eq.' + interventoId + '&select=lat,lon,creato_il,scade_il,volontario_id,volontario:volontario_id(cognome,nome)&order=creato_il.asc', { headers: H });
-    posizioni = await rp.json();
-  } catch(e) {}
-  try {
-    const rs = await fetch(SUPA_URL + '/rest/v1/segnalazioni_emergenza?intervento_id=eq.' + interventoId + '&select=*,volontario:volontario_id(cognome,nome)&order=creato_il.desc', { headers: H });
-    segnalazioni = await rs.json();
-  } catch(e) {}
-  return { posizioni: posizioni || [], segnalazioni: segnalazioni || [] };
-}
-
-function renderPosizioni(list, ns, mapElId, listElId) {
-  ns = ns || 'posizione';
-  mapElId = mapElId || 'posizioneMap';
-  listElId = listElId || 'posizioneLista';
-  const mapEl = document.getElementById(mapElId);
-  const lista = document.getElementById(listElId);
-  if (!mapEl || !lista || typeof L === 'undefined') return;
-
-  const ctx = _posizioneGetCtx(ns);
-  // Se il contenitore della mappa è stato ricreato (es. riapertura della scheda intervento,
-  // il cui HTML viene rigenerato ad ogni apertura), l'istanza Leaflet precedente punta a un
-  // nodo DOM non più agganciato: va smontata e ricreata sul nuovo nodo.
-  if (ctx.map && ctx.map.getContainer() !== mapEl) {
-    ctx.map.remove();
-    ctx.map = null;
-  }
-  if (!ctx.map) {
-    ctx.map = L.map(mapElId).setView([45.13, 8.45], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
-    }).addTo(ctx.map);
-    ctx.layers = [];
-  }
-  ctx.layers.forEach(l => ctx.map.removeLayer(l));
-  ctx.layers = [];
-  setTimeout(() => ctx.map.invalidateSize(), 0);
-
-  if (!list.length) {
-    lista.innerHTML = '<div class="loading-msg">nessuna posizione condivisa al momento.</div>';
-    return;
-  }
-
-  // Raggruppa i punti per volontario
-  const gruppi = new Map();
-  list.forEach(p => {
-    const v = p.volontario || {};
-    const key = p.volontario_id != null ? p.volontario_id : ((v.cognome || '') + '|' + (v.nome || ''));
-    if (!gruppi.has(key)) gruppi.set(key, { nome: (v.cognome || '?') + ' ' + (v.nome || ''), punti: [] });
-    gruppi.get(key).punti.push(p);
-  });
-
-  const now = Date.now();
-  const bounds = [];
-  let legendHtml = '';
-  let colorIdx = 0;
-
-  gruppi.forEach(g => {
-    const colore = POSIZIONE_PALETTE[colorIdx % POSIZIONE_PALETTE.length];
-    colorIdx++;
-    const latlngs = g.punti.map(p => [p.lat, p.lon]);
-    latlngs.forEach(ll => bounds.push(ll));
-
-    if (latlngs.length > 1) {
-      const poly = L.polyline(latlngs, { color: colore, weight: 3, opacity: 0.8 }).addTo(ctx.map);
-      ctx.layers.push(poly);
-    }
-
-    const ultimo = g.punti[g.punti.length - 1];
-    const attiva = g.punti.some(p => p.scade_il && new Date(p.scade_il).getTime() > now);
-    const minFa = Math.max(0, Math.round((now - new Date(ultimo.creato_il).getTime()) / 60000));
-    const statoTxt = attiva ? '🟢 Attiva' : '⚪ Terminata';
-    const statoCls = attiva ? 'p-blue' : 'p-grey';
-
-    const marker = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 8, color: colore, fillColor: colore, fillOpacity: 1, weight: 2 }).addTo(ctx.map);
-    marker.bindPopup('<strong>' + g.nome + '</strong><br>' + statoTxt + '<br>aggiornato ' + minFa + 'm fa');
-    ctx.layers.push(marker);
-
-    // il pallino ha il colore della traccia GPS sulla mappa (dato, non tema)
-    legendHtml += '<div class="impo-u-row clk" onclick="posizioneCentraSuLatLng(' + ultimo.lat + ',' + ultimo.lon + ',\'' + ns + '\')">'
-      + '<span class="pos-dot" style="background:' + colore + '"></span>'
-      + '<div class="impo-u-info"><div class="impo-u-name">' + g.nome + '</div>'
-      + '<div class="impo-u-role">aggiornato ' + minFa + ' min fa</div></div>'
-      + '<span class="pill ' + statoCls + '">' + (attiva ? 'Attiva' : 'Terminata') + '</span>'
-      + '</div>';
-  });
-  lista.innerHTML = legendHtml;
-
-  if (bounds.length === 1) ctx.map.setView(bounds[0], 15);
-  else if (bounds.length > 1) ctx.map.fitBounds(bounds, { padding: [30, 30] });
-}
-
-function posizioneCentraSuLatLng(lat, lon, ns) {
-  const ctx = _posizioneGetCtx(ns || 'posizione');
-  if (!ctx.map) return;
-  ctx.map.setView([lat, lon], 16);
-}
-
 
 const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';
