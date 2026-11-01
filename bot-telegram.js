@@ -93,9 +93,30 @@ async function btApriInvio(eventoId) {
     + '<label id="btEventoBox" hidden>Evento<select id="btEvento">' + eventi.map(e => '<option value="' + e.id + '"' + (e.id === eventoId ? ' selected' : '') + '>' + aggEsc(e.titolo) + '</option>').join('') + '</select></label>'
     + '<label class="perm-check"><input type="checkbox" id="btArpa"> Allega il bollettino ARPA (livelli e link, solo se il dato è aggiornato)</label>'
     + '<div class="actions"><button class="btn" onclick="btChiudi()">Annulla</button><button class="btn pri" id="btBtnAnteprima" onclick="btAnteprima()">Anteprima</button></div>'
+    + '<div class="grp mt14">Collegamento al bot</div><div id="btMancanti"><button class="btn sm" onclick="btMancanti()">Chi non è collegato</button></div>'
     + '<div class="grp mt14">Ultimi invii</div><div id="btStorico"><div class="loading-msg">Caricamento…</div></div>';
   btAggiornaDest();
   btCaricaStorico();
+}
+
+// Volontari attivi che non hanno ancora collegato il bot (non ricevono messaggi né allerte)
+async function btMancanti() {
+  const box = btEl('btMancanti');
+  box.innerHTML = '<div class="loading-msg">Caricamento…</div>';
+  try {
+    const [rv, rc] = await Promise.all([
+      sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,telefono,stato&order=cognome,nome&limit=5000', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/bot_chat?select=volontario_id', { headers: H }),
+    ]);
+    if (!rv.ok || !rc.ok) throw new Error(BT_NON_DISP);
+    const vol = (await rv.json()).filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO'));
+    const col = new Set((await rc.json()).map(c => c.volontario_id));
+    const manca = vol.filter(v => !col.has(v.id));
+    box.innerHTML = '<p class="sub">Collegati: ' + (vol.length - manca.length) + ' su ' + vol.length + '.</p>'
+      + (manca.length ? '<div class="ev-scorri" style="max-height:260px;overflow:auto"><table class="ev-tab"><thead><tr><th class="sx">Volontario</th><th class="sx">Telefono</th></tr></thead><tbody>'
+        + manca.map(v => '<tr><td class="sx">' + aggEsc(v.cognome + ' ' + v.nome) + '</td><td class="sx">' + aggEsc(v.telefono || '—') + '</td></tr>').join('') + '</tbody></table></div>'
+        : '<div class="empty">Sono tutti collegati.</div>');
+  } catch(e) { box.innerHTML = '<div class="empty">' + aggEsc(e.message) + '</div>'; }
 }
 
 function btAggiornaDest() {
