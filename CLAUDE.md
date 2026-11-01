@@ -26,6 +26,7 @@ There is no test suite, linter, or dev server configured. To check a change, ope
 - `manifest.json`, `sw.js` — PWA manifest and service worker, scoped to `area-riservata.html` (cache name `pcana-vN`; bump the version when changing cached assets so old caches are evicted).
 - `_headers` — Cloudflare/host header rules (currently disables content-encoding on `area-riservata.html`).
 - `icons/`, `images/` — static assets.
+- `guida/` — guida utenti pubblica, statica e separata dall'app (`pcanacasale.com/guida/`): `index.html` è il motore, `dati.js` i contenuti, `genera-audio.mjs` crea gli MP3 in `guida/audio/`. Il service worker non la intercetta. Vedi "Guida utenti".
 - `et/` — unrelated one-off HTML fragments/pages (different branding, e.g. "ET Store", "Wind Tre"); not part of the ANA site, treat as independent standalone files.
 
 ## `area-riservata.js` architecture
@@ -47,3 +48,13 @@ This is a single-page app manually driven by DOM manipulation (no framework). Ke
 - Prefer `Edit` over rewriting whole files — `area-riservata.js` and the larger HTML files are big enough that full reads/rewrites are wasteful; grep for the specific function/id first.
 - Since there's no build step, any syntax error in the edited file breaks the page directly in production once deployed — double-check JS edits (e.g. with `node --check file.js`) before considering a change done.
 - The Supabase anon key embedded in `area-riservata.js` is intentionally public (client-side anon key); do not treat its presence as a leaked secret, but also don't add any *service-role* keys or other credentials to this repo.
+
+## Guida utenti
+
+La guida pubblica in `guida/` va tenuta allineata all'app. Regole permanenti:
+
+- Ogni modifica che cambia cosa vede o fa l'utente (nuova funzione, nuova sezione, pulsante rinominato, passaggio diverso, permessi cambiati) deve aggiornare anche `guida/dati.js` nella stessa sessione: testo del passo (`d`), copione parlato (`v`), `intro` della pagina se serve, e la schermata finta (`schermo`) se l'elemento citato non c'è più o è nuovo (i passi lo indicano con `h` = `data-h` della schermata). Una nuova voce di menu = una nuova pagina della guida, con il giusto `percorso` (`["volontari"]`, `["staff"]` o entrambi) e il suo posto in `GUIDA.percorsi.staff.ordine`.
+- Stile dei testi: italiano semplice per volontari, niente tecnicismi. `d` = breve e asciutto; `v` = parlato colloquiale, come qualcuno che spiega seduto accanto, 2-4 frasi.
+- Dopo aver modificato `dati.js`, rigenera solo gli audio cambiati con `node genera-audio.mjs --gemini` (da `guida/`, chiave dalla variabile utente `GEMINI_API_KEY`, mai scritta nei file). Mai usare `--forza` se non richiesto.
+- Le modifiche puramente grafiche o interne (stile, refactoring, bug fix invisibili) NON richiedono di toccare la guida.
+- Nel riepilogo finale di ogni lavoro scrivi sempre una riga "Guida: aggiornata (pagine X, N audio rigenerati)" oppure "Guida: nessuna modifica necessaria".

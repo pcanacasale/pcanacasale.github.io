@@ -358,6 +358,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .loading-msg.sm{padding:10px 0;text-align:left}
 .loading-msg.bad{color:var(--red);font-weight:600}
 .loading-msg.ok{color:var(--accent);font-weight:600}
+.guida-azioni{display:flex;flex-wrap:wrap;gap:8px}
 .btn-sm{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap}
 .btn-sm:hover{border-color:var(--accent)}
 .btn-ok{color:var(--accent)}
@@ -2002,6 +2003,14 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div class="phead"><div><h1>Impostazioni</h1></div></div>
 
       <div class="grid g3 impo-grid">
+      <div class="card impo-section" id="guidaImpoBox" hidden>
+        <h2>Guida all'Area Riservata</h2>
+        <p class="note note-intro">Link pubblico della guida, da mandare a volontari e staff.</p>
+        <div class="guida-azioni">
+          <a class="btn pri" id="guidaApri" target="_blank" rel="noopener">Apri guida</a>
+          <button type="button" class="btn" id="guidaCopia" onclick="guidaCopiaLink()">Copia link</button>
+        </div>
+      </div>
       <div class="card impo-section" id="btImpoBox" hidden>
         <h2>Bot Telegram</h2>
         <p class="note note-intro">Messaggi ai volontari collegati al bot.</p>
@@ -2146,7 +2155,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=204"></script>
+<script src="area-riservata.js?v=205"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
 <script src="scheda-volontario.js?v=7"></script>
 <script src="allerta-home.js?v=2"></script>

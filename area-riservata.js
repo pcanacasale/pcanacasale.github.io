@@ -779,10 +779,39 @@ async function eliminaRichiesta(id) {
 }
 
 // -- IMPOSTAZIONI --
+const GUIDA_URL = "https://pcanacasale.com/guida/";
+let guidaCopiaTimer = null;
+
 async function caricaImpostazioni() {
+  document.getElementById('guidaImpoBox').hidden = currentUser.tipo_accesso !== 'master';
+  document.getElementById('guidaApri').href = GUIDA_URL;
   document.getElementById('btImpoBox').hidden = !hasPerm('eventi');
   renderSchemaList();
   evCaricaListe();
+}
+
+function guidaCopiaFallback() {
+  const campo = document.createElement('textarea');
+  campo.value = GUIDA_URL;
+  campo.setAttribute('readonly', '');
+  campo.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(campo);
+  campo.select();
+  let fatto = false;
+  try { fatto = document.execCommand('copy'); } catch(e) { /* resta false */ }
+  campo.remove();
+  return fatto;
+}
+
+async function guidaCopiaLink() {
+  let fatto = false;
+  try { await navigator.clipboard.writeText(GUIDA_URL); fatto = true; }
+  catch(e) { fatto = guidaCopiaFallback(); }
+  if (!fatto) { sbAvviso('Copia non riuscita. Il link è ' + GUIDA_URL); return; }
+  const btn = document.getElementById('guidaCopia');
+  btn.textContent = 'Copiato';
+  clearTimeout(guidaCopiaTimer);
+  guidaCopiaTimer = setTimeout(() => { btn.textContent = 'Copia link'; }, 2000);
 }
 
 // -- VOLONTARI --

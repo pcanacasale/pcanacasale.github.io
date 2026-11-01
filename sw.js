@@ -1,4 +1,4 @@
-const CACHE = 'pcana-v45';
+const CACHE = 'pcana-v46';
 const ASSETS = ['/area-riservata.html', '/area-riservata.js', '/aggiornamento-dati.js', '/scheda-volontario.js', '/allerta-home.js', '/editor-pdf.js', '/formazione.js', '/convocazioni.js', '/eventi.js', '/eventi-polo.js', '/gestione-accessi.js', '/bot-telegram.js', '/accesso.js', '/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -16,7 +16,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
   // Lascia passare tutto tranne i file statici locali
-  if (url.includes('/aggiorna.html') || url.includes('/firma.html') || // pagine pubbliche: mai gestite dal service worker
+  if (url.includes('/aggiorna.html') || url.includes('/firma.html') || url.includes('/guida/') || // pagine pubbliche: mai gestite dal service worker
       url.includes('supabase.co') ||
       url.includes('teable.ai') ||
       url.includes('fonts.googleapis') ||
