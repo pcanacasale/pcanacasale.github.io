@@ -101,14 +101,14 @@ function alRender(s, fonteInErrore) {
 async function caricaAllerta() {
   let stato = null;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/allerta_cache?id=eq.1&select=*', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/allerta_cache?id=eq.1&select=*', { headers: H });
     if (res.ok) stato = (await res.json())[0] || null;
   } catch(e) {}
   alRender(stato, false);
   const eta = stato && stato.aggiornato_il ? Date.now() - new Date(stato.aggiornato_il).getTime() : Infinity;
   if (eta <= AL_MAX_ETA_MS) return;
   try {
-    const res = await fetch(AL_FUNCTION_URL, { method: 'POST', headers: HJ, body: '{}' });
+    const res = await sbFetch(AL_FUNCTION_URL, { method: 'POST', headers: HJ, body: '{}', silenzioso: true });
     const data = await res.json();
     alRender(data.stato || stato, !data.ok);
   } catch(e) { alRender(stato, true); }

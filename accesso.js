@@ -1,6 +1,6 @@
 // Accesso con Google o codice via email (Supabase Auth), prefisso au*.
 // Affianca il vecchio accesso con password: chi entra da qui ha una sessione che resta dopo
-// il ricaricamento, e le chiamate REST usano il suo token (H e HJ vengono aggiornati sul posto).
+// il ricaricamento, e sbFetch mette il suo token in ogni chiamata a Supabase.
 // Il profilo arriva dalla funzione SQL mio_profilo.
 
 const AU_CHIAVE = 'pcana-auth';
@@ -80,13 +80,7 @@ function auCambiaEmail() {
 }
 
 // -- SESSIONE --
-function auImpostaToken(session) {
-  const bearer = 'Bearer ' + (session ? session.access_token : SUPA_KEY);
-  H.Authorization = bearer;
-  HJ.Authorization = bearer;
-}
-
-// Token aggiornato per le funzioni protette; null con il vecchio accesso
+// Token aggiornato (getSession lo rinnova se è scaduto); null senza sessione
 async function auToken() {
   if (!auClient) return null;
   const { data } = await auClient.auth.getSession();
@@ -116,7 +110,6 @@ function auUtenteDaProfilo(p, session) {
 }
 
 async function auApplica(session) {
-  auImpostaToken(session);
   if (!session) { if (auUtente) logout(); return; }
   const id = session.user.id;
   if (id === auUtente || id === auInCorso) return;   // SIGNED_IN torna anche quando si rientra nella scheda
@@ -150,7 +143,6 @@ async function auEsci() {
   auUtente = null;
   auInCorso = null;
   sessionStorage.removeItem('au_entrato');
-  auImpostaToken(null);
   auCambiaEmail();
   auVista('nuovo');
   if (!auClient) { auVista('vecchio'); return; }
@@ -160,7 +152,7 @@ async function auEsci() {
 
 // -- AVVIO --
 document.addEventListener('DOMContentLoaded', async function() {
-  if (!auClient) { auVista('vecchio'); auErrore('Accesso con Google e via email non disponibile: usa la password.'); return; }
+  if (!auClient) { auAvviso('Accesso non disponibile. Ricarica la pagina tra poco.', false); return; }
 
   // Google rimanda qui gli errori (es. accesso annullato) nell'indirizzo
   if (/error_description=/.test(location.hash + location.search)) {

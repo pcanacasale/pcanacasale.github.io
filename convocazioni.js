@@ -46,8 +46,8 @@ function cvEl(id) { return document.getElementById(id); }
 async function cvApi(azione, dati) {
   const token = await auToken();
   if (!token) throw new Error('Liste e storico richiedono l\'accesso con Google o con il codice email.');
-  const res = await fetch(SUPA_URL + '/rest/v1/rpc/conv_api', {
-    method: 'POST', headers: Object.assign({}, HJ, { 'Authorization': 'Bearer ' + token }),
+  const res = await sbFetch(SUPA_URL + '/rest/v1/rpc/conv_api', {
+    method: 'POST', headers: HJ,
     body: JSON.stringify({ p_azione: azione, p_dati: dati || {} }),
   });
   if (!res.ok) throw new Error('Archivio non disponibile. Se è la prima apertura, va eseguito supabase/convocazioni.sql.');
@@ -471,7 +471,7 @@ async function cvApriLista(id) {
   cvListaAperta = cvListaAperta === id ? null : id;
   if (cvListaAperta && cvGestisce() && !cvVolontari.length) {
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,email,stato&order=cognome,nome', { headers: H });
+      const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,email,stato&order=cognome,nome', { headers: H });
       if (res.ok) cvVolontari = (await res.json()).filter(v => v.stato !== 'DIMESSO');
     } catch(e) {}
   }
@@ -528,7 +528,7 @@ async function cvRenderPersonale() {
   const token = await auToken();
   if (!box || !token) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/rpc/conv_mie_liste', { method: 'POST', headers: Object.assign({}, HJ, { 'Authorization': 'Bearer ' + token }), body: '{}' });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/rpc/conv_mie_liste', { method: 'POST', headers: HJ, body: '{}', silenzioso: true });
     if (!res.ok) throw new Error('errore');
     const r = await res.json();
     if (!r.liste || !r.liste.length) return;

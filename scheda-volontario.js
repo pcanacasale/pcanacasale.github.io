@@ -27,6 +27,7 @@ function svPuoVisita() { return canModificaVolontari() || hasPerm('visite'); }
 function svPuoDoc()    { return canModificaVolontari() || hasPerm('documenti'); }
 function svHaAgg()     { return typeof aggHaAccesso === 'function' && aggHaAccesso(); }
 function svTabVisibile(tab) {
+  if (tab === 'interventi') return hasPerm('interventi');
   if (hasPerm('volontari')) return true;
   if (tab === 'documenti') return hasPerm('documenti');
   if (tab === 'visita') return hasPerm('visite');
@@ -49,12 +50,13 @@ async function apriDettaglio(id, tab) {
   try {
     if (!schemaCache.length) await caricaSchema();
     const [vRes, dRes, agg, ore] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + id + '&select=*&order=data_carico.desc', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + id + '&select=*&order=data_carico.desc', { headers: H }),
       svCaricaAgg(id),
       svOreAnno(id),
     ]);
     if (token !== svToken) return;
+    sbOk(vRes);
     const v = (await vRes.json())[0];
     if (!v) { document.getElementById('svTesta').innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
     sv = { id, v, docs: dRes.ok ? await dRes.json() : [], agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false };
@@ -63,7 +65,7 @@ async function apriDettaglio(id, tab) {
     svMostraTab(tab || SV_TABS.map(t => t.id).filter(svTabVisibile)[0]);
     svCaricaFoto();
   } catch(e) {
-    if (token === svToken) document.getElementById('svTesta').innerHTML = '<div class="empty">Errore nel caricamento.</div>';
+    if (token === svToken) document.getElementById('svTesta').innerHTML = '<div class="empty">Non disponibile.</div>';
   }
 }
 
@@ -73,9 +75,10 @@ async function svCaricaAgg(id) {
 }
 
 async function svOreAnno(id) {
+  if (!hasPerm('interventi')) return null;
   try {
     const anno = String(new Date().getFullYear());
-    const res = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?volontario_id=eq.' + id + '&select=ore,data_inizio,intervento:intervento_id(data)', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?volontario_id=eq.' + id + '&select=ore,data_inizio,intervento:intervento_id(data)', { headers: H });
     const righe = await res.json();
     return righe.filter(r => (r.data_inizio || (r.intervento && r.intervento.data) || '').slice(0, 4) === anno)
       .reduce((tot, r) => tot + (Number(r.ore) || 0), 0);
@@ -263,7 +266,7 @@ async function svSalvaCampi() {
     if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq'), dae: chk('fDae'), scad_dae: val('fScadDae') });
   }
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + sv.id, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + sv.id, {
       method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('errore');
@@ -291,7 +294,7 @@ let svProblemiPerVol = {};  // volontario_id → esito di svProblemi
 // Prepara le regole per tutto l'elenco. Chi ha il permesso vede anche i documenti d'archivio.
 async function svCaricaProblemi(vols) {
   const [docs, lista] = await Promise.all([
-    fetch(SUPA_URL + '/rest/v1/documenti?select=volontario_id,tipo', { headers: H }).then(r => r.ok ? r.json() : []).catch(() => []),
+    sbFetch(SUPA_URL + '/rest/v1/documenti?select=volontario_id,tipo', { headers: H }).then(r => r.ok ? r.json() : []).catch(() => []),
     svHaAgg() ? aggCall('list', {}).catch(() => null) : null,
   ]);
   const docsPerVol = {};
@@ -345,7 +348,8 @@ function svPassaFiltro(v) {
 // -- DASHBOARD: CARD "DA SISTEMARE" --
 async function svCardDashboard() {
   if (window.isVolUser || !(hasPerm('volontari') || hasPerm('documenti') || hasPerm('visite'))) return '';
-  const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,stato,stato_visita,quattro_ore,dodici_ore,dae,scad_dae,foto_url', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,stato,stato_visita,quattro_ore,dodici_ore,dae,scad_dae,foto_url', { headers: H });
+  if (!res.ok) return '';
   const vols = await res.json();
   await svCaricaProblemi(vols);
   const c = svConteggi(vols);
@@ -442,7 +446,7 @@ async function svApriAgg(id, scarica) {
 async function svRicaricaDocumenti() {
   if (!sv) return;
   const token = svToken;
-  const res = await fetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + sv.id + '&select=*&order=data_carico.desc', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + sv.id + '&select=*&order=data_carico.desc', { headers: H });
   const docs = res.ok ? await res.json() : sv.docs;
   if (!sv || token !== svToken) return;
   sv.docs = docs;
@@ -696,7 +700,8 @@ async function svCaricaInterventi() {
   sv.interventiOk = true;
   box.innerHTML = '<p class="note">Caricamento…</p>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?volontari_ids=cs.[' + sv.id + ']&select=id,evento,data,tipo_attivita,stato_calcolato&order=data.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?volontari_ids=cs.[' + sv.id + ']&select=id,evento,data,tipo_attivita,stato_calcolato&order=data.desc', { headers: H });
+    sbOk(res);
     const interventi = await res.json();
     if (token !== svToken) return;
     if (!interventi.length) { box.innerHTML = '<div class="empty">Nessun intervento registrato.</div>'; return; }
@@ -705,5 +710,5 @@ async function svCaricaInterventi() {
       return '<div class="lr clk" onclick="' + onclick + '"><div class="mid"><b>' + aggEsc(i.evento || '—') + '</b><span class="sub">'
         + aggEsc([svData(i.data) || '—', i.tipo_attivita].filter(Boolean).join(' · ')) + '</span></div><span class="go">→</span></div>';
     }).join('');
-  } catch(e) { if (token === svToken) box.innerHTML = '<p class="bad">Errore nel caricamento.</p>'; }
+  } catch(e) { if (token === svToken) box.innerHTML = '<p class="bad">Non disponibile.</p>'; }
 }

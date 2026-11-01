@@ -15,13 +15,13 @@ async function caricaVisite() {
   if (!list) return;
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=*&or=(stato.is.null,stato.neq.DIMESSO)&order=cognome,nome', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=*&or=(stato.is.null,stato.neq.DIMESSO)&order=cognome,nome', { headers: H });
     if (!res.ok) throw new Error('errore');
     visiteData = await res.json();
     renderDashboardVisite();
     filtraVisite();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
 }
 
@@ -76,7 +76,7 @@ async function cambiaVisitaCampo(volId, campo, valore) {
   const err = document.getElementById('visiteErr');
   err.hidden = true;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
       method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify({ [campo]: valore }),
     });
     if (!res.ok) throw new Error('errore');
@@ -123,7 +123,7 @@ function fzPuoScrivere() { return canModificaVolontari() || hasPerm('formazione'
 function fzNomeVol(id) { const v = fzVolontari.find(x => x.id === id); return v ? v.cognome + ' ' + v.nome : '—'; }
 
 async function fzCaricaVolontari() {
-  const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato&order=cognome,nome', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato&order=cognome,nome', { headers: H });
   if (!res.ok) throw new Error('errore');
   fzVolontari = await res.json();
 }
@@ -135,7 +135,7 @@ async function caricaFormazione() {
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const [res] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&order=data_corso.desc.nullslast,id.desc', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&order=data_corso.desc.nullslast,id.desc', { headers: H }),
       fzCaricaVolontari(),
     ]);
     if (!res.ok) throw new Error('errore');
@@ -291,7 +291,7 @@ async function fzSalva() {
   btn.disabled = true;
   const prima = fzForm.id ? fzRighe.find(x => x.id === fzForm.id) : null;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/formazione_registro' + (prima ? '?id=eq.' + prima.id : ''), {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro' + (prima ? '?id=eq.' + prima.id : ''), {
       method: prima ? 'PATCH' : 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify(prima ? dati : vol.map(id => Object.assign({ volontario_id: id }, dati))),
     });
@@ -308,7 +308,7 @@ async function fzElimina() {
   const r = fzRighe.find(x => x.id === fzForm.id);
   if (!r || !confirm('Eliminare "' + r.titolo + '" di ' + fzNomeVol(r.volontario_id) + '?')) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/formazione_registro?id=eq.' + r.id, { method: 'DELETE', headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?id=eq.' + r.id, { method: 'DELETE', headers: H });
     if (!res.ok) throw new Error('errore');
   } catch(e) { return fzErrore('Registrazione non eliminata: riprova.'); }
   logAttivita('ha eliminato ' + r.titolo + ' di ' + fzNomeVol(r.volontario_id));
@@ -329,7 +329,7 @@ async function fzDopoModifica(vol, codici) {
 async function fzRiallinea(vol, codici) {
   codici = [...new Set(codici)];
   if (!codici.length) return;
-  const res = await fetch(SUPA_URL + '/rest/v1/formazione_registro?select=volontario_id,codice,scadenza&volontario_id=in.(' + vol.join(',') + ')&codice=in.(' + codici.map(c => '"' + c + '"').join(',') + ')', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=volontario_id,codice,scadenza&volontario_id=in.(' + vol.join(',') + ')&codice=in.(' + codici.map(c => '"' + c + '"').join(',') + ')', { headers: H });
   if (!res.ok) throw new Error('errore');
   const righe = await res.json();
   await Promise.all(vol.map(async id => {
@@ -340,7 +340,7 @@ async function fzRiallinea(vol, codici) {
       body[c.campo] = sue.length > 0;
       if (c.scadenza) body[c.scadenza] = sue.map(r => r.scadenza).filter(Boolean).sort().pop() || null;
     });
-    const r = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id, {
+    const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id, {
       method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error('errore');
@@ -362,7 +362,7 @@ async function fzRenderScheda() {
   const id = sv.id;
   let righe;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + id + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + id + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
     if (!res.ok) throw new Error('errore');
     righe = await res.json();
   } catch(e) { box.innerHTML = '<p class="note m0 mb10">Registro non disponibile.</p>'; return; }
@@ -388,7 +388,7 @@ async function fzRenderPersonale(volId) {
   const box = document.getElementById('spFormazione');
   if (!box) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + volId + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + volId + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
     if (!res.ok) throw new Error('errore');
     const righe = await res.json();
     box.innerHTML = '<h2>Corsi e abilitazioni</h2>' + (fzRigheHtml(righe, false) || '<p class="note">Nessun corso registrato.</p>');

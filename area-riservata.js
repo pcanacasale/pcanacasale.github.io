@@ -67,11 +67,65 @@ function avviaSplashSafe() {
 document.addEventListener('DOMContentLoaded', avviaSplashSafe);
 
 const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
+const SB_SOLO_NUOVO = 'Questo accesso non è più disponibile: entra con Google o con il codice email.';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
 let currentUser = null;
-const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
-const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+const H  = { 'apikey': SUPA_KEY };
+const HJ = { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' };
 const AGENTE_INT_URL = SUPA_URL + '/functions/v1/Agente-Interventi';
+
+// -- CHIAMATE A SUPABASE --
+// Ogni chiamata dell'area riservata passa da sbFetch: porta sempre il token della sessione
+// (mai la chiave anonima, che resta solo nell'header apikey) e non rompe la pagina.
+// Una lettura negata o fallita risponde con res.ok falso e corpo [], quindi res.json() è sicuro.
+// Una scrittura negata avvisa l'utente; { silenzioso:true } serve per log e sfondo.
+function sbRisposta(status, corpo) {
+  return new Response(corpo, { status, headers: { 'Content-Type': 'application/json' } });
+}
+
+async function sbFetch(url, opz) {
+  const { silenzioso, ...richiesta } = opz || {};
+  const lettura = !richiesta.method || richiesta.method === 'GET';
+  let token = null;
+  try { token = await auToken(); } catch(e) {}
+  if (!token) {
+    if (!lettura && !silenzioso) sbAvviso('Sessione scaduta: esci e rientra.');
+    return sbRisposta(401, lettura ? '[]' : '{}');
+  }
+  richiesta.headers = Object.assign({}, richiesta.headers, { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + token });
+  let res;
+  try { res = await fetch(url, richiesta); }
+  catch(e) {
+    if (!lettura && !silenzioso) sbAvviso('Connessione assente: operazione non eseguita.');
+    return sbRisposta(503, lettura ? '[]' : '{}');
+  }
+  if (lettura) {
+    if (!res.ok) return sbRisposta(res.status, '[]');
+    if (res.status === 204 || !(await res.clone().text())) return new Response('[]', { status: 200, headers: res.headers });
+  } else if ((res.status === 401 || res.status === 403) && !silenzioso) {
+    sbAvviso('Operazione non consentita.');
+  }
+  return res;
+}
+
+// Dentro un try: passa al catch della sezione, che mostra "Non disponibile."
+function sbOk(res) { if (!res.ok) throw new Error('Non disponibile.'); }
+
+let sbAvvisoTimer = null;
+function sbAvviso(testo) {
+  let el = document.getElementById('sbAvviso');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sbAvviso';
+    el.className = 'sb-avviso';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = testo;
+  el.hidden = false;
+  clearTimeout(sbAvvisoTimer);
+  sbAvvisoTimer = setTimeout(() => { el.hidden = true; }, 5000);
+}
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -96,7 +150,7 @@ async function doLogin() {
   err.style.display = 'none';
   btn.disabled = true; btn.textContent = 'accesso...';
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso,permessi', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso,permessi', { headers: H });
     const data = await res.json();
     if (data && data.length > 0) {
       currentUser = data[0];
@@ -106,7 +160,7 @@ async function doLogin() {
       logAccesso('admin', null, currentUser.nome || u);
       avviaDashboard();
     } else {
-      err.textContent = 'Credenziali non corrette.'; err.style.display = 'block';
+      err.textContent = res.ok ? 'Credenziali non corrette.' : SB_SOLO_NUOVO; err.style.display = 'block';
     }
   } catch(e) {
     err.textContent = 'Errore di connessione.'; err.style.display = 'block';
@@ -143,7 +197,7 @@ async function doLoginVolontario() {
   err.style.display = 'none';
 
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/rpc/login_volontario', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/rpc/login_volontario', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
       body: JSON.stringify({ p_cf: cf, p_data_nascita: data })
@@ -169,7 +223,7 @@ async function doLoginVolontario() {
       logAccesso('volontario', v.id, v.cognome + ' ' + v.nome);
       avviaDashboard();
     } else {
-      err.textContent = 'Codice fiscale o data di nascita non corretti.';
+      err.textContent = res.ok ? 'Codice fiscale o data di nascita non corretti.' : SB_SOLO_NUOVO;
       err.style.display = 'block';
     }
   } catch(e) {
@@ -443,7 +497,20 @@ function logout() {
 }
 
 // -- NAVIGAZIONE --
+const PANEL_PERM = {
+  volontari: ['volontari','documenti','visite'], visite: ['visite'], formazione: ['formazione'],
+  interventi: ['interventi'], postazioni: ['postazioni'], dotazioni: ['dotazioni'],
+  pianiCarico: ['pianicarico'], mezzi: ['mezzi'], tlc: ['tlc'], galleria: ['galleria'],
+  editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], statistiche: ['statistiche'],
+  db: ['db'], accessi: ['accessi'], richieste: ['richieste'], impostazioni: ['impostazioni'],
+  aggDati: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
+};
+function puoAprirePannello(name) {
+  return !PANEL_PERM[name] || PANEL_PERM[name].some(hasPerm);
+}
+
 function showPanel(name, btn) {
+  if (!puoAprirePannello(name)) name = 'home';
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById('panel' + name.charAt(0).toUpperCase() + name.slice(1));
   if (panel) panel.classList.add('active');
@@ -503,11 +570,12 @@ async function caricaHomeDashboard() {
 
     // Carica compleanni del mese e ultimi interventi in parallelo
     const [volRes, intRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,data_nascita,squadra,foto_url&attivo=eq.true&order=data_nascita', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=id,evento,data,tipo_attivita,n_volontari,n_ore&stato_calcolato=eq.SVOLTO&order=data.desc&limit=5', { headers: H })
+      sbFetch(SUPA_URL + '/rest/v1/volontari_pubblici?select=id,cognome,nome,data_nascita,squadra,foto_url,stato&or=(stato.is.null,stato.neq.DIMESSO)&order=data_nascita', { headers: H }),
+      window.isVolUser ? null : sbFetch(SUPA_URL + '/rest/v1/interventi_recenti?select=id,evento,data,data_fine,tipo_attivita,luogo,n_volontari,n_ore,stato_calcolato&stato_calcolato=eq.SVOLTO&order=data.desc&limit=5', { headers: H })
     ]);
     const volontari  = await volRes.json();
-    const interventi = await intRes.json();
+    const interventi = intRes ? await intRes.json() : [];
+    const vedeInterventi = hasPerm('interventi');
 
     // Filtra compleanni del mese
     const bdayMonth = (volontari || []).filter(v => {
@@ -524,16 +592,16 @@ async function caricaHomeDashboard() {
     };
     let left = '', right = '';
 
-    // -- ULTIMI INTERVENTI -- (skip per volontari)
-    if (!window.isVolUser) {
+    // -- ULTIMI INTERVENTI -- (skip per volontari; senza permesso si leggono ma non si aprono)
+    if (intRes && intRes.ok) {
       left += '<div class="card"><div class="phead mb6"><h2>Ultimi interventi</h2>'
-        + '<button class="btn sm" onclick="navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;))">Vedi tutti →</button></div>';
+        + (vedeInterventi ? '<button class="btn sm" onclick="navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;))">Vedi tutti →</button>' : '') + '</div>';
       if (!interventi || !interventi.length) {
         left += '<p class="note">Nessun intervento registrato.</p>';
       } else {
         interventi.forEach(i => {
           var onclickInt = 'navTo(&quot;interventi&quot;,&quot;Interventi&quot;,document.getElementById(&quot;siInterventi&quot;));apriDettaglioIntervento(' + i.id + ')';
-          left += '<div class="lr clk" onclick="' + onclickInt + '">'
+          left += (vedeInterventi ? '<div class="lr clk" onclick="' + onclickInt + '">' : '<div class="lr">')
             + (i.data ? dtTile(i.data) : '<div class="dt"><b>—</b></div>')
             + '<div class="mid"><b>' + (i.evento||'—') + '</b><span class="sub">' + (i.tipo_attivita || '') + '</span></div>'
             + '<div class="end">' + (i.n_volontari||0) + ' vol' + (i.n_ore ? ' · ' + i.n_ore + ' h' : '') + '</div>'
@@ -547,8 +615,8 @@ async function caricaHomeDashboard() {
     try { right += await svCardDashboard(); } catch(e) {}
 
     // -- REVISIONI IN SCADENZA -- (skip per volontari)
-    if (!window.isVolUser) try {
-      var mezziRes  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
+    if (!window.isVolUser && hasPerm('mezzi')) try {
+      var mezziRes  = await sbFetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa,revisione,stato&order=revisione', { headers: H });
       var mezziAll  = await mezziRes.json();
       var oggi2     = new Date();
       var mmPad     = String(oggi2.getMonth()+1).padStart(2,'0');
@@ -582,8 +650,10 @@ async function caricaHomeDashboard() {
     } catch(e) {}
 
     // -- COMPLEANNI DEL MESE --
-    right += '<div class="card"><h2>Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</h2>';
-    if (!bdayMonth.length) {
+    if (volRes.ok) right += '<div class="card"><h2>Compleanni di ' + mesiIt[oggi.getMonth()+1] + '</h2>';
+    if (!volRes.ok) {
+      // sezione nascosta
+    } else if (!bdayMonth.length) {
       right += '<p class="note">Nessun compleanno questo mese.</p>';
     } else {
       const oggiMd = mm + '-' + String(oggi.getDate()).padStart(2,'0');
@@ -598,14 +668,15 @@ async function caricaHomeDashboard() {
           + '</div>';
       });
     }
-    right += '</div>';
+    if (volRes.ok) right += '</div>';
 
+    if (!left && !right) { grid.innerHTML = '<div class="empty">Non disponibile.</div>'; return; }
     grid.innerHTML = left
       ? '<div class="cols home-cols">' + left + '<div class="stack">' + right + '</div></div>'
       : '<div class="stack">' + right + '</div>';
 
   } catch(e) {
-    grid.innerHTML = '<div class="empty">Errore nel caricamento della dashboard.</div>';
+    grid.innerHTML = '<div class="empty">Non disponibile.</div>';
   }
 }
 
@@ -620,7 +691,7 @@ async function verificaCompleanni() {
     const oggi = new Date();
     const mm   = String(oggi.getMonth() + 1).padStart(2, '0');
     const dd   = String(oggi.getDate()).padStart(2, '0');
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?attivo=eq.true&select=nome,cognome,data_nascita', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari_pubblici?select=nome,cognome,data_nascita,stato&or=(stato.is.null,stato.neq.DIMESSO)', { headers: H });
     const utenti = await res.json();
     const compleanni = (utenti || []).filter(u => {
       if (!u.data_nascita) return false;
@@ -641,10 +712,11 @@ async function verificaCompleanni() {
 async function logAttivita(azione) {
   if (!currentUser) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/log_attivita', {
+    await sbFetch(SUPA_URL + '/rest/v1/log_attivita', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ utente_nome: currentUser.nome, azione })
+      body: JSON.stringify({ utente_nome: currentUser.nome, azione }),
+      silenzioso: true
     });
   } catch(e) {}
 }
@@ -652,7 +724,7 @@ async function logAttivita(azione) {
 // -- RICHIESTE --
 async function caricaBadgeRichieste() {
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?letta=eq.false&select=id', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/richieste_adesione?letta=eq.false&select=id', { headers: H });
     const data = await res.json();
     const badge = document.getElementById('siBadgeRichieste');
     if (data.length > 0) { badge.textContent = data.length; badge.classList.add('show'); }
@@ -664,7 +736,8 @@ async function caricaRichieste() {
   const list = document.getElementById('richiesteList');
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    const res       = await fetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
+    const res       = await sbFetch(SUPA_URL + '/rest/v1/richieste_adesione?select=*&order=created_at.desc', { headers: H });
+    sbOk(res);
     const richieste = await res.json();
     const nonLette  = richieste.filter(r => !r.letta).length;
     const badge     = document.getElementById('siBadgeRichieste');
@@ -687,18 +760,18 @@ async function caricaRichieste() {
         + '<div class="em-azioni">' + btnL + '<button class="btn sm danger" onclick="eliminaRichiesta(\'' + r.id + '\')">Elimina</button></div>';
       list.appendChild(div);
     });
-  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Non disponibile.</div>'; }
 }
 
 async function segnaLetta(id) {
-  await fetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method:'PATCH', headers:HJ, body:JSON.stringify({ letta:true }) });
+  await sbFetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method:'PATCH', headers:HJ, body:JSON.stringify({ letta:true }) });
   await logAttivita('ha segnato una richiesta come letta');
   caricaRichieste();
 }
 
 async function eliminaRichiesta(id) {
   if (!confirm('Eliminare questa richiesta?')) return;
-  await fetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method:'DELETE', headers:H });
+  await sbFetch(SUPA_URL + '/rest/v1/richieste_adesione?id=eq.' + id, { method:'DELETE', headers:H });
   await logAttivita('ha eliminato una richiesta adesione');
   caricaRichieste();
 }
@@ -714,7 +787,7 @@ async function caricaUtenti() {
   const list = document.getElementById('utentiList');
   if (!list) return; // utentiList rimosso da Impostazioni, ora la lista è in Accessi
   try {
-    const res    = await fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
+    const res    = await sbFetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
     const utenti = await res.json();
     _utentiList = utenti;
     list.innerHTML = '';
@@ -743,7 +816,7 @@ async function caricaUtenti() {
         + '</div>';
       list.appendChild(row);
     });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="loading-msg">Non disponibile.</div>'; }
 }
 
 async function salvaUtente() {
@@ -779,7 +852,7 @@ async function salvaUtente() {
     gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
     aggiornamento_dati: document.getElementById('permAggDati') ? document.getElementById('permAggDati').checked : false,
   };
-  const res = await fetch(SUPA_URL + '/rest/v1/utenti', {
+  const res = await sbFetch(SUPA_URL + '/rest/v1/utenti', {
     method: 'POST',
     headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
     body: JSON.stringify({ nome, username, password, ruolo, tipo_accesso:'standard', permessi })
@@ -870,7 +943,7 @@ async function salvaModificaUtente() {
   var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
   if (password) body.password = password;
   try {
-    var res = await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, {
+    var res = await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, {
       method: 'PATCH', headers: HJ, body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error('Errore salvataggio');
@@ -881,7 +954,7 @@ async function salvaModificaUtente() {
 }
 
 async function toggleAttivo(id, attivo) {
-  await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, { method:'PATCH', headers:HJ, body:JSON.stringify({ attivo: !attivo }) });
+  await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, { method:'PATCH', headers:HJ, body:JSON.stringify({ attivo: !attivo }) });
   await logAttivita('ha ' + (attivo ? 'disattivato' : 'riattivato') + ' un utente');
   caricaUtenti();
 }
@@ -890,7 +963,7 @@ async function caricaLog() {
   const list = document.getElementById('logList');
   if (!list) return; // logList rimosso da Impostazioni, ora il log è in Accessi
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=30', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=30', { headers: H });
     const logs = await res.json();
     if (!logs.length) { list.innerHTML = '<div class="loading-msg">nessun log.</div>'; return; }
     list.innerHTML = '';
@@ -907,7 +980,7 @@ async function caricaLog() {
         + '<div class="log-text"><span class="log-user">' + (l.utente_nome||'?') + '</span> ' + (l.azione||'') + '</div>';
       list.appendChild(row);
     });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">errore caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="loading-msg">Non disponibile.</div>'; }
 }
 
 
@@ -931,13 +1004,14 @@ async function caricaVolontari() {
   list.innerHTML = '<p class="note">Caricamento…</p>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
+    sbOk(res);
     volontariData = await res.json();
     document.getElementById('volTot').textContent = volontariData.length;
     await svCaricaProblemi(volontariData);
     svRenderFiltri();
     if (svFiltro) filtraVolontari(); else renderVolontari(volontariData);
-  } catch(e) { list.innerHTML = '<div class="empty full-row">Errore nel caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty full-row">Non disponibile.</div>'; }
 }
 
 function renderVolontari(data) {
@@ -1025,7 +1099,7 @@ async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
 
   selEl.disabled = true;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ stato: nuovoStato, attivo: nuovoStato !== 'DIMESSO' })
@@ -1345,7 +1419,7 @@ async function salvaVolontario() {
   // Controllo unicità: nessun altro volontario con lo stesso CF
   try {
     let urlCheck = SUPA_URL + '/rest/v1/volontari?codice_fiscale=eq.' + codiceFiscale + '&select=id,cognome,nome';
-    const resCheck = await fetch(urlCheck, { headers: H });
+    const resCheck = await sbFetch(urlCheck, { headers: H });
     const dupes = await resCheck.json();
     const altro = dupes.find(x => x.id !== volCorrenteId);
     if (altro) {
@@ -1394,10 +1468,10 @@ async function salvaVolontario() {
   try {
     let res;
     if (volCorrenteId) {
-      res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
       await logAttivita('ha modificato volontario: ' + cognome + ' ' + nome);
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/volontari', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/volontari', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
       await logAttivita('ha aggiunto volontario: ' + cognome + ' ' + nome);
     }
     if (res.ok) { chiudiForm(); chiudiDettaglio(); caricaVolontari(); }
@@ -1417,7 +1491,7 @@ async function eliminaVolontario() {
   if (!canModificaVolontari()) { alert('Permessi insufficienti.'); return; }
   if (!volCorrenteId) return;
   if (!confirm('Eliminare definitivamente questo volontario?')) return;
-  await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volCorrenteId, { method:'DELETE', headers: H });
   await logAttivita('ha eliminato un volontario');
   chiudiForm(); chiudiDettaglio(); caricaVolontari();
 }
@@ -1489,7 +1563,7 @@ let schemaCache = [];
 
 async function caricaSchema() {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/schema_volontari?select=*&order=sezione,ordine', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/schema_volontari?select=*&order=sezione,ordine', { headers: H });
     schemaCache = await res.json();
     return schemaCache;
   } catch(e) { return []; }
@@ -1543,7 +1617,7 @@ async function salvaNuovoCampo() {
   const campo_id = 'custom_' + etichetta.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
   const ordine   = schemaCache.filter(c => c.sezione === sezione).length;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/schema_volontari', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/schema_volontari', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ campo_id, etichetta, tipo, sezione, ordine, visibile: true })
@@ -1561,7 +1635,7 @@ async function salvaNuovoCampo() {
 }
 
 async function toggleCampo(id, visibile) {
-  await fetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, {
+  await sbFetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, {
     method: 'PATCH', headers: HJ, body: JSON.stringify({ visibile: !visibile })
   });
   renderSchemaList();
@@ -1569,7 +1643,7 @@ async function toggleCampo(id, visibile) {
 
 async function eliminaCampo(id, etichetta) {
   if (!confirm('Eliminare il campo "' + etichetta + '"? I dati inseriti per questo campo andranno persi.')) return;
-  await fetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/schema_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
   await logAttivita('ha eliminato campo custom: ' + etichetta);
   renderSchemaList();
 }
@@ -1591,12 +1665,13 @@ const VISTE_DEFAULT = [
 
 async function caricaViste() {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
+    sbOk(res);
     const data = await res.json();
     // Se non ci sono viste salvate, inserisco i default
-    if (!data.length) {
+    if (!data.length && canModificaVolontari()) {
       await seedVisteDefault();
-      const res2 = await fetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
+      const res2 = await sbFetch(SUPA_URL + '/rest/v1/viste_volontari?select=*&order=ordine', { headers: H });
       visteCache = await res2.json();
     } else {
       visteCache = data;
@@ -1607,7 +1682,7 @@ async function caricaViste() {
 
 async function seedVisteDefault() {
   for (const v of VISTE_DEFAULT) {
-    await fetch(SUPA_URL + '/rest/v1/viste_volontari', {
+    await sbFetch(SUPA_URL + '/rest/v1/viste_volontari', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify(v)
@@ -1879,11 +1954,11 @@ async function salvaVista() {
   }
 
   if (vistaEditId) {
-    await fetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + vistaEditId, {
+    await sbFetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + vistaEditId, {
       method: 'PATCH', headers: HJ, body: JSON.stringify({ nome, filtri })
     });
   } else {
-    await fetch(SUPA_URL + '/rest/v1/viste_volontari', {
+    await sbFetch(SUPA_URL + '/rest/v1/viste_volontari', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ nome, filtri, ordine: visteCache.length })
@@ -1897,7 +1972,7 @@ async function salvaVista() {
 
 async function eliminaVista(id, nome) {
   if (!confirm('Eliminare la vista "' + nome + '"?')) return;
-  await fetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/viste_volontari?id=eq.' + id, { method: 'DELETE', headers: H });
   await logAttivita('ha eliminato vista: ' + nome);
   vistaAttiva = null;
   await caricaViste();
@@ -1941,12 +2016,13 @@ async function caricaInterventi() {
   list.classList.add('card', 'tbl');
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data.desc', { headers: H });
+    sbOk(res);
     interventiData = await res.json();
     await caricaIntOreMancanti();
     aggiornaStatsInterventi();
     renderInterventi(interventiData);
-  } catch(e) { list.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>'; }
 }
 
 // Set degli intervento_id che hanno almeno un volontario con ore non segnate (0 o null)
@@ -1955,13 +2031,13 @@ async function caricaIntOreMancanti() {
   intOreMancantiSet = new Set();
   try {
     // Caso 1 (nuovo schema): righe in intervento_volontari con ore null o 0
-    const r1 = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
+    const r1 = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id,ore&or=(ore.is.null,ore.eq.0)', { headers: H });
     const rows1 = await r1.json();
     rows1.forEach(row => intOreMancantiSet.add(row.intervento_id));
 
     // Caso 2 (vecchio schema): interventi con volontari_ids non vuoto ma senza righe in intervento_volontari
     // Recupero tutti gli intervento_id presenti in intervento_volontari (quelli migrati)
-    const r2 = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id', { headers: H });
+    const r2 = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?select=intervento_id', { headers: H });
     const rows2 = await r2.json();
     const migrati = new Set(rows2.map(r => r.intervento_id));
 
@@ -2105,6 +2181,7 @@ function filtraInterventi() {
 }
 
 async function apriDettaglioIntervento(id) {
+  if (!hasPerm('interventi')) return;
   intCorrenteId = id;
   const detail = document.getElementById('intDetail');
   const body   = document.getElementById('intDetailBody');
@@ -2112,7 +2189,8 @@ async function apriDettaglioIntervento(id) {
   detail.scrollTop = 0;
   body.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+    sbOk(res);
     const data = await res.json();
     const i = data[0];
     if (!i) { body.innerHTML = '<div class="loading-msg">Intervento non trovato.</div>'; return; }
@@ -2127,7 +2205,7 @@ async function apriDettaglioIntervento(id) {
     if (i.volontari_ids && i.volontari_ids.length > 0) {
       try {
         const ids = i.volontari_ids.join(',');
-        const vRes = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids + ')&select=id,cognome,nome', { headers: H });
+        const vRes = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids + ')&select=id,cognome,nome', { headers: H });
         const vols = await vRes.json();
         volNomi = vols.map(v => v.cognome + ' ' + v.nome).join(', ') || '—';
       } catch(e) {}
@@ -2233,7 +2311,7 @@ async function apriDettaglioIntervento(id) {
       </div>
       <button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>`;
 
-  } catch(e) { body.innerHTML = '<div class="loading-msg bad">Errore nel caricamento.</div>'; }
+  } catch(e) { body.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>'; }
 }
 
 function chiudiDettaglioIntervento() {
@@ -2347,7 +2425,7 @@ async function caricaVolPicker() {
   // Carica volontari ATTIVI+SOSPESI in cache (per dropdown)
   if (!intVolAllCache.length) {
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale&stato=neq.DIMESSO&order=cognome', { headers: H });
+      const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale&stato=neq.DIMESSO&order=cognome', { headers: H });
       intVolAllCache = await res.json();
     } catch(e) { intVolAllCache = []; }
   }
@@ -2505,7 +2583,7 @@ function aggiornaConteggioVolontari() { aggiornaContatoriVolontari(); }
 
 async function caricaDatiFormIntervento(id) {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
     const data = await res.json();
     const i = data[0]; if (!i) return;
     const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
@@ -2538,7 +2616,7 @@ async function caricaDatiFormIntervento(id) {
     // Carica partecipanti dalla nuova tabella intervento_volontari
     intVolSelezionati = [];
     try {
-      const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,ore,data_inizio,data_fine,volontario:volontario_id(cognome,nome)&order=id', { headers: H });
+      const rIV = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,ore,data_inizio,data_fine,volontario:volontario_id(cognome,nome)&order=id', { headers: H });
       const ivs = await rIV.json();
       if (Array.isArray(ivs) && ivs.length) {
         // Dati nuovi
@@ -2553,7 +2631,7 @@ async function caricaDatiFormIntervento(id) {
         }));
       } else if (i.volontari_ids && i.volontari_ids.length) {
         // Legacy: carica da volontari_ids senza ore/date specifiche
-        const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome', { headers: H });
+        const rV = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome', { headers: H });
         const vols = await rV.json();
         intVolSelezionati = vols.map(v => ({
           volontario_id: v.id,
@@ -2613,10 +2691,10 @@ async function salvaIntervento() {
   try {
     let res, intId;
     if (intCorrenteId) {
-      res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'PATCH', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
       intId = intCorrenteId;
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/interventi', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=representation'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/interventi', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=representation'}), body: JSON.stringify(payload) });
       const created = await res.json();
       intId = Array.isArray(created) && created[0] ? created[0].id : null;
     }
@@ -2625,7 +2703,7 @@ async function salvaIntervento() {
     // Sincronizza intervento_volontari: cancella tutto e ricrea
     if (intId) {
       try {
-        await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + intId, { method:'DELETE', headers: H });
+        await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + intId, { method:'DELETE', headers: H });
         if (intVolSelezionati.length) {
           const rows = intVolSelezionati.map(v => ({
             intervento_id: intId,
@@ -2635,7 +2713,7 @@ async function salvaIntervento() {
             data_inizio: v.data_inizio || null,
             data_fine: v.data_fine || null
           }));
-          await fetch(SUPA_URL + '/rest/v1/intervento_volontari', {
+          await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari', {
             method: 'POST',
             headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
             body: JSON.stringify(rows)
@@ -2658,7 +2736,7 @@ async function cambiaStatoIntervento(id, nuovoStatoManuale) {
     : 'Sbloccare lo stato? Tornerà al calcolo automatico in base alla data.';
   if (!confirm(msg)) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ stato_manuale: nuovoStatoManuale })
@@ -2675,7 +2753,7 @@ async function cambiaStatoIntervento(id, nuovoStatoManuale) {
 async function eliminaIntervento() {
   if (!intCorrenteId) return;
   if (!confirm('Eliminare questo intervento?')) return;
-  await fetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/interventi?id=eq.' + intCorrenteId, { method:'DELETE', headers: H });
   await logAttivita('ha eliminato un intervento');
   chiudiFormIntervento();
   chiudiDettaglioIntervento();
@@ -2900,7 +2978,7 @@ async function apriGeneratoreAttestati(interventoId) {
 
   try {
     // Carica dati intervento
-    var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
+    var intRes  = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
     var intData = await intRes.json();
     var intv    = intData[0];
     if (!intv) { document.getElementById('attestatiBody').innerHTML = '<div class="loading-msg">Intervento non trovato.</div>'; return; }
@@ -2908,7 +2986,7 @@ async function apriGeneratoreAttestati(interventoId) {
     // Carica volontari partecipanti
     attestatiVolontari = [];
     if (intv.volontari_ids && intv.volontari_ids.length) {
-      var vRes  = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + intv.volontari_ids.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
+      var vRes  = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + intv.volontari_ids.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
       attestatiVolontari = await vRes.json();
     }
 
@@ -2967,9 +3045,10 @@ async function generaAttestatiSelezionati(interventoId, unico) {
 
   await _caricaLibreriaAttestati();
 
-  var intRes  = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
+  var intRes  = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + interventoId + '&select=*', { headers: H });
   var intData = await intRes.json();
   var intv    = intData[0];
+  if (!intv) { status.textContent = 'Non disponibile.'; return; }
   var vols    = attestatiVolontari.filter(function(v){ return selezionati.includes(v.id); });
 
   if (unico) {
@@ -3037,15 +3116,15 @@ async function archiviaAttestato(idx, interventoId) {
 
   try {
     var path = r.v.id + '/ATTESTATO_' + interventoId + '_' + Date.now() + '.pdf';
-    var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/attestati/' + path, {
+    var uploadRes = await sbFetch(SUPA_URL + '/storage/v1/object/attestati/' + path, {
       method: 'POST',
-      headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': 'application/pdf' },
+      headers: { 'apikey': SUPA_KEY, 'Content-Type': 'application/pdf' },
       body: r.blob
     });
     if (!uploadRes.ok) throw new Error('Errore upload');
 
     var url = SUPA_URL + '/storage/v1/object/public/attestati/' + path;
-    await fetch(SUPA_URL + '/rest/v1/documenti', {
+    await sbFetch(SUPA_URL + '/rest/v1/documenti', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ volontario_id: r.v.id, tipo: 'ATTESTATO', nome_file: r.nome, url, data_carico: new Date().toISOString() })
@@ -3393,9 +3472,8 @@ async function eseguiUploadDoc() {
   try {
     // Upload su Supabase Storage
     bar.style.width = '30%';
-    const uploadRes = await fetch(
-      SUPA_URL + '/storage/v1/object/' + bucket + '/' + path,
-      { method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': docUploadFile.type }, body: docUploadFile }
+    const uploadRes = await sbFetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path,
+      { method: 'POST', headers: { 'apikey': SUPA_KEY, 'Content-Type': docUploadFile.type }, body: docUploadFile }
     );
     bar.style.width = '70%';
     if (!uploadRes.ok) throw new Error('Errore upload storage');
@@ -3404,7 +3482,7 @@ async function eseguiUploadDoc() {
     const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
 
     // Salva record in documenti
-    const docRes = await fetch(SUPA_URL + '/rest/v1/documenti', {
+    const docRes = await sbFetch(SUPA_URL + '/rest/v1/documenti', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ volontario_id: docUploadVolId, tipo, nome_file: nomeDoc, url })
@@ -3414,7 +3492,7 @@ async function eseguiUploadDoc() {
 
     // Se è foto, aggiorna avatar volontario
     if (tipo === 'FOTO') {
-      await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + docUploadVolId, {
+      await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + docUploadVolId, {
         method: 'PATCH', headers: HJ, body: JSON.stringify({ foto_url: url })
       });
     }
@@ -3435,7 +3513,7 @@ async function eliminaDoc(docId, volId) {
   // Recupera info del documento per sapere tipo e path
   let doc = null;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId + '&select=tipo,url', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId + '&select=tipo,url', { headers: H });
     const arr = await r.json();
     doc = arr[0];
   } catch(e) {}
@@ -3447,17 +3525,17 @@ async function eliminaDoc(docId, volId) {
       const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
       if (m) {
         const bucket = m[1], path = m[2];
-        await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, { method: 'DELETE', headers: H });
+        await sbFetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, { method: 'DELETE', headers: H });
       }
     } catch(e) {}
   }
 
   // Elimina record dalla tabella documenti
-  await fetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId, { method: 'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/documenti?id=eq.' + docId, { method: 'DELETE', headers: H });
 
   // Se era una FOTO, azzera foto_url sul volontario
   if (doc && doc.tipo === 'FOTO' && volId) {
-    await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+    await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ foto_url: null })
@@ -3516,10 +3594,11 @@ async function eseguiVerificaCF() {
   box.innerHTML = '<div class="card vcf-card"><p class="note m0">Verifica in corso…</p></div>';
   let vols;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,luogo_nascita&stato=neq.DIMESSO&order=cognome,nome', { headers: H });
+    sbOk(r);
     vols = await r.json();
   } catch(e) {
-    box.innerHTML = '<div class="card vcf-card"><p class="bad m0">Errore nel caricamento dei volontari.</p></div>';
+    box.innerHTML = '<div class="card vcf-card"><p class="bad m0">Non disponibile.</p></div>';
     return;
   }
 
@@ -3583,10 +3662,10 @@ function _pstLabelMezzo(m) {
 
 async function _pstCaricaRadioMezzoOpts() {
   if (!tlcData || !tlcData.length) {
-    try { const r = await fetch(SUPA_URL + '/rest/v1/tlc?select=id,marca,modello,selettiva&order=marca', { headers: H }); tlcData = await r.json(); } catch(e) { tlcData = tlcData || []; }
+    try { const r = await sbFetch(SUPA_URL + '/rest/v1/tlc?select=id,marca,modello,selettiva&order=marca', { headers: H }); tlcData = await r.json(); } catch(e) { tlcData = tlcData || []; }
   }
   if (!mezziData || !mezziData.length) {
-    try { const r = await fetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
+    try { const r = await sbFetch(SUPA_URL + '/rest/v1/mezzi?select=id,automezzo,targa&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
   }
   const optsRadio = '<option value="">— radio (nessuna) —</option>' + tlcData.map(t => '<option value="' + t.id + '">' + _pstLabelRadio(t) + '</option>').join('');
   const optsMezzo = '<option value="">— mezzo (nessuno) —</option>' + mezziData.map(m => '<option value="' + m.id + '">' + _pstLabelMezzo(m) + '</option>').join('');
@@ -3599,7 +3678,12 @@ async function caricaPostazioni() {
   if (!sel) return;
   const prevVal = sel.value;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,luogo,volontari_ids&usa_postazioni=eq.true&order=data.desc&limit=500', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/interventi?select=id,evento,data,luogo,volontari_ids&usa_postazioni=eq.true&order=data.desc&limit=500', { headers: H });
+    if (!res.ok) {
+      sel.innerHTML = '<option value="">Non disponibile</option>';
+      document.getElementById('pstBody').style.display = 'none';
+      return;
+    }
     pstInterventiOpts = await res.json();
   } catch(e) { pstInterventiOpts = []; }
 
@@ -3645,7 +3729,7 @@ async function pstCaricaVolontariIntervento() {
   pstVolontariIntervento = [];
   if (!pstIntervento) return;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + pstIntervento.id + '&select=volontario_id,volontario:volontario_id(id,cognome,nome,squadra,telefono)', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + pstIntervento.id + '&select=volontario_id,volontario:volontario_id(id,cognome,nome,squadra,telefono)', { headers: H });
     const rows = await r.json();
     if (Array.isArray(rows) && rows.length) {
       pstVolontariIntervento = rows.filter(x => x.volontario).map(x => ({ id: x.volontario.id, cognome: x.volontario.cognome, nome: x.volontario.nome, squadra: x.volontario.squadra, telefono: x.volontario.telefono }));
@@ -3655,7 +3739,7 @@ async function pstCaricaVolontariIntervento() {
   // Fallback legacy
   if (pstIntervento.volontari_ids && pstIntervento.volontari_ids.length) {
     try {
-      const r = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + pstIntervento.volontari_ids.join(',') + ')&select=id,cognome,nome,squadra,telefono', { headers: H });
+      const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + pstIntervento.volontari_ids.join(',') + ')&select=id,cognome,nome,squadra,telefono', { headers: H });
       pstVolontariIntervento = await r.json();
     } catch(e) {}
   }
@@ -3666,13 +3750,14 @@ async function pstCaricaLista() {
   if (!list || !pstIntervento) return;
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const rP = await fetch(SUPA_URL + '/rest/v1/postazioni?select=*&intervento_id=eq.' + pstIntervento.id + '&order=ordine.asc', { headers: H });
+    const rP = await sbFetch(SUPA_URL + '/rest/v1/postazioni?select=*&intervento_id=eq.' + pstIntervento.id + '&order=ordine.asc', { headers: H });
+    sbOk(rP);
     const postazioni = await rP.json();
 
     let assegnazioni = [];
     if (postazioni.length) {
       const ids = postazioni.map(p => p.id).join(',');
-      const rA = await fetch(SUPA_URL + '/rest/v1/postazione_volontari?select=*,volontari(id,cognome,nome,squadra,telefono)&postazione_id=in.(' + ids + ')&order=id.asc', { headers: H });
+      const rA = await sbFetch(SUPA_URL + '/rest/v1/postazione_volontari?select=*,volontari(id,cognome,nome,squadra,telefono)&postazione_id=in.(' + ids + ')&order=id.asc', { headers: H });
       assegnazioni = await rA.json();
     }
 
@@ -3683,7 +3768,7 @@ async function pstCaricaLista() {
 
     pstRenderLista();
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg bad">errore caricamento postazioni.</div>';
+    list.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
 }
 
@@ -3810,7 +3895,7 @@ async function pstNuovaPostazione() {
 
   const ordine = pstPostazioni.length ? Math.max(...pstPostazioni.map(p => p.ordine || 0)) + 1 : 1;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/postazioni', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/postazioni', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({
@@ -3862,7 +3947,7 @@ async function pstSalvaModificaPostazione() {
   const vigile = document.getElementById('pstEFVigile').checked;
   const ana = document.getElementById('pstEFAna').checked;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({
@@ -3883,7 +3968,7 @@ async function pstSalvaModificaPostazione() {
 async function pstEliminaPostazione(id) {
   if (!confirm('Eliminare questa postazione e tutte le assegnazioni collegate?')) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + id, { method: 'DELETE', headers: H });
     await pstCaricaLista();
   } catch(e) { alert('Errore durante l\'eliminazione.'); }
 }
@@ -3894,7 +3979,7 @@ async function pstEliminaTutte() {
   if (!confirm('Eliminare TUTTE le ' + n + ' postazioni di questo intervento (e tutte le assegnazioni volontari collegate)? L\'operazione non è reversibile.')) return;
   if (!confirm('Ultima conferma: procedere con l\'eliminazione di tutte le ' + n + ' postazioni?')) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazioni?intervento_id=eq.' + pstIntervento.id, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/postazioni?intervento_id=eq.' + pstIntervento.id, { method: 'DELETE', headers: H });
     const searchEl = document.getElementById('pstSearch');
     if (searchEl) searchEl.value = '';
     await pstCaricaLista();
@@ -3903,7 +3988,7 @@ async function pstEliminaTutte() {
 
 async function pstAggiornaTrasporto(assegnazioneId, valore) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, {
+    await sbFetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, {
       method: 'PATCH', headers: HJ, body: JSON.stringify({ trasporto: valore })
     });
     pstPostazioni.forEach(p => { const a = p.volontari.find(x => x.id === assegnazioneId); if (a) a.trasporto = valore; });
@@ -3912,7 +3997,7 @@ async function pstAggiornaTrasporto(assegnazioneId, valore) {
 
 async function pstRimuoviVolontario(assegnazioneId) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/postazione_volontari?id=eq.' + assegnazioneId, { method: 'DELETE', headers: H });
     await pstCaricaLista();
   } catch(e) { alert('Errore durante la rimozione.'); }
 }
@@ -3958,7 +4043,7 @@ function pstRenderModalList() {
 async function pstAggiungiVolontarioA(volontarioId) {
   if (!pstTargetPostazioneId) return;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/postazione_volontari', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/postazione_volontari', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ postazione_id: pstTargetPostazioneId, volontario_id: volontarioId })
@@ -4238,7 +4323,7 @@ async function pstImportaExcel(file) {
 
       let postazioneId;
       try {
-        const res = await fetch(SUPA_URL + '/rest/v1/postazioni', {
+        const res = await sbFetch(SUPA_URL + '/rest/v1/postazioni', {
           method: 'POST',
           headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
           body: JSON.stringify({
@@ -4260,7 +4345,7 @@ async function pstImportaExcel(file) {
           const match = pstVolontariIntervento.find(v => _pstNorm(v.cognome + v.nome) === target || _pstNorm(v.nome + v.cognome) === target);
           if (!match) { avvisi.push('Riga ' + (idx+2) + ': volontario "' + nomeRichiesto + '" non trovato tra i partecipanti all\'intervento'); continue; }
           try {
-            await fetch(SUPA_URL + '/rest/v1/postazione_volontari', {
+            await sbFetch(SUPA_URL + '/rest/v1/postazione_volontari', {
               method: 'POST',
               headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
               body: JSON.stringify({ postazione_id: postazioneId, volontario_id: match.id })
@@ -4313,7 +4398,7 @@ function pstMostraTab(tab) {
 async function pstInitMappa() {
   if (!pstIntervento) return;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/mappe_intervento?select=*&intervento_id=eq.' + pstIntervento.id, { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/mappe_intervento?select=*&intervento_id=eq.' + pstIntervento.id, { headers: H });
     const rows = await r.json();
     pstMappaData = (Array.isArray(rows) && rows.length) ? rows[0] : { intervento_id: pstIntervento.id, tipo: 'immagine', immagine_url: null, google_center_lat: null, google_center_lng: null, google_zoom: 15, percorso: [] };
   } catch(e) {
@@ -4356,7 +4441,7 @@ async function pstUpsertMappa(campi) {
   if (!pstIntervento) return;
   const body = Object.assign({ intervento_id: pstIntervento.id }, campi);
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/mappe_intervento?on_conflict=intervento_id', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/mappe_intervento?on_conflict=intervento_id', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'resolution=merge-duplicates,return=representation' }),
       body: JSON.stringify(body)
@@ -4370,8 +4455,8 @@ async function pstCaricaImmagineMappa(file) {
   if (!file || !pstIntervento) return;
   try {
     const path = pstIntervento.id + '/mappa_' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const up = await fetch(SUPA_URL + '/storage/v1/object/mappe-postazioni/' + path, {
-      method: 'POST', headers: { 'apikey': SUPA_KEY, 'Authorization': H.Authorization, 'Content-Type': file.type }, body: file
+    const up = await sbFetch(SUPA_URL + '/storage/v1/object/mappe-postazioni/' + path, {
+      method: 'POST', headers: { 'apikey': SUPA_KEY, 'Content-Type': file.type }, body: file
     });
     if (!up.ok) throw new Error('upload fallito');
     const url = SUPA_URL + '/storage/v1/object/public/mappe-postazioni/' + path;
@@ -4516,7 +4601,7 @@ async function pstGestisciPanEnd(e) {
       const p = pstPostazioni.find(x => x.id === drag.postazioneId);
       if (p) { p.label_dx = nuovaDx; p.label_dy = nuovaDy; }
       try {
-        await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + drag.postazioneId, {
+        await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + drag.postazioneId, {
           method: 'PATCH', headers: HJ, body: JSON.stringify({ label_dx: nuovaDx, label_dy: nuovaDy })
         });
       } catch(err) {}
@@ -4779,7 +4864,7 @@ async function pstScaricaMappeIndividuali() {
 
 async function pstSalvaPinImmagine(postazioneId, xPct, yPct) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+    await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
       method: 'PATCH', headers: HJ,
       body: JSON.stringify({ map_x: xPct, map_y: yPct })
     });
@@ -4919,7 +5004,7 @@ function pstGestisciClickGoogle(e) {
 
 async function pstSalvaPinGoogle(postazioneId, lat, lng) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+    await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
       method: 'PATCH', headers: HJ,
       body: JSON.stringify({ map_lat: lat, map_lng: lng })
     });
@@ -4986,7 +5071,7 @@ function pstArmaPosizionamento(postazioneId) {
 
 async function pstRimuoviDallaMappa(postazioneId) {
   try {
-    await fetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
+    await sbFetch(SUPA_URL + '/rest/v1/postazioni?id=eq.' + postazioneId, {
       method: 'PATCH', headers: HJ,
       body: JSON.stringify({ map_x: null, map_y: null, map_lat: null, map_lng: null })
     });
@@ -5095,14 +5180,15 @@ async function caricaDb() {
     if (dbSearchTerm) {
       url += '&or=(cognome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,nome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,squadra.ilike.*' + encodeURIComponent(dbSearchTerm) + '*)';
     }
-    var res  = await fetch(url, { headers: Object.assign({}, H, { 'Prefer': 'count=exact' }) });
+    var res  = await sbFetch(url, { headers: Object.assign({}, H, { 'Prefer': 'count=exact' }) });
     var total = parseInt(res.headers.get('Content-Range')?.split('/')[1] || '0');
     dbTotal   = total;
+    sbOk(res);
     dbRecords = await res.json();
     dbRenderBody();
     dbRenderPag();
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="99" class="db-loading bad">Errore: ' + e.message + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="99" class="db-loading bad">Non disponibile.</td></tr>';
   }
 }
 
@@ -5214,9 +5300,11 @@ async function dbApriModifica(id) {
   document.getElementById('dbRecordTitle').textContent = 'Modifica volontario';
   document.getElementById('dbRecordErr').style.display = 'none';
   try {
-    var res  = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
+    var res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + id + '&select=*', { headers: H });
+    sbOk(res);
     var data = await res.json();
-    dbBuildForm(data[0] || {});
+    if (!data[0]) throw new Error('Non disponibile.');   // mai un form vuoto sopra un record esistente
+    dbBuildForm(data[0]);
     document.getElementById('dbRecordOverlay').classList.add('open');
   var delBtn = document.getElementById('dbDelBtn'); if (delBtn) delBtn.style.display = 'block';
   } catch(e) { alert('Errore caricamento: ' + e.message); }
@@ -5260,12 +5348,12 @@ async function dbSalvaRecord() {
   try {
     var res;
     if (dbEditId) {
-      res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, {
+      res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, {
         method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
         body: JSON.stringify(payload)
       });
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/volontari', {
+      res = await sbFetch(SUPA_URL + '/rest/v1/volontari', {
         method: 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
         body: JSON.stringify(payload)
       });
@@ -5281,7 +5369,7 @@ async function dbSalvaRecord() {
 async function dbEliminaRecord() {
   if (!dbEditId) return;
   if (!confirm('Eliminare definitivamente questo volontario?')) return;
-  await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, { method: 'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + dbEditId, { method: 'DELETE', headers: H });
   await logAttivita('ha eliminato un volontario (DB)');
   document.getElementById('dbRecordOverlay').classList.remove('open');
   caricaDb();
@@ -5324,14 +5412,15 @@ async function caricaTlc() {
   list.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
     const [rApp, rDoc] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=is.null&select=*&order=tipo,data_carico.desc', { headers: H })
+      sbFetch(SUPA_URL + '/rest/v1/tlc?select=*&order=tipologia,marca,modello', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=is.null&select=*&order=tipo,data_carico.desc', { headers: H })
     ]);
+    sbOk(rApp);
     tlcData = await rApp.json();
     tlcDocsGenerali = await rDoc.json();
     renderTlc(tlcData);
   } catch(e) {
-    list.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
+    list.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
 }
 
@@ -5565,14 +5654,14 @@ async function salvaTlc() {
   try {
     let res;
     if (tlcCorrenteId) {
-      res = await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + tlcCorrenteId, {
+      res = await sbFetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + tlcCorrenteId, {
         method: 'PATCH',
         headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
         body: JSON.stringify(payload)
       });
       await logAttivita('ha modificato apparato TLC: ' + (payload.marca || '') + ' ' + (payload.modello || ''));
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/tlc', {
+      res = await sbFetch(SUPA_URL + '/rest/v1/tlc', {
         method: 'POST',
         headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
         body: JSON.stringify(payload)
@@ -5593,18 +5682,18 @@ async function eliminaTlc(id) {
   if (!confirm('Eliminare questo apparato? Verranno cancellati anche i documenti collegati.')) return;
   try {
     // Cancella prima i file dal bucket
-    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + id + '&select=url', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + id + '&select=url', { headers: H });
     const docs = await r.json();
     for (const d of (docs || [])) {
       if (d.url) {
         const m = d.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
         if (m) {
-          await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+          await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
         }
       }
     }
     // Cancella apparato (cascade su documenti_tlc)
-    await fetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + id, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + id, { method: 'DELETE', headers: H });
     await logAttivita('ha eliminato apparato TLC');
     chiudiDettaglioTlc();
     caricaTlc();
@@ -5628,7 +5717,8 @@ async function caricaDocTlc(tlcId) {
   if (!body) return;
   body.innerHTML = '<p class="note">Caricamento…</p>';
   try {
-    const res  = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
+    sbOk(res);
     const docs = await res.json();
     const count = document.getElementById('tlcDocCount');
     if (count) count.textContent = '(' + docs.length + ')';
@@ -5652,7 +5742,7 @@ async function caricaDocTlc(tlcId) {
     html += '<button class="doc-add-btn mt10" onclick="apriTlcDocUpload(' + tlcId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
+    body.innerHTML = '<p class="bad">Non disponibile.</p>';
   }
 }
 
@@ -5679,7 +5769,7 @@ async function eseguiUploadDocTlc() {
   const bucket = 'documenti-tlc';
 
   try {
-    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+    const uploadRes = await sbFetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
       method: 'POST',
       headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
       body: file
@@ -5687,7 +5777,7 @@ async function eseguiUploadDocTlc() {
     if (!uploadRes.ok) throw new Error('upload fallito');
     const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
 
-    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+    await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ tlc_id: tlcDocCorrenteId, tipo: tipo, nome_file: file.name, url: url })
@@ -5704,14 +5794,14 @@ async function eseguiUploadDocTlc() {
 async function eliminaDocTlc(docId, tlcId) {
   if (!confirm('Eliminare questo documento?')) return;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
     const arr = await r.json();
     const doc = arr[0];
     if (doc && doc.url) {
       const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+      if (m) await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
     }
-    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
     caricaDocTlc(tlcId);
   } catch(e) { alert('Errore.'); }
 }
@@ -5739,7 +5829,7 @@ async function eseguiUploadDocTlcGenerale() {
   const bucket = 'documenti-tlc';
 
   try {
-    const uploadRes = await fetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
+    const uploadRes = await sbFetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, {
       method: 'POST',
       headers: { 'Authorization': H['Authorization'], 'apikey': H['apikey'], 'Content-Type': file.type || 'application/octet-stream' },
       body: file
@@ -5747,7 +5837,7 @@ async function eseguiUploadDocTlcGenerale() {
     if (!uploadRes.ok) throw new Error('upload fallito');
     const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
 
-    await fetch(SUPA_URL + '/rest/v1/documenti_tlc', {
+    await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ tlc_id: null, tipo: tipo, nome_file: file.name, url: url })
@@ -5765,14 +5855,14 @@ async function eseguiUploadDocTlcGenerale() {
 async function eliminaDocTlcGen(docId) {
   if (!confirm('Eliminare questo documento?')) return;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
     const arr = await r.json();
     const doc = arr[0];
     if (doc && doc.url) {
       const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      if (m) await fetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
+      if (m) await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
     }
-    await fetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
     window._tlcDocsGenAperto = true;
     caricaTlc();
   } catch(e) { alert('Errore.'); }
@@ -5847,15 +5937,16 @@ async function caricaDotazioni() {
   lista.innerHTML = '<p class="note">Caricamento…</p>';
   try {
     const [magRes, catRes, dotRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?select=*&order=ordine.asc', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H })
+      sbFetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?select=*&order=ordine.asc', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H })
     ]);
+    sbOk(dotRes);
     dotMagazzini = await magRes.json();
     dotCategorieAlbero = await catRes.json();
     dotAll = await dotRes.json();
   } catch(e) {
-    lista.innerHTML = '<div class="empty">Errore nel caricamento delle dotazioni.</div>';
+    lista.innerHTML = '<div class="empty">Non disponibile.</div>';
     return;
   }
   dotRenderCategoriaTabs();
@@ -5944,8 +6035,8 @@ async function dotSpostaMagazzino(id, direzione) {
   const ordineA = a.ordine, ordineB = b.ordine;
   try {
     await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + a.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineB }) }),
-      fetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + b.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineA }) })
+      sbFetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + a.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineB }) }),
+      sbFetch(SUPA_URL + '/rest/v1/dotazioni_magazzini?id=eq.' + b.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ ordine: ordineA }) })
     ]);
   } catch(e) { alert('Errore nello spostamento.'); return; }
   await caricaDotazioni();
@@ -6096,7 +6187,7 @@ function dotRenderDettaglioBody() {
 async function dotCaricaManutenzioni(id) {
   dotRenderDettaglioBody(); // mostra "caricamento..."
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?select=*&dotazione_id=eq.' + id + '&order=data.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?select=*&dotazione_id=eq.' + id + '&order=data.desc', { headers: H });
     dotManCache[id] = await res.json();
   } catch(e) { dotManCache[id] = []; }
   dotRenderDettaglioBody();
@@ -6108,7 +6199,7 @@ async function dotAggiungiManutenzione(id) {
   const nota = document.getElementById('dotManNota' + id).value.trim();
   if (!nota) { alert('Inserisci una nota per l\'intervento.'); return; }
   try {
-    await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni', {
+    await sbFetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni', {
       method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ dotazione_id: id, data, utente, nota })
     });
@@ -6119,7 +6210,7 @@ async function dotAggiungiManutenzione(id) {
 
 async function dotEliminaManutenzione(manId, dotazioneId) {
   if (!confirm('Eliminare questo intervento di manutenzione?')) return;
-  try { await fetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?id=eq.' + manId, { method:'DELETE', headers: H }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/dotazioni_manutenzioni?id=eq.' + manId, { method:'DELETE', headers: H }); }
   catch(e) {}
   delete dotManCache[dotazioneId];
   await dotCaricaManutenzioni(dotazioneId);
@@ -6180,9 +6271,9 @@ async function dotSalvaNuovo() {
   };
   try {
     if (dotEditId) {
-      await fetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + dotEditId, { method:'PATCH', headers: HJ, body: JSON.stringify(body) });
+      await sbFetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + dotEditId, { method:'PATCH', headers: HJ, body: JSON.stringify(body) });
     } else {
-      await fetch(SUPA_URL + '/rest/v1/dotazioni', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(body) });
+      await sbFetch(SUPA_URL + '/rest/v1/dotazioni', { method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(body) });
     }
   } catch(e) { alert('Errore salvataggio articolo.'); return; }
   dotResetForm();
@@ -6192,7 +6283,7 @@ async function dotSalvaNuovo() {
 
 async function dotEliminaArticolo(id) {
   if (!confirm('Eliminare questo articolo?')) return;
-  try { await fetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + id, { method:'DELETE', headers: H }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/dotazioni?id=eq.' + id, { method:'DELETE', headers: H }); }
   catch(e) { alert('Errore eliminazione.'); return; }
   chiudiDettaglioDotazione();
   await caricaDotazioni();
@@ -6289,7 +6380,7 @@ async function dotImportaExcel(file) {
       if (!righe.length) continue;
 
       // sostituisce gli articoli esistenti del magazzino (codice/descrizione/categoria andranno reinseriti a mano)
-      await fetch(SUPA_URL + '/rest/v1/dotazioni?magazzino=eq.' + encodeURIComponent(magazzino), { method: 'DELETE', headers: H });
+      await sbFetch(SUPA_URL + '/rest/v1/dotazioni?magazzino=eq.' + encodeURIComponent(magazzino), { method: 'DELETE', headers: H });
 
       const nuovi = righe.map(r => {
         const q = _dotParseQuantita(r.quantitaRaw);
@@ -6298,7 +6389,7 @@ async function dotImportaExcel(file) {
         else if (q.extra) note = note + ' (quantità originale: ' + q.extra + ')';
         return { magazzino: magazzino, articolo: r.articolo, quantita: q.valore, note: note };
       });
-      await fetch(SUPA_URL + '/rest/v1/dotazioni', { method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(nuovi) });
+      await sbFetch(SUPA_URL + '/rest/v1/dotazioni', { method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}), body: JSON.stringify(nuovi) });
       totRighe += nuovi.length;
     }
 
@@ -6320,9 +6411,10 @@ async function caricaCategorieDotazioni() {
   if (!el) return;
   el.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/dotazioni_categorie?select=*&order=ordine.asc,nome.asc', { headers: H });
+    sbOk(res);
     dotCategorieAlbero = await res.json();
-  } catch(e) { el.innerHTML = '<div class="loading-msg bad">errore caricamento categorie.</div>'; return; }
+  } catch(e) { el.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>'; return; }
   catDotRenderList();
 }
 
@@ -6353,7 +6445,7 @@ async function catDotAggiungiCategoria() {
   const nome = inp.value.trim();
   if (!nome) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
+    await sbFetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
       method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ nome: nome, parent_id: null })
     });
@@ -6366,7 +6458,7 @@ async function catDotAggiungiSottocategoria(parentId) {
   const nome = prompt('Nome sottocategoria:');
   if (!nome || !nome.trim()) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
+    await sbFetch(SUPA_URL + '/rest/v1/dotazioni_categorie', {
       method:'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ nome: nome.trim(), parent_id: parentId })
     });
@@ -6376,7 +6468,7 @@ async function catDotAggiungiSottocategoria(parentId) {
 
 async function catDotElimina(id) {
   if (!confirm('Eliminare questa categoria? Le sottocategorie collegate verranno eliminate e gli articoli che la usano resteranno senza categoria.')) return;
-  try { await fetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + id, { method:'DELETE', headers: H }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/dotazioni_categorie?id=eq.' + id, { method:'DELETE', headers: H }); }
   catch(e) { alert('Errore eliminazione.'); return; }
   await caricaCategorieDotazioni();
 }
@@ -6388,7 +6480,8 @@ var pdcMezzi = []; // [{...mezzo, voci:[...]}]
 
 async function caricaPianiCarico() {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/piani_carico?select=*&order=created_at.desc', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/piani_carico?select=*&order=created_at.desc', { headers: H });
+    if (!res.ok) sbAvviso('Piani di carico non disponibili.');
     pdcPianiList = await res.json();
   } catch(e) { pdcPianiList = []; }
   const sel = document.getElementById('pdcPiano');
@@ -6399,7 +6492,7 @@ async function caricaPianiCarico() {
   pdcPianoCorrente = null;
   if (!dotAll.length) {
     try {
-      const dotRes = await fetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H });
+      const dotRes = await sbFetch(SUPA_URL + '/rest/v1/dotazioni?select=*&order=magazzino.asc,articolo.asc', { headers: H });
       dotAll = await dotRes.json();
     } catch(e) {}
   }
@@ -6417,7 +6510,7 @@ async function pdcSalvaNuovoPiano() {
   if (!nome) { alert('Inserisci il nome del piano.'); return; }
   const data = document.getElementById('pdcNuovoData').value || null;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/piani_carico', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/piani_carico', {
       method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=representation'}),
       body: JSON.stringify({ nome, data })
     });
@@ -6434,7 +6527,7 @@ async function pdcEliminaPianoCorrente() {
   if (!pdcPianoCorrente) return;
   if (!confirm('Eliminare il piano "' + pdcPianoCorrente.nome + '" e tutti i mezzi/voci collegati?')) return;
   try {
-    await fetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method: 'DELETE', headers: H });
+    await sbFetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method: 'DELETE', headers: H });
     await logAttivita('ha eliminato il piano di carico: ' + pdcPianoCorrente.nome);
   } catch(e) { alert('Errore eliminazione piano.'); return; }
   await caricaPianiCarico();
@@ -6452,7 +6545,7 @@ async function pdcSelezionaPiano(id) {
 async function pdcToggleComposizione(checked) {
   if (!pdcPianoCorrente) return;
   pdcPianoCorrente.mostra_composizione = checked;
-  try { await fetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ mostra_composizione: checked }) }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/piani_carico?id=eq.' + pdcPianoCorrente.id, { method:'PATCH', headers: HJ, body: JSON.stringify({ mostra_composizione: checked }) }); }
   catch(e) {}
   pdcRenderMezzi();
 }
@@ -6461,12 +6554,12 @@ async function pdcCaricaMezzi() {
   const list = document.getElementById('pdcMezziList');
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   if (!mezziData || !mezziData.length) {
-    try { const r = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
+    try { const r = await sbFetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H }); mezziData = await r.json(); } catch(e) { mezziData = mezziData || []; }
   }
   try {
-    const mezziRes = await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?select=*&piano_id=eq.' + pdcPianoCorrente.id + '&order=ordine.asc', { headers: H });
+    const mezziRes = await sbFetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?select=*&piano_id=eq.' + pdcPianoCorrente.id + '&order=ordine.asc', { headers: H });
     const mezzi = await mezziRes.json();
-    const vociRes = await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?select=*&order=ordine.asc', { headers: H });
+    const vociRes = await sbFetch(SUPA_URL + '/rest/v1/piani_carico_voci?select=*&order=ordine.asc', { headers: H });
     const vociAll = await vociRes.json();
     pdcMezzi = mezzi.map(m => Object.assign({}, m, { voci: vociAll.filter(v => v.mezzo_id === m.id) }));
   } catch(e) { pdcMezzi = []; }
@@ -6543,7 +6636,7 @@ async function pdcAggiungiMezzo() {
   if (!pdcPianoCorrente) return;
   const ordine = pdcMezzi.length ? Math.max(...pdcMezzi.map(m => m.ordine||0)) + 1 : 1;
   try {
-    await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi', {
+    await sbFetch(SUPA_URL + '/rest/v1/piani_carico_mezzi', {
       method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ piano_id: pdcPianoCorrente.id, descrizione_mezzo: '', autista_nome: '', ordine })
     });
@@ -6569,7 +6662,7 @@ function _pdcQuantitaResidua(dotazioneId, escludiVoceId) {
 
 async function pdcAggiornaMezzo(id, campo, valore) {
   const body = {}; body[campo] = valore || (campo === 'ordine' ? 0 : null);
-  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
   catch(e) {}
   if (campo === 'ordine') { await pdcCaricaMezzi(); return; }
   const m = pdcMezzi.find(x => x.id === id); if (m) m[campo] = valore;
@@ -6577,7 +6670,7 @@ async function pdcAggiornaMezzo(id, campo, valore) {
 
 async function pdcEliminaMezzo(id) {
   if (!confirm('Eliminare questo mezzo e tutte le voci collegate?')) return;
-  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'DELETE', headers: H }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/piani_carico_mezzi?id=eq.' + id, { method:'DELETE', headers: H }); }
   catch(e) {}
   await pdcCaricaMezzi();
 }
@@ -6601,7 +6694,7 @@ async function pdcAggiungiVoceDaDotazione(mezzoId) {
   const m = pdcMezzi.find(x => x.id === mezzoId);
   const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
   try {
-    await fetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
+    await sbFetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
       method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ mezzo_id: mezzoId, dotazione_id: d.id, descrizione: d.articolo, quantita: null, ordine })
     });
@@ -6617,7 +6710,7 @@ async function pdcAggiungiVoceLibera(mezzoId) {
   const m = pdcMezzi.find(x => x.id === mezzoId);
   const ordine = m && m.voci.length ? Math.max(...m.voci.map(v => v.ordine||0)) + 1 : 1;
   try {
-    await fetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
+    await sbFetch(SUPA_URL + '/rest/v1/piani_carico_voci', {
       method: 'POST', headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({ mezzo_id: mezzoId, dotazione_id: null, descrizione: testo, quantita: null, ordine })
     });
@@ -6641,14 +6734,14 @@ async function pdcAggiornaVoce(id, campo, valore) {
     }
   }
   const body = {}; body[campo] = valore;
-  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'PATCH', headers: HJ, body: JSON.stringify(body) }); }
   catch(e) {}
   pdcMezzi.forEach(m => { const v = m.voci.find(x => x.id === id); if (v) v[campo] = valore; });
   if (campo === 'spuntato') pdcRenderMezzi();
 }
 
 async function pdcEliminaVoce(id) {
-  try { await fetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'DELETE', headers: H }); }
+  try { await sbFetch(SUPA_URL + '/rest/v1/piani_carico_voci?id=eq.' + id, { method:'DELETE', headers: H }); }
   catch(e) {}
   await pdcCaricaMezzi();
 }
@@ -6721,10 +6814,11 @@ async function caricaMezzi() {
   if (!list) return;
   list.innerHTML = '<p class="note">Caricamento…</p>';
   try {
-    var res  = await fetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
+    var res  = await sbFetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
+    sbOk(res);
     mezziData = await res.json();
     renderMezzi();
-  } catch(e) { list.innerHTML = '<div class="empty">Errore nel caricamento.</div>'; }
+  } catch(e) { list.innerHTML = '<div class="empty">Non disponibile.</div>'; }
 }
 
 function renderMezzi() {
@@ -6868,9 +6962,9 @@ async function salvaMezzo() {
   try {
     var res;
     if (mezzoCorrenteId) {
-      res = await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'PATCH', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'PATCH', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
     } else {
-      res = await fetch(SUPA_URL + '/rest/v1/mezzi', { method:'POST', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
+      res = await sbFetch(SUPA_URL + '/rest/v1/mezzi', { method:'POST', headers: Object.assign({},HJ,{'Prefer':'return=minimal'}), body: JSON.stringify(payload) });
     }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     await logAttivita((mezzoCorrenteId ? 'ha modificato' : 'ha aggiunto') + ' mezzo: ' + nome);
@@ -6882,7 +6976,7 @@ async function salvaMezzo() {
 
 async function eliminaMezzo() {
   if (!mezzoCorrenteId || !confirm('Eliminare questo mezzo?')) return;
-  await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoCorrenteId, { method:'DELETE', headers: H });
   await logAttivita('ha eliminato un mezzo');
   chiudiFormMezzo();
   chiudiDettaglioMezzo();
@@ -6905,11 +6999,12 @@ async function caricaAccessi() {
 
   try {
     const [uRes, vRes, logRes, attRes] = await Promise.all([
-      fetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H }),
-      fetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
+      sbFetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
     ]);
+    if (![uRes, vRes, logRes, attRes].some(r => r.ok)) throw new Error('Non disponibile.');
     accessiData.admin = await uRes.json();
     _utentiList = accessiData.admin;
     accessiData.vol   = await vRes.json();
@@ -6918,7 +7013,7 @@ async function caricaAccessi() {
     renderAccessi();
     if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
 }
 
@@ -6983,7 +7078,7 @@ async function togglePermessoMatrice(userId, key, checked) {
   const permessi = Object.assign({}, u.permessi || {});
   permessi[key] = checked;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + userId, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + userId, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ permessi: permessi })
@@ -7108,7 +7203,7 @@ function filtraAccessi() {
 }
 
 function logAccesso(tipo, volontarioId, label) {
-  fetch(SUPA_URL + '/rest/v1/log_accessi', {
+  sbFetch(SUPA_URL + '/rest/v1/log_accessi', {
     method: 'POST',
     headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
     body: JSON.stringify({
@@ -7116,8 +7211,9 @@ function logAccesso(tipo, volontarioId, label) {
       utente_id: volontarioId || null,
       utente_label: label || null,
       user_agent: navigator.userAgent || null
-    })
-  }).catch(() => {});
+    }),
+    silenzioso: true
+  });
 }
 
 
@@ -7130,7 +7226,8 @@ async function caricaSchedaPersonale() {
   }
   content.innerHTML = '<div class="loading-msg">caricamento...</div>';
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + currentUser.volontario_id + '&select=*', { headers: H });
+    const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + currentUser.volontario_id + '&select=*', { headers: H });
+    sbOk(res);
     const arr = await res.json();
     if (!arr.length) {
       content.innerHTML = '<div class="loading-msg">Scheda non trovata.</div>';
@@ -7139,7 +7236,7 @@ async function caricaSchedaPersonale() {
     const v = arr[0];
     renderSchedaPersonale(v);
   } catch(e) {
-    content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
+    content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
 }
 
@@ -7211,11 +7308,12 @@ async function caricaSegnalazioni() {
     sub.textContent = 'Segnala errori nella tua scheda. Verranno presi in carico dagli amministratori.';
     content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
+      const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?volontario_id=eq.' + currentUser.volontario_id + '&select=*&order=data_creazione.desc', { headers: H });
+      sbOk(res);
       const arr = await res.json();
       renderSegnalazioniVolontario(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
     }
   } else if (!hasPerm('gestione_segnalazioni')) {
     sub.textContent = 'Segnalazioni ricevute dai volontari';
@@ -7225,11 +7323,12 @@ async function caricaSegnalazioni() {
     sub.textContent = 'Segnalazioni ricevute dai volontari';
     content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
     try {
-      const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
+      const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
+      sbOk(res);
       const arr = await res.json();
       renderSegnalazioniAdmin(arr || []);
     } catch(e) {
-      content.innerHTML = '<div class="loading-msg bad">errore caricamento.</div>';
+      content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
     }
   }
 }
@@ -7291,7 +7390,7 @@ async function inviaSegnalazione() {
   const txt = (document.getElementById('segText').value || '').trim();
   if (!txt) { alert('Inserisci una descrizione.'); return; }
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ volontario_id: currentUser.volontario_id, testo: txt })
@@ -7309,7 +7408,7 @@ async function cambiaStatoSegnalazione(id, gestita) {
   try {
     const body = { gestita: gestita };
     if (gestita) body.data_gestione = new Date().toISOString();
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify(body)
@@ -7323,7 +7422,7 @@ async function cambiaStatoSegnalazione(id, gestita) {
 async function salvaNoteSegnalazione(id) {
   const note = document.getElementById('segNote_' + id).value;
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
       body: JSON.stringify({ note_admin: note })
@@ -7335,7 +7434,7 @@ async function salvaNoteSegnalazione(id) {
 
 async function caricaBadgeSegnalazioni() {
   try {
-    const res = await fetch(SUPA_URL + '/rest/v1/segnalazioni?gestita=eq.false&select=id', {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?gestita=eq.false&select=id', {
       headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
     });
     const cr = res.headers.get('Content-Range') || '';
@@ -7635,7 +7734,8 @@ async function caricaDocMezzo(mezzoId) {
   if (!body) return;
   body.style.display = 'block';
   try {
-    var res  = await fetch(SUPA_URL + '/rest/v1/documenti_mezzi?mezzo_id=eq.' + mezzoId + '&select=*&order=data_carico.desc', { headers: H });
+    var res  = await sbFetch(SUPA_URL + '/rest/v1/documenti_mezzi?mezzo_id=eq.' + mezzoId + '&select=*&order=data_carico.desc', { headers: H });
+    sbOk(res);
     var docs = await res.json();
     if (count) count.textContent = '(' + docs.length + ')';
 
@@ -7666,13 +7766,13 @@ async function caricaDocMezzo(mezzoId) {
     html += '<button class="doc-add-btn" onclick="apriUploadDocMezzo(' + mezzoId + ')">+ Aggiungi documento</button>';
     body.innerHTML = html;
   } catch(e) {
-    body.innerHTML = '<p class="bad">Errore nel caricamento.</p>';
+    body.innerHTML = '<p class="bad">Non disponibile.</p>';
   }
 }
 
 async function eliminaDocMezzo(docId, mezzoId) {
   if (!confirm('Eliminare questo documento?')) return;
-  await fetch(SUPA_URL + '/rest/v1/documenti_mezzi?id=eq.' + docId, { method:'DELETE', headers: H });
+  await sbFetch(SUPA_URL + '/rest/v1/documenti_mezzi?id=eq.' + docId, { method:'DELETE', headers: H });
   await logAttivita('ha eliminato documento mezzo');
   caricaDocMezzo(mezzoId);
 }
@@ -7722,20 +7822,20 @@ async function eseguiUploadDocMezzo() {
   errEl.style.display = 'none';
   btn.disabled = true; btn.textContent = 'caricamento...';
   try {
-    var uploadRes = await fetch(SUPA_URL + '/storage/v1/object/documenti-mezzi/' + path, {
-      method:'POST', headers:{ 'apikey':SUPA_KEY,'Authorization':H.Authorization,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
+    var uploadRes = await sbFetch(SUPA_URL + '/storage/v1/object/documenti-mezzi/' + path, {
+      method:'POST', headers:{ 'apikey':SUPA_KEY,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
     });
     if (!uploadRes.ok) throw new Error('Errore upload storage');
     var url = SUPA_URL + '/storage/v1/object/public/documenti-mezzi/' + path;
 
     // Se è foto, aggiorna foto_url nel mezzo
     if (tipo === 'FOTO') {
-      await fetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoUploadId, {
+      await sbFetch(SUPA_URL + '/rest/v1/mezzi?id=eq.' + mezzoUploadId, {
         method:'PATCH', headers:HJ, body:JSON.stringify({ foto_url: url })
       });
     }
 
-    await fetch(SUPA_URL + '/rest/v1/documenti_mezzi', {
+    await sbFetch(SUPA_URL + '/rest/v1/documenti_mezzi', {
       method:'POST', headers:Object.assign({},HJ,{'Prefer':'return=minimal'}),
       body:JSON.stringify({ mezzo_id:mezzoUploadId, tipo:tipo, nome_file:nomeDoc, url:url })
     });
@@ -7756,7 +7856,7 @@ async function caricaStatistiche() {
   var anno = document.getElementById('statsAnno').value;
   var url  = SUPA_URL + '/rest/v1/interventi_con_stato?select=*&order=data&stato_calcolato=eq.SVOLTO';
   if (anno) url += '&data=gte.' + anno + '-01-01&data=lte.' + anno + '-12-31';
-  var res = await fetch(url, { headers: H });
+  var res = await sbFetch(url, { headers: H });
   statsInterventi = await res.json();
   renderStatCards();
   renderChartTipo();
@@ -7766,7 +7866,12 @@ async function caricaStatistiche() {
 
 async function initStatistiche() {
   // Popola anni disponibili
-  var res   = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=data&order=data', { headers: H });
+  var res   = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?select=data&order=data', { headers: H });
+  if (!res.ok) {
+    var cards = document.getElementById('statsCards');
+    if (cards) cards.innerHTML = '<div class="empty">Non disponibile.</div>';
+    return;
+  }
   var dati  = await res.json();
   var anni  = [...new Set((dati||[]).map(function(d){ return d.data ? d.data.slice(0,4) : null; }).filter(Boolean))].sort().reverse();
   var sel   = document.getElementById('statsAnno');
@@ -7849,7 +7954,7 @@ function renderOreTable() {
   // Carica nomi volontari
   var ids = Object.keys(volMap);
   if (!ids.length) { el.innerHTML = '<div class="empty">Nessun dato.</div>'; return; }
-  fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome,codice_fiscale', { headers: H })
+  sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + ids.join(',') + ')&select=id,cognome,nome,codice_fiscale', { headers: H })
     .then(function(r){ return r.json(); })
     .then(function(vols){
       var rows = vols.map(function(v){
@@ -7898,7 +8003,7 @@ async function stampaPDFStatistiche() {
     });
   });
   var ids = Object.keys(volMap);
-  var vols = ids.length ? await fetch(SUPA_URL+'/rest/v1/volontari?id=in.('+ids.join(',')+')&select=id,cognome,nome',{headers:H}).then(function(r){return r.json();}) : [];
+  var vols = ids.length ? await sbFetch(SUPA_URL+'/rest/v1/volontari?id=in.('+ids.join(',')+')&select=id,cognome,nome',{headers:H}).then(function(r){return r.json();}) : [];
   var rows = vols.map(function(v){
     var s = volMap[v.id]||{ore:0,count:0};
     return { nome:v.cognome+' '+v.nome, ore:Math.round(s.ore*10)/10, count:s.count };
@@ -7979,7 +8084,7 @@ async function esportaModuloTerritoriale(id) {
   } catch(e) { alert('Impossibile caricare la libreria Excel.'); return; }
 
   // Carica dati intervento
-  const rI = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+  const rI = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
   const dati = await rI.json();
   if (!dati.length) { alert('Intervento non trovato.'); return; }
   const i = dati[0];
@@ -7987,13 +8092,13 @@ async function esportaModuloTerritoriale(id) {
   // Carica partecipanti dalla tabella intervento_volontari (con dati anagrafici)
   let partecipanti = [];
   try {
-    const rIV = await fetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,data_inizio,data_fine,volontario:volontario_id(cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta)&order=id', { headers: H });
+    const rIV = await sbFetch(SUPA_URL + '/rest/v1/intervento_volontari?intervento_id=eq.' + id + '&select=volontario_id,art_39,data_inizio,data_fine,volontario:volontario_id(cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta)&order=id', { headers: H });
     partecipanti = await rIV.json();
   } catch(e) {}
 
   // Fallback legacy: se vuoto e ci sono volontari_ids
   if ((!partecipanti || !partecipanti.length) && i.volontari_ids && i.volontari_ids.length) {
-    const rV = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta&order=cognome', { headers: H });
+    const rV = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + i.volontari_ids.join(',') + ')&select=id,cognome,nome,luogo_nascita,data_nascita,codice_fiscale,telefono,email,citta&order=cognome', { headers: H });
     const vols = await rV.json();
     partecipanti = vols.map(v => ({
       volontario_id: v.id,
@@ -8058,7 +8163,7 @@ async function esportaModuloTerritoriale(id) {
 
 async function stampaIntervento(id) {
   // Carica i dati dell'intervento
-  var res = await fetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
+  var res = await sbFetch(SUPA_URL + '/rest/v1/interventi_con_stato?id=eq.' + id + '&select=*', { headers: H });
   var dati = await res.json();
   if (!dati.length) return;
   var i = dati[0];
@@ -8067,7 +8172,7 @@ async function stampaIntervento(id) {
   var volIds = i.volontari_ids || [];
   var vols = [];
   if (volIds.length) {
-    var rv = await fetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + volIds.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
+    var rv = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=in.(' + volIds.join(',') + ')&select=id,cognome,nome,codice_fiscale&order=cognome', { headers: H });
     vols = await rv.json();
   }
 
@@ -8142,7 +8247,7 @@ async function apriModalLetteraAttivazione(volontarioId) {
   // Carica dati volontario (inclusi campi ditta)
   let v;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volontarioId + '&select=id,cognome,nome,datore_lavoro,indirizzo_lavoro,cap_lavoro,citta_lavoro', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volontarioId + '&select=id,cognome,nome,datore_lavoro,indirizzo_lavoro,cap_lavoro,citta_lavoro', { headers: H });
     const arr = await r.json();
     v = arr[0];
   } catch(e) { alert('Errore caricamento dati volontario.'); return; }
@@ -8196,7 +8301,7 @@ async function generaLetteraAttivazione() {
 
   // Salva i dati ditta sul volontario (persistenza per usi futuri)
   try {
-    await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+    await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
       method: 'PATCH',
       headers: Object.assign({}, HJ, {'Prefer':'return=minimal'}),
       body: JSON.stringify({
@@ -8211,9 +8316,10 @@ async function generaLetteraAttivazione() {
   // Recupera dati volontario e intervento
   let v;
   try {
-    const r = await fetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId + '&select=cognome,nome', { headers: H });
+    const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId + '&select=cognome,nome', { headers: H });
     v = (await r.json())[0];
   } catch(e) { alert('Errore recupero dati volontario.'); return; }
+  if (!v) { alert('Dati del volontario non disponibili.'); return; }
 
   const evento = (document.getElementById('ifEvento') || {}).value || '';
   const dataInizio = (document.getElementById('ifData') || {}).value || '';
