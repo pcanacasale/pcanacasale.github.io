@@ -165,3 +165,34 @@ async function btConferma() {
       + '<div class="actions"><button class="btn pri" onclick="btChiudi()">Chiudi</button></div>';
   } catch(e) { btn.disabled = false; btn.textContent = 'Riprova'; btErrore(e.message + ' Controlla gli ultimi invii prima di riprovare.'); }
 }
+
+// -- PROMEMORIA PER CHI NON È COLLEGATO --
+// Una volta per sessione, solo a chi ha una scheda e non ha ancora collegato il bot.
+// "Più tardi" lo rimanda di 3 giorni; sparisce solo collegandosi.
+const BT_BOT_LINK = 'https://t.me/PCANACasale_bot';
+const BT_RIMANDA_MS = 3 * 86400000;
+
+async function btPromemoria() {
+  try {
+    if (sessionStorage.getItem('bt_promemoria')) return;
+    sessionStorage.setItem('bt_promemoria', '1');
+    let fino = 0;
+    try { fino = Number(localStorage.getItem('bt_rimanda_fino')) || 0; } catch(e) {}
+    if (Date.now() < fino) return;
+    const res = await sbFetch(SUPA_URL + '/rest/v1/rpc/mio_bot_collegato', { method: 'POST', headers: HJ, silenzioso: true, body: '{}' });
+    if (!res.ok || (await res.json()) !== false) return;   // collegato, senza scheda o non verificabile: nessun avviso
+    setTimeout(() => {
+      if (!btEl('btOv') || !btEl('btOv').hidden) return;
+      btApriFinestra('Collega il bot Telegram',
+        '<p>Il bot di PC ANA Casale ti avvisa delle allerte meteo e permette di inviare foto geolocalizzate durante emergenze ed esercitazioni.</p>'
+        + '<ol class="sub"><li>Apri il bot e premi <b>Avvia</b></li><li>Premi <b>📱 Invia il mio numero</b></li></ol>'
+        + '<p class="sub">Ti riconosce dal numero di telefono che hai in scheda. Se non ti riconosce, scrivi in segreteria.</p>'
+        + '<div class="actions"><button class="btn" onclick="btRimanda()">Più tardi</button><a class="btn pri" href="' + BT_BOT_LINK + '" target="_blank" rel="noopener" onclick="btChiudi()">Apri il bot</a></div>');
+    }, 2000);
+  } catch(e) { /* il promemoria non deve mai disturbare */ }
+}
+
+function btRimanda() {
+  try { localStorage.setItem('bt_rimanda_fino', String(Date.now() + BT_RIMANDA_MS)); } catch(e) {}
+  btChiudi();
+}

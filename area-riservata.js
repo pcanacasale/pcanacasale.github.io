@@ -475,6 +475,7 @@ function avviaDashboard() {
 
   renderNav();
   renderWho();
+  if (typeof btPromemoria === 'function') btPromemoria();
 }
 
 
