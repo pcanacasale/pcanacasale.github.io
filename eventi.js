@@ -78,6 +78,7 @@ async function caricaEventi() {
     evElenco = await evLeggi('eventi?select=' + EV_COL_EVENTO + ',evento_volontari(count)&order=data_inizio.desc,id.desc');
     evRenderChip();
     evRenderLista();
+    evAggiornaConteggioGeneriche();
   } catch(e) {
     evEl('evBtnNuovo').hidden = true;
     evEl('evChips').innerHTML = '';
@@ -383,22 +384,22 @@ async function evAggiungiSegnalazione() {
 async function evStatoSegnalazione(id, gestita) {
   try {
     const [riga] = await evScrivi('PATCH', 'evento_segnalazioni?id=eq.' + id, { gestita });
-    const s = evCorrente.segn.find(x => x.id === id);
+    const s = evListaSegn().find(x => x.id === id);
     if (s) s.gestita = riga.gestita;
-    await logAttivita((gestita ? 'ha gestito' : 'ha riaperto') + ' una segnalazione dell\'evento: ' + evCorrente.e.titolo);
-    evRenderSegnalazioni();
+    await logAttivita((gestita ? 'ha gestito' : 'ha riaperto') + ' una segnalazione ' + (evCorrente ? 'dell\'evento: ' + evCorrente.e.titolo : 'generica'));
+    if (evCorrente) evRenderSegnalazioni(); else evRenderGeneriche();
   } catch(e) { sbAvviso('Modifica non salvata.'); }
 }
 
 async function evEliminaSegnalazione(id) {
   if (!confirm('Eliminare questa segnalazione?')) return;
-  const s = evCorrente.segn.find(x => x.id === id);
+  const s = evListaSegn().find(x => x.id === id);
   try {
     await evScrivi('DELETE', 'evento_segnalazioni?id=eq.' + id);
     if (s && s.foto_path) await sbEliminaFile(s.foto_path);
-    evCorrente.segn = evCorrente.segn.filter(x => x.id !== id);
-    await logAttivita('ha eliminato una segnalazione dell\'evento: ' + evCorrente.e.titolo);
-    evRender();
+    await logAttivita('ha eliminato una segnalazione ' + (evCorrente ? 'dell\'evento: ' + evCorrente.e.titolo : 'generica'));
+    if (evCorrente) { evCorrente.segn = evCorrente.segn.filter(x => x.id !== id); evRender(); }
+    else { evGen.segn = evGen.segn.filter(x => x.id !== id); evRenderGeneriche(); evAggiornaConteggioGeneriche(); }
   } catch(e) { sbAvviso('Eliminazione non riuscita.'); }
 }
 
@@ -477,4 +478,60 @@ async function evCreaIntervento() {
     btn.disabled = false;
     sbAvviso('Intervento non creato.');
   }
+}
+
+// -- SEGNALAZIONI GENERICHE (foto del bot senza evento in corso: evento_id nullo) --
+let evGen = { segn: [], eventi: [] };
+function evListaSegn() { return evCorrente ? evCorrente.segn : evGen.segn; }
+
+async function evAggiornaConteggioGeneriche() {
+  const b = evEl('evGenN');
+  if (!b) return;
+  try {
+    const r = await evLeggi('evento_segnalazioni?evento_id=is.null&gestita=eq.false&select=id');
+    b.textContent = r.length; b.hidden = !r.length;
+  } catch(e) { b.hidden = true; }
+}
+
+async function evApriGeneriche() {
+  const ov = evEl('evOv');
+  evCorrente = null;
+  ov.innerHTML = '<div class="sheet ev-crusc" role="dialog" aria-modal="true" aria-label="Segnalazioni generiche"><div class="shead"><h2>Segnalazioni generiche</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
+    + '<div class="sbody"><div class="loading-msg">Caricamento…</div></div></div>';
+  ov.hidden = false;
+  try {
+    const [segn, eventi] = await Promise.all([
+      evLeggi('evento_segnalazioni?evento_id=is.null&select=id,evento_id,descrizione,foto_path,gestita,lat,lon,volontario_id,creato_il&order=creato_il.desc'),
+      evLeggi('eventi?select=id,titolo,tipo,stato&order=data_inizio.desc,id.desc'),
+      evCaricaVolontari(),
+    ]);
+    await sbFirmaRighe(segn, 'foto_path');
+    evGen = { segn, eventi };
+    evRenderGeneriche();
+  } catch(e) {
+    ov.querySelector('.sbody').innerHTML = evNonDisp();
+  }
+}
+
+function evRenderGeneriche() {
+  const opz = evGen.eventi.map(e => '<option value="' + e.id + '">' + aggEsc((EV_TIPI[e.tipo] || e.tipo) + ': ' + e.titolo) + '</option>').join('');
+  const card = s => evCardSegnalazione(s).replace('<div class="em-azioni">',
+    '<div class="em-azioni"><select id="evAss' + s.id + '"><option value="">Assegna a evento…</option>' + opz + '</select>'
+    + '<button class="btn sm pri" onclick="evAssegna(' + s.id + ')">Assegna</button>');
+  evEl('evOv').querySelector('.sbody').innerHTML = !evGen.segn.length
+    ? '<div class="empty">Nessuna segnalazione generica.</div>'
+    : '<p class="sub">Foto inviate al bot quando non c\'era nessun evento in corso. Assegnale a un evento oppure segnalale come gestite.</p><div class="grid g3 mt14">' + evGen.segn.map(card).join('') + '</div>';
+}
+
+async function evAssegna(id) {
+  const sel = evEl('evAss' + id), eventoId = sel && Number(sel.value);
+  if (!eventoId) { sbAvviso('Scegli un evento.'); return; }
+  try {
+    await evScrivi('PATCH', 'evento_segnalazioni?id=eq.' + id, { evento_id: eventoId });
+    const e = evGen.eventi.find(x => x.id === eventoId);
+    evGen.segn = evGen.segn.filter(x => x.id !== id);
+    await logAttivita('ha assegnato una segnalazione generica all\'evento: ' + (e ? e.titolo : eventoId));
+    evRenderGeneriche();
+    evAggiornaConteggioGeneriche();
+  } catch(err) { sbAvviso('Assegnazione non riuscita.'); }
 }
