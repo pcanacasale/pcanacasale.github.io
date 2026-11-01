@@ -1,6 +1,6 @@
 // Supabase Edge Function: bot-allerta
 //
-// Allerta ARPA automatica (pg_cron, ai minuti 5 e 35, dopo l'aggiornamento di allerta-arpa).
+// Allerta ARPA automatica (pg_cron, dopo le 14 alle 12:10-13:40 UTC, quando esce il bollettino; il dato lo tiene fresco allerta-arpa ogni 30 minuti).
 // Scrive a tutti i volontari collegati al bot quando il quadro cambia e c'è almeno un'allerta gialla,
 // e una volta sola quando rientra al verde. Con dato non fresco o scaduto non invia nulla (di quello
 // avvisa bot-avvisi): il verde non si inventa. Per sospenderla: una riga in bot_avvisi_stato con
