@@ -67,7 +67,6 @@ function avviaSplashSafe() {
 document.addEventListener('DOMContentLoaded', avviaSplashSafe);
 
 const SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
-const SB_SOLO_NUOVO = 'Questo accesso non è più disponibile: entra con Google o con il codice email.';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
 let currentUser = null;
 const H  = { 'apikey': SUPA_KEY };
@@ -127,6 +126,80 @@ function sbAvviso(testo) {
   sbAvvisoTimer = setTimeout(() => { el.hidden = true; }, 5000);
 }
 
+// -- FILE NEI BUCKET PRIVATI --
+// Nel database un file è "bucket/percorso"; i record vecchi hanno l'URL pubblico intero e si
+// leggono uguale. foto-volontari resta pubblico. I link durano un'ora e si firmano in blocco.
+const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni'];
+const SB_FILE_DURATA = 3600;
+
+function sbPercorso(bucket, path) {
+  return SB_BUCKET_PRIVATI.includes(bucket) ? bucket + '/' + path : SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+}
+
+function sbRif(valore) {
+  const s = String(valore || '').trim();
+  if (/^https?:/i.test(s)) {
+    const m = s.match(/\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^/?]+)\/([^?#]+)/);
+    if (!m) return null;
+    try { return { bucket: m[1], path: decodeURIComponent(m[2]) }; } catch(e) { return { bucket: m[1], path: m[2] }; }
+  }
+  const i = s.indexOf('/');
+  return i > 0 ? { bucket: s.slice(0, i), path: s.slice(i + 1) } : null;
+}
+
+// Restituisce Map(valore del database → link utilizzabile, null se il file non è disponibile)
+async function sbFirma(valori) {
+  const link = new Map(), perBucket = {};
+  [...new Set((valori || []).filter(Boolean))].forEach(v => {
+    const r = sbRif(v);
+    if (r && SB_BUCKET_PRIVATI.includes(r.bucket)) (perBucket[r.bucket] = perBucket[r.bucket] || []).push({ v, path: r.path });
+    else link.set(v, /^https?:/i.test(v) ? v : null);
+  });
+  await Promise.all(Object.keys(perBucket).map(async bucket => {
+    const voci = perBucket[bucket];
+    try {
+      if (!(await auToken())) throw new Error('sessione assente');
+      const { data, error } = await auClient.storage.from(bucket).createSignedUrls(voci.map(x => x.path), SB_FILE_DURATA);
+      if (error) throw error;
+      voci.forEach((x, i) => { const d = data[i]; link.set(x.v, d && !d.error && d.signedUrl ? d.signedUrl : null); });
+    } catch(e) { voci.forEach(x => link.set(x.v, null)); }
+  }));
+  return link;
+}
+
+async function sbUrlFile(valore) { return (await sbFirma([valore])).get(valore) || null; }
+
+// Mette in r._file il link firmato di r[campo]
+async function sbFirmaRighe(righe, campo) {
+  const link = await sbFirma(righe.map(r => r[campo]));
+  righe.forEach(r => { r._file = link.get(r[campo]) || null; });
+}
+
+function sbLinkFile(rif, url, scarica) {
+  if (!url) return '<span class="sub">File non disponibile</span>';
+  const attr = ' class="btn sm" data-sb-file="' + escapeHtmlNav(rif) + '" data-sb-t="' + Date.now() + '"';
+  let h = '<a href="' + escapeHtmlNav(url) + '" target="_blank" rel="noopener"' + attr + '>Apri</a>';
+  if (scarica) h += '<a href="' + escapeHtmlNav(url + (url.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(scarica)) + '"' + attr + '>Scarica</a>';
+  return h;
+}
+
+// Un link scaduto (pagina aperta da tempo) si rigenera al clic
+document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('a[data-sb-file]');
+  if (!a || Date.now() - Number(a.dataset.sbT) < (SB_FILE_DURATA - 300) * 1000) return;
+  e.preventDefault();
+  const finestra = window.open('', '_blank');
+  const url = await sbUrlFile(a.dataset.sbFile);
+  if (url) finestra.location = url;
+  else { finestra.close(); sbAvviso('File non disponibile.'); }
+});
+
+async function sbEliminaFile(valore) {
+  const r = sbRif(valore);
+  if (!r) return;
+  await sbFetch(SUPA_URL + '/storage/v1/object/' + r.bucket + '/' + r.path.split('/').map(encodeURIComponent).join('/'), { method: 'DELETE', headers: H, silenzioso: true });
+}
+
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
@@ -139,98 +212,6 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 15000);
-
-// -- LOGIN --
-async function doLogin() {
-  const u   = document.getElementById('loginUser').value.trim();
-  const p   = document.getElementById('loginPass').value.trim();
-  const err = document.getElementById('loginError');
-  const btn = document.getElementById('btnLogin');
-  if (!u || !p) { err.textContent = 'Inserisci username e password.'; err.style.display = 'block'; return; }
-  err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'accesso...';
-  try {
-    const res  = await sbFetch(SUPA_URL + '/rest/v1/utenti?username=eq.' + encodeURIComponent(u) + '&password=eq.' + encodeURIComponent(p) + '&attivo=eq.true&select=id,nome,ruolo,tipo_accesso,permessi', { headers: H });
-    const data = await res.json();
-    if (data && data.length > 0) {
-      currentUser = data[0];
-      sessionStorage.setItem('ar_user', u);
-      sessionStorage.setItem('ar_pass', p);
-      await logAttivita('ha effettuato il login');
-      logAccesso('admin', null, currentUser.nome || u);
-      avviaDashboard();
-    } else {
-      err.textContent = res.ok ? 'Credenziali non corrette.' : SB_SOLO_NUOVO; err.style.display = 'block';
-    }
-  } catch(e) {
-    err.textContent = 'Errore di connessione.'; err.style.display = 'block';
-  }
-  btn.disabled = false; btn.textContent = 'Accedi';
-}
-
-function switchLoginTab(which) {
-  const adminTab = document.getElementById('ltabAdmin');
-  const volTab   = document.getElementById('ltabVol');
-  const fAdmin   = document.getElementById('loginFormAdmin');
-  const fVol     = document.getElementById('loginFormVol');
-  const err      = document.getElementById('loginError');
-  err.style.display = 'none';
-  if (which === 'vol') {
-    adminTab.classList.remove('active');
-    volTab.classList.add('active');
-    fAdmin.style.display = 'none';
-    fVol.style.display = 'block';
-  } else {
-    volTab.classList.remove('active');
-    adminTab.classList.add('active');
-    fVol.style.display = 'none';
-    fAdmin.style.display = 'block';
-  }
-}
-
-async function doLoginVolontario() {
-  const cf   = (document.getElementById('loginVolCF').value || '').trim().toUpperCase();
-  const data = document.getElementById('loginVolData').value;
-  const err  = document.getElementById('loginError');
-  if (!cf || cf.length !== 16) { err.textContent = 'Codice fiscale non valido.'; err.style.display = 'block'; return; }
-  if (!data) { err.textContent = 'Inserisci la tua data di nascita.'; err.style.display = 'block'; return; }
-  err.style.display = 'none';
-
-  try {
-    const res = await sbFetch(SUPA_URL + '/rest/v1/rpc/login_volontario', {
-      method: 'POST',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
-      body: JSON.stringify({ p_cf: cf, p_data_nascita: data })
-    });
-    const arr = await res.json();
-    if (Array.isArray(arr) && arr.length > 0) {
-      const v = arr[0];
-      // Costruisco un currentUser "finto" per il volontario
-      currentUser = {
-        id: 'vol_' + v.id,
-        volontario_id: v.id,
-        nome: v.cognome + ' ' + v.nome,
-        nomeProprio: v.nome,
-        cognome: v.cognome,
-        ruolo: 'Volontario',
-        tipo_accesso: 'volontario',
-        permessi: { galleria: true, scheda_personale: true, segnalazioni: true }
-      };
-      sessionStorage.setItem('ar_vol_cf', cf);
-      sessionStorage.setItem('ar_vol_data', data);
-      sessionStorage.removeItem('ar_user');
-      sessionStorage.removeItem('ar_pass');
-      logAccesso('volontario', v.id, v.cognome + ' ' + v.nome);
-      avviaDashboard();
-    } else {
-      err.textContent = res.ok ? 'Codice fiscale o data di nascita non corretti.' : SB_SOLO_NUOVO;
-      err.style.display = 'block';
-    }
-  } catch(e) {
-    err.textContent = 'Errore di connessione.';
-    err.style.display = 'block';
-  }
-}
 
 let isMasterUser = false;
 
@@ -479,16 +460,10 @@ function avviaDashboard() {
 function logout() {
   logAttivita('ha effettuato il logout');
   currentUser = null;
-  sessionStorage.removeItem('ar_user');
-  sessionStorage.removeItem('ar_pass');
-  sessionStorage.removeItem('ar_vol_cf');
-  sessionStorage.removeItem('ar_vol_data');
   auEsci();
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   isMasterUser = false;
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panelHome').classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -778,54 +753,16 @@ async function eliminaRichiesta(id) {
 
 // -- IMPOSTAZIONI --
 async function caricaImpostazioni() {
-  caricaUtenti();
-  caricaLog();
   renderSchemaList();
 }
 
-async function caricaUtenti() {
-  const list = document.getElementById('utentiList');
-  if (!list) return; // utentiList rimosso da Impostazioni, ora la lista è in Accessi
-  try {
-    const res    = await sbFetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H });
-    const utenti = await res.json();
-    _utentiList = utenti;
-    list.innerHTML = '';
-    utenti.forEach(u => {
-      const row = document.createElement('div');
-      row.className = 'impo-u-row' + (u.attivo ? '' : ' utente-disattivo');
-      const initials = u.nome.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-      const badgeClass = u.tipo_accesso === 'master' ? 'badge-master' : (u.attivo ? 'badge-std' : 'badge-off');
-      const badgeText  = u.tipo_accesso === 'master' ? 'MASTER' : (u.attivo ? 'STD' : 'OFF');
-      const p = u.permessi || {};
-      const perms = u.tipo_accesso === 'master' ? '' :
-        '<div class="int-pills">'
-        + (p.volontari?'<span class="badge badge-std">Vol</span>':'')
-        + (p.interventi?'<span class="badge badge-std">Int</span>':'')
-        + (p.mezzi?'<span class="badge badge-std">Mez</span>':'')
-        + (p.richieste?'<span class="badge badge-std">Ric</span>':'')
-        + (p.visite?'<span class="badge badge-std">Vis</span>':'')
-        + '</div>';
-      row.innerHTML = '<span class="av s40">' + initials + '</span>'
-        + '<div class="impo-u-info"><div class="impo-u-name">' + u.nome + '</div><div class="impo-u-role">@' + u.username + ' | ' + u.ruolo + '</div>' + perms + '</div>'
-        + '<div class="impo-u-actions">'
-        + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
-        + '<button class="btn-sm btn-ok" onclick="apriModificaUtenteById(\'' + u.id + '\')">✏</button>'
-        + '<button class="btn-sm ' + (u.attivo ? 'btn-warn' : 'btn-ok') + '" onclick="toggleAttivo(\'' + u.id + '\',' + u.attivo + ')">' + (u.attivo ? 'off' : 'on') + '</button>'
-        + '<button class="btn-sm btn-danger" onclick="eliminaUtenteById(\'' + u.id + '\')">✕</button>'
-        + '</div>';
-      list.appendChild(row);
-    });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">Non disponibile.</div>'; }
-}
-
 async function salvaUtente() {
-  const nome      = document.getElementById('nuovoNome').value.trim();
-  const username  = document.getElementById('nuovoUsername').value.trim();
-  const password  = document.getElementById('nuovaPassword').value.trim();
-  const ruolo     = document.getElementById('nuovoRuolo').value.trim();
+  const sel       = document.getElementById('nuovoVolontario');
+  const volId     = Number(sel.value);
+  const email     = document.getElementById('nuovoEmail').value.trim().toLowerCase();
   const errEl     = document.getElementById('nuovoUtenteErr');
-  if (!nome || !username || !password || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
+  const haEmail   = (accessiData.email || []).some(e => e.volontario_id === volId);
+  if (!volId || (!email && !haEmail)) { errEl.textContent = 'Scegli il volontario e inserisci la sua email.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   const permessi = {
     volontari:  document.getElementById('permVolontari').checked,
@@ -852,16 +789,25 @@ async function salvaUtente() {
     gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
     aggiornamento_dati: document.getElementById('permAggDati') ? document.getElementById('permAggDati').checked : false,
   };
-  const res = await sbFetch(SUPA_URL + '/rest/v1/utenti', {
+  const res = await sbFetch(SUPA_URL + '/rest/v1/staff', {
     method: 'POST',
     headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-    body: JSON.stringify({ nome, username, password, ruolo, tipo_accesso:'standard', permessi })
+    body: JSON.stringify({ volontario_id: volId, tipo_accesso: 'standard', attivo: true, permessi })
   });
-  if (res.ok) {
-    ['nuovoNome','nuovoUsername','nuovaPassword','nuovoRuolo'].forEach(id => document.getElementById(id).value = '');
-    await logAttivita('ha aggiunto utente: ' + nome);
-    caricaUtenti();
-  } else { errEl.textContent = 'Errore. Username già esistente?'; errEl.style.display = 'block'; }
+  if (!res.ok) { errEl.textContent = 'Salvataggio non riuscito. Questo volontario ha già un accesso?'; errEl.style.display = 'block'; return; }
+  const nome = sel.options[sel.selectedIndex].textContent;
+  await logAttivita('ha aggiunto utente: ' + nome);
+  if (email && !haEmail) {
+    const resEmail = await sbFetch(SUPA_URL + '/rest/v1/email_accesso', {
+      method: 'POST',
+      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ volontario_id: volId, email })
+    });
+    if (!resEmail.ok) { errEl.textContent = 'Accesso creato, ma email non salvata: è già usata da un altro volontario?'; errEl.style.display = 'block'; caricaAccessi(); return; }
+  }
+  document.getElementById('nuovoEmail').value = '';
+  toggleNuovoUtente();
+  caricaAccessi();
 }
 
 var _utentiList = [];
@@ -871,17 +817,11 @@ function apriModificaUtenteById(id) {
   if (u) apriModificaUtente(u);
 }
 
-function eliminaUtenteById(id) {
-  var u = _utentiList.find(function(x){ return String(x.id) === String(id); });
-  if (u) eliminaUtente(u.id, u.nome);
-}
-
 function apriModificaUtente(u) {
   document.getElementById('modUtenteId').value      = u.id;
   document.getElementById('modNome').value          = u.nome || '';
-  document.getElementById('modUsername').value      = u.username || '';
-  document.getElementById('modPassword').value      = '';
-  document.getElementById('modRuolo').value         = u.ruolo || '';
+  document.getElementById('modEmail').value         = u.email || '';
+  document.getElementById('modAttivo').checked      = u.attivo !== false;
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
@@ -902,18 +842,25 @@ function apriModificaUtente(u) {
   document.getElementById('modUtenteOverlay').classList.add('open');
 }
 
+// PATCH con le regole attive può toccare 0 righe senza errore: si chiede la riga indietro per saperlo
+async function accSalvaStaff(id, campi) {
+  const res = await sbFetch(SUPA_URL + '/rest/v1/staff?volontario_id=eq.' + id, {
+    method: 'PATCH',
+    headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
+    body: JSON.stringify(campi)
+  });
+  const righe = res.ok ? await res.json() : [];
+  if (!righe.length) throw new Error('salvataggio non consentito');
+}
+
 function chiudiModificaUtente() {
   document.getElementById('modUtenteOverlay').classList.remove('open');
 }
 
 async function salvaModificaUtente() {
   var id       = document.getElementById('modUtenteId').value;
-  var nome     = document.getElementById('modNome').value.trim();
-  var username = document.getElementById('modUsername').value.trim();
-  var password = document.getElementById('modPassword').value.trim();
-  var ruolo    = document.getElementById('modRuolo').value.trim();
+  var nome     = document.getElementById('modNome').value;
   var errEl    = document.getElementById('modUtenteErr');
-  if (!nome || !username || !ruolo) { errEl.textContent = 'Compila tutti i campi.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
   var permessi = {
     volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
@@ -940,49 +887,14 @@ async function salvaModificaUtente() {
     gestione_segnalazioni: document.getElementById('modPermGestioneSegnalazioni') ? document.getElementById('modPermGestioneSegnalazioni').checked : false,
     aggiornamento_dati: document.getElementById('modPermAggDati') ? document.getElementById('modPermAggDati').checked : false,
   };
-  var body = { nome: nome, username: username, ruolo: ruolo, permessi: permessi };
-  if (password) body.password = password;
+  var body = { permessi: permessi, attivo: document.getElementById('modAttivo').checked };
   try {
-    var res = await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, {
-      method: 'PATCH', headers: HJ, body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error('Errore salvataggio');
+    await accSalvaStaff(id, body);
     await logAttivita('ha modificato utente: ' + nome);
     chiudiModificaUtente();
-    caricaUtenti();
+    caricaAccessi();
   } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
-
-async function toggleAttivo(id, attivo) {
-  await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + id, { method:'PATCH', headers:HJ, body:JSON.stringify({ attivo: !attivo }) });
-  await logAttivita('ha ' + (attivo ? 'disattivato' : 'riattivato') + ' un utente');
-  caricaUtenti();
-}
-
-async function caricaLog() {
-  const list = document.getElementById('logList');
-  if (!list) return; // logList rimosso da Impostazioni, ora il log è in Accessi
-  try {
-    const res  = await sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=30', { headers: H });
-    const logs = await res.json();
-    if (!logs.length) { list.innerHTML = '<div class="loading-msg">nessun log.</div>'; return; }
-    list.innerHTML = '';
-    logs.forEach(l => {
-      const dt  = new Date(l.created_at);
-      const now = new Date();
-      const isOggi = dt.toDateString() === now.toDateString();
-      const timeStr = isOggi
-        ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' })
-        : dt.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit' });
-      const row = document.createElement('div');
-      row.className = 'log-row';
-      row.innerHTML = '<span class="log-time">' + timeStr + '</span>'
-        + '<div class="log-text"><span class="log-user">' + (l.utente_nome||'?') + '</span> ' + (l.azione||'') + '</div>';
-      list.appendChild(row);
-    });
-  } catch(e) { list.innerHTML = '<div class="loading-msg">Non disponibile.</div>'; }
-}
-
 
 // -- VOLONTARI --
 let volontariData = [];
@@ -3123,7 +3035,7 @@ async function archiviaAttestato(idx, interventoId) {
     });
     if (!uploadRes.ok) throw new Error('Errore upload');
 
-    var url = SUPA_URL + '/storage/v1/object/public/attestati/' + path;
+    var url = sbPercorso('attestati', path);
     await sbFetch(SUPA_URL + '/rest/v1/documenti', {
       method: 'POST',
       headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
@@ -3479,7 +3391,7 @@ async function eseguiUploadDoc() {
     if (!uploadRes.ok) throw new Error('Errore upload storage');
 
     // URL pubblico
-    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+    const url = sbPercorso(bucket, path);
 
     // Salva record in documenti
     const docRes = await sbFetch(SUPA_URL + '/rest/v1/documenti', {
@@ -3521,12 +3433,7 @@ async function eliminaDoc(docId, volId) {
   // Elimina file dal bucket Storage
   if (doc && doc.url) {
     try {
-      // Estrai bucket + path dall'URL pubblico: .../storage/v1/object/public/{bucket}/{path}
-      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      if (m) {
-        const bucket = m[1], path = m[2];
-        await sbFetch(SUPA_URL + '/storage/v1/object/' + bucket + '/' + path, { method: 'DELETE', headers: H });
-      }
+      await sbEliminaFile(doc.url);
     } catch(e) {}
   }
 
@@ -3579,12 +3486,6 @@ function toggleNuovoCampo() {
   if (!form) return;
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
-
-// -- KEYBOARD --
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
-});
-
 
 // -- VERIFICA CF (pagina DB Avanzato) --
 async function eseguiVerificaCF() {
@@ -4404,6 +4305,7 @@ async function pstInitMappa() {
   } catch(e) {
     pstMappaData = { intervento_id: pstIntervento.id, tipo: 'immagine', percorso: [] };
   }
+  await pstFirmaMappa();
   document.getElementById('pstMapTipo').value = pstMappaData.tipo || 'immagine';
   pstMapModalitaDisegno = false;
   pstMapArmaPartenza = false;
@@ -4437,6 +4339,10 @@ async function pstCambiaTipoMappa() {
   pstAggiornaControlliTipoMappa();
 }
 
+async function pstFirmaMappa() {
+  if (pstMappaData) pstMappaData._img = pstMappaData.immagine_url ? await sbUrlFile(pstMappaData.immagine_url) : null;
+}
+
 async function pstUpsertMappa(campi) {
   if (!pstIntervento) return;
   const body = Object.assign({ intervento_id: pstIntervento.id }, campi);
@@ -4447,7 +4353,7 @@ async function pstUpsertMappa(campi) {
       body: JSON.stringify(body)
     });
     const data = await res.json();
-    if (Array.isArray(data) && data.length) pstMappaData = data[0];
+    if (Array.isArray(data) && data.length) { pstMappaData = data[0]; await pstFirmaMappa(); }
   } catch(e) {}
 }
 
@@ -4459,7 +4365,7 @@ async function pstCaricaImmagineMappa(file) {
       method: 'POST', headers: { 'apikey': SUPA_KEY, 'Content-Type': file.type }, body: file
     });
     if (!up.ok) throw new Error('upload fallito');
-    const url = SUPA_URL + '/storage/v1/object/public/mappe-postazioni/' + path;
+    const url = sbPercorso('mappe-postazioni', path);
     await pstUpsertMappa({ immagine_url: url, tipo: 'immagine' });
     document.getElementById('pstMapTipo').value = 'immagine';
     pstAggiornaControlliTipoMappa();
@@ -4476,9 +4382,10 @@ function pstRenderCanvasImmagine() {
   const toolbar = document.getElementById('pstMapToolbar');
   const zoomCtrl = document.getElementById('pstMapZoomControls');
   const btnScarica = document.getElementById('pstBtnScaricaMappa');
-  if (!pstMappaData || !pstMappaData.immagine_url) {
+  if (!pstMappaData || !pstMappaData._img) {
     layout.style.display = 'none';
     toolbar.style.display = 'none';
+    noImg.textContent = pstMappaData && pstMappaData.immagine_url ? 'File non disponibile. Puoi caricare di nuovo l\'immagine.' : 'Carica un\'immagine per iniziare a posizionare le postazioni.';
     noImg.style.display = 'block';
     noImg.textContent = 'carica un\'immagine per iniziare a posizionare le postazioni.';
     return;
@@ -4521,7 +4428,7 @@ function pstRenderCanvasImmagine() {
 
   canvas.innerHTML =
     '<div id="pstMapZoomWrap" class="pst-zoomwrap" style="width:' + PST_IMG_BASE_WIDTH + 'px;transform:scale(' + pstImgZoom + ')">'
-    + '<img id="pstMapImgEl" class="pst-img" src="' + pstMappaData.immagine_url + '" style="width:' + PST_IMG_BASE_WIDTH + 'px" draggable="false" alt="">'
+    + '<img id="pstMapImgEl" class="pst-img" src="' + pstMappaData._img + '" style="width:' + PST_IMG_BASE_WIDTH + 'px" draggable="false" alt="">'
     + '<svg id="pstMapSvg" class="pst-svg" viewBox="0 0 100 100" preserveAspectRatio="none">'
     + (puntiSvg ? '<polyline class="pst-route" points="' + puntiSvg + '" stroke-width="' + spessore + '" vector-effect="non-scaling-stroke" />' : '')
     + '</svg>'
@@ -4794,7 +4701,9 @@ function _pstDisegnaBaseMappa(cv, ctx, img) {
 }
 
 async function pstScaricaMappaImmagine() {
-  if (!pstMappaData || !pstMappaData.immagine_url) return;
+  if (!pstMappaData) return;
+  await pstFirmaMappa();
+  if (!pstMappaData._img) { alert('File non disponibile.'); return; }
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
@@ -4822,13 +4731,14 @@ async function pstScaricaMappaImmagine() {
     }
   };
   img.onerror = () => alert('Impossibile scaricare l\'immagine (problema di accesso all\'immagine salvata).');
-  img.src = pstMappaData.immagine_url;
+  img.src = pstMappaData._img;
 }
 
 // Scarica una mappa individuale per ogni postazione con assegnata_ana=true e già posizionata,
 // mostrando solo il quadrato ricco (indirizzo/mezzo/volontari) di quella postazione.
 async function pstScaricaMappeIndividuali() {
-  if (!pstMappaData || !pstMappaData.immagine_url) { alert('Serve una mappa a immagine per questa funzione.'); return; }
+  await pstFirmaMappa();
+  if (!pstMappaData || !pstMappaData._img) { alert('Serve una mappa a immagine per questa funzione.'); return; }
   const target = pstPostazioni.filter(p => p.assegnata_ana !== false && p.map_x != null && p.map_y != null);
   if (!target.length) { alert('Nessuna postazione ANA posizionata sulla mappa.'); return; }
   if (!confirm('Scaricare ' + target.length + ' mappe (una per postazione ANA)?')) return;
@@ -4837,7 +4747,7 @@ async function pstScaricaMappeIndividuali() {
     const im = new Image(); im.crossOrigin = 'anonymous';
     im.onload = () => resolve(im);
     im.onerror = () => reject(new Error('Impossibile caricare l\'immagine mappa.'));
-    im.src = pstMappaData.immagine_url;
+    im.src = pstMappaData._img;
   }).catch(e => { alert(e.message); return null; });
   if (!img) return;
 
@@ -5418,6 +5328,7 @@ async function caricaTlc() {
     sbOk(rApp);
     tlcData = await rApp.json();
     tlcDocsGenerali = await rDoc.json();
+    await sbFirmaRighe(tlcDocsGenerali, 'url');
     renderTlc(tlcData);
   } catch(e) {
     list.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
@@ -5507,7 +5418,7 @@ function _renderTlcDocsGenerali() {
         html += '<div class="doc-item">'
           + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
           + '<div class="doc-item-meta">' + data + '</div></div>'
-          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<div class="doc-item-actions">' + sbLinkFile(d.url, d._file)
           + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlcGen(' + d.id + ')">✕</button></div>'
           + '</div>';
       });
@@ -5685,12 +5596,7 @@ async function eliminaTlc(id) {
     const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + id + '&select=url', { headers: H });
     const docs = await r.json();
     for (const d of (docs || [])) {
-      if (d.url) {
-        const m = d.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-        if (m) {
-          await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
-        }
-      }
+      if (d.url) await sbEliminaFile(d.url);
     }
     // Cancella apparato (cascade su documenti_tlc)
     await sbFetch(SUPA_URL + '/rest/v1/tlc?id=eq.' + id, { method: 'DELETE', headers: H });
@@ -5720,6 +5626,7 @@ async function caricaDocTlc(tlcId) {
     const res  = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?tlc_id=eq.' + tlcId + '&select=*&order=data_carico.desc', { headers: H });
     sbOk(res);
     const docs = await res.json();
+    await sbFirmaRighe(docs, 'url');
     const count = document.getElementById('tlcDocCount');
     if (count) count.textContent = '(' + docs.length + ')';
 
@@ -5734,7 +5641,7 @@ async function caricaDocTlc(tlcId) {
         html += '<div class="doc-item">'
           + '<div class="doc-item-info"><div class="doc-item-name">' + nome + '</div>'
           + '<div class="doc-item-meta">' + label + ' · ' + data + '</div></div>'
-          + '<div class="doc-item-actions"><a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + '<div class="doc-item-actions">' + sbLinkFile(d.url, d._file)
           + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocTlc(' + d.id + ',' + tlcId + ')">✕</button></div>'
           + '</div>';
       });
@@ -5775,7 +5682,7 @@ async function eseguiUploadDocTlc() {
       body: file
     });
     if (!uploadRes.ok) throw new Error('upload fallito');
-    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+    const url = sbPercorso(bucket, path);
 
     await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc', {
       method: 'POST',
@@ -5797,10 +5704,7 @@ async function eliminaDocTlc(docId, tlcId) {
     const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
     const arr = await r.json();
     const doc = arr[0];
-    if (doc && doc.url) {
-      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      if (m) await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
-    }
+    if (doc && doc.url) await sbEliminaFile(doc.url);
     await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
     caricaDocTlc(tlcId);
   } catch(e) { alert('Errore.'); }
@@ -5835,7 +5739,7 @@ async function eseguiUploadDocTlcGenerale() {
       body: file
     });
     if (!uploadRes.ok) throw new Error('upload fallito');
-    const url = SUPA_URL + '/storage/v1/object/public/' + bucket + '/' + path;
+    const url = sbPercorso(bucket, path);
 
     await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc', {
       method: 'POST',
@@ -5858,10 +5762,7 @@ async function eliminaDocTlcGen(docId) {
     const r = await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId + '&select=url', { headers: H });
     const arr = await r.json();
     const doc = arr[0];
-    if (doc && doc.url) {
-      const m = doc.url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-      if (m) await sbFetch(SUPA_URL + '/storage/v1/object/' + m[1] + '/' + m[2], { method: 'DELETE', headers: H });
-    }
+    if (doc && doc.url) await sbEliminaFile(doc.url);
     await sbFetch(SUPA_URL + '/rest/v1/documenti_tlc?id=eq.' + docId, { method: 'DELETE', headers: H });
     window._tlcDocsGenAperto = true;
     caricaTlc();
@@ -6817,6 +6718,7 @@ async function caricaMezzi() {
     var res  = await sbFetch(SUPA_URL + '/rest/v1/mezzi?select=*&order=automezzo', { headers: H });
     sbOk(res);
     mezziData = await res.json();
+    await sbFirmaRighe(mezziData, 'foto_url');
     renderMezzi();
   } catch(e) { list.innerHTML = '<div class="empty">Non disponibile.</div>'; }
 }
@@ -6830,8 +6732,8 @@ function renderMezzi() {
   mezziData.forEach(function(m, i) {
     var rev      = getRevisioneStatus(m.revisione);
     var revLabel = m.revisione ? new Date(m.revisione).toLocaleDateString('it-IT',{month:'2-digit',year:'numeric'}) : '—';
-    var fotoHtml = m.foto_url
-      ? '<img src="' + m.foto_url + '" alt="">'
+    var fotoHtml = m._file
+      ? '<img src="' + m._file + '" alt="" onerror="this.remove()">'
       : getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox');
     var sub = [m.marca, m.modello].filter(Boolean).join(' ');
 
@@ -6868,8 +6770,8 @@ function apriDettaglioMezzo(id) {
   var fmtDate = function(v) { return v ? fmt(new Date(v).toLocaleDateString('it-IT')) : fmt(null); };
   var rev = getRevisioneStatus(m.revisione);
 
-  var _fotoHtml = m.foto_url
-    ? '<img src="' + m.foto_url + '" class="thumb hero-thumb" alt="">'
+  var _fotoHtml = m._file
+    ? '<img src="' + m._file + '" class="thumb hero-thumb" alt="" onerror="this.remove()">'
     : '<div class="thumb y hero-thumb">' + getMezzoIcon(m.automezzo).replace('viewBox', 'class="mezzo-ic" viewBox') + '</div>';
 
   body.innerHTML = '<div class="vol-detail-hero">'
@@ -6998,16 +6900,27 @@ async function caricaAccessi() {
   if (matriceSec) matriceSec.style.display = isMasterUser ? 'block' : 'none';
 
   try {
-    const [uRes, vRes, logRes, attRes] = await Promise.all([
-      sbFetch(SUPA_URL + '/rest/v1/utenti?select=id,nome,username,ruolo,tipo_accesso,attivo,permessi&order=nome', { headers: H }),
-      sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&stato=neq.DIMESSO&order=cognome,nome', { headers: H }),
+    const [sRes, eRes, vRes, logRes, attRes] = await Promise.all([
+      sbFetch(SUPA_URL + '/rest/v1/staff?select=volontario_id,tipo_accesso,attivo,permessi', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/email_accesso?select=volontario_id,email&order=email', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&order=cognome,nome', { headers: H }),
       sbFetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H }),
       sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
     ]);
-    if (![uRes, vRes, logRes, attRes].some(r => r.ok)) throw new Error('Non disponibile.');
-    accessiData.admin = await uRes.json();
+    if (![sRes, eRes, vRes, logRes, attRes].some(r => r.ok)) throw new Error('Non disponibile.');
+    const staff = await sRes.json(), email = await eRes.json(), volontari = await vRes.json();
+    const volPerId = new Map(volontari.map(v => [v.id, v]));
+    const staffIds = new Set(staff.map(s => s.volontario_id));
+    const emailDi  = id => email.filter(e => e.volontario_id === id).map(e => e.email).join(', ');
+    const attivi   = volontari.filter(v => v.stato !== 'DIMESSO' && !staffIds.has(v.id));
+    accessiData.email = email;
+    accessiData.admin = staff.map(s => {
+      const v = volPerId.get(s.volontario_id) || {};
+      return Object.assign({}, s, { id: s.volontario_id, nome: [v.cognome, v.nome].filter(Boolean).join(' '), email: emailDi(s.volontario_id) });
+    }).sort((a, b) => a.nome.localeCompare(b.nome));
     _utentiList = accessiData.admin;
-    accessiData.vol   = await vRes.json();
+    accessiData.vol   = attivi.filter(v => emailDi(v.id)).map(v => Object.assign({}, v, { email: emailDi(v.id) }));
+    accPopolaNuovoUtente(attivi);
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();
     renderAccessi();
@@ -7015,6 +6928,11 @@ async function caricaAccessi() {
   } catch(e) {
     content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
   }
+}
+
+function accPopolaNuovoUtente(volontari) {
+  const sel = document.getElementById('nuovoVolontario');
+  if (sel) sel.innerHTML = '<option value="">— scegli —</option>' + volontari.map(v => '<option value="' + v.id + '">' + escapeHtmlNav((v.cognome || '') + ' ' + (v.nome || '')) + '</option>').join('');
 }
 
 // -- MATRICE PERMESSI --
@@ -7078,12 +6996,7 @@ async function togglePermessoMatrice(userId, key, checked) {
   const permessi = Object.assign({}, u.permessi || {});
   permessi[key] = checked;
   try {
-    const res = await sbFetch(SUPA_URL + '/rest/v1/utenti?id=eq.' + userId, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ permessi: permessi })
-    });
-    if (!res.ok) throw new Error('errore');
+    await accSalvaStaff(userId, { permessi: permessi });
     u.permessi = permessi;
     if (cell) {
       cell.classList.remove('mp-flash');
@@ -7111,7 +7024,7 @@ function renderAccessi() {
 
   // --- Amministratori ---
   if (tipo !== 'vol') {
-    const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.username||'') + ' ' + (u.ruolo||'')));
+    const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.email||'')));
     html += '<div class="acc-sec">';
     html += _accCollapsibleHead('Amministratori (' + admins.length + ')', 'accAdminBody');
     if (!admins.length) {
@@ -7123,7 +7036,7 @@ function renderAccessi() {
         const stato  = u.attivo ? '<span class="pill p-blue">Attivo</span>' : '<span class="pill p-grey">Disattivato</span>';
         const tipoLbl = u.tipo_accesso === 'master' ? '<span class="pill p-yellow">Master</span>' : '<span class="pill p-sand">Standard</span>';
         html += '<div class="card">'
-          + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.username||'—') + ' · ' + (u.ruolo||'—') + '</span></div></div>'
+          + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.email||'—') + '</span></div></div>'
           + '<div class="cfoot"><span class="int-pills m0">' + tipoLbl + stato + '</span>'
           + (isMasterUser ? '<button class="btn sm" onclick="apriModificaUtenteById(\'' + u.id + '\')">Modifica</button>' : '')
           + '</div></div>';
@@ -7135,7 +7048,7 @@ function renderAccessi() {
 
   // --- Volontari abilitati ---
   if (tipo !== 'admin') {
-    const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'')));
+    const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'') + ' ' + (v.email||'')));
     html += '<div class="acc-sec">';
     html += _accCollapsibleHead('Volontari abilitati (' + vols.length + ')', 'accVolBody');
     if (!vols.length) {
@@ -7148,7 +7061,7 @@ function renderAccessi() {
           ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
           : '<span class="av s40">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</span>';
         html += '<div class="card">'
-          + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">CF ' + (v.codice_fiscale||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
+          + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">' + (v.email||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
           + '</div>';
       });
       html += '</div>';
@@ -7289,11 +7202,34 @@ function renderSchedaPersonale(v) {
     });
     html += '</div>';
   });
-  html += '<div class="card" id="spFormazione" hidden></div><div class="card" id="spListe" hidden></div></div>';
+  html += '<div class="card" id="spFormazione" hidden></div><div class="card" id="spDocumenti" hidden></div><div class="card" id="spListe" hidden></div></div>';
 
   content.innerHTML = html;
   fzRenderPersonale(v.id);
+  spRenderDocumenti(v.id);
   cvRenderPersonale();
+}
+
+// Attestati e documenti propri: se non ce ne sono, o non si possono aprire, la card resta nascosta
+async function spRenderDocumenti(volId) {
+  const box = document.getElementById('spDocumenti');
+  if (!box) return;
+  const res = await sbFetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + volId + '&select=id,tipo,nome_file,url,data_carico&order=data_carico.desc', { headers: H });
+  if (!res.ok) return;
+  const docs = (await res.json()).filter(d => d.tipo !== 'FOTO');
+  await sbFirmaRighe(docs, 'url');
+  if (!docs.some(d => d._file)) return;
+  const riga = d => {
+    const nome = d.nome_file || svEtichetta(DOC_TIPO_LABEL[d.tipo] || d.tipo);
+    return '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + aggEsc(nome) + '</div>'
+      + '<div class="doc-item-meta">' + aggEsc(svEtichetta(DOC_TIPO_LABEL[d.tipo] || d.tipo)) + '</div></div>'
+      + '<div class="doc-item-actions">' + sbLinkFile(d.url, d._file, nome) + '</div></div>';
+  };
+  const attestati = docs.filter(d => DOC_TIPI_ATTESTATO.includes(d.tipo));
+  const altri = docs.filter(d => !DOC_TIPI_ATTESTATO.includes(d.tipo));
+  box.innerHTML = (attestati.length ? '<h2>Attestati</h2>' + attestati.map(riga).join('') : '')
+    + (altri.length ? '<h2' + (attestati.length ? ' class="mt14"' : '') + '>Documenti</h2>' + altri.map(riga).join('') : '');
+  box.hidden = false;
 }
 
 // -- SEGNALAZIONI --
@@ -7737,6 +7673,7 @@ async function caricaDocMezzo(mezzoId) {
     var res  = await sbFetch(SUPA_URL + '/rest/v1/documenti_mezzi?mezzo_id=eq.' + mezzoId + '&select=*&order=data_carico.desc', { headers: H });
     sbOk(res);
     var docs = await res.json();
+    await sbFirmaRighe(docs, 'url');
     if (count) count.textContent = '(' + docs.length + ')';
 
     var DOC_MEZZO_LABEL = {
@@ -7757,7 +7694,7 @@ async function caricaDocMezzo(mezzoId) {
           + '<div class="doc-item-meta">' + label.replace(/^[^ ]+ /,'') + ' | ' + data + '</div>'
           + '</div>'
           + '<div class="doc-item-actions">'
-          + '<a href="' + d.url + '" target="_blank" rel="noopener" class="btn sm">Apri</a>'
+          + sbLinkFile(d.url, d._file)
           + '<button class="btn sm danger" aria-label="Elimina" onclick="eliminaDocMezzo(' + d.id + ',' + mezzoId + ')">✕</button>'
           + '</div></div>';
       });
@@ -7826,7 +7763,7 @@ async function eseguiUploadDocMezzo() {
       method:'POST', headers:{ 'apikey':SUPA_KEY,'Content-Type':mezzoUploadFile.type }, body:mezzoUploadFile
     });
     if (!uploadRes.ok) throw new Error('Errore upload storage');
-    var url = SUPA_URL + '/storage/v1/object/public/documenti-mezzi/' + path;
+    var url = sbPercorso('documenti-mezzi', path);
 
     // Se è foto, aggiorna foto_url nel mezzo
     if (tipo === 'FOTO') {

@@ -59,7 +59,10 @@ async function apriDettaglio(id, tab) {
     sbOk(vRes);
     const v = (await vRes.json())[0];
     if (!v) { document.getElementById('svTesta').innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
-    sv = { id, v, docs: dRes.ok ? await dRes.json() : [], agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false };
+    const docs = dRes.ok ? await dRes.json() : [];
+    await sbFirmaRighe(docs, 'url');
+    if (token !== svToken) return;
+    sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false };
     aggCorrente = agg;
     svRender();
     svMostraTab(tab || SV_TABS.map(t => t.id).filter(svTabVisibile)[0]);
@@ -409,17 +412,17 @@ function svProblemi(v, aggCard, docs) {
 function svDocAgg() { return sv && sv.agg ? (sv.agg.documenti || []) : []; }
 function svEtichetta(label) { return label.replace(/^[^\s\wÀ-ÿ]+\s*/u, ''); }
 
-// -- ALLEGATI (due archivi: tabella documenti con URL pubblico, agg_documenti con link temporaneo) --
+// -- ALLEGATI (due archivi: tabella documenti e agg_documenti, entrambe con link temporaneo) --
 function svEImmagine(nome) { return /\.(jpe?g|png|webp|gif)(\?|$)/i.test(nome || ''); }
 function svAzioniDoc(d) {
   const apri = d.agg
     ? '<button class="btn sm" onclick="svApriAgg(' + d.id + ')">Apri</button><button class="btn sm" onclick="svApriAgg(' + d.id + ',true)">Scarica</button>'
-    : '<a class="btn sm" href="' + aggEsc(d.url) + '" target="_blank" rel="noopener">Apri</a><a class="btn sm" href="' + aggEsc(d.url) + '?download=' + encodeURIComponent(d.nome || 'documento') + '">Scarica</a>';
+    : sbLinkFile(d.ref, d.url, d.nome);
   const puoEliminare = d.agg ? svHaAgg() : svPuoDoc();
   const del = !puoEliminare ? '' : '<button class="btn sm danger" aria-label="Elimina" onclick="' + (d.agg ? 'aggEliminaDocumento(' + d.id + ')' : 'eliminaDoc(' + d.id + ',' + sv.id + ')') + '">✕</button>';
   return apri + del;
 }
-function svRigaDaDocumenti(d) { return { id: d.id, tipo: d.tipo, nome: d.nome_file || svEtichetta(DOC_TIPO_LABEL[d.tipo] || d.tipo), url: d.url, data: d.data_carico, agg: false }; }
+function svRigaDaDocumenti(d) { return { id: d.id, tipo: d.tipo, nome: d.nome_file || svEtichetta(DOC_TIPO_LABEL[d.tipo] || d.tipo), url: d._file, ref: d.url, data: d.data_carico, agg: false }; }
 function svRigaDaAgg(d) { return { id: d.id, tipo: d.tipo, nome: d.descrizione || d.nome_file || svEtichetta(AGG_DOC_LABEL[d.tipo] || d.tipo), file: d.nome_file, scadenza: d.scadenza, data: d.caricato_il, agg: true }; }
 
 function svPillScadenza(st) {
@@ -448,6 +451,7 @@ async function svRicaricaDocumenti() {
   const token = svToken;
   const res = await sbFetch(SUPA_URL + '/rest/v1/documenti?volontario_id=eq.' + sv.id + '&select=*&order=data_carico.desc', { headers: H });
   const docs = res.ok ? await res.json() : sv.docs;
+  await sbFirmaRighe(docs, 'url');
   if (!sv || token !== svToken) return;
   sv.docs = docs;
   const foto = docs.find(d => d.tipo === 'FOTO');
@@ -487,7 +491,7 @@ const SV_DOC_SLOT = [
 ];
 
 function svCartaDoc(titolo, d, azioni) {
-  const img = d && !d.agg && svEImmagine(d.url) ? '<img src="' + aggEsc(d.url) + '" alt="">' : '';
+  const img = d && !d.agg && svEImmagine(d.url) ? '<img src="' + aggEsc(d.url) + '" alt="" onerror="this.remove()">' : '';
   const st = d ? svStatoScadenza(d.scadenza) : '';
   const pill = !d ? '<span class="pill p-sand">Mancante</span>' : (st ? svPillScadenza(st) : '<span class="pill p-blue">Presente</span>');
   return '<div class="card sv-doc"><div class="thumb b"' + (d && d.agg ? ' id="svThumb_' + d.id + '"' : '') + '>' + (img || navIc('file', 34)) + '</div>'

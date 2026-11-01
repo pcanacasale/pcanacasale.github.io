@@ -517,8 +517,6 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .login-card{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px 20px}
 .login-logo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .login-logo h1{font-size:26px}
-.login-tabs{display:flex;width:100%;margin-bottom:6px}
-.login-tabs .login-tab{flex:1}
 .seg button.active{background:var(--accent-bg);color:var(--accent-fg)}
 .login-label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 4px}
 .btn-login{width:100%;height:46px;margin-top:18px;border-radius:14px;border:1px solid var(--yellow);background:var(--yellow);color:var(--on-yellow);font-weight:800;font-size:15px}
@@ -1050,7 +1048,6 @@ body.cv-solo-vede .cv-gestione{display:none}
         <button class="btn-login" id="auBtnVerifica" onclick="auVerificaCodice()">Accedi</button>
         <button class="au-link" onclick="auCambiaEmail()">Cambia email o richiedi un nuovo codice</button>
       </div>
-      <button class="au-link" onclick="auVista('vecchio')">Accesso con password (temporaneo)</button>
     </div>
 
     <div id="auAttesa" hidden><p class="au-testo">Verifica dell'accesso…</p></div>
@@ -1059,33 +1056,6 @@ body.cv-solo-vede .cv-gestione{display:none}
       <p class="au-testo" id="auAvvisoTesto"></p>
       <button class="btn-login" id="auBtnRiprova" onclick="auRiprova()" hidden>Riprova</button>
       <button class="btn-login" onclick="auEsci()">Esci</button>
-    </div>
-
-    <!-- Vecchio accesso con password, temporaneo -->
-    <div id="auVecchio" hidden>
-    <div class="seg login-tabs" role="group" aria-label="Tipo di accesso">
-      <button class="login-tab active" id="ltabAdmin" onclick="switchLoginTab('admin')">Amministratori</button>
-      <button class="login-tab" id="ltabVol" onclick="switchLoginTab('vol')">Volontari</button>
-    </div>
-
-    <!-- Tab Admin -->
-    <div id="loginFormAdmin">
-      <label class="login-label">Username</label>
-      <input class="login-input" type="text" id="loginUser" placeholder="username" autocomplete="username">
-      <label class="login-label">Password</label>
-      <input class="login-input" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-      <button class="btn-login" id="btnLogin" onclick="doLogin()">Accedi</button>
-    </div>
-
-    <!-- Tab Volontario -->
-    <div id="loginFormVol" style="display:none">
-      <label class="login-label">Codice Fiscale</label>
-      <input class="login-input upper" type="text" id="loginVolCF" placeholder="RSSMRA80A01H501U" maxlength="16">
-      <label class="login-label">Data di nascita</label>
-      <input class="login-input" type="date" id="loginVolData">
-      <button class="btn-login" onclick="doLoginVolontario()">Accedi come volontario</button>
-    </div>
-    <button class="au-link" onclick="auVista('nuovo')">Torna all'accesso con Google o email</button>
     </div>
 
     <div class="login-error" id="loginError"></div>
@@ -1614,12 +1584,8 @@ body.cv-solo-vede .cv-gestione{display:none}
           <h2>Nuovo utente</h2>
           <div class="form-err" id="nuovoUtenteErr"></div>
           <div class="row2">
-            <label>Nome e cognome<input type="text" id="nuovoNome" placeholder="Mario Rossi"></label>
-            <label>Username<input type="text" id="nuovoUsername" placeholder="mrossi"></label>
-          </div>
-          <div class="row2">
-            <label>Password<input type="password" id="nuovaPassword" placeholder="••••••••"></label>
-            <label>Ruolo<input type="text" id="nuovoRuolo" placeholder="es. Volontario"></label>
+            <label>Volontario<select id="nuovoVolontario"></select></label>
+            <label>Email di accesso<input type="email" id="nuovoEmail" placeholder="nome@esempio.it"></label>
           </div>
           <div class="grp m0">Permessi</div>
           <div class="perm-grid">
@@ -2100,10 +2066,9 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div class="shead sheet-h"><h2>Modifica utente</h2><button class="x" onclick="chiudiModificaUtente()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <input type="hidden" id="modUtenteId">
       <div class="form-err" id="modUtenteErr"></div>
-      <div class="form-field"><label class="form-lbl">Nome e Cognome *</label><input class="form-inp" id="modNome"></div>
-      <div class="form-field"><label class="form-lbl">Username *</label><input class="form-inp" id="modUsername"></div>
-      <div class="form-field"><label class="form-lbl">Nuova password (lascia vuoto per non cambiare)</label><input class="form-inp" type="password" id="modPassword" placeholder="••••••••"></div>
-      <div class="form-field"><label class="form-lbl">Ruolo *</label><input class="form-inp" id="modRuolo"></div>
+      <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" id="modNome" readonly></div>
+      <div class="form-field"><label class="form-lbl">Email di accesso</label><input class="form-inp" id="modEmail" readonly></div>
+      <div class="form-field"><label class="perm-check"><input type="checkbox" id="modAttivo"> Accesso attivo</label></div>
       <div class="form-field">
         <label class="form-lbl">Permessi sezioni</label>
         <div class="perm-grid">
@@ -2189,13 +2154,13 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=198"></script>
+<script src="area-riservata.js?v=199"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
-<script src="scheda-volontario.js?v=4"></script>
+<script src="scheda-volontario.js?v=5"></script>
 <script src="allerta-home.js?v=2"></script>
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=4"></script>
 <script src="convocazioni.js?v=3"></script>
-<script src="accesso.js?v=4"></script>
+<script src="accesso.js?v=5"></script>
 </body>
 </html>

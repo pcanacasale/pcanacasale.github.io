@@ -1,6 +1,5 @@
 // Accesso con Google o codice via email (Supabase Auth), prefisso au*.
-// Affianca il vecchio accesso con password: chi entra da qui ha una sessione che resta dopo
-// il ricaricamento, e sbFetch mette il suo token in ogni chiamata a Supabase.
+// La sessione resta dopo il ricaricamento e sbFetch mette il suo token in ogni chiamata a Supabase.
 // Il profilo arriva dalla funzione SQL mio_profilo.
 
 const AU_CHIAVE = 'pcana-auth';
@@ -15,7 +14,7 @@ let auEmail = '';
 function auEl(id) { return document.getElementById(id); }
 
 function auVista(nome) {
-  ['Nuovo', 'Vecchio', 'Attesa', 'Avviso'].forEach(v => { auEl('au' + v).hidden = v.toLowerCase() !== nome; });
+  ['Nuovo', 'Attesa', 'Avviso'].forEach(v => { auEl('au' + v).hidden = v.toLowerCase() !== nome; });
   auEl('loginError').style.display = 'none';
 }
 
@@ -145,7 +144,7 @@ async function auEsci() {
   sessionStorage.removeItem('au_entrato');
   auCambiaEmail();
   auVista('nuovo');
-  if (!auClient) { auVista('vecchio'); return; }
+  if (!auClient) return;
   const { error } = await auClient.auth.signOut({ scope: 'local' });
   if (error) { try { localStorage.removeItem(AU_CHIAVE); } catch(e) {} }  // senza rete la sessione non resta sul dispositivo
 }
