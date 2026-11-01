@@ -9,3 +9,9 @@ verify_jwt = false
 
 [functions.editor-pdf-firma]
 verify_jwt = false
+
+[functions.smooth-function]
+verify_jwt = false
+
+[functions.Agente-Interventi]
+verify_jwt = false

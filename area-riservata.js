@@ -72,7 +72,6 @@ let currentUser = null;
 const H  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
 const HJ = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
 const AGENTE_INT_URL = SUPA_URL + '/functions/v1/Agente-Interventi';
-const TELEGRAM_BROADCAST_SECRET = 'WDNIK0SQMiVz16Hi1AAdwhtEHSBtsUkY';
 
 // PWA
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -2882,6 +2881,13 @@ function aicCorreggi() {
   setTimeout(() => { inp.classList.remove('flash-ok'); }, 1000);
 }
 
+// Header per le funzioni che verificano la sessione; col vecchio accesso il token non c'è
+async function headersFunzioneProtetta() {
+  const token = await auToken();
+  if (!token) throw Object.assign(new Error('Per questa funzione entra con Google o con il codice email.'), { senzaSessione: true });
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': SUPA_KEY };
+}
+
 async function aicInviaMessaggio() {
   const inp = document.getElementById('aicInput');
   if (!inp) return;
@@ -2895,7 +2901,7 @@ async function aicInviaMessaggio() {
   try {
     const res = await fetch(AGENTE_INT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY, 'apikey': SUPA_KEY },
+      headers: await headersFunzioneProtetta(),
       body: JSON.stringify({ messages: aicMessages })
     });
     const data = await res.json();
@@ -2916,7 +2922,7 @@ async function aicInviaMessaggio() {
     aicRender();
   } catch (e) {
     aicLoading = false;
-    aicLog.push({ type: 'err', text: 'Errore di connessione con l\'agente. Riprova.' });
+    aicLog.push({ type: 'err', text: e.senzaSessione ? e.message : 'Errore di connessione con l\'agente. Riprova.' });
     aicRender();
   }
 }
@@ -7568,15 +7574,16 @@ async function botImpostaInterventoAttivo() {
   const val = sel.value || null;
   try {
     const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'set_intervento_attivo', secret: TELEGRAM_BROADCAST_SECRET, intervento_id: val })
+      method: 'POST', headers: await headersFunzioneProtetta(),
+      body: JSON.stringify({ action: 'set_intervento_attivo', intervento_id: val })
     });
-    if (!res.ok) throw new Error('errore');
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || 'riprova.');
     botInterventoAttivoId = val;
     botRenderInterventoAttivoLbl();
     alert(val ? 'Intervento attivo impostato.' : 'Nessun intervento attivo impostato.');
   } catch(e) {
-    alert('Errore impostazione intervento attivo.');
+    alert('Errore impostazione intervento attivo: ' + e.message);
   }
 }
 
@@ -7699,8 +7706,8 @@ async function tgInviaBroadcast() {
   if (!confirm('Inviare questo messaggio a tutti i volontari registrati sul bot Telegram?')) return;
   try {
     const res = await fetch(SUPA_URL + '/functions/v1/smooth-function', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'broadcast', secret: TELEGRAM_BROADCAST_SECRET, testo: txt })
+      method: 'POST', headers: await headersFunzioneProtetta(),
+      body: JSON.stringify({ action: 'broadcast', testo: txt })
     });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(out.error || 'errore invio');

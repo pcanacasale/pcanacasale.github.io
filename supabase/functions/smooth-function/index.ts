@@ -1,20 +1,25 @@
-// Supabase Edge Function: telegram-interventi
+// Supabase Edge Function: smooth-function (nome visualizzato: telegram-interventi)
+//
+// Autenticazione, diversa per ogni chiamante (verify_jwt = false in config.toml):
+//  - Telegram: header X-Telegram-Bot-Api-Secret-Token = TELEGRAM_WEBHOOK_SECRET
+//  - app (broadcast, set_intervento_attivo): token della sessione + permesso 'bot'
+//  - pg_cron (controlla_interruzioni): header x-cron-secret = CRON_SECRET
+// Le tabelle si leggono e scrivono con la service role, solo dopo questi controlli.
 //
 // Bot Telegram multi-funzione, guidato da un menu a pulsanti (tastiera persistente):
 //  - "📋 Registra intervento": wizard (solo volontari con bot_registra_interventi=true)
-//  - "📍 Condividi posizione" (anche "in tempo reale"): storico in posizioni_tracciate
-//    (mai sovrascritto, così si vede il percorso), agganciato all'intervento
-//    attivo (bot_config.intervento_attivo_id). Se non c'è nessun intervento
-//    attivo la posizione viene scartata (non salvata da nessuna parte): il
-//    percorso GPS ha senso solo dentro un intervento, a differenza delle
-//    segnalazioni. Per la condivisione a durata scelta dal menu, un job
-//    pg_cron chiama periodicamente l'azione "promemoria_posizione" per
-//    ricordare di rimandare la posizione (un bot non può avviare da solo una
-//    condivisione live continua, vedi setup4.sql)
+//  - "📍 Condividi posizione": storico in posizioni_tracciate (mai sovrascritto,
+//    così si vede il percorso), agganciato all'eventuale intervento attivo
+//    (bot_config.intervento_attivo_id). Usa la condivisione "in tempo reale"
+//    nativa di Telegram (un bot non può avviarla da solo, è un limite della
+//    piattaforma) — il bottone del menu spiega come attivarla; una volta
+//    avviata, il bot la registra da sola via edited_message.location. Dato che
+//    Telegram/il telefono a volte la interrompono (risparmio energia, app in
+//    background), un job pg_cron chiama l'azione "controlla_interruzioni" per
+//    accorgersi degli stop e avvisare UNA VOLTA SOLA con un bottone per
+//    riavviarla, invece di continuare a chiedere (vedi setup5.sql)
 //  - "📸 Segnala emergenza": foto + testo + posizione -> segnalazioni_emergenza
-//    + Storage bucket "segnalazioni". Agganciata all'intervento attivo se
-//    presente, ma salvata comunque anche se nessun intervento è attivo
-//    (a differenza delle posizioni GPS)
+//    + Storage bucket "segnalazioni", anch'essa agganciata all'intervento attivo
 //  - messaggi massivi e impostazione dell'intervento attivo: chiamate interne
 //    dall'app (non da Telegram), vedi rami "broadcast" e "set_intervento_attivo"
 //
@@ -23,6 +28,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "jsr:@supabase/server@^1";
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const TIPO_ATTIVITA = [
   'EMERGENZA', 'ESERCITAZIONE', 'CORSI', 'PREVENZIONE INFORTUNI',
@@ -38,16 +44,6 @@ const MENU_KEYBOARD = {
   ],
   resize_keyboard: true,
 };
-const DURATE_POSIZIONE: Record<string, number> = { '15': 15, '60': 60, '240': 240, '480': 480, 'indef': 60 * 24 * 30 };
-const INTERVALLO_PROMEMORIA_MIN = 3; // ogni quanto il bot chiede di rimandare la posizione durante una condivisione a durata
-const tastieraDurata = () => ({
-  inline_keyboard: [
-    [{ text: '15 minuti', callback_data: 'durata:15' }, { text: '1 ora', callback_data: 'durata:60' }],
-    [{ text: '4 ore', callback_data: 'durata:240' }, { text: '8 ore', callback_data: 'durata:480' }],
-    [{ text: 'Fino a nuovo avviso', callback_data: 'durata:indef' }],
-  ],
-});
-
 function oggiRoma(): string {
   const f = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' });
   return f.format(new Date());
@@ -78,15 +74,27 @@ const CORS_HEADERS = {
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
 
+// Confronto a tempo costante: si confrontano le impronte, non i testi
+async function impronta(testo: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(testo)));
+}
+async function segretoValido(ricevuto: string | null, atteso: string | undefined): Promise<boolean> {
+  if (!ricevuto || !atteso) return false;
+  const [a, b] = await Promise.all([impronta(ricevuto), impronta(atteso)]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) => {
   if (req.method !== 'POST') return jsonResponse({ ok: true });
 
   const TELEGRAM_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
   const SUPA_URL = Deno.env.get('SUPABASE_URL');
-  const SUPA_KEY = Deno.env.get('SUPABASE_ANON_KEY');
-  const BROADCAST_SECRET = Deno.env.get('BROADCAST_SECRET');
-  if (!TELEGRAM_TOKEN || !SUPA_URL || !SUPA_KEY) {
-    console.error('Secrets mancanti: TELEGRAM_BOT_TOKEN / SUPABASE_URL / SUPABASE_ANON_KEY');
+  const SUPA_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!TELEGRAM_TOKEN || !SUPA_URL || !SUPA_KEY || !ANON_KEY) {
+    console.error('Secrets mancanti: TELEGRAM_BOT_TOKEN / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY');
     return jsonResponse({ ok: true });
   }
 
@@ -107,12 +115,28 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
     return false;
   }
 
+  // Regola di public.ho_permesso: master sì salvo permesso tolto, standard solo se concesso, volontari mai
+  async function erroreSessione(): Promise<Response | null> {
+    const auth = req.headers.get('authorization') || '';
+    if (!auth.startsWith('Bearer ')) return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
+    try {
+      const client = createClient(SUPA_URL!, ANON_KEY!, { auth: { persistSession: false }, global: { headers: { Authorization: auth } } });
+      const { data, error } = await client.rpc('mio_profilo');
+      if (error) throw error;
+      const u = Array.isArray(data) ? data[0] : data;
+      const p = u?.permessi?.bot;
+      if (u?.tipo && u.tipo !== 'volontario' && p !== false && (u.tipo === 'master' || p === true)) return null;
+    } catch (e) { console.error('verifica permesso fallita', e); }
+    return jsonResponse({ ok: false, error: 'permesso negato' }, 403);
+  }
+
   let update: any;
   try { update = await req.json(); } catch { return jsonResponse({ ok: true }); }
 
   // --- Chiamata dall'app (non da Telegram): messaggio massivo ---
   if (update.action === 'broadcast') {
-    if (!BROADCAST_SECRET || update.secret !== BROADCAST_SECRET) return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
+    const negato = await erroreSessione();
+    if (negato) return negato;
     const testo = String(update.testo || '').trim();
     if (!testo) return jsonResponse({ ok: false, error: 'testo mancante' }, 400);
     const r = await fetch(`${SUPA_URL}/rest/v1/telegram_volontari?select=telegram_chat_id`, { headers: H });
@@ -125,50 +149,54 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
   // --- Chiamata dall'app: imposta/rimuove l'intervento "attivo" per le emergenze
   // (le posizioni e le segnalazioni inviate dal bot vengono agganciate a questo) ---
   if (update.action === 'set_intervento_attivo') {
-    if (!BROADCAST_SECRET || update.secret !== BROADCAST_SECRET) return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
+    const negato = await erroreSessione();
+    if (negato) return negato;
     const valore = update.intervento_id ? String(update.intervento_id) : null;
     const res = await fetch(`${SUPA_URL}/rest/v1/bot_config`, {
       method: 'POST', headers: { ...HJ, Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({ chiave: 'intervento_attivo_id', valore }),
     });
-    return jsonResponse({ ok: res.ok });
+    if (!(await checkOk(res, 'set_intervento_attivo'))) return jsonResponse({ ok: false, error: 'salvataggio non riuscito' }, 500);
+    return jsonResponse({ ok: true });
   }
 
-  // --- Chiamata schedulata (pg_cron, ogni minuto): manda un promemoria con il
-  // bottone "invia posizione" a chi ha una condivisione a durata ancora attiva,
-  // così il "quasi continuo" tramite bot richiede solo un tocco ogni tot minuti
-  // invece di dover riavviare tutto da capo. Approssima la condivisione live
-  // nativa di Telegram, che un bot non può avviare da solo. ---
-  if (update.action === 'promemoria_posizione') {
-    if (!BROADCAST_SECRET || update.secret !== BROADCAST_SECRET) return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
-    const ora = new Date().toISOString();
-
-    // Sessioni scadute: notifica di chiusura e pulizia (una volta sola).
-    const rScadute = await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?scade_il=lt.${ora}&select=volontario_id,telegram_volontari:volontario_id(telegram_chat_id)`, { headers: H });
-    const scadute = (await checkOk(rScadute, 'promemoria: lookup scadute')) ? await rScadute.json() : [];
-    for (const s of scadute || []) {
-      const chatId = s.telegram_volontari?.telegram_chat_id;
-      if (chatId) await sendMsg(chatId, '⏹ Condivisione posizione terminata (tempo scaduto).');
-    }
-    if ((scadute || []).length) {
-      await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?scade_il=lt.${ora}`, { method: 'DELETE', headers: H });
-    }
-
-    // Sessioni ancora attive con promemoria in scadenza: rimanda il bottone e sposta avanti il prossimo promemoria.
-    const rDovute = await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?scade_il=gte.${ora}&prossimo_promemoria=lte.${ora}&select=volontario_id,telegram_volontari:volontario_id(telegram_chat_id)`, { headers: H });
-    const dovute = (await checkOk(rDovute, 'promemoria: lookup dovute')) ? await rDovute.json() : [];
-    let inviati = 0;
+  // --- Chiamata schedulata (pg_cron, ogni paio di minuti): si accorge di una
+  // condivisione "in tempo reale" che si è interrotta (risparmio energia, app
+  // in background, segnale) e avvisa UNA VOLTA SOLA con un bottone per
+  // riavviarla — non un promemoria continuo, solo quando serve davvero. ---
+  if (update.action === 'controlla_interruzioni') {
+    if (!(await segretoValido(req.headers.get('x-cron-secret'), Deno.env.get('CRON_SECRET')))) return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
+    const ora = new Date();
+    const sogliaIso = new Date(ora.getTime() - 5 * 60000).toISOString(); // 5 minuti senza aggiornamenti = probabile interruzione
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/posizioni_pausa?scade_il=gt.${ora.toISOString()}&ultima_posizione_il=lt.${sogliaIso}&avviso_inviato=eq.false&select=volontario_id,telegram_volontari:volontario_id(telegram_chat_id)`,
+      { headers: H },
+    );
+    const dovute = (await checkOk(r, 'controlla_interruzioni: lookup')) ? await r.json() : [];
+    let avvisati = 0;
     for (const s of dovute || []) {
       const chatId = s.telegram_volontari?.telegram_chat_id;
       if (!chatId) continue;
-      await sendMsg(chatId, '📍 Rimanda la posizione per continuare a condividerla.', { keyboard: [[{ text: '📍 Invia posizione', request_location: true }]], resize_keyboard: true, one_time_keyboard: true });
-      const prossimo = new Date(Date.now() + INTERVALLO_PROMEMORIA_MIN * 60000).toISOString();
-      await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?volontario_id=eq.${s.volontario_id}`, {
-        method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' }, body: JSON.stringify({ prossimo_promemoria: prossimo }),
+      await sendMsg(
+        chatId,
+        '⚠️ La condivisione posizione in tempo reale sembra essersi interrotta (probabilmente per il risparmio energia del telefono). Riattivala da 📎 → Posizione → "Condividi la mia posizione in tempo reale", oppure invia una posizione singola col bottone qui sotto.',
+        { keyboard: [[{ text: '📍 Invia posizione', request_location: true }]], resize_keyboard: true, one_time_keyboard: true },
+      );
+      await fetch(`${SUPA_URL}/rest/v1/posizioni_pausa?volontario_id=eq.${s.volontario_id}`, {
+        method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' }, body: JSON.stringify({ avviso_inviato: true }),
       });
-      inviati++;
+      avvisati++;
     }
-    return jsonResponse({ ok: true, inviati, scadute: (scadute || []).length });
+    // Pulizia: le sessioni ormai scadute non vanno più controllate.
+    await fetch(`${SUPA_URL}/rest/v1/posizioni_pausa?scade_il=lt.${ora.toISOString()}`, {
+      method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' }, body: JSON.stringify({ scade_il: null }),
+    });
+    return jsonResponse({ ok: true, avvisati });
+  }
+
+  // --- Da qui in poi solo aggiornamenti di Telegram ---
+  if (!(await segretoValido(req.headers.get('x-telegram-bot-api-secret-token'), Deno.env.get('TELEGRAM_WEBHOOK_SECRET')))) {
+    return jsonResponse({ ok: false, error: 'non autorizzato' }, 401);
   }
 
   async function getStato(chat_id: number) {
@@ -204,47 +232,33 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
     const rows = await r.json();
     return !!rows[0]?.in_pausa;
   }
-  async function setPausa(volontario_id: number, in_pausa: boolean) {
+  async function setPausa(volontario_id: number, in_pausa: boolean, extra: Record<string, unknown> = {}) {
     await fetch(`${SUPA_URL}/rest/v1/posizioni_pausa`, {
       method: 'POST', headers: { ...HJ, Prefer: 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify({ volontario_id, in_pausa, aggiornato_il: new Date().toISOString() }),
+      body: JSON.stringify({ volontario_id, in_pausa, aggiornato_il: new Date().toISOString(), ...extra }),
     });
   }
   // Registra un NUOVO punto (non sovrascrive): serve per poter vedere il percorso.
   // Ogni punto viene agganciato all'eventuale intervento attivo per le emergenze.
-  // Se non c'è nessun intervento attivo la posizione viene scartata (non ha senso
-  // tracciare un percorso che non sarà mai consultabile da nessuna parte
-  // dell'app): a differenza delle segnalazioni/foto, che restano indipendenti
-  // dall'intervento attivo, il tracciamento GPS vive solo dentro un intervento.
-  async function registraPosizione(volontario_id: number, lat: number, lon: number, minuti?: number, creaPromemoria = false): Promise<'saved' | 'discarded' | 'error'> {
-    const intervento_id = await getInterventoAttivo();
-    if (!intervento_id) return 'discarded';
+  async function registraPosizione(volontario_id: number, lat: number, lon: number, minuti?: number) {
     const scade_il = minuti ? new Date(Date.now() + minuti * 60000).toISOString() : null;
+    const intervento_id = await getInterventoAttivo();
     const res = await fetch(`${SUPA_URL}/rest/v1/posizioni_tracciate`, {
       method: 'POST', headers: { ...HJ, Prefer: 'return=minimal' },
       body: JSON.stringify({ volontario_id, intervento_id, lat, lon, scade_il }),
     });
-    await setPausa(volontario_id, false); // una condivisione esplicita riattiva sempre il tracciamento
-    // Solo per la condivisione a durata scelta dal menu del bot: mantiene/aggiorna
-    // la sessione di promemoria (il bot non può avviare da solo una condivisione
-    // live continua, quindi ricorda periodicamente di rimandare la posizione finché
-    // la durata non scade). Non serve per la condivisione live nativa di Telegram,
-    // che è già continua da sola.
-    if (creaPromemoria && scade_il) {
-      const prossimo_promemoria = new Date(Date.now() + INTERVALLO_PROMEMORIA_MIN * 60000).toISOString();
-      await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione`, {
-        method: 'POST', headers: { ...HJ, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({ volontario_id, scade_il, prossimo_promemoria }),
-      });
-    } else if (!minuti) {
-      // Nessuna durata (posizione "del momento"): niente da tracciare come sessione.
-      await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?volontario_id=eq.${volontario_id}`, { method: 'DELETE', headers: H });
-    }
-    return (await checkOk(res, 'registraPosizione')) ? 'saved' : 'error';
+    // Una condivisione esplicita riattiva sempre il tracciamento. Se è "in tempo reale"
+    // (minuti presente), tiene anche il battito per accorgersi di un'interruzione:
+    // ogni nuovo punto conferma che sta ancora funzionando, azzerando l'avviso già inviato.
+    await setPausa(volontario_id, false, minuti
+      ? { scade_il, ultima_posizione_il: new Date().toISOString(), avviso_inviato: false }
+      : { scade_il: null });
+    return checkOk(res, 'registraPosizione');
   }
   async function interrompiPosizione(volontario_id: number) {
-    await setPausa(volontario_id, true); // i punti storici restano: si ferma solo la ricezione di nuovi aggiornamenti live
-    await fetch(`${SUPA_URL}/rest/v1/sessioni_posizione?volontario_id=eq.${volontario_id}`, { method: 'DELETE', headers: H });
+    // I punti storici restano: si ferma solo la ricezione di nuovi aggiornamenti live
+    // e il controllo delle interruzioni (altrimenti arriverebbe un avviso di interruzione fantasma).
+    await setPausa(volontario_id, true, { scade_il: null });
   }
   async function caricaFotoESalva(file_id: string): Promise<string | null> {
     const rf = await fetch(`${TG}/getFile?file_id=${file_id}`);
@@ -299,7 +313,7 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
     await sendMsg(chat_id, riepilogo, tastieraConferma());
   }
   function normalizzaTesto(s: string): string {
-    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
   function levenshtein(a: string, b: string): number {
     const m = a.length, n = b.length;
@@ -396,11 +410,6 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
         await promptAltriVolontari(chat_id, dati);
       }
       else if (campo === 'note' && valore === 'skip') { dati.note = null; await chiediConferma(chat_id, dati); }
-      else if (campo === 'durata') {
-        dati.durata_min = DURATE_POSIZIONE[valore] || 60;
-        await setStato(chat_id, 'posizione_attesa_invio', dati);
-        await sendMsg(chat_id, 'Ora invia la tua posizione.', tastieraPosizione());
-      }
       else if (campo === 'conferma') {
         if (valore === 'si') {
           const ok = await salvaIntervento(dati, volontario);
@@ -473,9 +482,20 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
       return jsonResponse({ ok: true });
     }
     if (text === '📍 Condividi posizione') {
-      const interventoAttivo = await getInterventoAttivo();
-      if (!interventoAttivo) { await sendMsg(chat_id, '⚠️ Nessuna emergenza attiva al momento: la condivisione posizione è disponibile solo durante un intervento attivo.'); return jsonResponse({ ok: true }); }
-      await sendMsg(chat_id, 'Per quanto tempo vuoi condividere la posizione?', tastieraDurata());
+      const istruzioni = [
+        '<b>Per un tracciamento automatico e continuo</b> (nessun tocco da fare finché non la fermi tu), usa la condivisione "in tempo reale" di Telegram:',
+        '1. Tocca 📎 (o "+") accanto al campo messaggio',
+        '2. Scegli "Posizione"',
+        '3. Premi "Condividi la mia posizione in tempo reale"',
+        '4. Scegli per quanto tempo (15 min / 1 ora / 8 ore)',
+        '',
+        'Da quel momento la registro da sola, senza bisogno di fare altro (un bot non può avviarla al posto tuo, è un limite di Telegram).',
+        '',
+        '⚠️ Per evitare interruzioni, disattiva il risparmio energetico per Telegram: Impostazioni del telefono → Batteria/App → Telegram → nessuna limitazione/ottimizzazione in background. Se si interrompe comunque, ti avviso io con un bottone per riavviarla.',
+        '',
+        'In alternativa, il bottone qui sotto invia solo la posizione attuale, una volta sola.',
+      ].join('\n');
+      await sendMsg(chat_id, istruzioni, tastieraPosizione());
       return jsonResponse({ ok: true });
     }
     if (text === '⏹ Interrompi posizione') {
@@ -488,21 +508,13 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
     // --- Posizione ricevuta fuori dal flusso segnalazione ---
     const statoAttuale = await getStato(chat_id);
     if (msg.location && statoAttuale?.step !== 'segnalazione_attesa_posizione') {
-      let minuti: number | undefined;
-      let creaPromemoria = false;
-      if (statoAttuale?.step === 'posizione_attesa_invio') {
-        minuti = statoAttuale.dati?.durata_min;
-        creaPromemoria = true; // condivisione a durata scelta dal menu del bot: serve il promemoria periodico
-        await resetStato(chat_id);
-      } else if (msg.location.live_period) {
-        minuti = Math.round(msg.location.live_period / 60); // condivisione "in tempo reale" nativa di Telegram, avviata senza passare dal menu (già continua da sola)
-      }
-      const esito = await registraPosizione(volontario.id, msg.location.latitude, msg.location.longitude, minuti, creaPromemoria);
-      const nota = creaPromemoria ? `\nTi ricorderò di rimandarla ogni ${INTERVALLO_PROMEMORIA_MIN} minuti finché non scade o premi "⏹ Interrompi posizione".` : '';
-      const testoEsito = esito === 'saved' ? `📍 Posizione ricevuta, grazie.${nota}`
-        : esito === 'discarded' ? '⚠️ Nessuna emergenza attiva al momento: la posizione non è stata salvata.'
-        : '⚠️ Errore nel salvataggio della posizione.';
-      await sendMsg(chat_id, testoEsito);
+      // Se ha un live_period è una condivisione "in tempo reale" nativa di Telegram appena
+      // avviata (già continua da sola, la seguiamo via edited_message.location); altrimenti
+      // è un invio singolo (bottone "posizione attuale").
+      const minuti = msg.location.live_period ? Math.round(msg.location.live_period / 60) : undefined;
+      const ok = await registraPosizione(volontario.id, msg.location.latitude, msg.location.longitude, minuti);
+      const nota = minuti ? '\n🔴 Condivisione in tempo reale attiva, la seguo automaticamente.' : '';
+      await sendMsg(chat_id, ok ? `📍 Posizione ricevuta, grazie.${nota}` : '⚠️ Errore nel salvataggio della posizione.');
       return jsonResponse({ ok: true });
     }
 
