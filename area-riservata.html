@@ -513,8 +513,14 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .seg-nota{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 
 /* ── accessi ── */
-.acc-tipo{width:auto;min-width:200px}
-.nuovo-utente-form{margin-bottom:18px}
+.ga-card{display:flex;flex-direction:column}
+.ga-card .sub{margin:8px 0 0;overflow-wrap:anywhere}
+.ga-card .em-azioni{margin-top:auto;padding-top:14px}
+.ga-riga{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.ga-riga>b,.ga-riga>.ga-valore{flex:1 1 180px;min-width:0;overflow-wrap:anywhere}
+.ga-riga input{flex:1 1 200px;min-width:0;width:auto}
+#gaOv label.perm-check{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0}
+#gaOv label.perm-check input{width:auto;margin:0}
 #nuovoUtenteForm:not([style*="none"]){display:flex!important}
 .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
 .perm-check{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:14px;font-weight:600;color:var(--fg);cursor:pointer}
@@ -1137,7 +1143,8 @@ body.cv-solo-vede .cv-gestione{display:none}
     <button id="siVisite" class="sidebar-item" onclick="navTo('visite','Visite mediche',this)" style="display:none"></button>
     <button id="siFormazione" class="sidebar-item" onclick="navTo('formazione','Formazione',this)" style="display:none"></button>
     <button id="siAggDati" class="sidebar-item" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none"></button>
-    <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Accessi',this)" style="display:none"></button>
+    <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Registro accessi',this)" style="display:none"></button>
+    <button id="siGestioneAccessi" class="sidebar-item" onclick="navTo('gestioneAccessi','Gestione accessi',this)" style="display:none"></button>
     <button id="siStatistiche" class="sidebar-item" onclick="navTo('statistiche','Statistiche',this)" style="display:none"></button>
     <button id="siDb" class="sidebar-item" onclick="navTo('db','DB Avanzato',this)" style="display:none"></button>
     <button id="siImpostazioni" class="sidebar-item" onclick="navTo('impostazioni','Impostazioni',this);caricaImpostazioni();" style="display:none"></button>
@@ -1603,69 +1610,24 @@ body.cv-solo-vede .cv-gestione{display:none}
 
     <!-- ACCESSI (per master) -->
     <div class="panel" id="panelAccessi">
-      <div class="phead"><div><h1>Accessi</h1></div></div>
+      <div class="phead"><div><h1>Registro accessi</h1></div></div>
 
       <div class="bar">
         <label class="search" for="accessiSearch"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4"/></svg><input type="search" id="accessiSearch" placeholder="Cerca per nome, CF o ruolo" autocomplete="off" oninput="filtraAccessi()"></label>
-        <select id="accessiTipo" class="acc-tipo" onchange="filtraAccessi()" aria-label="Tipo">
-          <option value="">Tutti</option>
-          <option value="admin">Solo amministratori</option>
-          <option value="vol">Solo volontari</option>
-        </select>
-      </div>
-
-      <!-- Nuovo utente (spostato da Impostazioni) -->
-      <div class="impo-section" id="accNuovoUtenteSection">
-        <button class="btn pri mb18" onclick="toggleNuovoUtente()">+ Nuovo utente</button>
-        <div class="card form nuovo-utente-form" id="nuovoUtenteForm" style="display:none">
-          <h2>Nuovo utente</h2>
-          <div class="form-err" id="nuovoUtenteErr"></div>
-          <div class="row2">
-            <label>Volontario<select id="nuovoVolontario"></select></label>
-            <label>Email di accesso<input type="email" id="nuovoEmail" placeholder="nome@esempio.it"></label>
-          </div>
-          <div class="grp m0">Permessi</div>
-          <div class="perm-grid">
-            <label class="perm-check"><input type="checkbox" id="permVolontari" checked> Volontari</label>
-            <label class="perm-check"><input type="checkbox" id="permModificaVolontari"> Modifica Volontari</label>
-            <label class="perm-check"><input type="checkbox" id="permInterventi" checked> Interventi</label>
-            <label class="perm-check"><input type="checkbox" id="permPostazioni"> Postazioni</label>
-            <label class="perm-check"><input type="checkbox" id="permDotazioni"> Dotazioni</label>
-            <label class="perm-check"><input type="checkbox" id="permPianiCarico"> Piani di Carico</label>
-            <label class="perm-check"><input type="checkbox" id="permMezzi" checked> Mezzi</label>
-            <label class="perm-check"><input type="checkbox" id="permTlc"> TLC</label>
-            <label class="perm-check"><input type="checkbox" id="permRichieste"> Richieste</label>
-            <label class="perm-check"><input type="checkbox" id="permVisite"> Visite Mediche</label>
-            <label class="perm-check"><input type="checkbox" id="permFormazione"> Formazione</label>
-            <label class="perm-check"><input type="checkbox" id="permGalleria" checked> Galleria</label>
-            <label class="perm-check"><input type="checkbox" id="permEditorPdf"> Editor PDF base</label>
-            <label class="perm-check"><input type="checkbox" id="permEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
-            <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni (vede)</label>
-            <label class="perm-check"><input type="checkbox" id="permConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
-            <label class="perm-check"><input type="checkbox" id="permEventi"> Eventi</label>
-            <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti volontari</label>
-            <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
-            <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
-            <label class="perm-check"><input type="checkbox" id="permAccessi"> Accessi</label>
-            <label class="perm-check"><input type="checkbox" id="permGestioneSegnalazioni"> Gestione Segnalazioni</label>
-            <label class="perm-check"><input type="checkbox" id="permImpostazioni"> Impostazioni</label>
-            <label class="perm-check"><input type="checkbox" id="permAggDati"> Aggiornamento dati</label>
-          </div>
-          <div class="actions"><button class="btn" onclick="toggleNuovoUtente()">Annulla</button><button class="btn pri" onclick="salvaUtente()">Salva utente</button></div>
-        </div>
       </div>
 
       <div id="accessiContent"><div class="loading-msg">Caricamento…</div></div>
 
-      <!-- Matrice permessi -->
-      <div class="impo-section" id="matricePermessiSection" style="display:none">
-        <div class="grp">Matrice permessi</div>
-        <div class="card tbl mp-wrap">
-          <table id="matricePermessi">
-            <!-- popolata via JS -->
-          </table>
-        </div>
+    </div>
+
+    <!-- GESTIONE ACCESSI (solo master — contenuto generato da gestione-accessi.js) -->
+    <div class="panel" id="panelGestioneAccessi">
+      <div class="phead">
+        <div><h1>Gestione accessi</h1><span class="sub" id="gaMostrati"></span></div>
+        <div class="pact"><button class="btn pri" id="gaBtnNuovo" onclick="gaApri()" hidden>Aggiungi staff</button></div>
       </div>
+      <div id="gaContenuto"><div class="loading-msg">Caricamento…</div></div>
+      <div class="ov" id="gaOv" hidden></div>
     </div>
 
     <!-- SCHEDA PERSONALE (per volontari) -->    <div class="panel" id="panelSchedapers">
@@ -2119,47 +2081,6 @@ body.cv-solo-vede .cv-gestione{display:none}
       </div>
     </div>
   </div>
-  <!-- Modifica utente -->
-  <div class="vista-form-overlay" id="modUtenteOverlay">
-    <div class="vista-form-card">
-      <div class="shead sheet-h"><h2>Modifica utente</h2><button class="x" onclick="chiudiModificaUtente()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-      <input type="hidden" id="modUtenteId">
-      <div class="form-err" id="modUtenteErr"></div>
-      <div class="form-field"><label class="form-lbl">Nome e Cognome</label><input class="form-inp" id="modNome" readonly></div>
-      <div class="form-field"><label class="form-lbl">Email di accesso</label><input class="form-inp" id="modEmail" readonly></div>
-      <div class="form-field"><label class="perm-check"><input type="checkbox" id="modAttivo"> Accesso attivo</label></div>
-      <div class="form-field">
-        <label class="form-lbl">Permessi sezioni</label>
-        <div class="perm-grid">
-          <label class="perm-check"><input type="checkbox" id="modPermVolontari"> Volontari</label>
-          <label class="perm-check"><input type="checkbox" id="modPermModificaVolontari"> Modifica Volontari</label>
-          <label class="perm-check"><input type="checkbox" id="modPermInterventi"> Interventi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPostazioni"> Postazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDotazioni"> Dotazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermPianiCarico"> Piani di Carico</label>
-          <label class="perm-check"><input type="checkbox" id="modPermMezzi"> Mezzi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermTlc"> TLC</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDb"> DB Avanzato</label>
-          <label class="perm-check"><input type="checkbox" id="modPermDocumenti"> Documenti volontari</label>
-          <label class="perm-check"><input type="checkbox" id="modPermVisite"> Visite Mediche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermFormazione"> Formazione</label>
-          <label class="perm-check"><input type="checkbox" id="modPermGalleria"> Galleria</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEditorPdf"> Editor PDF base</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
-          <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> Convocazioni (vede)</label>
-          <label class="perm-check"><input type="checkbox" id="modPermConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
-          <label class="perm-check"><input type="checkbox" id="modPermEventi"> Eventi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
-          <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
-          <label class="perm-check"><input type="checkbox" id="modPermAccessi"> Accessi</label>
-          <label class="perm-check"><input type="checkbox" id="modPermGestioneSegnalazioni"> Gestione Segnalazioni</label>
-          <label class="perm-check"><input type="checkbox" id="modPermAggDati"> Aggiornamento dati</label>
-        </div>
-      </div>
-      <div class="actions"><button class="btn" onclick="chiudiModificaUtente()">Annulla</button><button class="btn pri" onclick="salvaModificaUtente()">Salva</button></div>
-    </div>
-  </div>
   <div class="ov fz-ov" id="fzOv" hidden onclick="if(event.target===this)fzChiudiForm()"></div>
 
   <!-- Export PDF visite mediche -->
@@ -2214,7 +2135,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=202"></script>
+<script src="area-riservata.js?v=203"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
 <script src="scheda-volontario.js?v=6"></script>
 <script src="allerta-home.js?v=2"></script>
@@ -2223,6 +2144,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="convocazioni.js?v=3"></script>
 <script src="eventi.js?v=3"></script>
 <script src="eventi-polo.js?v=2"></script>
+<script src="gestione-accessi.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

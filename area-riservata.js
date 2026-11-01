@@ -279,6 +279,7 @@ const NAV_VOCI = [
   { id:'siRichieste',       label:'Richieste',          ic:'inbox',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siDb',              label:'DB',                 ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAccessi',         label:'Registro accessi',   ic:'shield',  sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siGestioneAccessi', label:'Gestione accessi',   ic:'shield',  sez:'Amministrazione', ruoli:['master'] },
   { id:'siImpostazioni',    label:'Impostazioni',       ic:'gear',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
 ];
 const NAV_IC = {
@@ -414,7 +415,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siVisite','siFormazione','siConvocazioni','siEventi'
+      'siVisite','siFormazione','siConvocazioni','siEventi','siGestioneAccessi'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -451,6 +452,7 @@ function avviaDashboard() {
     if (hasPerm('statistiche'))  showSi('siStatistiche');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
+    if (isMaster)                showSi('siGestioneAccessi');
     showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (hasPerm('impostazioni')) showSi('siImpostazioni');
@@ -499,6 +501,7 @@ const PANEL_PERM = {
   aggDati: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
 };
 function puoAprirePannello(name) {
+  if (name === 'gestioneAccessi') return !!currentUser && currentUser.tipo_accesso === 'master';
   return !PANEL_PERM[name] || PANEL_PERM[name].some(hasPerm);
 }
 
@@ -533,6 +536,7 @@ function showPanel(name, btn) {
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
+  if (name === 'gestioneAccessi') caricaGestioneAccessi();
   if (name === 'statistiche') {
     if (typeof Chart === 'undefined') {
       var s = document.createElement('script');
@@ -775,148 +779,6 @@ async function eliminaRichiesta(id) {
 async function caricaImpostazioni() {
   renderSchemaList();
   evCaricaListe();
-}
-
-async function salvaUtente() {
-  const sel       = document.getElementById('nuovoVolontario');
-  const volId     = Number(sel.value);
-  const email     = document.getElementById('nuovoEmail').value.trim().toLowerCase();
-  const errEl     = document.getElementById('nuovoUtenteErr');
-  const haEmail   = (accessiData.email || []).some(e => e.volontario_id === volId);
-  if (!volId || (!email && !haEmail)) { errEl.textContent = 'Scegli il volontario e inserisci la sua email.'; errEl.style.display = 'block'; return; }
-  errEl.style.display = 'none';
-  const permessi = {
-    volontari:  document.getElementById('permVolontari').checked,
-    modifica_volontari: document.getElementById('permModificaVolontari') ? document.getElementById('permModificaVolontari').checked : false,
-    interventi: document.getElementById('permInterventi').checked,
-    postazioni: document.getElementById('permPostazioni') ? document.getElementById('permPostazioni').checked : false,
-    dotazioni:  document.getElementById('permDotazioni') ? document.getElementById('permDotazioni').checked : false,
-    pianicarico: document.getElementById('permPianiCarico') ? document.getElementById('permPianiCarico').checked : false,
-    mezzi:      document.getElementById('permMezzi').checked,
-    tlc:        document.getElementById('permTlc') ? document.getElementById('permTlc').checked : false,
-    richieste:  document.getElementById('permRichieste').checked,
-    documenti:    document.getElementById('permDocumenti') ? document.getElementById('permDocumenti').checked : false,
-    visite:       document.getElementById('permVisite') ? document.getElementById('permVisite').checked : false,
-    formazione:   document.getElementById('permFormazione') ? document.getElementById('permFormazione').checked : false,
-    galleria:     document.getElementById('permGalleria') ? document.getElementById('permGalleria').checked : false,
-    editor_pdf:   document.getElementById('permEditorPdf') ? document.getElementById('permEditorPdf').checked : false,
-    editor_pdf_completo: document.getElementById('permEditorPdfCompleto') ? document.getElementById('permEditorPdfCompleto').checked : false,
-    convocazioni: document.getElementById('permConvocazioni') ? document.getElementById('permConvocazioni').checked : false,
-    convocazioni_gestione: document.getElementById('permConvocazioniGestione') ? document.getElementById('permConvocazioniGestione').checked : false,
-    eventi:       document.getElementById('permEventi') ? document.getElementById('permEventi').checked : false,
-    db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
-    impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
-    statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
-    accessi:      document.getElementById('permAccessi') ? document.getElementById('permAccessi').checked : false,
-    gestione_segnalazioni: document.getElementById('permGestioneSegnalazioni') ? document.getElementById('permGestioneSegnalazioni').checked : false,
-    aggiornamento_dati: document.getElementById('permAggDati') ? document.getElementById('permAggDati').checked : false,
-  };
-  const res = await sbFetch(SUPA_URL + '/rest/v1/staff', {
-    method: 'POST',
-    headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-    body: JSON.stringify({ volontario_id: volId, tipo_accesso: 'standard', attivo: true, permessi })
-  });
-  if (!res.ok) { errEl.textContent = 'Salvataggio non riuscito. Questo volontario ha già un accesso?'; errEl.style.display = 'block'; return; }
-  const nome = sel.options[sel.selectedIndex].textContent;
-  await logAttivita('ha aggiunto utente: ' + nome);
-  if (email && !haEmail) {
-    const resEmail = await sbFetch(SUPA_URL + '/rest/v1/email_accesso', {
-      method: 'POST',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ volontario_id: volId, email })
-    });
-    if (!resEmail.ok) { errEl.textContent = 'Accesso creato, ma email non salvata: è già usata da un altro volontario?'; errEl.style.display = 'block'; caricaAccessi(); return; }
-  }
-  document.getElementById('nuovoEmail').value = '';
-  toggleNuovoUtente();
-  caricaAccessi();
-}
-
-var _utentiList = [];
-
-function apriModificaUtenteById(id) {
-  var u = _utentiList.find(function(x){ return String(x.id) === String(id); });
-  if (u) apriModificaUtente(u);
-}
-
-function apriModificaUtente(u) {
-  document.getElementById('modUtenteId').value      = u.id;
-  document.getElementById('modNome').value          = u.nome || '';
-  document.getElementById('modEmail').value         = u.email || '';
-  document.getElementById('modAttivo').checked      = u.attivo !== false;
-  var p = u.permessi || {};
-  var permMap = {
-    'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','Eventi':'eventi','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo','Convocazioni':'convocazioni','ConvocazioniGestione':'convocazioni_gestione',
-    'Impostazioni':'impostazioni','Statistiche':'statistiche',
-    'Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
-    'AggDati':'aggiornamento_dati'
-  };
-  // Come nella Matrice permessi: un master ha accesso di default, quindi la
-  // casella è spuntata salvo permesso esplicitamente false (altrimenti salvando
-  // il form gli si toglierebbero tutte le pagine non salvate esplicitamente).
-  var isMasterU = u.tipo_accesso === 'master';
-  Object.keys(permMap).forEach(function(n) {
-    var el = document.getElementById('modPerm' + n);
-    if (el) el.checked = isMasterU ? (p[permMap[n]] !== false) : !!(p[permMap[n]]);
-  });
-  document.getElementById('modUtenteErr').style.display = 'none';
-  document.getElementById('modUtenteOverlay').classList.add('open');
-}
-
-// PATCH con le regole attive può toccare 0 righe senza errore: si chiede la riga indietro per saperlo
-async function accSalvaStaff(id, campi) {
-  const res = await sbFetch(SUPA_URL + '/rest/v1/staff?volontario_id=eq.' + id, {
-    method: 'PATCH',
-    headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }),
-    body: JSON.stringify(campi)
-  });
-  const righe = res.ok ? await res.json() : [];
-  if (!righe.length) throw new Error('salvataggio non consentito');
-}
-
-function chiudiModificaUtente() {
-  document.getElementById('modUtenteOverlay').classList.remove('open');
-}
-
-async function salvaModificaUtente() {
-  var id       = document.getElementById('modUtenteId').value;
-  var nome     = document.getElementById('modNome').value;
-  var errEl    = document.getElementById('modUtenteErr');
-  errEl.style.display = 'none';
-  var permessi = {
-    volontari:    document.getElementById('modPermVolontari') ? document.getElementById('modPermVolontari').checked : false,
-    modifica_volontari: document.getElementById('modPermModificaVolontari') ? document.getElementById('modPermModificaVolontari').checked : false,
-    interventi:   document.getElementById('modPermInterventi') ? document.getElementById('modPermInterventi').checked : false,
-    postazioni:   document.getElementById('modPermPostazioni') ? document.getElementById('modPermPostazioni').checked : false,
-    dotazioni:    document.getElementById('modPermDotazioni') ? document.getElementById('modPermDotazioni').checked : false,
-    pianicarico:  document.getElementById('modPermPianiCarico') ? document.getElementById('modPermPianiCarico').checked : false,
-    mezzi:        document.getElementById('modPermMezzi') ? document.getElementById('modPermMezzi').checked : false,
-    tlc:          document.getElementById('modPermTlc') ? document.getElementById('modPermTlc').checked : false,
-    db:           document.getElementById('modPermDb') ? document.getElementById('modPermDb').checked : false,
-    documenti:    document.getElementById('modPermDocumenti') ? document.getElementById('modPermDocumenti').checked : false,
-    visite:       document.getElementById('modPermVisite') ? document.getElementById('modPermVisite').checked : false,
-    formazione:   document.getElementById('modPermFormazione') ? document.getElementById('modPermFormazione').checked : false,
-    galleria:     document.getElementById('modPermGalleria') ? document.getElementById('modPermGalleria').checked : false,
-    editor_pdf:   document.getElementById('modPermEditorPdf') ? document.getElementById('modPermEditorPdf').checked : false,
-    editor_pdf_completo: document.getElementById('modPermEditorPdfCompleto') ? document.getElementById('modPermEditorPdfCompleto').checked : false,
-    convocazioni: document.getElementById('modPermConvocazioni') ? document.getElementById('modPermConvocazioni').checked : false,
-    convocazioni_gestione: document.getElementById('modPermConvocazioniGestione') ? document.getElementById('modPermConvocazioniGestione').checked : false,
-    eventi:       document.getElementById('modPermEventi') ? document.getElementById('modPermEventi').checked : false,
-    richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
-    impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
-    statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
-    accessi:        document.getElementById('modPermAccessi') ? document.getElementById('modPermAccessi').checked : false,
-    gestione_segnalazioni: document.getElementById('modPermGestioneSegnalazioni') ? document.getElementById('modPermGestioneSegnalazioni').checked : false,
-    aggiornamento_dati: document.getElementById('modPermAggDati') ? document.getElementById('modPermAggDati').checked : false,
-  };
-  var body = { permessi: permessi, attivo: document.getElementById('modAttivo').checked };
-  try {
-    await accSalvaStaff(id, body);
-    await logAttivita('ha modificato utente: ' + nome);
-    chiudiModificaUtente();
-    caricaAccessi();
-  } catch(e) { errEl.textContent = 'Errore: ' + e.message; errEl.style.display = 'block'; }
 }
 
 // -- VOLONTARI --
@@ -3494,12 +3356,6 @@ function getTipoAttivitaAvatar(tipo, size) {
   size = size || 36;
   var cls = 'tipo-ic' + (/EMERG/i.test(tipo || '') ? ' em' : '') + (size >= 56 ? ' s56' : size <= 40 ? ' s40' : '');
   return '<div class="' + cls + '">' + getTipoAttivitaIcon(tipo, Math.round(size*0.55), 'currentColor') + '</div>';
-}
-
-function toggleNuovoUtente() {
-  var form = document.getElementById('nuovoUtenteForm');
-  if (!form) return;
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 function toggleNuovoCampo() {
@@ -6906,129 +6762,25 @@ async function eliminaMezzo() {
   caricaMezzi();
 }
 
-// -- ACCESSI E CREDENZIALI (master) --
-let accessiData = { admin: [], vol: [] };
+// -- REGISTRO ACCESSI (chi ha accesso si gestisce in gestione-accessi.js) --
+let accessiData = { log: [], att: [] };
 
 async function caricaAccessi() {
   const content = document.getElementById('accessiContent');
   if (!content) return;
   content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
 
-  // Mostra/nascondi sezione nuovo utente e matrice permessi solo per master
-  const nuovoSec = document.getElementById('accNuovoUtenteSection');
-  if (nuovoSec) nuovoSec.style.display = isMasterUser ? 'block' : 'none';
-  const matriceSec = document.getElementById('matricePermessiSection');
-  if (matriceSec) matriceSec.style.display = isMasterUser ? 'block' : 'none';
-
   try {
-    const [sRes, eRes, vRes, logRes, attRes] = await Promise.all([
-      sbFetch(SUPA_URL + '/rest/v1/staff?select=volontario_id,tipo_accesso,attivo,permessi', { headers: H }),
-      sbFetch(SUPA_URL + '/rest/v1/email_accesso?select=volontario_id,email&order=email', { headers: H }),
-      sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,codice_fiscale,data_nascita,stato,foto_url&order=cognome,nome', { headers: H }),
-      sbFetch(SUPA_URL + '/rest/v1/log_accessi?select=*&order=accesso_at.desc&limit=50', { headers: H }),
-      sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=*&order=created_at.desc&limit=50', { headers: H })
+    const [logRes, attRes] = await Promise.all([
+      sbFetch(SUPA_URL + '/rest/v1/log_accessi?select=accesso_at,utente_tipo,utente_label&order=accesso_at.desc&limit=50', { headers: H }),
+      sbFetch(SUPA_URL + '/rest/v1/log_attivita?select=created_at,utente_nome,azione&order=created_at.desc&limit=50', { headers: H })
     ]);
-    if (![sRes, eRes, vRes, logRes, attRes].some(r => r.ok)) throw new Error('Non disponibile.');
-    const staff = await sRes.json(), email = await eRes.json(), volontari = await vRes.json();
-    const volPerId = new Map(volontari.map(v => [v.id, v]));
-    const staffIds = new Set(staff.map(s => s.volontario_id));
-    const emailDi  = id => email.filter(e => e.volontario_id === id).map(e => e.email).join(', ');
-    const attivi   = volontari.filter(v => v.stato !== 'DIMESSO' && !staffIds.has(v.id));
-    accessiData.email = email;
-    accessiData.admin = staff.map(s => {
-      const v = volPerId.get(s.volontario_id) || {};
-      return Object.assign({}, s, { id: s.volontario_id, nome: [v.cognome, v.nome].filter(Boolean).join(' '), email: emailDi(s.volontario_id) });
-    }).sort((a, b) => a.nome.localeCompare(b.nome));
-    _utentiList = accessiData.admin;
-    accessiData.vol   = attivi.filter(v => emailDi(v.id)).map(v => Object.assign({}, v, { email: emailDi(v.id) }));
-    await sbFirmaRighe(accessiData.vol, 'foto_url');
-    accPopolaNuovoUtente(attivi);
+    if (!logRes.ok && !attRes.ok) throw new Error('Non disponibile.');
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();
     renderAccessi();
-    if (isMasterUser) caricaMatricePermessi();
   } catch(e) {
     content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
-  }
-}
-
-function accPopolaNuovoUtente(volontari) {
-  const sel = document.getElementById('nuovoVolontario');
-  if (sel) sel.innerHTML = '<option value="">— scegli —</option>' + volontari.map(v => '<option value="' + v.id + '">' + escapeHtmlNav((v.cognome || '') + ' ' + (v.nome || '')) + '</option>').join('');
-}
-
-// -- MATRICE PERMESSI --
-const PERMESSI_PAGINE = [
-  { key: 'volontari',              label: 'Volontari' },
-  { key: 'modifica_volontari',     label: 'Modifica Volontari' },
-  { key: 'interventi',             label: 'Interventi' },
-  { key: 'postazioni',             label: 'Postazioni' },
-  { key: 'dotazioni',              label: 'Dotazioni' },
-  { key: 'pianicarico',            label: 'Piani di Carico' },
-  { key: 'mezzi',                  label: 'Mezzi' },
-  { key: 'tlc',                    label: 'TLC' },
-  { key: 'richieste',              label: 'Richieste' },
-  { key: 'visite',                 label: 'Visite Mediche' },
-  { key: 'formazione',             label: 'Formazione' },
-  { key: 'galleria',               label: 'Galleria' },
-  { key: 'editor_pdf',             label: 'Editor PDF base' },
-  { key: 'editor_pdf_completo',    label: 'Editor PDF completo' },
-  { key: 'convocazioni',           label: 'Convocazioni (vede)' },
-  { key: 'convocazioni_gestione',  label: 'Convocazioni: crea e gestisce liste' },
-  { key: 'eventi',                 label: 'Eventi' },
-  { key: 'documenti',              label: 'Documenti volontari' },
-  { key: 'statistiche',            label: 'Statistiche' },
-  { key: 'db',                     label: 'DB Avanzato' },
-  { key: 'accessi',                label: 'Accessi' },
-  { key: 'gestione_segnalazioni',  label: 'Gestione Segnalazioni' },
-  { key: 'impostazioni',           label: 'Impostazioni' },
-  { key: 'aggiornamento_dati',     label: 'Aggiornamento dati' },
-];
-
-function caricaMatricePermessi() {
-  const tbl = document.getElementById('matricePermessi');
-  if (!tbl) return;
-  const utenti = accessiData.admin || [];
-  if (!utenti.length) { tbl.innerHTML = ''; return; }
-
-  let html = '<thead><tr><th></th>';
-  utenti.forEach(function(u) {
-    html += '<th>' + (u.nome || '—') + (u.tipo_accesso === 'master' ? ' · master' : '') + '</th>';
-  });
-  html += '</tr></thead><tbody>';
-
-  PERMESSI_PAGINE.forEach(function(perm) {
-    html += '<tr><td>' + perm.label + '</td>';
-    utenti.forEach(function(u) {
-      const p = u.permessi || {};
-      const checked = u.tipo_accesso === 'master' ? (p[perm.key] !== false) : !!p[perm.key];
-      html += '<td id="mp-' + u.id + '-' + perm.key + '">'
-        + '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="togglePermessoMatrice(\'' + u.id + '\',\'' + perm.key + '\',this.checked)">'
-        + '</td>';
-    });
-    html += '</tr>';
-  });
-  html += '</tbody>';
-  tbl.innerHTML = html;
-}
-
-async function togglePermessoMatrice(userId, key, checked) {
-  const cell = document.getElementById('mp-' + userId + '-' + key);
-  const u = (accessiData.admin || []).find(function(x) { return String(x.id) === String(userId); });
-  if (!u) return;
-  const permessi = Object.assign({}, u.permessi || {});
-  permessi[key] = checked;
-  try {
-    await accSalvaStaff(userId, { permessi: permessi });
-    u.permessi = permessi;
-    if (cell) {
-      cell.classList.remove('mp-flash');
-      void cell.offsetWidth; // riavvia l'animazione anche su click ravvicinati
-      cell.classList.add('mp-flash');
-    }
-  } catch(e) {
-    alert('Errore salvataggio permesso.');
-    if (cell) { var cb = cell.querySelector('input[type=checkbox]'); if (cb) cb.checked = !checked; }
   }
 }
 
@@ -7040,59 +6792,13 @@ function _accCollapsibleHead(label, id) {
 function renderAccessi() {
   const content = document.getElementById('accessiContent');
   const q       = (document.getElementById('accessiSearch').value || '').toLowerCase().trim();
-  const tipo    = document.getElementById('accessiTipo').value;
   const matchQ  = (s) => !q || s.toLowerCase().includes(q);
 
   let html = '';
 
-  // --- Amministratori ---
-  if (tipo !== 'vol') {
-    const admins = accessiData.admin.filter(u => matchQ((u.nome||'') + ' ' + (u.email||'')));
-    html += '<div class="acc-sec">';
-    html += _accCollapsibleHead('Amministratori (' + admins.length + ')', 'accAdminBody');
-    if (!admins.length) {
-      html += '<div class="loading-msg sm">Nessun amministratore</div>';
-    } else {
-      html += '<div class="grid g3">';
-      admins.forEach(u => {
-        const ini    = (u.nome || '?').split(' ').map(x => x[0] || '').join('').slice(0,2).toUpperCase();
-        const stato  = u.attivo ? '<span class="pill p-blue">Attivo</span>' : '<span class="pill p-grey">Disattivato</span>';
-        const tipoLbl = u.tipo_accesso === 'master' ? '<span class="pill p-yellow">Master</span>' : '<span class="pill p-sand">Standard</span>';
-        html += '<div class="card">'
-          + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (u.nome||'—') + '</b><span class="sub">' + (u.email||'—') + '</span></div></div>'
-          + '<div class="cfoot"><span class="int-pills m0">' + tipoLbl + stato + '</span>'
-          + (isMasterUser ? '<button class="btn sm" onclick="apriModificaUtenteById(\'' + u.id + '\')">Modifica</button>' : '')
-          + '</div></div>';
-      });
-      html += '</div>';
-    }
-    html += '</div></div>'; // chiude body + sezione
-  }
-
-  // --- Volontari abilitati ---
-  if (tipo !== 'admin') {
-    const vols = accessiData.vol.filter(v => matchQ((v.cognome||'') + ' ' + (v.nome||'') + ' ' + (v.codice_fiscale||'') + ' ' + (v.email||'')));
-    html += '<div class="acc-sec">';
-    html += _accCollapsibleHead('Volontari abilitati (' + vols.length + ')', 'accVolBody');
-    if (!vols.length) {
-      html += '<div class="loading-msg sm">Nessun volontario</div>';
-    } else {
-      html += '<div class="grid g3">';
-      vols.forEach(v => {
-        const dataNasc = v.data_nascita ? v.data_nascita.split('-').reverse().join('/') : '—';
-        const avatar = sbAvatar(v, 'av s40');
-        html += '<div class="card">'
-          + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">' + (v.email||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
-          + '</div>';
-      });
-      html += '</div>';
-    }
-    html += '</div></div>';
-  }
-
   // --- Log accessi recenti ---
-  if (!q) {
-    const logs = accessiData.log || [];
+  {
+    const logs = accessiData.log.filter(l => matchQ(l.utente_label || ''));
     html += '<div class="acc-sec">';
     html += _accCollapsibleHead('Registro accessi (' + logs.length + ')', 'accLogBody');
     if (!logs.length) {
@@ -7112,7 +6818,7 @@ function renderAccessi() {
     html += '</div></div>';
 
     // --- Log attività ---
-    const atts = accessiData.att || [];
+    const atts = accessiData.att.filter(a => matchQ((a.utente_nome || '') + ' ' + (a.azione || '')));
     html += '<div class="acc-sec">';
     html += _accCollapsibleHead('Registro attività (' + atts.length + ')', 'accAttBody');
     if (!atts.length) {
@@ -7122,7 +6828,7 @@ function renderAccessi() {
       atts.forEach(a => {
         const dt = new Date(a.created_at);
         const dtStr = dt.toLocaleDateString('it-IT') + ' ' + dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
-        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + (a.utente||'—') + '</b><span>' + (a.azione||'—') + '</span></div>';
+        html += '<div class="irow"><span class="sub">' + dtStr + '</span><b class="sm">' + aggEsc(a.utente_nome || '—') + '</b><span>' + aggEsc(a.azione || '—') + '</span></div>';
       });
       html += '</div>';
     }
