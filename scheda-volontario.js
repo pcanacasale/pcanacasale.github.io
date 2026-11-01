@@ -60,7 +60,7 @@ async function apriDettaglio(id, tab) {
     const v = (await vRes.json())[0];
     if (!v) { document.getElementById('svTesta').innerHTML = '<div class="empty">Volontario non trovato.</div>'; return; }
     const docs = dRes.ok ? await dRes.json() : [];
-    await sbFirmaRighe(docs, 'url');
+    await Promise.all([sbFirmaRighe(docs, 'url'), sbFirmaRighe([v], 'foto_url')]);
     if (token !== svToken) return;
     sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false };
     aggCorrente = agg;
@@ -145,7 +145,7 @@ function svRenderTesta() {
 
 // Foto dell'archivio PIA: il file è privato e serve un link temporaneo
 async function svCaricaFoto() {
-  if (!sv || sv.v.foto_url || !sv.agg) return;
+  if (!sv || sv.v._file || !sv.agg) return;
   const foto = (sv.agg.documenti || []).find(d => d.tipo === 'FOTO');
   if (!foto) return;
   const token = svToken;
@@ -456,6 +456,7 @@ async function svRicaricaDocumenti() {
   sv.docs = docs;
   const foto = docs.find(d => d.tipo === 'FOTO');
   sv.v.foto_url = foto ? foto.url : null;
+  sv.v._file = foto ? foto._file : null;
   svAggiornaAllegati();
 }
 function svAggiornaAllegati() {

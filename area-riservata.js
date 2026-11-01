@@ -128,8 +128,8 @@ function sbAvviso(testo) {
 
 // -- FILE NEI BUCKET PRIVATI --
 // Nel database un file è "bucket/percorso"; i record vecchi hanno l'URL pubblico intero e si
-// leggono uguale. foto-volontari resta pubblico. I link durano un'ora e si firmano in blocco.
-const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni','eventi'];
+// leggono uguale. I link durano un'ora e si firmano in blocco.
+const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni','eventi','foto-volontari'];
 const SB_FILE_DURATA = 3600;
 
 function sbPercorso(bucket, path) {
@@ -173,6 +173,21 @@ async function sbUrlFile(valore) { return (await sbFirma([valore])).get(valore) 
 async function sbFirmaRighe(righe, campo) {
   const link = await sbFirma(righe.map(r => r[campo]));
   righe.forEach(r => { r._file = link.get(r[campo]) || null; });
+}
+
+// Avatar del volontario: foto firmata in v._file (sbFirmaRighe su foto_url), altrimenti iniziali.
+// Anche un'immagine che non si carica torna alle iniziali.
+function sbAvatar(v, cls) {
+  const ini = escapeHtmlNav(((v.cognome || '?')[0] + (v.nome || '?')[0]).toUpperCase());
+  return v._file
+    ? '<img src="' + escapeHtmlNav(v._file) + '" class="' + cls + '" alt="" data-ini="' + ini + '" onerror="sbAvatarRotto(this)">'
+    : '<span class="' + cls + '">' + ini + '</span>';
+}
+function sbAvatarRotto(img) {
+  const s = document.createElement('span');
+  s.className = img.className;
+  s.textContent = img.dataset.ini;
+  img.replaceWith(s);
 }
 
 function sbLinkFile(rif, url, scarica) {
@@ -564,6 +579,8 @@ async function caricaHomeDashboard() {
       return parseInt(a.data_nascita.slice(8,10)) - parseInt(b.data_nascita.slice(8,10));
     });
 
+    await sbFirmaRighe(bdayMonth, 'foto_url');
+
     const mesiIt = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
     const mesiBr = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
     const dtTile = function(iso) {
@@ -639,9 +656,8 @@ async function caricaHomeDashboard() {
       bdayMonth.forEach(v => {
         const isOggi   = v.data_nascita.slice(5,10) === oggiMd;
         const eta      = oggi.getFullYear() - parseInt(v.data_nascita.slice(0,4));
-        const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
         right += '<div class="lr">'
-          + (v.foto_url ? '<img src="' + v.foto_url + '" class="av s40" alt="">' : '<span class="av s40">' + initials + '</span>')
+          + sbAvatar(v, 'av s40')
           + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + v.data_nascita.slice(8,10) + ' ' + mesiIt[oggi.getMonth()+1] + ' · ' + eta + ' anni</span></div>'
           + (isOggi ? '<span class="pill p-yellow">Oggi</span>' : '')
           + '</div>';
@@ -926,6 +942,7 @@ async function caricaVolontari() {
     const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
     sbOk(res);
     volontariData = await res.json();
+    await sbFirmaRighe(volontariData, 'foto_url');
     document.getElementById('volTot').textContent = volontariData.length;
     await svCaricaProblemi(volontariData);
     svRenderFiltri();
@@ -957,10 +974,7 @@ function renderVolontari(data) {
 
 // Pillole di stato come nel riferimento: Attivo blu chiaro, Sospeso/Dimesso grigio
 const VOL_STATO_PILL = { ATTIVO:['Attivo','p-blue'], SOSPESO:['Sospeso','p-grey'], DIMESSO:['Dimesso','p-grey'] };
-function _volAvatar(v) {
-  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
-  return v.foto_url ? '<img src="' + v.foto_url + '" class="av" alt="">' : '<span class="av">' + initials + '</span>';
-}
+function _volAvatar(v) { return sbAvatar(v, 'av'); }
 function _volCardHtml(v, statoHtml, tags) {
   return '<div class="vc">' + _volAvatar(v)
     + '<div class="mid"><b>' + v.cognome + ' ' + v.nome + '</b><span class="sub">' + (v.tipo_volontario||'—') + (v.mansione ? ' · ' + v.mansione : '') + '</span></div>'
@@ -6927,6 +6941,7 @@ async function caricaAccessi() {
     }).sort((a, b) => a.nome.localeCompare(b.nome));
     _utentiList = accessiData.admin;
     accessiData.vol   = attivi.filter(v => emailDi(v.id)).map(v => Object.assign({}, v, { email: emailDi(v.id) }));
+    await sbFirmaRighe(accessiData.vol, 'foto_url');
     accPopolaNuovoUtente(attivi);
     accessiData.log   = await logRes.json();
     accessiData.att   = await attRes.json();
@@ -7065,9 +7080,7 @@ function renderAccessi() {
       html += '<div class="grid g3">';
       vols.forEach(v => {
         const dataNasc = v.data_nascita ? v.data_nascita.split('-').reverse().join('/') : '—';
-        const avatar = v.foto_url
-          ? '<img src="' + v.foto_url + '" class="av s40" alt="">'
-          : '<span class="av s40">' + (v.cognome||'?')[0] + (v.nome||'?')[0] + '</span>';
+        const avatar = sbAvatar(v, 'av s40');
         html += '<div class="card">'
           + '<div class="vc">' + avatar + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b><span class="sub">' + (v.email||'—') + ' · nato il ' + dataNasc + '</span></div></div>'
           + '</div>';
@@ -7155,6 +7168,7 @@ async function caricaSchedaPersonale() {
       return;
     }
     const v = arr[0];
+    await sbFirmaRighe([v], 'foto_url');
     renderSchedaPersonale(v);
   } catch(e) {
     content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
@@ -7165,7 +7179,6 @@ function renderSchedaPersonale(v) {
   const content = document.getElementById('schedaPersContent');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : '—';
   const yes = (b) => b ? '<span class="vol-bool-yes">✓ Sì</span>' : '<span class="muted">—</span>';
-  const initials = ((v.cognome||'?')[0] + (v.nome||'?')[0]).toUpperCase();
 
   // Sezioni e campi (sola lettura)
   const sections = [
@@ -7195,9 +7208,7 @@ function renderSchedaPersonale(v) {
   ];
 
   let html = '<div class="card vc sp-hero">'
-    + (v.foto_url
-        ? '<img src="' + v.foto_url + '" class="av" alt="">'
-        : '<span class="av">' + initials + '</span>')
+    + sbAvatar(v, 'av')
     + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>'
     + '<span class="sub">' + (v.tipo_volontario||'Volontario') + ' · ' + (v.squadra||'—') + '</span></div>'
     + '<span class="pill ' + ((v.stato || 'ATTIVO') === 'ATTIVO' ? 'p-blue' : 'p-grey') + '">' + (v.stato || 'ATTIVO') + '</span>'
