@@ -469,6 +469,14 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 
 .sb-avviso{position:fixed;left:16px;right:16px;bottom:88px;z-index:9999;max-width:420px;margin:0 auto;padding:12px 16px;border-radius:10px;background:var(--fg);color:var(--bg);font-size:14px;text-align:center}
 .sb-avviso[hidden]{display:none}
+.em-card{display:flex;flex-direction:column}
+.em-foto{display:block;height:160px;margin:12px 0 0}
+.em-desc{margin:12px 0 0;white-space:pre-wrap}
+#evScheda .doc-item{flex-wrap:wrap}
+#evScheda .doc-item-info{flex:1 1 180px;min-width:0}
+#evScheda input.ev-ruolo{flex:0 1 170px;width:170px;min-width:0;height:40px}
+#evScheda input.ev-ore{flex:0 0 80px;width:80px;height:40px}
+@media (max-width:640px){#evScheda .doc-item-info{flex-basis:100%}#evScheda input.ev-ruolo{flex:1 1 120px}}
 /* ── azioni nelle card ── */
 .em-azioni{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
@@ -867,7 +875,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 
 /* ── schermi larghi: sotto i 1100px non cambia nulla; le finestre (.sheet, scheda volontario) restano fuori ── */
 @media (min-width:1100px){
- .panel>.note,.note-page,.seg-text,.ric-msg{max-width:var(--larghezza-testo)}
+ .panel>.note,.note-page,.seg-text,.em-desc,.ric-msg{max-width:var(--larghezza-testo)}
 }
 @media (min-width:1280px){
  .grid>button.card{display:flex;flex-direction:column}
@@ -1090,6 +1098,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <button id="siInterventi" class="sidebar-item" onclick="navTo('interventi','Interventi',this)" style="display:none"></button>
     <button id="siSchedaPersonale" class="sidebar-item" onclick="navTo('schedapers','La mia scheda',this)" style="display:none"></button>
     <button id="siConvocazioni" class="sidebar-item" onclick="navTo('convocazioni','Generatore convocazioni',this)" style="display:none"></button>
+    <button id="siEventi" class="sidebar-item" onclick="navTo('eventi','Eventi',this)" style="display:none"></button>
     <button id="siGalleria" class="sidebar-item" onclick="navTo('galleria','Galleria',this)" style="display:none"></button>
     <button id="siEditorPdf" class="sidebar-item" onclick="navTo('editorPdf','Editor PDF',this)" style="display:none"></button>
     <button id="siPostazioni" class="sidebar-item" onclick="navTo('postazioni','Postazioni',this)" style="display:none"></button>
@@ -1605,6 +1614,7 @@ body.cv-solo-vede .cv-gestione{display:none}
             <label class="perm-check"><input type="checkbox" id="permEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
             <label class="perm-check"><input type="checkbox" id="permConvocazioni"> Convocazioni (vede)</label>
             <label class="perm-check"><input type="checkbox" id="permConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
+            <label class="perm-check"><input type="checkbox" id="permEventi"> Eventi</label>
             <label class="perm-check"><input type="checkbox" id="permDocumenti"> Documenti volontari</label>
             <label class="perm-check"><input type="checkbox" id="permStatistiche"> Statistiche</label>
             <label class="perm-check"><input type="checkbox" id="permDb"> DB Avanzato</label>
@@ -1970,6 +1980,22 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div id="fzList"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
+    <!-- EVENTI (esercitazioni ed emergenze — contenuto generato da eventi.js) -->
+    <div class="panel" id="panelEventi">
+      <div class="phead">
+        <div><h1>Eventi</h1><span class="sub" id="evMostrati"></span></div>
+        <div class="pact"><button class="btn pri" id="evBtnNuovo" onclick="evApriForm()" hidden>Nuovo evento</button></div>
+      </div>
+      <div class="bar">
+        <div id="evChips" class="chips"></div>
+        <span class="grow"></span>
+        <label class="search" for="evSearch"><input type="search" id="evSearch" placeholder="Cerca evento" autocomplete="off" oninput="evRenderLista()"></label>
+      </div>
+      <div id="evList"><div class="loading-msg">Caricamento…</div></div>
+      <div class="ov" id="evOv" hidden></div>
+      <div class="ov" id="evFormOv" hidden></div>
+    </div>
+
     <!-- AGGIORNAMENTO DATI (solo master — tutta la UI è generata da aggiornamento-dati.js) -->
     <div class="panel" id="panelAggDati">
       <div class="phead"><div><h1>Aggiornamento dati</h1></div></div>
@@ -2089,6 +2115,7 @@ body.cv-solo-vede .cv-gestione{display:none}
           <label class="perm-check"><input type="checkbox" id="modPermEditorPdfCompleto"> Editor PDF completo (richiede base)</label>
           <label class="perm-check"><input type="checkbox" id="modPermConvocazioni"> Convocazioni (vede)</label>
           <label class="perm-check"><input type="checkbox" id="modPermConvocazioniGestione"> Convocazioni: crea e gestisce liste (richiede vede)</label>
+          <label class="perm-check"><input type="checkbox" id="modPermEventi"> Eventi</label>
           <label class="perm-check"><input type="checkbox" id="modPermRichieste"> Richieste</label>
           <label class="perm-check"><input type="checkbox" id="modPermImpostazioni"> Impostazioni</label>
           <label class="perm-check"><input type="checkbox" id="modPermStatistiche"> Statistiche</label>
@@ -2154,13 +2181,14 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=199"></script>
+<script src="area-riservata.js?v=200"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
 <script src="scheda-volontario.js?v=5"></script>
 <script src="allerta-home.js?v=2"></script>
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=4"></script>
 <script src="convocazioni.js?v=3"></script>
+<script src="eventi.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

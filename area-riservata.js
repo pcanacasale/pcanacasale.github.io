@@ -129,7 +129,7 @@ function sbAvviso(testo) {
 // -- FILE NEI BUCKET PRIVATI --
 // Nel database un file è "bucket/percorso"; i record vecchi hanno l'URL pubblico intero e si
 // leggono uguale. foto-volontari resta pubblico. I link durano un'ora e si firmano in blocco.
-const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni'];
+const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni','eventi'];
 const SB_FILE_DURATA = 3600;
 
 function sbPercorso(bucket, path) {
@@ -255,6 +255,7 @@ const NAV_VOCI = [
   { id:'siGalleria',        label:'Galleria',           ic:'image',   sez:'Strumenti',       ruoli:NAV_RUOLI_TUTTI },
   { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siConvocazioni',    label:'Generatore convocazioni', ic:'send', sez:'Strumenti',      ruoli:NAV_RUOLI_STAFF },
+  { id:'siEventi',          label:'Eventi',             ic:'alert',   sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siVisite',          label:'Visite mediche',     ic:'heart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siFormazione',      label:'Formazione',         ic:'clip',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
@@ -266,6 +267,7 @@ const NAV_VOCI = [
   { id:'siImpostazioni',    label:'Impostazioni',       ic:'gear',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
 ];
 const NAV_IC = {
+  alert:'M12 3l10 18H2zM12 10v5M12 18v.5',
   home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
   user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
   truck:'M2 6h12v10H2zM14 10h4l4 3v3h-8M6 19a1 1 0 1 0 .01 0M18 19a1 1 0 1 0 .01 0',
@@ -397,7 +399,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siVisite','siFormazione','siConvocazioni'
+      'siVisite','siFormazione','siConvocazioni','siEventi'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -430,6 +432,7 @@ function avviaDashboard() {
     if (hasPerm('galleria'))     showSi('siGalleria');
     if (hasPerm('editor_pdf'))   showSi('siEditorPdf');
     if (hasPerm('convocazioni')) showSi('siConvocazioni');
+    if (hasPerm('eventi'))       showSi('siEventi');
     if (hasPerm('statistiche'))  showSi('siStatistiche');
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
@@ -476,7 +479,7 @@ const PANEL_PERM = {
   volontari: ['volontari','documenti','visite'], visite: ['visite'], formazione: ['formazione'],
   interventi: ['interventi'], postazioni: ['postazioni'], dotazioni: ['dotazioni'],
   pianiCarico: ['pianicarico'], mezzi: ['mezzi'], tlc: ['tlc'], galleria: ['galleria'],
-  editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], statistiche: ['statistiche'],
+  editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], eventi: ['eventi'], statistiche: ['statistiche'],
   db: ['db'], accessi: ['accessi'], richieste: ['richieste'], impostazioni: ['impostazioni'],
   aggDati: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
 };
@@ -511,6 +514,7 @@ function showPanel(name, btn) {
   if (name === 'galleria') caricaGalleria();
   if (name === 'editorPdf') caricaEditorPdf();
   if (name === 'convocazioni') caricaConvocazioni();
+  if (name === 'eventi') caricaEventi();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
@@ -782,6 +786,7 @@ async function salvaUtente() {
     editor_pdf_completo: document.getElementById('permEditorPdfCompleto') ? document.getElementById('permEditorPdfCompleto').checked : false,
     convocazioni: document.getElementById('permConvocazioni') ? document.getElementById('permConvocazioni').checked : false,
     convocazioni_gestione: document.getElementById('permConvocazioniGestione') ? document.getElementById('permConvocazioniGestione').checked : false,
+    eventi:       document.getElementById('permEventi') ? document.getElementById('permEventi').checked : false,
     db:           document.getElementById('permDb') ? document.getElementById('permDb').checked : false,
     impostazioni: document.getElementById('permImpostazioni') ? document.getElementById('permImpostazioni').checked : false,
     statistiche:  document.getElementById('permStatistiche') ? document.getElementById('permStatistiche').checked : false,
@@ -825,7 +830,7 @@ function apriModificaUtente(u) {
   var p = u.permessi || {};
   var permMap = {
     'Volontari':'volontari','ModificaVolontari':'modifica_volontari','Interventi':'interventi','Postazioni':'postazioni','Dotazioni':'dotazioni','PianiCarico':'pianicarico','Mezzi':'mezzi','Tlc':'tlc','Db':'db',
-    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo','Convocazioni':'convocazioni','ConvocazioniGestione':'convocazioni_gestione',
+    'Documenti':'documenti','Richieste':'richieste','Visite':'visite','Formazione':'formazione','Galleria':'galleria','Eventi':'eventi','EditorPdf':'editor_pdf','EditorPdfCompleto':'editor_pdf_completo','Convocazioni':'convocazioni','ConvocazioniGestione':'convocazioni_gestione',
     'Impostazioni':'impostazioni','Statistiche':'statistiche',
     'Accessi':'accessi','GestioneSegnalazioni':'gestione_segnalazioni',
     'AggDati':'aggiornamento_dati'
@@ -880,6 +885,7 @@ async function salvaModificaUtente() {
     editor_pdf_completo: document.getElementById('modPermEditorPdfCompleto') ? document.getElementById('modPermEditorPdfCompleto').checked : false,
     convocazioni: document.getElementById('modPermConvocazioni') ? document.getElementById('modPermConvocazioni').checked : false,
     convocazioni_gestione: document.getElementById('modPermConvocazioniGestione') ? document.getElementById('modPermConvocazioniGestione').checked : false,
+    eventi:       document.getElementById('modPermEventi') ? document.getElementById('modPermEventi').checked : false,
     richieste:    document.getElementById('modPermRichieste') ? document.getElementById('modPermRichieste').checked : false,
     impostazioni: document.getElementById('modPermImpostazioni') ? document.getElementById('modPermImpostazioni').checked : false,
     statistiche:    document.getElementById('modPermStatistiche') ? document.getElementById('modPermStatistiche').checked : false,
@@ -6953,6 +6959,7 @@ const PERMESSI_PAGINE = [
   { key: 'editor_pdf_completo',    label: 'Editor PDF completo' },
   { key: 'convocazioni',           label: 'Convocazioni (vede)' },
   { key: 'convocazioni_gestione',  label: 'Convocazioni: crea e gestisce liste' },
+  { key: 'eventi',                 label: 'Eventi' },
   { key: 'documenti',              label: 'Documenti volontari' },
   { key: 'statistiche',            label: 'Statistiche' },
   { key: 'db',                     label: 'DB Avanzato' },
