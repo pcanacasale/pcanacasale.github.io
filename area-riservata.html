@@ -194,7 +194,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 }
 @media (max-width:899px){
  #whoName{display:none}
- .topnav{display:none}
+ .topnav,.tab-altro{display:none}
  .topin{justify-content:space-between;gap:10px}
  .bottom{display:flex}
  .main-content{padding-block:20px calc(104px + env(safe-area-inset-bottom,0px))}
@@ -1118,6 +1118,7 @@ body.cv-solo-vede .cv-gestione{display:none}
         <b>PC ANA Casale</b>
       </button>
       <nav class="topnav" id="topnav" aria-label="Menu principale"></nav>
+      <button class="tab tab-altro" id="altroBtn" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>
       <div class="who"><span class="av" id="whoAv" aria-hidden="true">—</span><span id="whoName"></span></div>
     </div>
   </header>

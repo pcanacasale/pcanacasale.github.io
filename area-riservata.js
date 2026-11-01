@@ -329,7 +329,9 @@ function renderNav() {
   var barra = _navVoci().filter(function(x){ return !x.sez; });
   top.innerHTML = barra.map(function(x) {
     return '<button class="tab'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')">'+x.label+'</button>';
-  }).join('') + '<button class="tab'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()" aria-haspopup="true">Altro <span aria-hidden="true">▾</span></button>';
+  }).join('');
+  var ab = document.getElementById('altroBtn');
+  if (ab) ab.classList.toggle('on', _navAltroOn());
   bot.innerHTML = barra.map(function(x) {
     return '<button class="bt'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')"><span class="pill-i">'+navIc(x.ic)+'</span>'+x.label+'</button>';
   }).join('') + '<button class="bt'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
