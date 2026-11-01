@@ -758,6 +758,7 @@ async function eliminaRichiesta(id) {
 // -- IMPOSTAZIONI --
 async function caricaImpostazioni() {
   renderSchemaList();
+  evCaricaListe();
 }
 
 async function salvaUtente() {

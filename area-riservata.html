@@ -473,6 +473,21 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .em-foto{display:block;height:160px;margin:12px 0 0}
 .em-desc{margin:12px 0 0;white-space:pre-wrap}
 #evScheda .doc-item{flex-wrap:wrap}
+.ev-stat{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}.ev-stat .card{padding:12px 14px}.ev-num{display:block;font-size:24px}
+.ev-scorri{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+.ev-tab{width:100%;border-collapse:collapse;font-size:13px}
+.ev-tab th,.ev-tab td{padding:8px 10px;border-top:1px solid var(--line);text-align:center;vertical-align:top;white-space:nowrap}
+.ev-tab thead th{border-top:0;color:var(--muted);font-weight:700}
+.ev-tab .sx{text-align:left;white-space:normal;min-width:120px}
+.ev-griglia th:first-child,.ev-griglia td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;white-space:normal;min-width:130px}
+.ev-t{min-width:30px;height:30px;padding:0 6px;margin:1px;border:1px solid var(--line2);border-radius:8px;background:none;color:var(--muted);font-size:12px;font-weight:700}
+.ev-t.on{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-fg)}
+.ev-orari{display:flex;gap:4px;margin-top:4px;justify-content:center}
+#evScheda .ev-orari input{width:92px;height:30px;padding:0 4px;font-size:12px}
+#evScheda input.ev-extra{width:64px;height:34px;padding:0 6px;text-align:center}
+.ev-liste-riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line)}
+.ev-liste-riga input.ev-nome{flex:1 1 130px;min-width:0;height:36px}
+.ev-liste-riga input.ev-ordine{width:64px;height:36px;padding:0 6px}
 #evScheda .doc-item-info{flex:1 1 180px;min-width:0}
 #evScheda input.ev-ruolo{flex:0 1 170px;width:170px;min-width:0;height:40px}
 #evScheda input.ev-ore{flex:0 0 80px;width:80px;height:40px}
@@ -2007,6 +2022,11 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div class="phead"><div><h1>Impostazioni</h1></div></div>
 
       <div class="grid g3 impo-grid">
+      <div class="card impo-section" id="evListeBox">
+        <h2>Liste degli eventi</h2>
+        <p class="note note-intro">Tipologie di volontario ed esigenze alimentari disponibili negli eventi.</p>
+        <div id="evListe"><div class="loading-msg">Caricamento…</div></div>
+      </div>
       <div class="card impo-section">
         <h2>Campi volontari</h2>
         <p class="note note-intro">Gestisci i campi aggiuntivi della scheda volontario.</p>
@@ -2181,14 +2201,15 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=200"></script>
+<script src="area-riservata.js?v=201"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
 <script src="scheda-volontario.js?v=5"></script>
 <script src="allerta-home.js?v=2"></script>
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=4"></script>
 <script src="convocazioni.js?v=3"></script>
-<script src="eventi.js?v=1"></script>
+<script src="eventi.js?v=2"></script>
+<script src="eventi-polo.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

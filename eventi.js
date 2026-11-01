@@ -3,27 +3,41 @@
 // ============================================================
 // Tabelle: eventi, evento_volontari, evento_mezzi, evento_segnalazioni.
 // Le foto stanno nel bucket privato eventi: in foto_path si salva "eventi/<evento>/<file>".
-// I nomi arrivano da volontari_pubblici. Solo i presenti contano nei totali, nella stampa
-// e nell'intervento creato a fine evento.
+// I dati dei volontari arrivano dall'anagrafica. Solo i presenti contano nei totali, nelle
+// stampe, in cucina e nell'intervento creato a fine evento.
+// Giorni, cucina, mezzi e materiali, riepilogo, Excel e liste stanno in eventi-polo.js.
 // ============================================================
 
 const EV_TIPI = { EMERGENZA: 'Emergenza', ESERCITAZIONE: 'Esercitazione' };
 const EV_STATI = { PIANIFICATO: ['Pianificato', 'p-sand'], 'IN CORSO': ['In corso', 'p-yellow'], CONCLUSO: ['Concluso', 'p-grey'] };
-const EV_TAB = [['squadra', 'Squadra'], ['mezzi', 'Mezzi'], ['segnalazioni', 'Segnalazioni']];
+const EV_TAB = [['squadra', 'Squadra'], ['giorni', 'Giorni e servizi'], ['mezzi', 'Mezzi e materiali'], ['cucina', 'Cucina'], ['riepilogo', 'Riepilogo'], ['segnalazioni', 'Segnalazioni']];
+const EV_CAMPI = [['cellulare', 'Cellulare'], ['patenti', 'Patenti'], ['servizi', 'Pasti e pernotti'], ['note', 'Note'], ['tipologia', 'Tipologia'], ['art39', 'Art. 39'], ['esigenze', 'Esigenze alimentari'], ['orari', 'Fasce orarie']];
+const EV_LIVELLI = { non_richiesto: 'Non richiesto', facoltativo: 'Facoltativo', obbligatorio: 'Obbligatorio' };
+// Come nel Polo: se la chiave manca, questi valgono "non richiesto", gli altri "facoltativo"
+const EV_SPENTI_SE_ASSENTI = ['tipologia', 'art39', 'esigenze', 'orari'];
+const EV_COL_EVENTO = 'id,tipo,titolo,luogo,data_inizio,data_fine,fine_finestra,stato,note,lat,lon,intervento_id,referente,campi';
+const EV_COL_SQUADRA = 'id,evento_id,volontario_id,ruolo,ore,presente,note,tipologia,art39,esigenze,esigenze_nota';
 const EV_FOTO_LATO = 1600, EV_FOTO_QUALITA = 0.8;
 
 let evElenco = [];
 let evFiltroTipo = '', evFiltroStato = '';
-let evVolontari = [];      // volontari_pubblici, anche dimessi: servono i nomi degli eventi passati
-let evCorrente = null;     // { e, squadra, mezzi, segn, tab, parco, parcoOk }
+let evVolontari = [];      // anche i dimessi: servono i nomi degli eventi passati
+let evCorrente = null;     // { e, squadra, disp, mezzi, materiali, ospiti, ospitiServizi, extra, segn, tipologie, esigenze, tab, parco, parcoOk }
 let evModificaId = null;
 
 function evEl(id) { return document.getElementById(id); }
 function evData(d) { return d ? String(d).slice(0, 10).split('-').reverse().join('/') : ''; }
 function evGiorno(d) { return d ? String(d).slice(0, 10) : ''; }
-function evDate(e) { return evData(e.data_inizio) + (e.data_fine && evGiorno(e.data_fine) !== evGiorno(e.data_inizio) ? ' – ' + evData(e.data_fine) : ''); }
+function evDate(e) {
+  const fine = e.data_fine || e.fine_finestra;
+  return evData(e.data_inizio) + (fine && evGiorno(fine) !== evGiorno(e.data_inizio) ? ' – ' + evData(fine) : '');
+}
+function evLivello(e, k) { return (e.campi && e.campi[k]) || (EV_SPENTI_SE_ASSENTI.includes(k) ? 'non_richiesto' : 'facoltativo'); }
+function evAtt(k) { return evLivello(evCorrente.e, k) !== 'non_richiesto'; }
+function evObb(k) { return evLivello(evCorrente.e, k) === 'obbligatorio'; }
 function evStatoPill(s) { const x = EV_STATI[s] || [s || '—', 'p-grey']; return '<span class="pill ' + x[1] + '">' + aggEsc(x[0]) + '</span>'; }
-function evNomeVol(id) { const v = evVolontari.find(x => x.id === id); return v ? v.cognome + ' ' + v.nome : '—'; }
+function evVol(id) { return evVolontari.find(x => x.id === id) || null; }
+function evNomeVol(id) { const v = evVol(id); return v ? v.cognome + ' ' + v.nome : '—'; }
 function evOre(r) { return Math.round(Number(r.ore) || 0); }
 function evPresenti() { return evCorrente.squadra.filter(r => r.presente !== false); }
 function evNonDisp() { return '<div class="empty">Non disponibile.</div>'; }
@@ -46,10 +60,12 @@ async function evLeggi(percorso) {
   return res.json();
 }
 
+// Cellulare, patenti e codice fiscale stanno in volontari; senza accesso si ripiega sulla vista pubblica
 async function evCaricaVolontari() {
-  if (!evVolontari.length) {
-    try { evVolontari = await evLeggi('volontari_pubblici?select=id,cognome,nome,squadra,stato&order=cognome,nome'); } catch(e) { evVolontari = []; }
-  }
+  if (evVolontari.length) return;
+  try { evVolontari = await evLeggi('volontari?select=id,cognome,nome,squadra,stato,telefono,patenti,codice_fiscale&order=cognome,nome'); } catch(e) { evVolontari = []; }
+  if (evVolontari.length) return;
+  try { evVolontari = await evLeggi('volontari_pubblici?select=id,cognome,nome,squadra,stato&order=cognome,nome'); } catch(e) { evVolontari = []; }
 }
 
 // -- ELENCO --
@@ -59,7 +75,7 @@ async function caricaEventi() {
   evEl('evBtnNuovo').hidden = false;
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    evElenco = await evLeggi('eventi?select=*&order=data_inizio.desc,id.desc');
+    evElenco = await evLeggi('eventi?select=' + EV_COL_EVENTO + '&order=data_inizio.desc,id.desc');
     evRenderChip();
     evRenderLista();
   } catch(e) {
@@ -105,19 +121,26 @@ function evApriForm(id) {
   ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Evento"><div class="shead"><h2>' + (e ? 'Modifica evento' : 'Nuovo evento') + '</h2>'
     + '<button class="x" onclick="evChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
     + '<div class="form-err" id="evErr"></div>'
-    + '<div class="row2"><label>Tipo<select id="evTipo">' + opz(EV_TIPI, e ? e.tipo : 'ESERCITAZIONE', k => EV_TIPI[k]) + '</select></label>'
+    + '<div class="row2"><label>Tipo<select id="evTipo" onchange="evAggiornaFinestra()">' + opz(EV_TIPI, e ? e.tipo : 'ESERCITAZIONE', k => EV_TIPI[k]) + '</select></label>'
     + '<label>Stato<select id="evStato">' + opz(EV_STATI, e ? e.stato : 'PIANIFICATO', k => EV_STATI[k][0]) + '</select></label></div>'
     + '<label>Titolo<input id="evTitolo" value="' + aggEsc(e ? e.titolo : '') + '"></label>'
-    + '<label>Luogo<input id="evLuogo" value="' + aggEsc(e ? e.luogo || '' : '') + '"></label>'
+    + '<div class="row2"><label>Luogo<input id="evLuogo" value="' + aggEsc(e ? e.luogo || '' : '') + '"></label>'
+    + '<label>Referente<input id="evReferente" value="' + aggEsc(e ? e.referente || '' : '') + '"></label></div>'
     + '<div class="row2"><label>Data inizio<input type="date" id="evInizio" value="' + aggEsc(e ? evGiorno(e.data_inizio) : '') + '"></label>'
     + '<label>Data fine<input type="date" id="evFine" value="' + aggEsc(e ? evGiorno(e.data_fine) : '') + '"></label></div>'
+    + '<label id="evFinestraBox">Fine finestra (se non conosci ancora la data di fine)<input type="date" id="evFinestra" value="' + aggEsc(e ? evGiorno(e.fine_finestra) : '') + '"></label>'
     + '<label>Note<textarea id="evNote" rows="2">' + aggEsc(e ? e.note || '' : '') + '</textarea></label>'
     + '<label>Link Google Maps (facoltativo)<input id="evMaps" placeholder="https://www.google.com/maps/…" oninput="evDaLink()"></label>'
     + '<div class="row2"><label>Latitudine<input type="number" step="any" id="evLat" value="' + aggEsc(e && e.lat != null ? e.lat : '') + '"></label>'
     + '<label>Longitudine<input type="number" step="any" id="evLon" value="' + aggEsc(e && e.lon != null ? e.lon : '') + '"></label></div>'
+    + '<div class="grp">Dati da raccogliere</div><div class="row2">'
+    + EV_CAMPI.map(c => '<label>' + c[1] + '<select id="evCampo_' + c[0] + '">' + opz(EV_LIVELLI, e ? evLivello(e, c[0]) : (EV_SPENTI_SE_ASSENTI.includes(c[0]) ? 'non_richiesto' : 'facoltativo'), k => EV_LIVELLI[k]) + '</select></label>').join('') + '</div>'
     + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evSalvaBtn" onclick="evSalva()">Salva</button></div></div></div>';
   ov.hidden = false;
+  evAggiornaFinestra();
 }
+
+function evAggiornaFinestra() { evEl('evFinestraBox').hidden = evEl('evTipo').value !== 'EMERGENZA'; }
 
 function evChiudiForm() {
   const ov = evEl('evFormOv');
@@ -146,15 +169,21 @@ async function evSalva() {
   const err = evEl('evErr'), btn = evEl('evSalvaBtn');
   const titolo = evEl('evTitolo').value.trim(), inizio = evEl('evInizio').value, fine = evEl('evFine').value;
   const lat = evEl('evLat').value, lon = evEl('evLon').value, link = evEl('evMaps').value.trim();
+  const tipo = evEl('evTipo').value, finestra = tipo === 'EMERGENZA' ? evEl('evFinestra').value : '';
   const errore = t => { err.textContent = t; err.style.display = 'block'; };
   if (!titolo || !inizio) return errore('Titolo e data di inizio sono obbligatori.');
+  if (tipo === 'ESERCITAZIONE' && !fine) return errore('Per un\'esercitazione la data di fine è obbligatoria.');
+  if (tipo === 'EMERGENZA' && !fine && !finestra) return errore('Per un\'emergenza indica la data di fine oppure la fine finestra.');
   if (fine && fine < inizio) return errore('La data di fine è precedente all\'inizio.');
+  if (finestra && finestra < inizio) return errore('La fine finestra è precedente all\'inizio.');
   if (link && !evCoordDaLink(link) && lat === '') return errore('Da questo link non si leggono le coordinate: inserisci latitudine e longitudine.');
   if (!evCoordValide(lat, lon)) return errore('Latitudine e longitudine non valide.');
   err.style.display = 'none';
   const corpo = {
-    tipo: evEl('evTipo').value, stato: evEl('evStato').value, titolo,
-    luogo: evEl('evLuogo').value.trim() || null, data_inizio: inizio, data_fine: fine || null,
+    tipo, stato: evEl('evStato').value, titolo,
+    luogo: evEl('evLuogo').value.trim() || null, referente: evEl('evReferente').value.trim() || null,
+    data_inizio: inizio, data_fine: fine || null, fine_finestra: finestra || null,
+    campi: Object.fromEntries(EV_CAMPI.map(c => [c[0], evEl('evCampo_' + c[0]).value])),
     note: evEl('evNote').value.trim() || null,
     lat: lat === '' ? null : Number(lat), lon: lon === '' ? null : Number(lon),
   };
@@ -188,7 +217,9 @@ async function evEliminaRighe(id) {
   try { await evScrivi('DELETE', 'eventi?id=eq.' + id); }
   catch(e) {
     if (e.status !== 409) throw e;
-    for (const t of ['evento_volontari', 'evento_mezzi', 'evento_segnalazioni']) {
+    const ospiti = evCorrente.ospiti.map(o => o.id);
+    if (ospiti.length) await sbFetch(SUPA_URL + '/rest/v1/evento_ospiti_servizi?ospite_id=in.(' + ospiti.join(',') + ')', { method: 'DELETE', headers: H });
+    for (const t of ['evento_disponibilita', 'evento_ospiti', 'evento_extra', 'evento_materiali', 'evento_mezzi', 'evento_segnalazioni', 'evento_volontari']) {
       await sbFetch(SUPA_URL + '/rest/v1/' + t + '?evento_id=eq.' + id, { method: 'DELETE', headers: H });
     }
     await evScrivi('DELETE', 'eventi?id=eq.' + id);
@@ -203,16 +234,16 @@ async function evApri(id) {
   ov.hidden = false;
   evCorrente = null;
   try {
-    const [righe, squadra, mezzi, segn] = await Promise.all([
-      evLeggi('eventi?id=eq.' + id + '&select=*'),
-      evLeggi('evento_volontari?evento_id=eq.' + id + '&select=*&order=id'),
-      evLeggi('evento_mezzi?evento_id=eq.' + id + '&select=*&order=id'),
-      evLeggi('evento_segnalazioni?evento_id=eq.' + id + '&select=*&order=creato_il.desc'),
+    const [righe, squadra, segn, polo] = await Promise.all([
+      evLeggi('eventi?id=eq.' + id + '&select=' + EV_COL_EVENTO),
+      evLeggi('evento_volontari?evento_id=eq.' + id + '&select=' + EV_COL_SQUADRA + '&order=id'),
+      evLeggi('evento_segnalazioni?evento_id=eq.' + id + '&select=id,evento_id,descrizione,foto_path,gestita,lat,lon,volontario_id,creato_il&order=creato_il.desc'),
+      evCaricaPolo(id),
       evCaricaVolontari(),
     ]);
     if (!righe[0]) throw new Error('Non disponibile.');
     await sbFirmaRighe(segn, 'foto_path');
-    evCorrente = { e: righe[0], squadra, mezzi, segn, tab: 'squadra', parco: [], parcoOk: false };
+    evCorrente = Object.assign({ e: righe[0], squadra, segn, tab: 'squadra', parco: [], parcoOk: false }, polo);
     await evCaricaParco();
     evRender();
   } catch(e) {
@@ -225,7 +256,7 @@ function evChiudi() {
   ov.hidden = true; ov.innerHTML = ''; evCorrente = null;
 }
 
-// Parco mezzi: se la lettura è negata la scheda mostra "Non disponibile", il resto funziona
+// Parco mezzi: se la lettura è negata i mezzi si inseriscono a mano
 async function evCaricaParco() {
   try { evCorrente.parco = await evLeggi('mezzi?select=id,automezzo,targa&order=automezzo'); evCorrente.parcoOk = true; }
   catch(e) { evCorrente.parco = []; evCorrente.parcoOk = false; }
@@ -237,7 +268,7 @@ function evRender() {
   evEl('evOv').innerHTML = '<div class="sheet wide" role="dialog" aria-modal="true" aria-label="' + aggEsc(e.titolo) + '">'
     + '<div class="shead"><h2>' + aggEsc(e.titolo) + '</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
     + '<div class="sbody"><div class="int-pills m0">' + intTipoPill(e.tipo) + evStatoPill(e.stato) + '</div>'
-    + '<p class="sub mt10">' + aggEsc([e.luogo, evDate(e)].filter(Boolean).join(' · ')) + '</p>'
+    + '<p class="sub mt10">' + aggEsc([e.luogo, evDate(e), e.referente ? 'Referente: ' + e.referente : ''].filter(Boolean).join(' · ')) + '</p>'
     + (e.note ? '<p class="em-desc">' + aggEsc(e.note) + '</p>' : '')
     + '<div class="em-azioni">' + mappa
     + '<button class="btn sm" onclick="evApriForm(' + e.id + ')">Modifica</button>'
@@ -252,7 +283,7 @@ function evRender() {
 function evLinkMappa(r) { return 'https://www.google.com/maps?q=' + encodeURIComponent(r.lat + ',' + r.lon); }
 function evScheda(tab) { evCorrente.tab = tab; evRender(); }
 function evRenderScheda() {
-  ({ squadra: evRenderSquadra, mezzi: evRenderMezzi, segnalazioni: evRenderSegnalazioni })[evCorrente.tab]();
+  ({ squadra: evRenderSquadra, giorni: evRenderGiorni, mezzi: evRenderMezzi, cucina: evRenderCucina, riepilogo: evRenderRiepilogo, segnalazioni: evRenderSegnalazioni })[evCorrente.tab]();
 }
 
 // -- SQUADRA --
@@ -263,10 +294,11 @@ function evRenderSquadra() {
     + '<div id="evVolRisultati" class="mt6"></div>'
     + '<p class="sub mt10">' + presenti.length + ' presenti su ' + s.length + ' volontari · ' + ore + ' ore</p>'
     + (!s.length ? '<div class="empty">Nessun volontario in squadra.</div>' : s.map(r => '<div class="doc-item">'
-      + '<div class="doc-item-info"><div class="doc-item-name">' + aggEsc(evNomeVol(r.volontario_id)) + '</div></div>'
+      + '<div class="doc-item-info"><div class="doc-item-name">' + aggEsc(evNomeVol(r.volontario_id)) + '</div>' + evSottotitoloVol(r) + '</div>'
       + '<input class="ev-ruolo" aria-label="Ruolo" placeholder="Ruolo" value="' + aggEsc(r.ruolo || '') + '" onchange="evAggiornaVol(' + r.id + ',{ruolo:this.value.trim()||null})">'
       + '<input class="ev-ore" type="number" min="0" step="1" aria-label="Ore" placeholder="Ore" value="' + aggEsc(r.ore != null ? evOre(r) : '') + '" onchange="evAggiornaVol(' + r.id + ',{ore:this.value===\'\'?null:Math.max(0,Math.round(Number(this.value)))})">'
       + '<label class="perm-check"><input type="checkbox"' + (r.presente !== false ? ' checked' : '') + ' onchange="evAggiornaVol(' + r.id + ',{presente:this.checked})"> Presente</label>'
+      + (evHaDettagli() ? '<button class="btn sm" onclick="evApriVol(' + r.id + ')">Dettagli</button>' : '')
       + '<button class="btn sm danger" aria-label="Togli" onclick="evTogliVol(' + r.id + ')">✕</button></div>').join(''));
 }
 
@@ -281,9 +313,7 @@ function evRenderCercaVol() {
 
 async function evAggiungiVol(volId) {
   try {
-    const [riga] = await evScrivi('POST', 'evento_volontari', { evento_id: evCorrente.e.id, volontario_id: volId, presente: true });
-    evCorrente.squadra.push(riga);
-    await logAttivita('ha aggiunto ' + evNomeVol(volId) + ' alla squadra dell\'evento: ' + evCorrente.e.titolo);
+    await evSalvaVolontario({ volontario_id: volId });
     evRenderSquadra();
   } catch(e) { sbAvviso('Volontario non aggiunto.'); }
 }
@@ -300,49 +330,13 @@ async function evAggiornaVol(id, campi) {
 
 async function evTogliVol(id) {
   try {
+    await sbFetch(SUPA_URL + '/rest/v1/evento_disponibilita?evento_volontario_id=eq.' + id, { method: 'DELETE', headers: H, silenzioso: true });
     await evScrivi('DELETE', 'evento_volontari?id=eq.' + id);
     evCorrente.squadra = evCorrente.squadra.filter(r => r.id !== id);
+    evCorrente.disp = evCorrente.disp.filter(d => d.evento_volontario_id !== id);
     await logAttivita('ha tolto un volontario dalla squadra dell\'evento: ' + evCorrente.e.titolo);
     evRenderSquadra();
   } catch(e) { sbAvviso('Volontario non tolto.'); }
-}
-
-// -- MEZZI --
-function evNomeMezzo(id) {
-  const m = evCorrente.parco.find(x => x.id === id);
-  return m ? m.automezzo + (m.targa ? ' · ' + m.targa : '') : 'Mezzo ' + id;
-}
-
-function evRenderMezzi() {
-  const c = evCorrente;
-  if (!c.parcoOk) { evEl('evScheda').innerHTML = evNonDisp(); return; }
-  const presi = new Set(c.mezzi.map(r => r.mezzo_id));
-  const liberi = c.parco.filter(m => !presi.has(m.id));
-  evEl('evScheda').innerHTML = '<div class="bar"><select id="evMezzoSel" aria-label="Mezzo"><option value="">— scegli un mezzo —</option>'
-    + liberi.map(m => '<option value="' + m.id + '">' + aggEsc(m.automezzo + (m.targa ? ' · ' + m.targa : '')) + '</option>').join('') + '</select>'
-    + '<button class="btn pri" onclick="evAggiungiMezzo()">Aggiungi</button></div>'
-    + (!c.mezzi.length ? '<div class="empty">Nessun mezzo assegnato.</div>' : c.mezzi.map(r => '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + aggEsc(evNomeMezzo(r.mezzo_id)) + '</div></div>'
-      + '<button class="btn sm danger" aria-label="Togli" onclick="evTogliMezzo(' + r.id + ')">✕</button></div>').join(''));
-}
-
-async function evAggiungiMezzo() {
-  const id = Number(evEl('evMezzoSel').value);
-  if (!id) return;
-  try {
-    const [riga] = await evScrivi('POST', 'evento_mezzi', { evento_id: evCorrente.e.id, mezzo_id: id });
-    evCorrente.mezzi.push(riga);
-    await logAttivita('ha aggiunto ' + evNomeMezzo(id) + ' all\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
-  } catch(e) { sbAvviso('Mezzo non aggiunto.'); }
-}
-
-async function evTogliMezzo(id) {
-  try {
-    await evScrivi('DELETE', 'evento_mezzi?id=eq.' + id);
-    evCorrente.mezzi = evCorrente.mezzi.filter(r => r.id !== id);
-    await logAttivita('ha tolto un mezzo dall\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
-  } catch(e) { sbAvviso('Mezzo non tolto.'); }
 }
 
 // -- SEGNALAZIONI --
@@ -452,14 +446,19 @@ function evStampa() {
   const finestra = window.open('', '_blank');
   if (!finestra) { sbAvviso('Il browser ha bloccato la finestra di stampa.'); return; }
   const totale = righe.reduce((t, r) => t + evOre(r), 0);
+  const c = evCorrente;
+  const mezzi = !c.mezzi.length ? '' : '<h2>Mezzi</h2><table class="lib"><thead><tr><th>Mezzo</th><th>Targa</th><th>Giorni</th></tr></thead><tbody>'
+    + c.mezzi.map(m => '<tr><td>' + aggEsc(evMezzoNome(m)) + '</td><td>' + aggEsc(evMezzoTarga(m)) + '</td><td>' + aggEsc(evGiorniMezzo(m)) + '</td></tr>').join('') + '</tbody></table>';
+  const materiali = !c.materiali.length ? '' : '<h2>Materiali</h2><table class="lib"><thead><tr><th>Quantità</th><th>Descrizione</th><th>Note</th></tr></thead><tbody>'
+    + c.materiali.map(m => '<tr><td>' + m.quantita + '</td><td>' + aggEsc(m.descrizione) + '</td><td>' + aggEsc(m.note || '') + '</td></tr>').join('') + '</tbody></table>';
   finestra.document.write('<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Squadra - ' + aggEsc(e.titolo) + '</title><style>'
-    + 'body{font:14px Arial,sans-serif;color:#000;margin:24px}h1{font-size:20px;margin:0 0 4px}p{margin:2px 0}'
-    + 'table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #000;padding:6px 8px;text-align:left}th:last-child,td:last-child{text-align:right;width:70px}'
+    + 'body{font:14px Arial,sans-serif;color:#000;margin:24px}h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:20px 0 0}p{margin:2px 0}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #000;padding:6px 8px;text-align:left}table:not(.lib) th:last-child,table:not(.lib) td:last-child{text-align:right;width:70px}'
     + '</style></head><body><p>Protezione Civile ANA Casale Monferrato</p><h1>' + aggEsc(e.titolo) + '</h1>'
     + '<p>' + aggEsc([EV_TIPI[e.tipo] || e.tipo, e.luogo, evDate(e)].filter(Boolean).join(' · ')) + '</p>'
     + '<table><thead><tr><th>Nome</th><th>Ruolo</th><th>Ore</th></tr></thead><tbody>'
     + righe.map(r => '<tr><td>' + aggEsc(evNomeVol(r.volontario_id)) + '</td><td>' + aggEsc(r.ruolo || '') + '</td><td>' + evOre(r) + '</td></tr>').join('')
-    + '</tbody><tfoot><tr><th colspan="2">Totale: ' + righe.length + ' volontari</th><th>' + totale + '</th></tr></tfoot></table></body></html>');
+    + '</tbody><tfoot><tr><th colspan="2">Totale: ' + righe.length + ' volontari</th><th>' + totale + '</th></tr></tfoot></table>' + mezzi + materiali + '</body></html>');
   finestra.document.close();
   finestra.focus();
   finestra.print();
@@ -495,7 +494,7 @@ async function evCreaIntervento() {
     if (!ora) throw new Error('Non disponibile.');
     if (ora.intervento_id) { e.intervento_id = ora.intervento_id; evRender(); return; }
     const [creato] = await evScrivi('POST', 'interventi', {
-      evento: e.titolo, data: evGiorno(e.data_inizio), data_fine: evGiorno(e.data_fine) || null,
+      evento: e.titolo, data: evGiorno(e.data_inizio), data_fine: evGiorno(e.data_fine || e.fine_finestra) || null,
       tipo_attivita: e.tipo, luogo: e.luogo, n_volontari: righe.length, n_ore: nOre,
       volontari_ids: righe.map(r => r.volontario_id), utente: currentUser.nome,
     });
