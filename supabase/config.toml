@@ -10,5 +10,11 @@ verify_jwt = false
 [functions.editor-pdf-firma]
 verify_jwt = false
 
+[functions.bot-telegram]
+verify_jwt = false
+
+[functions.bot-app]
+verify_jwt = false
+
 [functions.Agente-Interventi]
 verify_jwt = false

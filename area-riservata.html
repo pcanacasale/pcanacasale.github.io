@@ -513,6 +513,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .seg-nota{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 
 /* ── accessi ── */
+.bt-ov{z-index:900}
+#btOv label.perm-check{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0}
+#btOv label.perm-check input{width:auto;margin:0}
+#btOv label[hidden]{display:none}
 .ga-card{display:flex;flex-direction:column}
 .ga-card .sub{margin:8px 0 0;overflow-wrap:anywhere}
 .ga-card .em-azioni{margin-top:auto;padding-top:14px}
@@ -1974,7 +1978,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <div class="panel" id="panelEventi">
       <div class="phead">
         <div><h1>Eventi</h1><span class="sub" id="evMostrati"></span></div>
-        <div class="pact"><button class="btn pri" id="evBtnNuovo" onclick="evApriForm()" hidden>Nuovo evento</button></div>
+        <div class="pact"><button class="btn" onclick="btApriInvio()">Invia messaggio</button><button class="btn pri" id="evBtnNuovo" onclick="evApriForm()" hidden>Nuovo evento</button></div>
       </div>
       <div class="bar">
         <div id="evChips" class="chips"></div>
@@ -1997,6 +2001,11 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div class="phead"><div><h1>Impostazioni</h1></div></div>
 
       <div class="grid g3 impo-grid">
+      <div class="card impo-section" id="btImpoBox" hidden>
+        <h2>Bot Telegram</h2>
+        <p class="note note-intro">Messaggi ai volontari collegati al bot.</p>
+        <button class="btn pri" onclick="btApriInvio()">Invia messaggio</button>
+      </div>
       <div class="card impo-section" id="evListeBox">
         <h2>Liste degli eventi</h2>
         <p class="note note-intro">Tipologie di volontario ed esigenze alimentari disponibili negli eventi.</p>
@@ -2081,6 +2090,7 @@ body.cv-solo-vede .cv-gestione{display:none}
       </div>
     </div>
   </div>
+  <div class="ov bt-ov" id="btOv" hidden></div>
   <div class="ov fz-ov" id="fzOv" hidden onclick="if(event.target===this)fzChiudiForm()"></div>
 
   <!-- Export PDF visite mediche -->
@@ -2135,16 +2145,17 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=203"></script>
+<script src="area-riservata.js?v=204"></script>
 <script src="aggiornamento-dati.js?v=12"></script>
-<script src="scheda-volontario.js?v=6"></script>
+<script src="scheda-volontario.js?v=7"></script>
 <script src="allerta-home.js?v=2"></script>
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=4"></script>
 <script src="convocazioni.js?v=3"></script>
 <script src="eventi.js?v=3"></script>
 <script src="eventi-polo.js?v=2"></script>
-<script src="gestione-accessi.js?v=1"></script>
+<script src="gestione-accessi.js?v=2"></script>
+<script src="bot-telegram.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

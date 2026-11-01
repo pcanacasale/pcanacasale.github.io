@@ -116,10 +116,13 @@ function gaRenderElenco() {
         + '<p class="sub ga-mail">' + (mail.length ? mail.map(e => aggEsc(e.email)).join('<br>') : '<span class="bad">Nessuna mail di accesso</span>') + '</p>'
         + '<p class="sub">' + aggEsc(gaRiepilogoPermessi(s)) + '</p>'
         + '<div class="em-azioni"><button class="btn sm" onclick="gaApri(' + id + ')">Modifica</button>'
+        + (hasPerm('eventi') ? '<button class="btn sm" onclick="gaLinkBot(' + id + ')">Link bot</button>' : '')
         + (io ? '' : '<button class="btn sm" onclick="gaCambiaAttivo(' + id + ')">' + (s.attivo !== false ? 'Disattiva' : 'Riattiva') + '</button>'
           + '<button class="btn sm danger" onclick="gaRimuovi(' + id + ')">Rimuovi dallo staff</button>') + '</div></div>';
     }).join('') + '</div>';
 }
+
+function gaLinkBot(id) { btApriLink(id, gaNome(id)); }
 
 // -- MAIL --
 // Restituisce la mail pulita oppure lancia il motivo del rifiuto. altre = mail già scelte nella form.

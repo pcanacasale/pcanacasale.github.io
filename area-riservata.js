@@ -777,6 +777,7 @@ async function eliminaRichiesta(id) {
 
 // -- IMPOSTAZIONI --
 async function caricaImpostazioni() {
+  document.getElementById('btImpoBox').hidden = !hasPerm('eventi');
   renderSchemaList();
   evCaricaListe();
 }

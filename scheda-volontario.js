@@ -140,6 +140,7 @@ function svRenderTesta() {
   document.getElementById('svTesta').innerHTML = '<span id="svAvatar">' + _volAvatar(v) + '</span>'
     + '<div class="mid"><h2 id="volDetailTitle">' + aggEsc(v.cognome + ' ' + v.nome) + '</h2>'
     + '<span class="sub">' + aggEsc(riga.join(' · ')) + '</span></div>'
+    + (hasPerm('eventi') && ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO') ? '<button class="btn sm" onclick="btApriLink(' + v.id + ',\'' + aggEsc(v.cognome + ' ' + v.nome).replace(/'/g, '&#39;') + '\')">Link bot</button>' : '')
     + '<span class="pill ' + stato[1] + '">' + stato[0] + '</span>';
 }
 
