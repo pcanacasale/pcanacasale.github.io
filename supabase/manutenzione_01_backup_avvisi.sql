@@ -1,0 +1,9 @@
+-- Già applicata al database (migrazione manutenzione_backup_avvisi); qui per riferimento.
+-- 1) fai_backup_settimanale(): copia le tabelle di public (esclusi log_*, bot_*, allerta_cache, keepalive)
+--    nello schema backup, non esposto dall'API, come <tabella>_AAAAMMGG; tiene le ultime 5 date.
+--    Pianificata la domenica alle 02:30 (pg_cron 'backup-settimanale'). Non copia i file dei bucket.
+-- 2) stato_sistema(): età dell'allerta ARPA, attività cron fallite, segnalazioni da gestire da 24 h, ultimo backup.
+--    Solo service_role. La legge la Edge Function bot-avvisi (pg_cron 'bot-avvisi-orario', ogni ora al minuto 7),
+--    che avvisa i master su Telegram; stesso avviso non ripetuto prima di 6 ore (24 per le segnalazioni).
+-- 3) bot_avvisi_stato: ultimo invio per tipo di avviso.
+-- Per ripristinare una tabella: insert/update da backup.<tabella>_AAAAMMGG con il ruolo postgres (SQL editor).

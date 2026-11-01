@@ -15,6 +15,7 @@
 import { ambiente, uguali, sha256, pulisci, statoAbilitato, dbLeggi, dbScrivi, tg, scaricaFile, logAttivita } from '../_shared/bot.ts';
 import { leggiGpsExif } from '../_shared/exif.ts';
 import { testoArpa } from '../_shared/arpa.ts';
+import { avvisaStaff } from '../_shared/avvisi.ts';
 
 const FINESTRA_MS = 10 * 60 * 1000;
 const MAX_FILE = 20 * 1024 * 1024;
@@ -191,6 +192,9 @@ async function salvaSegnalazione(chat: number, a: any, v: any) {
   await manda(chat, ev ? 'Segnalazione registrata per: ' + ev.titolo + '.'
     : volevaEvento ? 'L\'evento non è più in corso: la segnalazione è stata registrata come generica.'
     : 'Segnalazione registrata come generica (nessun evento in corso).', MENU);
+  // Lo staff lo sa subito, senza aprire Eventi (chi ha inviato la foto non riceve l'avviso)
+  await avvisaStaff('📷 Nuova segnalazione da ' + v.cognome + ' ' + v.nome + ' — ' + (ev ? ev.titolo : 'generica')
+    + (a.didascalia ? '\n' + a.didascalia : '') + '\nPosizione: https://www.google.com/maps?q=' + a.lat + ',' + a.lon, { escludi: chat });
 }
 
 // Le foto ferme da più di 10 minuti non restano appese: si avvisa e si tolgono
