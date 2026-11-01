@@ -478,7 +478,9 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .ev-tab{width:100%;border-collapse:collapse;font-size:13px}
 .ev-tab th,.ev-tab td{padding:8px 10px;border-top:1px solid var(--line);text-align:center;vertical-align:top;white-space:nowrap}
 .ev-tab thead th{border-top:0;color:var(--muted);font-weight:700}
-.ev-tab .sx{text-align:left;white-space:normal;min-width:120px}
+.ev-tab .sx{text-align:left;white-space:normal;min-width:76px}
+#evFormOv label.perm-check{display:inline-flex;flex-direction:row;align-items:center;gap:8px;width:auto;margin:0}
+#evFormOv label.perm-check input{width:auto;margin:0}
 .ev-griglia th:first-child,.ev-griglia td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;white-space:normal;min-width:130px}
 .ev-t{min-width:30px;height:30px;padding:0 6px;margin:1px;border:1px solid var(--line2);border-radius:8px;background:none;color:var(--muted);font-size:12px;font-weight:700}
 .ev-t.on{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-fg)}
@@ -489,9 +491,20 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .ev-liste-riga input.ev-nome{flex:1 1 130px;min-width:0;height:36px}
 .ev-liste-riga input.ev-ordine{width:64px;height:36px;padding:0 6px}
 #evScheda .doc-item-info{flex:1 1 180px;min-width:0}
-#evScheda input.ev-ruolo{flex:0 1 170px;width:170px;min-width:0;height:40px}
-#evScheda input.ev-ore{flex:0 0 80px;width:80px;height:40px}
-@media (max-width:640px){#evScheda .doc-item-info{flex-basis:100%}#evScheda input.ev-ruolo{flex:1 1 120px}}
+.sheet.ev-crusc{width:min(1120px,100%)}
+.ev-crusc .shead h2{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ev-testata{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ev-testata .ev-azioni{margin-top:0}
+.ev-elenco tbody tr.clk{cursor:pointer}
+.ev-elenco tbody tr.clk:hover{background:var(--bg)}
+.ev-elenco td .pill{vertical-align:middle}
+.ev-tab .ev-az{white-space:nowrap;text-align:right}
+.ev-tab .ev-az .btn{margin-left:4px}
+.ev-barre{display:grid;gap:8px}
+.ev-barra{display:grid;grid-template-columns:minmax(70px,150px) minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:13px}
+.ev-barra i{display:block;height:10px;border-radius:999px;background:var(--line)}
+.ev-barra i b{display:block;height:100%;border-radius:999px;background:var(--accent-bg)}
+.ev-due{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:18px}
 /* ── azioni nelle card ── */
 .em-azioni{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
@@ -2208,8 +2221,8 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=4"></script>
 <script src="convocazioni.js?v=3"></script>
-<script src="eventi.js?v=2"></script>
-<script src="eventi-polo.js?v=1"></script>
+<script src="eventi.js?v=3"></script>
+<script src="eventi-polo.js?v=2"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

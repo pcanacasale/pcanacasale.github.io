@@ -5,12 +5,12 @@
 // Le foto stanno nel bucket privato eventi: in foto_path si salva "eventi/<evento>/<file>".
 // I dati dei volontari arrivano dall'anagrafica. Solo i presenti contano nei totali, nelle
 // stampe, in cucina e nell'intervento creato a fine evento.
-// Giorni, cucina, mezzi e materiali, riepilogo, Excel e liste stanno in eventi-polo.js.
+// Elenco e cruscotto stanno qui; le schede Riepilogo, Volontari, Mezzi e materiali, Ospiti e
+// Cucina, l'Excel e le liste stanno in eventi-polo.js.
 // ============================================================
 
 const EV_TIPI = { EMERGENZA: 'Emergenza', ESERCITAZIONE: 'Esercitazione' };
 const EV_STATI = { PIANIFICATO: ['Pianificato', 'p-sand'], 'IN CORSO': ['In corso', 'p-yellow'], CONCLUSO: ['Concluso', 'p-grey'] };
-const EV_TAB = [['squadra', 'Squadra'], ['giorni', 'Giorni e servizi'], ['mezzi', 'Mezzi e materiali'], ['cucina', 'Cucina'], ['riepilogo', 'Riepilogo'], ['segnalazioni', 'Segnalazioni']];
 const EV_CAMPI = [['cellulare', 'Cellulare'], ['patenti', 'Patenti'], ['servizi', 'Pasti e pernotti'], ['note', 'Note'], ['tipologia', 'Tipologia'], ['art39', 'Art. 39'], ['esigenze', 'Esigenze alimentari'], ['orari', 'Fasce orarie']];
 const EV_LIVELLI = { non_richiesto: 'Non richiesto', facoltativo: 'Facoltativo', obbligatorio: 'Obbligatorio' };
 // Come nel Polo: se la chiave manca, questi valgono "non richiesto", gli altri "facoltativo"
@@ -22,7 +22,7 @@ const EV_FOTO_LATO = 1600, EV_FOTO_QUALITA = 0.8;
 let evElenco = [];
 let evFiltroTipo = '', evFiltroStato = '';
 let evVolontari = [];      // anche i dimessi: servono i nomi degli eventi passati
-let evCorrente = null;     // { e, squadra, disp, mezzi, materiali, ospiti, ospitiServizi, extra, segn, tipologie, esigenze, tab, parco, parcoOk }
+let evCorrente = null;     // { e, squadra, disp, mezzi, materiali, ospiti, ospitiServizi, extra, segn, tipologie, esigenze, abilitazioni, tab, griglia, cerca, parco, parcoOk }
 let evModificaId = null;
 
 function evEl(id) { return document.getElementById(id); }
@@ -75,7 +75,7 @@ async function caricaEventi() {
   evEl('evBtnNuovo').hidden = false;
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
-    evElenco = await evLeggi('eventi?select=' + EV_COL_EVENTO + '&order=data_inizio.desc,id.desc');
+    evElenco = await evLeggi('eventi?select=' + EV_COL_EVENTO + ',evento_volontari(count)&order=data_inizio.desc,id.desc');
     evRenderChip();
     evRenderLista();
   } catch(e) {
@@ -105,11 +105,13 @@ function evRenderLista() {
   const righe = evElenco.filter(e => (!evFiltroTipo || e.tipo === evFiltroTipo) && (!evFiltroStato || e.stato === evFiltroStato)
     && (!q || [e.titolo, e.luogo, e.note].some(t => (t || '').toLowerCase().includes(q))));
   evEl('evMostrati').textContent = righe.length + (righe.length === 1 ? ' evento' : ' eventi');
+  const n = e => (e.evento_volontari && e.evento_volontari[0] && e.evento_volontari[0].count) || 0;
   evEl('evList').innerHTML = !righe.length ? '<div class="empty">Nessun evento.</div>'
-    : '<div class="grid g3">' + righe.map(e => '<div class="card clk" onclick="evApri(' + e.id + ')">'
-      + '<div class="int-pills m0">' + intTipoPill(e.tipo) + evStatoPill(e.stato) + '</div>'
-      + '<h2 class="mt10">' + aggEsc(e.titolo) + '</h2>'
-      + '<span class="sub">' + aggEsc([e.luogo, evDate(e)].filter(Boolean).join(' · ')) + '</span></div>').join('') + '</div>';
+    : '<div class="ev-scorri"><table class="ev-tab ev-elenco"><thead><tr><th class="sx">Titolo</th><th class="sx">Date</th><th class="sx">Stato</th><th>Volontari</th></tr></thead><tbody>'
+      + righe.map(e => '<tr class="clk" tabindex="0" onclick="evApri(' + e.id + ')" onkeydown="if(event.key===\'Enter\')evApri(' + e.id + ')">'
+        + '<td class="sx"><b>' + aggEsc(e.titolo) + '</b> ' + intTipoPill(e.tipo) + (e.luogo ? '<div class="sub">' + aggEsc(e.luogo) + '</div>' : '') + '</td>'
+        + '<td class="sx">' + aggEsc(evDate(e)) + '</td><td class="sx">' + evStatoPill(e.stato) + '</td><td>' + n(e) + '</td></tr>').join('')
+      + '</tbody></table></div>';
 }
 
 // -- NUOVO / MODIFICA --
@@ -229,7 +231,7 @@ async function evEliminaRighe(id) {
 // -- DETTAGLIO --
 async function evApri(id) {
   const ov = evEl('evOv');
-  ov.innerHTML = '<div class="sheet wide" role="dialog" aria-modal="true" aria-label="Evento"><div class="shead"><h2>Evento</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
+  ov.innerHTML = '<div class="sheet ev-crusc" role="dialog" aria-modal="true" aria-label="Evento"><div class="shead"><h2>Evento</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
     + '<div class="sbody"><div class="loading-msg">Caricamento…</div></div></div>';
   ov.hidden = false;
   evCorrente = null;
@@ -243,8 +245,8 @@ async function evApri(id) {
     ]);
     if (!righe[0]) throw new Error('Non disponibile.');
     await sbFirmaRighe(segn, 'foto_path');
-    evCorrente = Object.assign({ e: righe[0], squadra, segn, tab: 'squadra', parco: [], parcoOk: false }, polo);
-    await evCaricaParco();
+    evCorrente = Object.assign({ e: righe[0], squadra, segn, tab: 'riepilogo', griglia: false, cerca: '', parco: [], parcoOk: false, abilitazioni: [] }, polo);
+    await Promise.all([evCaricaParco(), evCaricaAbilitazioni()]);
     evRender();
   } catch(e) {
     ov.querySelector('.sbody').innerHTML = evNonDisp();
@@ -262,81 +264,41 @@ async function evCaricaParco() {
   catch(e) { evCorrente.parco = []; evCorrente.parcoOk = false; }
 }
 
+function evConPasti() {
+  const c = evCorrente;
+  return evAtt('servizi') || c.ospiti.length > 0 || c.extra.length > 0;
+}
+
 function evRender() {
   const c = evCorrente, e = c.e;
+  const conPasti = evConPasti();
+  if (!conPasti && ['ospiti', 'cucina'].includes(c.tab)) c.tab = 'riepilogo';
+  const schede = [['riepilogo', 'Riepilogo'], ['volontari', 'Volontari (' + c.squadra.length + ')'], ['mezzi', 'Mezzi e materiali (' + (c.mezzi.length + c.materiali.length) + ')']]
+    .concat(conPasti ? [['ospiti', 'Ospiti (' + c.ospiti.length + ')'], ['cucina', 'Cucina']] : [])
+    .concat([['segnalazioni', 'Segnalazioni (' + c.segn.length + ')']]);
   const mappa = e.lat != null && e.lon != null ? '<a class="btn sm" href="' + evLinkMappa(e) + '" target="_blank" rel="noopener">Vedi posizione</a>' : '';
-  evEl('evOv').innerHTML = '<div class="sheet wide" role="dialog" aria-modal="true" aria-label="' + aggEsc(e.titolo) + '">'
-    + '<div class="shead"><h2>' + aggEsc(e.titolo) + '</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
-    + '<div class="sbody"><div class="int-pills m0">' + intTipoPill(e.tipo) + evStatoPill(e.stato) + '</div>'
-    + '<p class="sub mt10">' + aggEsc([e.luogo, evDate(e), e.referente ? 'Referente: ' + e.referente : ''].filter(Boolean).join(' · ')) + '</p>'
-    + (e.note ? '<p class="em-desc">' + aggEsc(e.note) + '</p>' : '')
-    + '<div class="em-azioni">' + mappa
-    + '<button class="btn sm" onclick="evApriForm(' + e.id + ')">Modifica</button>'
+  const vecchia = document.querySelector('#evOv .sheet'), scorri = vecchia ? vecchia.scrollTop : 0;
+  evEl('evOv').innerHTML = '<div class="sheet ev-crusc" role="dialog" aria-modal="true" aria-label="' + aggEsc(e.titolo) + '">'
+    + '<div class="shead"><h2>' + aggEsc(e.titolo) + ' ' + evStatoPill(e.stato) + '</h2><button class="x" onclick="evChiudi()" aria-label="Chiudi">✕</button></div>'
+    + '<div class="sbody"><div class="ev-testata"><div><div class="int-pills m0">' + intTipoPill(e.tipo) + '<span>' + aggEsc([evDate(e), e.luogo].filter(Boolean).join(' · ')) + '</span></div>'
+    + (e.referente ? '<div class="sub mt6">Referente: ' + aggEsc(e.referente) + '</div>' : '')
+    + (e.note ? '<p class="em-desc">' + aggEsc(e.note) + '</p>' : '') + '</div>'
+    + '<div class="em-azioni ev-azioni">' + mappa
+    + '<button class="btn sm" onclick="evEsportaExcel()">Excel</button>'
     + '<button class="btn sm" onclick="evStampa()">Stampa squadra</button>'
     + evAzioneIntervento()
-    + '<button class="btn sm danger" onclick="evElimina()">Elimina</button></div>'
-    + '<div class="chips mt14" role="tablist">' + EV_TAB.map(t => '<button class="chip' + (c.tab === t[0] ? ' on' : '') + '" role="tab" onclick="evScheda(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>'
+    + '<button class="btn sm" onclick="evApriForm(' + e.id + ')">Modifica</button>'
+    + '<button class="btn sm danger" onclick="evElimina()">Elimina</button></div></div>'
+    + '<div class="chips mt14" role="tablist">' + schede.map(t => '<button class="chip' + (c.tab === t[0] ? ' on' : '') + '" role="tab" onclick="evScheda(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>'
     + '<div class="mt14" id="evScheda"></div></div></div>';
   evRenderScheda();
+  document.querySelector('#evOv .sheet').scrollTop = scorri;
 }
 
 function evLinkMappa(r) { return 'https://www.google.com/maps?q=' + encodeURIComponent(r.lat + ',' + r.lon); }
 function evScheda(tab) { evCorrente.tab = tab; evRender(); }
 function evRenderScheda() {
-  ({ squadra: evRenderSquadra, giorni: evRenderGiorni, mezzi: evRenderMezzi, cucina: evRenderCucina, riepilogo: evRenderRiepilogo, segnalazioni: evRenderSegnalazioni })[evCorrente.tab]();
-}
-
-// -- SQUADRA --
-function evRenderSquadra() {
-  const s = evCorrente.squadra, presenti = evPresenti();
-  const ore = presenti.reduce((t, r) => t + evOre(r), 0);
-  evEl('evScheda').innerHTML = '<label class="search" for="evVolCerca"><input type="search" id="evVolCerca" placeholder="Aggiungi volontario: cerca per cognome o squadra" autocomplete="off" oninput="evRenderCercaVol()"></label>'
-    + '<div id="evVolRisultati" class="mt6"></div>'
-    + '<p class="sub mt10">' + presenti.length + ' presenti su ' + s.length + ' volontari · ' + ore + ' ore</p>'
-    + (!s.length ? '<div class="empty">Nessun volontario in squadra.</div>' : s.map(r => '<div class="doc-item">'
-      + '<div class="doc-item-info"><div class="doc-item-name">' + aggEsc(evNomeVol(r.volontario_id)) + '</div>' + evSottotitoloVol(r) + '</div>'
-      + '<input class="ev-ruolo" aria-label="Ruolo" placeholder="Ruolo" value="' + aggEsc(r.ruolo || '') + '" onchange="evAggiornaVol(' + r.id + ',{ruolo:this.value.trim()||null})">'
-      + '<input class="ev-ore" type="number" min="0" step="1" aria-label="Ore" placeholder="Ore" value="' + aggEsc(r.ore != null ? evOre(r) : '') + '" onchange="evAggiornaVol(' + r.id + ',{ore:this.value===\'\'?null:Math.max(0,Math.round(Number(this.value)))})">'
-      + '<label class="perm-check"><input type="checkbox"' + (r.presente !== false ? ' checked' : '') + ' onchange="evAggiornaVol(' + r.id + ',{presente:this.checked})"> Presente</label>'
-      + (evHaDettagli() ? '<button class="btn sm" onclick="evApriVol(' + r.id + ')">Dettagli</button>' : '')
-      + '<button class="btn sm danger" aria-label="Togli" onclick="evTogliVol(' + r.id + ')">✕</button></div>').join(''));
-}
-
-function evRenderCercaVol() {
-  const q = evEl('evVolCerca').value.toLowerCase().trim(), box = evEl('evVolRisultati');
-  if (!q) { box.innerHTML = ''; return; }
-  const presi = new Set(evCorrente.squadra.map(r => r.volontario_id));
-  const trovati = evVolontari.filter(v => v.stato !== 'DIMESSO' && !presi.has(v.id) && (v.cognome + ' ' + v.nome + ' ' + (v.squadra || '')).toLowerCase().includes(q)).slice(0, 8);
-  box.innerHTML = trovati.length ? trovati.map(v => '<div class="lr clk" onclick="evAggiungiVol(' + v.id + ')"><div class="mid"><b>' + aggEsc(v.cognome + ' ' + v.nome) + '</b><span class="sub">' + aggEsc(v.squadra || '') + '</span></div></div>').join('')
-    : '<p class="note">Nessun volontario trovato.</p>';
-}
-
-async function evAggiungiVol(volId) {
-  try {
-    await evSalvaVolontario({ volontario_id: volId });
-    evRenderSquadra();
-  } catch(e) { sbAvviso('Volontario non aggiunto.'); }
-}
-
-async function evAggiornaVol(id, campi) {
-  try {
-    const [riga] = await evScrivi('PATCH', 'evento_volontari?id=eq.' + id, campi);
-    const i = evCorrente.squadra.findIndex(r => r.id === id);
-    if (i >= 0) evCorrente.squadra[i] = riga;
-    await logAttivita('ha modificato la squadra dell\'evento: ' + evCorrente.e.titolo);
-  } catch(e) { sbAvviso('Modifica non salvata.'); }
-  evRenderSquadra();
-}
-
-async function evTogliVol(id) {
-  try {
-    await sbFetch(SUPA_URL + '/rest/v1/evento_disponibilita?evento_volontario_id=eq.' + id, { method: 'DELETE', headers: H, silenzioso: true });
-    await evScrivi('DELETE', 'evento_volontari?id=eq.' + id);
-    evCorrente.squadra = evCorrente.squadra.filter(r => r.id !== id);
-    evCorrente.disp = evCorrente.disp.filter(d => d.evento_volontario_id !== id);
-    await logAttivita('ha tolto un volontario dalla squadra dell\'evento: ' + evCorrente.e.titolo);
-    evRenderSquadra();
-  } catch(e) { sbAvviso('Volontario non tolto.'); }
+  ({ riepilogo: evRenderRiepilogo, volontari: evCorrente.griglia ? evRenderGiorni : evRenderVolontari, mezzi: evRenderMezzi, ospiti: evRenderOspiti, cucina: evRenderCucina, segnalazioni: evRenderSegnalazioni })[evCorrente.tab]();
 }
 
 // -- SEGNALAZIONI --
@@ -410,7 +372,7 @@ async function evAggiungiSegnalazione() {
     await sbFirmaRighe([riga], 'foto_path');
     evCorrente.segn.unshift(riga);
     await logAttivita('ha aggiunto una segnalazione all\'evento: ' + evCorrente.e.titolo);
-    evRenderSegnalazioni();
+    evRender();
   } catch(e) {
     if (foto) sbEliminaFile(foto);   // niente file orfani se la riga non si salva
     btn.disabled = false;
@@ -436,7 +398,7 @@ async function evEliminaSegnalazione(id) {
     if (s && s.foto_path) await sbEliminaFile(s.foto_path);
     evCorrente.segn = evCorrente.segn.filter(x => x.id !== id);
     await logAttivita('ha eliminato una segnalazione dell\'evento: ' + evCorrente.e.titolo);
-    evRenderSegnalazioni();
+    evRender();
   } catch(e) { sbAvviso('Eliminazione non riuscita.'); }
 }
 

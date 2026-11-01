@@ -1,11 +1,11 @@
 // ============================================================
 // STRUMENTI — pagina Eventi, seconda parte (prefisso ev*, permesso eventi).
 // ============================================================
-// Modello: Attivazioni del Polo Logistico, compilato dallo staff, solo volontari dell'anagrafica.
+// Modello: cruscotto delle Attivazioni del Polo Logistico, compilato dallo staff, solo volontari dell'anagrafica.
 // Una riga in evento_disponibilita vuol dire "disponibile quel giorno"; senza orari è giornata intera.
 // Pasti, posti letto e conteggi sono calcolati qui nel browser dai dati caricati.
 // Gli assenti (presente = false) non contano in cucina, nel riepilogo e nelle stampe.
-// evSalvaVolontario è l'unico punto di salvataggio, usato da aggiunta, Dettagli e import Excel.
+// evSalvaVolontario è l'unico punto di salvataggio, usato dalla form e dall'import Excel.
 // ============================================================
 
 const EV_SERVIZI = [['colazione', 'Colazione', 'C'], ['pranzo', 'Pranzo', 'P'], ['cena', 'Cena', 'Ce'], ['pernotto', 'Pernotto', 'N']];
@@ -27,6 +27,12 @@ async function evCaricaPolo(id) {
   const ospitiServizi = ospiti.length
     ? await evLeggi('evento_ospiti_servizi?ospite_id=in.(' + ospiti.map(o => o.id).join(',') + ')&select=id,ospite_id,giorno,colazione,pranzo,cena,pernotto') : [];
   return { disp, mezzi, materiali, ospiti, ospitiServizi, extra, tipologie, esigenze };
+}
+
+// Le abilitazioni stanno nel registro formazione: senza accesso le barre non compaiono
+async function evCaricaAbilitazioni() {
+  try { evCorrente.abilitazioni = await evLeggi('formazione_registro?tipo=eq.ABILITAZIONE&select=volontario_id,titolo'); }
+  catch(e) { evCorrente.abilitazioni = []; }
 }
 
 // -- GIORNI --
@@ -101,9 +107,9 @@ function evRenderGiorni() {
   const c = evCorrente, giorni = evGiorni(c.e);
   const estendi = c.e.tipo === 'EMERGENZA' && !c.e.data_fine ? '<button class="btn sm" onclick="evEstendi()">Aggiungi un giorno</button>' : '';
   const legenda = '<p class="sub">✓ disponibile' + (evAtt('servizi') ? ' · C colazione · P pranzo · Ce cena · N pernotto' : '') + (evAtt('orari') ? ' · senza orari vale la giornata intera' : '') + '</p>';
-  evEl('evScheda').innerHTML = '<div class="bar">' + legenda + '<span class="grow"></span>' + estendi + '</div>'
+  evEl('evScheda').innerHTML = '<div class="bar">' + legenda + '<span class="grow"></span>' + estendi + '<button class="btn sm" onclick="evVistaGriglia(false)">Torna all\'elenco</button></div>'
     + (evAtt('servizi') ? '<p class="sub mb10">Spuntando il pernotto, la colazione del mattino dopo si spunta da sola (modificabile).</p>' : '')
-    + (!c.squadra.length ? '<div class="empty">Aggiungi prima i volontari nella scheda Squadra.</div>'
+    + (!c.squadra.length ? '<div class="empty">Aggiungi prima i volontari.</div>'
       : '<div class="ev-scorri"><table class="ev-tab ev-griglia"><thead><tr><th>Volontario</th>' + giorni.map(g => '<th>' + aggEsc(evGiornoBreve(g)) + '</th>').join('') + '</tr></thead><tbody>'
         + c.squadra.map(r => '<tr><td><b>' + aggEsc(evNomeVol(r.volontario_id)) + '</b></td>'
           + giorni.map(g => '<td id="evC_' + r.id + '_' + g + '">' + evCellaHtml(r.id, g) + '</td>').join('') + '</tr>').join('')
@@ -156,8 +162,6 @@ async function evEstendi() {
 }
 
 // -- DATI DEL VOLONTARIO --
-function evHaDettagli() { return ['tipologia', 'art39', 'esigenze', 'note'].some(evAtt); }
-
 // Controlli comuni a form e import; d ha gli stessi nomi delle colonne
 function evValidaVol(d) {
   const err = [];
@@ -169,7 +173,7 @@ function evValidaVol(d) {
   return err;
 }
 
-// I campi obbligatori che dipendono da anagrafica e griglia si segnalano, non bloccano
+// I campi che dipendono da anagrafica e griglia si segnalano in elenco, non bloccano
 function evMancanti(r) {
   const v = evVol(r.volontario_id) || {}, giorni = evGiorni(evCorrente.e).map(g => evDisp(r.id, g)).filter(Boolean);
   const out = evValidaVol(r);
@@ -180,19 +184,17 @@ function evMancanti(r) {
   return out;
 }
 
-function evSottotitoloVol(r) {
-  const v = evVol(r.volontario_id) || {}, parti = [];
-  if (evAtt('cellulare') && v.telefono) parti.push(v.telefono);
-  if (evAtt('patenti') && v.patenti) parti.push('Patenti ' + v.patenti);
-  if (evAtt('tipologia') && r.tipologia) parti.push(r.tipologia);
-  if (evAtt('art39') && r.art39) parti.push('Art. 39');
-  if (evAtt('esigenze') && (r.esigenze || []).length) parti.push(r.esigenze.join(', '));
-  const manca = evMancanti(r);
-  return (parti.length ? '<div class="doc-item-meta">' + aggEsc(parti.join(' · ')) + '</div>' : '')
-    + (manca.length ? '<div class="doc-item-meta bad">' + aggEsc(manca.join(' · ')) + '</div>' : '');
+// Come descriviServiziAdesione del Polo: giornate con orario, poi pasti e notti
+function evDescriviServizi(r) {
+  const giorni = evGiorni(evCorrente.e).filter(g => evDisp(r.id, g));
+  const righe = giorni.map(g => evDisp(r.id, g));
+  const pasti = righe.reduce((t, d) => t + EV_PASTI.filter(p => d[p]).length, 0), notti = righe.filter(d => d.pernotto).length;
+  const testo = giorni.map(g => evGiornoBreve(g) + (evFascia(evDisp(r.id, g)) ? ' ' + evFascia(evDisp(r.id, g)) : '')).join(', ');
+  const serv = evAtt('servizi') ? [pasti ? pasti + (pasti === 1 ? ' pasto' : ' pasti') : '', notti ? notti + (notti === 1 ? ' notte' : ' notti') : ''] : [];
+  return [testo, ...serv].filter(Boolean).join(', ') || '—';
 }
 
-// Inserisce o aggiorna il volontario; giorni (Map giorno → campi) sostituisce la griglia se presente
+// Inserisce o aggiorna il volontario; giorni (Map giorno → campi) sostituisce le giornate se presente
 async function evSalvaVolontario(d, giorni) {
   const c = evCorrente, esiste = c.squadra.find(r => r.volontario_id === d.volontario_id);
   const campi = Object.assign({}, d);
@@ -207,10 +209,11 @@ async function evSalvaVolontario(d, giorni) {
     c.squadra.push(riga);
   }
   if (giorni) {
+    const uguale = (k, a, b) => k.startsWith('ora_') ? (evOraBreve(a) || null) === (evOraBreve(b) || null) : a === b;
     for (const g of evGiorni(c.e)) {
       const vuole = giorni.get(g), ha = evDisp(riga.id, g);
-      if (vuole) await evScriviGiorno(riga.id, g, vuole);
-      else if (ha) await evTogliGiorno(ha);
+      if (vuole && (!ha || Object.keys(vuole).some(k => !uguale(k, ha[k], vuole[k])))) await evScriviGiorno(riga.id, g, vuole);
+      else if (!vuole && ha) await evTogliGiorno(ha);
     }
   }
   await logAttivita((esiste ? 'ha modificato ' : 'ha aggiunto ') + evNomeVol(d.volontario_id) + ' nell\'evento: ' + c.e.titolo);
@@ -227,36 +230,161 @@ function evLeggiEsigenze(prefisso) {
   return [...document.querySelectorAll('[id^="' + prefisso + '"]')].filter(i => i.checked).map(i => i.dataset.nome);
 }
 
+// -- SCHEDA VOLONTARI --
+function evVistaGriglia(si) { evCorrente.griglia = si; evRender(); }
+
+function evRenderVolontari() {
+  const c = evCorrente, presenti = evPresenti();
+  const ore = presenti.reduce((t, r) => t + evOre(r), 0);
+  evEl('evScheda').innerHTML = '<div class="bar"><label class="search" for="evVolFiltro"><input type="search" id="evVolFiltro" placeholder="Cerca volontario" autocomplete="off" value="' + aggEsc(c.cerca) + '" oninput="evCorrente.cerca=this.value;evDisegnaVolontari()"></label><span class="grow"></span>'
+    + '<button class="btn sm" onclick="evVistaGriglia(true)">Griglia giorni</button>'
+    + '<label class="btn sm">Importa da Excel<input type="file" accept=".xlsx" hidden onchange="evImportaExcel(this)"></label>'
+    + '<button class="btn sm pri" onclick="evApriVol()">Aggiungi volontario</button></div>'
+    + '<p class="sub mb10">' + presenti.length + ' presenti su ' + c.squadra.length + ' volontari · ' + ore + ' ore</p><div id="evVolLista"></div>';
+  evDisegnaVolontari();
+}
+
+function evDisegnaVolontari() {
+  const c = evCorrente, q = c.cerca.toLowerCase().trim(), box = evEl('evVolLista');
+  const nome = r => evNomeVol(r.volontario_id);
+  const righe = c.squadra.filter(r => !q || nome(r).toLowerCase().includes(q) || (r.ruolo || '').toLowerCase().includes(q))
+    .slice().sort((a, b) => nome(a).localeCompare(nome(b)));
+  if (!righe.length) { box.innerHTML = '<div class="empty">' + (c.squadra.length ? 'Nessun volontario corrisponde alla ricerca.' : 'Nessun volontario.') + '</div>'; return; }
+  const cel = evAtt('cellulare'), tip = evAtt('tipologia'), pat = evAtt('patenti'), es = evAtt('esigenze'), art = evAtt('art39');
+  box.innerHTML = '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Cognome Nome</th>' + (cel ? '<th class="sx">Cellulare</th>' : '') + (tip ? '<th class="sx">Tipologia</th>' : '') + (pat ? '<th class="sx">Patenti</th>' : '')
+    + '<th class="sx">Giorni e servizi</th>' + (es ? '<th class="sx">Esigenze</th>' : '') + (art ? '<th>Art. 39</th>' : '') + '<th>Ore</th><th>Presente</th><th></th></tr></thead><tbody>'
+    + righe.map(r => {
+      const v = evVol(r.volontario_id) || {}, manca = evMancanti(r);
+      const sotto = [r.ruolo, evAtt('note') ? r.note : ''].filter(Boolean).join(' · ');
+      return '<tr><td class="sx"><b>' + aggEsc(nome(r)) + '</b>' + (sotto ? '<div class="sub">' + aggEsc(sotto) + '</div>' : '') + (manca.length ? '<div class="sub bad">' + aggEsc(manca.join(' · ')) + '</div>' : '') + '</td>'
+        + (cel ? '<td class="sx">' + aggEsc(v.telefono || '—') + '</td>' : '') + (tip ? '<td class="sx">' + aggEsc(r.tipologia || '—') + '</td>' : '') + (pat ? '<td class="sx">' + aggEsc(v.patenti || '—') + '</td>' : '')
+        + '<td class="sx">' + aggEsc(evDescriviServizi(r)) + '</td>' + (es ? '<td class="sx">' + aggEsc(evTestoEsigenzePersona(r)) + '</td>' : '') + (art ? '<td>' + (r.art39 ? 'Sì' : '—') + '</td>' : '')
+        + '<td>' + (r.ore != null ? evOre(r) : '—') + '</td><td>' + (r.presente !== false ? 'Sì' : '<span class="pill p-grey">Assente</span>') + '</td>'
+        + '<td class="ev-az"><button class="btn sm" onclick="evApriVol(' + r.id + ')">Modifica</button><button class="btn sm danger" onclick="evTogliVol(' + r.id + ')">Elimina</button></td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+let evFormVol = null;   // { id, volontario_id }
+
+function evRigheGiorniForm(r) {
+  const orari = evAtt('orari'), serv = evAtt('servizi');
+  return '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Giorno</th><th>Disponibile</th>' + (orari ? '<th>Orario (facoltativo)</th>' : '') + (serv ? EV_SERVIZI.map(s => '<th>' + s[1] + '</th>').join('') : '') + '</tr></thead><tbody>'
+    + evGiorni(evCorrente.e).map(g => {
+      const d = (r && evDisp(r.id, g)) || null;
+      return '<tr><td class="sx">' + aggEsc(evGiornoBreve(g)) + '</td><td><input type="checkbox" id="evFg_' + g + '_disp" aria-label="Disponibile"' + (d ? ' checked' : '') + ' onchange="evFormDisp(\'' + g + '\',this.checked)"></td>'
+        + (orari ? '<td><span class="ev-orari"><input type="time" id="evFg_' + g + '_dalle" aria-label="Dalle" value="' + evOraBreve(d && d.ora_dalle) + '"><input type="time" id="evFg_' + g + '_alle" aria-label="Alle" value="' + evOraBreve(d && d.ora_alle) + '"></span></td>' : '')
+        + (serv ? EV_SERVIZI.map(s => '<td><input type="checkbox" id="evFg_' + g + '_' + s[0] + '" aria-label="' + s[1] + '"' + (d && d[s[0]] ? ' checked' : '') + ' onchange="evFormServizio(\'' + g + '\',\'' + s[0] + '\',this.checked)"></td>').join('') : '') + '</tr>';
+    }).join('') + '</tbody></table></div>'
+    + (orari ? '<p class="sub mt6">Orario vuoto = giornata intera.</p>' : '')
+    + (serv ? '<p class="sub mt6">Spuntando il pernotto, la colazione del mattino dopo si spunta da sola (modificabile).</p>' : '');
+}
+
+function evFormDisp(g, si) {
+  if (si) return;
+  EV_SERVIZI.forEach(s => { const b = evEl('evFg_' + g + '_' + s[0]); if (b) b.checked = false; });
+}
+
+function evFormServizio(g, servizio, si) {
+  if (!si) return;
+  evEl('evFg_' + g + '_disp').checked = true;
+  const domani = evEl('evFg_' + evPiuUno(g) + '_colazione');
+  if (servizio === 'pernotto' && domani) { domani.checked = true; evEl('evFg_' + evPiuUno(g) + '_disp').checked = true; }
+}
+
+// Giornate spuntate nella form: Map giorno → campi, oppure un errore
+function evLeggiGiorniForm() {
+  const giorni = new Map(), orari = evAtt('orari'), serv = evAtt('servizi');
+  for (const g of evGiorni(evCorrente.e)) {
+    if (!evEl('evFg_' + g + '_disp').checked) continue;
+    const campi = {};
+    if (serv) EV_SERVIZI.forEach(s => { campi[s[0]] = evEl('evFg_' + g + '_' + s[0]).checked; });
+    if (orari) {
+      const dalle = evEl('evFg_' + g + '_dalle').value, alle = evEl('evFg_' + g + '_alle').value;
+      if (!!dalle !== !!alle) return { errore: evGiornoBreve(g) + ': indica entrambi gli orari.' };
+      if (dalle && dalle === alle) return { errore: evGiornoBreve(g) + ': i due orari devono essere diversi.' };
+      if (!dalle && evObb('orari')) return { errore: evGiornoBreve(g) + ': l\'orario è obbligatorio.' };
+      campi.ora_dalle = dalle || null;
+      campi.ora_alle = alle || null;
+    }
+    giorni.set(g, campi);
+  }
+  if (evObb('servizi') && !giorni.size) return { errore: 'Indica almeno una giornata.' };
+  return { giorni };
+}
+
 function evApriVol(id) {
-  const r = evCorrente.squadra.find(x => x.id === id);
-  if (!r) return;
-  const tip = evCorrente.tipologie.filter(t => t.attiva || t.nome === r.tipologia);
+  const c = evCorrente, r = id ? c.squadra.find(x => x.id === id) : null;
+  if (id && !r) return;
+  evFormVol = { id: id || null, volontario_id: r ? r.volontario_id : null };
+  const tip = c.tipologie.filter(t => t.attiva || (r && t.nome === r.tipologia));
   const ov = evEl('evFormOv');
-  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Dati del volontario"><div class="shead"><h2>' + aggEsc(evNomeVol(r.volontario_id)) + '</h2><button class="x" onclick="evChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
+  ov.innerHTML = '<div class="sheet wide" role="dialog" aria-modal="true" aria-label="Volontario"><div class="shead"><h2>' + (r ? aggEsc(evNomeVol(r.volontario_id)) : 'Aggiungi volontario') + '</h2><button class="x" onclick="evChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
     + '<div class="form-err" id="evVolErr"></div>'
-    + (evAtt('tipologia') ? '<label>Tipologia<select id="evVolTip"><option value="">—</option>' + tip.map(t => '<option' + (t.nome === r.tipologia ? ' selected' : '') + '>' + aggEsc(t.nome) + '</option>').join('') + '</select></label>' : '')
-    + (evAtt('art39') ? '<label class="perm-check"><input type="checkbox" id="evVolArt"' + (r.art39 ? ' checked' : '') + '> Chiede art. 39</label>' : '')
-    + (evAtt('esigenze') ? '<div class="grp">Esigenze alimentari</div>' + evCheckEsigenze('evVolEs_', r.esigenze) + '<label>Nota esigenze<input id="evVolNota" value="' + aggEsc(r.esigenze_nota || '') + '"></label>' : '')
-    + (evAtt('note') ? '<label>Note<textarea id="evVolNote" rows="2">' + aggEsc(r.note || '') + '</textarea></label>' : '')
-    + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evVolBtn" onclick="evSalvaVol(' + id + ')">Salva</button></div></div></div>';
+    + (r ? '' : '<label>Volontario<input type="search" id="evVolCerca" placeholder="Cerca per cognome o squadra" autocomplete="off" oninput="evRenderCercaVol()"></label><div id="evVolRisultati"></div>')
+    + '<div class="row2"><label>Ruolo<input id="evVolRuolo" value="' + aggEsc(r ? r.ruolo || '' : '') + '"></label><label>Ore<input type="number" min="0" step="1" id="evVolOre" value="' + aggEsc(r && r.ore != null ? evOre(r) : '') + '"></label></div>'
+    + '<label class="perm-check"><input type="checkbox" id="evVolPresente"' + (!r || r.presente !== false ? ' checked' : '') + '> Presente</label>'
+    + (evAtt('tipologia') ? '<label>Tipologia<select id="evVolTip"><option value="">—</option>' + tip.map(t => '<option' + (r && t.nome === r.tipologia ? ' selected' : '') + '>' + aggEsc(t.nome) + '</option>').join('') + '</select></label>' : '')
+    + '<div class="grp">Giorni' + (evAtt('servizi') ? ' e servizi' : '') + '</div>' + evRigheGiorniForm(r)
+    + (evAtt('art39') ? '<label class="perm-check mt10"><input type="checkbox" id="evVolArt"' + (r && r.art39 ? ' checked' : '') + '> Chiede art. 39</label>' : '')
+    + (evAtt('esigenze') ? '<div class="grp">Esigenze alimentari</div>' + evCheckEsigenze('evVolEs_', r ? r.esigenze : []) + '<label>Nota esigenze<input id="evVolNota" value="' + aggEsc(r ? r.esigenze_nota || '' : '') + '"></label>' : '')
+    + (evAtt('note') ? '<label>Note<textarea id="evVolNote" rows="2">' + aggEsc(r ? r.note || '' : '') + '</textarea></label>' : '')
+    + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evVolBtn" onclick="evSalvaVol()">Salva</button></div></div></div>';
   ov.hidden = false;
 }
 
-async function evSalvaVol(id) {
-  const r = evCorrente.squadra.find(x => x.id === id), err = evEl('evVolErr'), btn = evEl('evVolBtn');
-  const d = { volontario_id: r.volontario_id };
+function evRenderCercaVol() {
+  const q = evEl('evVolCerca').value.toLowerCase().trim(), box = evEl('evVolRisultati');
+  evFormVol.volontario_id = null;
+  if (!q) { box.innerHTML = ''; return; }
+  const presi = new Set(evCorrente.squadra.map(r => r.volontario_id));
+  const trovati = evVolontari.filter(v => v.stato !== 'DIMESSO' && !presi.has(v.id) && (v.cognome + ' ' + v.nome + ' ' + (v.squadra || '')).toLowerCase().includes(q)).slice(0, 8);
+  box.innerHTML = trovati.length ? trovati.map(v => '<div class="lr clk" onclick="evSceltoVol(' + v.id + ')"><div class="mid"><b>' + aggEsc(v.cognome + ' ' + v.nome) + '</b><span class="sub">' + aggEsc(v.squadra || '') + '</span></div></div>').join('')
+    : '<p class="note">Nessun volontario trovato.</p>';
+}
+
+function evSceltoVol(id) {
+  evFormVol.volontario_id = id;
+  evEl('evVolCerca').value = evNomeVol(id);
+  evEl('evVolRisultati').innerHTML = '';
+}
+
+async function evSalvaVol() {
+  const err = evEl('evVolErr'), btn = evEl('evVolBtn');
+  const errore = t => { err.textContent = t; err.style.display = 'block'; };
+  if (!evFormVol.volontario_id) return errore('Scegli un volontario dall\'elenco.');
+  const ore = evEl('evVolOre').value;
+  const d = {
+    volontario_id: evFormVol.volontario_id, ruolo: evEl('evVolRuolo').value.trim() || null,
+    ore: ore === '' ? null : Math.max(0, Math.round(Number(ore))), presente: evEl('evVolPresente').checked,
+  };
   if (evAtt('tipologia')) d.tipologia = evEl('evVolTip').value || null;
   if (evAtt('art39')) d.art39 = evEl('evVolArt').checked;
   if (evAtt('esigenze')) { d.esigenze = evLeggiEsigenze('evVolEs_'); d.esigenze_nota = evEl('evVolNota').value.trim() || null; }
   if (evAtt('note')) d.note = evEl('evVolNote').value.trim() || null;
-  const errori = evValidaVol(Object.assign({}, r, d));
-  if (errori.length) { err.textContent = errori.join(' · '); err.style.display = 'block'; return; }
+  const esiste = evCorrente.squadra.find(x => x.id === evFormVol.id) || {};
+  const errori = evValidaVol(Object.assign({}, esiste, d));
+  if (errori.length) return errore(errori.join(' · '));
+  const { giorni, errore: errGiorni } = evLeggiGiorniForm();
+  if (errGiorni) return errore(errGiorni);
   btn.disabled = true;
   try {
-    await evSalvaVolontario(d);
+    await evSalvaVolontario(d, giorni);
     evChiudiForm();
-    evRenderSquadra();
-  } catch(e) { btn.disabled = false; err.textContent = e.message; err.style.display = 'block'; }
+    evRender();
+  } catch(e) { btn.disabled = false; errore(e.message); }
+}
+
+async function evTogliVol(id) {
+  const c = evCorrente, r = c.squadra.find(x => x.id === id);
+  if (!confirm('Eliminare ' + evNomeVol(r.volontario_id) + ' dall\'evento, con i suoi giorni e servizi?')) return;
+  try {
+    await sbFetch(SUPA_URL + '/rest/v1/evento_disponibilita?evento_volontario_id=eq.' + id, { method: 'DELETE', headers: H, silenzioso: true });
+    await evScrivi('DELETE', 'evento_volontari?id=eq.' + id);
+    c.squadra = c.squadra.filter(x => x.id !== id);
+    c.disp = c.disp.filter(d => d.evento_volontario_id !== id);
+    await logAttivita('ha tolto ' + evNomeVol(r.volontario_id) + ' dall\'evento: ' + c.e.titolo);
+    evRender();
+  } catch(e) { sbAvviso('Volontario non tolto.'); }
 }
 
 // -- MEZZI E MATERIALI --
@@ -267,85 +395,105 @@ function evMezzoTarga(m) { const a = evMezzoAnagrafica(m); return m.targa || (a 
 function evMezzoNelGiorno(m, g) { return !(m.giorni || []).length || m.giorni.map(evGiorno).includes(g); }
 function evGiorniMezzo(m) {
   const giorni = evGiorni(evCorrente.e), suoi = giorni.filter(g => evMezzoNelGiorno(m, g));
-  return suoi.length === giorni.length ? 'Tutti i giorni' : suoi.map(evGiornoBreve).join(', ');
+  return suoi.length === giorni.length ? 'Tutti i giorni' : suoi.map(evGiornoBreve).join(', ') || '—';
 }
 
 function evRenderMezzi() {
-  const c = evCorrente, giorni = evGiorni(c.e);
-  const presi = new Set(c.mezzi.map(r => r.mezzo_id).filter(Boolean));
-  const liberi = c.parco.filter(m => !presi.has(m.id));
-  evEl('evScheda').innerHTML = '<div class="card form mb18"><h2>Aggiungi mezzo</h2>'
+  const c = evCorrente;
+  evEl('evScheda').innerHTML = '<div class="bar"><h2>Mezzi (' + c.mezzi.length + ')</h2><span class="grow"></span><button class="btn sm pri" onclick="evApriMezzo()">Aggiungi mezzo</button></div>'
+    + (!c.mezzi.length ? '<div class="empty">Nessun mezzo indicato.</div>' : '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Mezzo</th><th class="sx">Targa</th><th class="sx">Disponibile</th><th class="sx">Note</th><th></th></tr></thead><tbody>'
+      + c.mezzi.map(m => '<tr><td class="sx"><b>' + aggEsc(evMezzoNome(m)) + '</b></td><td class="sx">' + aggEsc(evMezzoTarga(m) || '—') + '</td><td class="sx">' + aggEsc(evGiorniMezzo(m)) + '</td><td class="sx">' + aggEsc(m.note || '—') + '</td>'
+        + '<td class="ev-az"><button class="btn sm" onclick="evApriMezzo(' + m.id + ')">Modifica</button><button class="btn sm danger" onclick="evTogliMezzo(' + m.id + ')">Elimina</button></td></tr>').join('') + '</tbody></table></div>')
+    + '<div class="bar mt14"><h2>Materiali (' + c.materiali.length + ')</h2><span class="grow"></span><button class="btn sm pri" onclick="evApriMateriale()">Aggiungi materiale</button></div>'
+    + (!c.materiali.length ? '<div class="empty">Nessun materiale indicato.</div>' : '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th>Quantità</th><th class="sx">Descrizione</th><th class="sx">Note</th><th></th></tr></thead><tbody>'
+      + c.materiali.map(m => '<tr><td>' + m.quantita + '</td><td class="sx"><b>' + aggEsc(m.descrizione) + '</b></td><td class="sx">' + aggEsc(m.note || '—') + '</td>'
+        + '<td class="ev-az"><button class="btn sm" onclick="evApriMateriale(' + m.id + ')">Modifica</button><button class="btn sm danger" onclick="evTogliMateriale(' + m.id + ')">Elimina</button></td></tr>').join('') + '</tbody></table></div>');
+}
+
+function evApriMezzo(id) {
+  const c = evCorrente, m = id ? c.mezzi.find(x => x.id === id) : null;
+  const presi = new Set(c.mezzi.filter(x => x !== m).map(x => x.mezzo_id).filter(Boolean));
+  const liberi = c.parco.filter(x => !presi.has(x.id));
+  const ov = evEl('evFormOv');
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Mezzo"><div class="shead"><h2>' + (m ? 'Modifica mezzo' : 'Aggiungi mezzo') + '</h2><button class="x" onclick="evChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
+    + '<div class="form-err" id="evMezzoErr"></div>'
     + (c.parcoOk ? '<label>Dall\'anagrafica<select id="evMezzoSel" onchange="evMezzoScelto()"><option value="">— inserisci a mano —</option>'
-      + liberi.map(m => '<option value="' + m.id + '">' + aggEsc(m.automezzo + (m.targa ? ' · ' + m.targa : '')) + '</option>').join('') + '</select></label>' : '')
-    + '<div class="row2"><label>Tipo<input id="evMezzoTipo"></label><label>Targa<input id="evMezzoTarga" class="upper"></label></div>'
-    + '<div class="actions"><button class="btn pri" onclick="evAggiungiMezzo()">Aggiungi</button></div></div>'
-    + '<div class="grp">Mezzi (' + c.mezzi.length + ')</div>'
-    + (!c.mezzi.length ? '<div class="empty">Nessun mezzo assegnato.</div>' : c.mezzi.map(m => '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + aggEsc([evMezzoNome(m), evMezzoTarga(m)].filter(Boolean).join(' · ')) + '</div>'
-      + '<div class="chips mt6">' + giorni.map(g => '<button class="ev-t' + (evMezzoNelGiorno(m, g) ? ' on' : '') + '" aria-pressed="' + evMezzoNelGiorno(m, g) + '" onclick="evMezzoGiorno(' + m.id + ',\'' + g + '\')">' + aggEsc(evGiornoBreve(g)) + '</button>').join('') + '</div></div>'
-      + '<button class="btn sm danger" aria-label="Togli" onclick="evTogliMezzo(' + m.id + ')">✕</button></div>').join(''))
-    + '<div class="card form mt14"><h2>Aggiungi materiale</h2><div class="row2"><label>Quantità<input type="number" min="1" step="1" id="evMatQta" value="1"></label><label>Descrizione<input id="evMatDesc"></label></div>'
-    + '<label>Note<input id="evMatNote"></label><div class="actions"><button class="btn pri" onclick="evAggiungiMateriale()">Aggiungi</button></div></div>'
-    + '<div class="grp">Materiali (' + c.materiali.length + ')</div>'
-    + (!c.materiali.length ? '<div class="empty">Nessun materiale indicato.</div>' : c.materiali.map(m => '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + m.quantita + ' × ' + aggEsc(m.descrizione) + '</div>'
-      + (m.note ? '<div class="doc-item-meta">' + aggEsc(m.note) + '</div>' : '') + '</div><button class="btn sm danger" aria-label="Togli" onclick="evTogliMateriale(' + m.id + ')">✕</button></div>').join(''));
+      + liberi.map(x => '<option value="' + x.id + '"' + (m && m.mezzo_id === x.id ? ' selected' : '') + '>' + aggEsc(x.automezzo + (x.targa ? ' · ' + x.targa : '')) + '</option>').join('') + '</select></label>' : '')
+    + '<div class="row2"><label>Tipo<input id="evMezzoTipo" value="' + aggEsc(m ? evMezzoNome(m) : '') + '"></label><label>Targa<input id="evMezzoTargaC" class="upper" maxlength="15" value="' + aggEsc(m ? evMezzoTarga(m) : '') + '"></label></div>'
+    + '<div class="grp">Giorni</div><div class="perm-grid">' + evGiorni(c.e).map(g => '<label class="perm-check"><input type="checkbox" id="evMg_' + g + '"' + (!m || evMezzoNelGiorno(m, g) ? ' checked' : '') + '> ' + aggEsc(evGiornoBreve(g)) + '</label>').join('') + '</div>'
+    + '<label>Note<input id="evMezzoNote" value="' + aggEsc(m ? m.note || '' : '') + '"></label>'
+    + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evMezzoBtn" onclick="evSalvaMezzo(' + (m ? m.id : 'null') + ')">Salva</button></div></div></div>';
+  ov.hidden = false;
 }
 
 function evMezzoScelto() {
   const m = evCorrente.parco.find(x => x.id === Number(evEl('evMezzoSel').value));
   evEl('evMezzoTipo').value = m ? m.automezzo : '';
-  evEl('evMezzoTarga').value = m ? m.targa || '' : '';
+  evEl('evMezzoTargaC').value = m ? m.targa || '' : '';
 }
 
-async function evAggiungiMezzo() {
-  const sel = evEl('evMezzoSel'), mezzo = sel && sel.value ? Number(sel.value) : null;
-  const tipo = evEl('evMezzoTipo').value.trim(), targa = evEl('evMezzoTarga').value.trim().toUpperCase();
-  if (!tipo) { sbAvviso('Indica il tipo di mezzo.'); return; }
+async function evSalvaMezzo(id) {
+  const c = evCorrente, err = evEl('evMezzoErr'), btn = evEl('evMezzoBtn'), sel = evEl('evMezzoSel');
+  const errore = t => { err.textContent = t; err.style.display = 'block'; };
+  const tipo = evEl('evMezzoTipo').value.trim(), giorni = evGiorni(c.e).filter(g => evEl('evMg_' + g).checked);
+  if (!tipo) return errore('Indica il tipo di mezzo.');
+  if (!giorni.length) return errore('Indica almeno un giorno.');
+  const corpo = { mezzo_id: sel && sel.value ? Number(sel.value) : null, tipo, targa: evEl('evMezzoTargaC').value.trim().toUpperCase() || null, giorni, note: evEl('evMezzoNote').value.trim() || null };
+  btn.disabled = true;
   try {
-    const [riga] = await evScrivi('POST', 'evento_mezzi', { evento_id: evCorrente.e.id, mezzo_id: mezzo, tipo, targa: targa || null, giorni: evGiorni(evCorrente.e) });
-    evCorrente.mezzi.push(riga);
-    await logAttivita('ha aggiunto ' + tipo + ' all\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
-  } catch(e) { sbAvviso('Mezzo non aggiunto.'); }
-}
-
-async function evMezzoGiorno(id, g) {
-  const m = evCorrente.mezzi.find(x => x.id === id), tutti = evGiorni(evCorrente.e);
-  const giorni = evMezzoNelGiorno(m, g) ? tutti.filter(x => x !== g && evMezzoNelGiorno(m, x)) : tutti.filter(x => x === g || evMezzoNelGiorno(m, x));
-  if (!giorni.length) { sbAvviso('Un mezzo deve restare almeno su un giorno: per toglierlo usa ✕.'); return; }
-  try {
-    const [riga] = await evScrivi('PATCH', 'evento_mezzi?id=eq.' + id, { giorni });
-    Object.assign(m, riga);
-    await logAttivita('ha modificato i giorni di ' + evMezzoNome(m) + ' nell\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
-  } catch(e) { sbAvviso('Modifica non salvata.'); }
+    const [riga] = id ? await evScrivi('PATCH', 'evento_mezzi?id=eq.' + id, corpo) : await evScrivi('POST', 'evento_mezzi', Object.assign({ evento_id: c.e.id }, corpo));
+    if (id) Object.assign(c.mezzi.find(x => x.id === id), riga); else c.mezzi.push(riga);
+    await logAttivita((id ? 'ha modificato ' : 'ha aggiunto ') + tipo + ' nell\'evento: ' + c.e.titolo);
+    evChiudiForm();
+    evRender();
+  } catch(e) { btn.disabled = false; errore(e.message); }
 }
 
 async function evTogliMezzo(id) {
+  const m = evCorrente.mezzi.find(x => x.id === id);
+  if (!confirm('Eliminare ' + evMezzoNome(m) + ' dall\'evento?')) return;
   try {
     await evScrivi('DELETE', 'evento_mezzi?id=eq.' + id);
     evCorrente.mezzi = evCorrente.mezzi.filter(r => r.id !== id);
-    await logAttivita('ha tolto un mezzo dall\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
+    await logAttivita('ha tolto ' + evMezzoNome(m) + ' dall\'evento: ' + evCorrente.e.titolo);
+    evRender();
   } catch(e) { sbAvviso('Mezzo non tolto.'); }
 }
 
-async function evAggiungiMateriale() {
+function evApriMateriale(id) {
+  const m = id ? evCorrente.materiali.find(x => x.id === id) : null;
+  const ov = evEl('evFormOv');
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Materiale"><div class="shead"><h2>' + (m ? 'Modifica materiale' : 'Aggiungi materiale') + '</h2><button class="x" onclick="evChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
+    + '<div class="form-err" id="evMatErr"></div><div class="row2"><label>Quantità<input type="number" min="1" step="1" id="evMatQta" value="' + (m ? m.quantita : 1) + '"></label><label>Descrizione<input id="evMatDesc" value="' + aggEsc(m ? m.descrizione : '') + '"></label></div>'
+    + '<label>Note<input id="evMatNote" value="' + aggEsc(m ? m.note || '' : '') + '"></label>'
+    + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evMatBtn" onclick="evSalvaMateriale(' + (m ? m.id : 'null') + ')">Salva</button></div></div></div>';
+  ov.hidden = false;
+}
+
+async function evSalvaMateriale(id) {
+  const c = evCorrente, err = evEl('evMatErr'), btn = evEl('evMatBtn');
+  const errore = t => { err.textContent = t; err.style.display = 'block'; };
   const quantita = Math.round(Number(evEl('evMatQta').value)), descrizione = evEl('evMatDesc').value.trim();
-  if (!(quantita >= 1) || !descrizione) { sbAvviso('Indica quantità e descrizione.'); return; }
+  if (!(quantita >= 1) || !descrizione) return errore('Indica quantità e descrizione.');
+  const corpo = { quantita, descrizione, note: evEl('evMatNote').value.trim() || null };
+  btn.disabled = true;
   try {
-    const [riga] = await evScrivi('POST', 'evento_materiali', { evento_id: evCorrente.e.id, quantita, descrizione, note: evEl('evMatNote').value.trim() || null });
-    evCorrente.materiali.push(riga);
-    await logAttivita('ha aggiunto materiale all\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
-  } catch(e) { sbAvviso('Materiale non aggiunto.'); }
+    const [riga] = id ? await evScrivi('PATCH', 'evento_materiali?id=eq.' + id, corpo) : await evScrivi('POST', 'evento_materiali', Object.assign({ evento_id: c.e.id }, corpo));
+    if (id) Object.assign(c.materiali.find(x => x.id === id), riga); else c.materiali.push(riga);
+    await logAttivita((id ? 'ha modificato' : 'ha aggiunto') + ' materiale nell\'evento: ' + c.e.titolo);
+    evChiudiForm();
+    evRender();
+  } catch(e) { btn.disabled = false; errore(e.message); }
 }
 
 async function evTogliMateriale(id) {
+  const m = evCorrente.materiali.find(x => x.id === id);
+  if (!confirm('Eliminare "' + m.descrizione + '"?')) return;
   try {
     await evScrivi('DELETE', 'evento_materiali?id=eq.' + id);
     evCorrente.materiali = evCorrente.materiali.filter(r => r.id !== id);
     await logAttivita('ha tolto materiale dall\'evento: ' + evCorrente.e.titolo);
-    evRenderMezzi();
+    evRender();
   } catch(e) { sbAvviso('Materiale non tolto.'); }
 }
 
@@ -394,15 +542,23 @@ function evTabellaCucina(righe, stampa) {
 }
 
 function evRenderCucina() {
-  const c = evCorrente;
   evEl('evScheda').innerHTML = '<div class="bar"><p class="sub">Totali per servizio: volontari + ospiti + extra. I nomi compaiono solo per le esigenze da segnalare.</p><span class="grow"></span><button class="btn sm" onclick="evStampaCucina()">Stampa cucina</button></div>'
-    + evTabellaCucina(evCalcolaCucina(), false)
-    + '<div class="bar mt14"><h2>Ospiti (' + c.ospiti.length + ')</h2><span class="grow"></span><button class="btn sm pri" onclick="evApriOspite()">Aggiungi ospite</button></div>'
-    + (!c.ospiti.length ? '<div class="empty">Nessun ospite.</div>' : c.ospiti.map(o => {
-      const serv = c.ospitiServizi.filter(s => s.ospite_id === o.id).map(s => evGiornoBreve(evGiorno(s.giorno)) + ' ' + EV_SERVIZI.filter(x => s[x[0]]).map(x => x[2]).join(' ')).join(', ');
-      return '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + aggEsc(o.nome) + '</div><div class="doc-item-meta">' + aggEsc([serv, (o.esigenze || []).join(', ')].filter(Boolean).join(' · ') || 'Nessun servizio') + '</div></div>'
-        + '<button class="btn sm" onclick="evApriOspite(' + o.id + ')">Modifica</button><button class="btn sm danger" aria-label="Elimina" onclick="evEliminaOspite(' + o.id + ')">✕</button></div>';
-    }).join(''));
+    + evTabellaCucina(evCalcolaCucina(), false);
+}
+
+function evRenderOspiti() {
+  const c = evCorrente;
+  evEl('evScheda').innerHTML = '<div class="bar"><p class="sub">Persone esterne che usufruiscono di pasti o pernotti. Vengono conteggiate in cucina.</p><span class="grow"></span><button class="btn sm pri" onclick="evApriOspite()">Aggiungi ospite</button></div>'
+    + (!c.ospiti.length ? '<div class="empty">Nessun ospite.</div>' : '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Nome</th><th class="sx">Giorni e servizi</th><th class="sx">Esigenze alimentari</th><th class="sx">Note</th><th></th></tr></thead><tbody>'
+      + c.ospiti.map(o => {
+        const serv = c.ospitiServizi.filter(s => s.ospite_id === o.id).sort((a, b) => evGiorno(a.giorno).localeCompare(evGiorno(b.giorno))).map(s => evGiornoBreve(evGiorno(s.giorno)) + ' ' + EV_SERVIZI.filter(x => s[x[0]]).map(x => x[2]).join(' ')).join(', ');
+        return '<tr><td class="sx"><b>' + aggEsc(o.nome) + '</b></td><td class="sx">' + aggEsc(serv || '—') + '</td><td class="sx">' + aggEsc(evTestoEsigenzePersona(o)) + '</td><td class="sx">' + aggEsc(o.note || '—') + '</td>'
+          + '<td class="ev-az"><button class="btn sm" onclick="evApriOspite(' + o.id + ')">Modifica</button><button class="btn sm danger" onclick="evEliminaOspite(' + o.id + ')">Elimina</button></td></tr>';
+      }).join('') + '</tbody></table></div>');
+}
+
+function evTestoEsigenzePersona(p) {
+  return (p.esigenze || []).join(', ') + (p.esigenze_nota ? ' – ' + p.esigenze_nota : '') || '—';
 }
 
 async function evSalvaExtra(g, servizio, valore) {
@@ -468,7 +624,7 @@ async function evSalvaOspite(id) {
     }
     await logAttivita((id ? 'ha modificato' : 'ha aggiunto') + ' l\'ospite ' + nome + ' nell\'evento: ' + c.e.titolo);
     evChiudiForm();
-    evRenderCucina();
+    evRender();
   } catch(e) { btn.disabled = false; errore(e.message); }
 }
 
@@ -481,7 +637,7 @@ async function evEliminaOspite(id) {
     c.ospiti = c.ospiti.filter(x => x.id !== id);
     c.ospitiServizi = c.ospitiServizi.filter(x => x.ospite_id !== id);
     await logAttivita('ha eliminato l\'ospite ' + o.nome + ' dall\'evento: ' + c.e.titolo);
-    evRenderCucina();
+    evRender();
   } catch(e) { sbAvviso('Eliminazione non riuscita.'); }
 }
 
@@ -525,24 +681,48 @@ function evTipologieUsate(giorni) {
   return [...new Set([...evCorrente.tipologie.filter(t => t.attiva).map(t => t.nome), ...giorni.flatMap(g => Object.keys(g.tipologie).filter(Boolean))])];
 }
 
+// Come barreEsercitazione del Polo
+function evBarre(righe) {
+  if (!righe.length) return '<div class="empty">Nessun dato.</div>';
+  const max = Math.max(1, ...righe.map(r => r.n));
+  return '<div class="ev-barre">' + righe.map(r => '<div class="ev-barra"><span>' + aggEsc(r.nome) + '</span><i><b style="width:' + Math.round(r.n / max * 100) + '%"></b></i><span>' + r.n + '</span></div>').join('') + '</div>';
+}
+
+function evContaDa(valori) {
+  const conta = {};
+  valori.forEach(v => { conta[v] = (conta[v] || 0) + 1; });
+  return Object.entries(conta).map(([nome, n]) => ({ nome, n })).sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome));
+}
+
 function evRenderRiepilogo() {
-  const c = evCorrente, giorni = evCalcolaGiorni(), tipologie = evAtt('tipologia') ? evTipologieUsate(giorni) : [];
-  const conOrari = evAtt('orari'), conPat = evAtt('patenti');
+  const c = evCorrente, giorni = evCalcolaGiorni(), cucina = evCalcolaCucina(), presenti = evPresenti();
+  const tipologie = evAtt('tipologia') ? evTipologieUsate(giorni) : [];
+  const conOrari = evAtt('orari'), conPat = evAtt('patenti'), conPasti = evConPasti();
   const senzaTip = evAtt('tipologia') && giorni.some(g => g.tipologie['']);
+  const disponibili = new Set(evDispValide().map(d => d.evento_volontario_id)).size;
   const box = (n, l) => '<div class="card"><b class="ev-num">' + n + '</b><span class="sub">' + l + '</span></div>';
-  const nArt = evPresenti().filter(r => r.art39).length;
-  evEl('evScheda').innerHTML = '<div class="bar"><span class="grow"></span><button class="btn sm" onclick="evEsportaExcel()">Esporta Excel</button>'
-    + '<label class="btn sm">Importa Excel<input type="file" accept=".xlsx" hidden onchange="evImportaExcel(this)"></label></div>'
-    + '<div class="ev-stat mb18">' + box(evPresenti().length, 'Volontari presenti') + box(giorni.reduce((t, g) => t + g.pasti, 0), 'Pasti totali (con ospiti ed extra)')
-    + box(Math.max(0, ...giorni.map(g => g.pernotti)), 'Posti letto (notte più piena)') + box(c.mezzi.length, 'Mezzi')
-    + (evAtt('art39') ? box(nArt, 'Chiedono l\'art. 39') : '') + '</div>'
-    + '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Giorno</th><th>Volontari</th>' + (conOrari ? '<th>Giornata intera</th><th>Con orario</th>' : '')
-    + tipologie.map(t => '<th>' + aggEsc(t) + '</th>').join('') + (senzaTip ? '<th>Non indicata</th>' : '') + (conPat ? '<th>Patenti</th>' : '') + '<th>Mezzi</th><th>Pasti</th></tr></thead><tbody>'
+  const pasti = giorni.reduce((t, g) => t + g.pasti, 0), pernotti = giorni.reduce((t, g) => t + g.pernotti, 0);
+  const lab = t => EV_SERVIZI.find(s => s[0] === t)[1];
+  const cella = (g, t) => cucina.find(r => r.giorno === g && r.tipo === t).totale;
+  const elenco = evGiorni(c.e);
+  const idPresenti = new Set(presenti.map(r => r.volontario_id));
+  const patenti = evContaDa(presenti.flatMap(evPatentiDi));
+  const abilitazioni = evContaDa(c.abilitazioni.filter(a => idPresenti.has(a.volontario_id)).map(a => a.titolo));
+  evEl('evScheda').innerHTML = '<div class="ev-stat mb18">' + box(disponibili, 'Volontari disponibili') + box(c.mezzi.length, 'Mezzi')
+    + (evAtt('art39') ? box(presenti.filter(r => r.art39).length, 'Richieste Art. 39') : '')
+    + (conPasti ? box(pasti, 'Pasti (con ospiti ed extra)') + box(pernotti, 'Pernotti') + box(Math.max(0, ...giorni.map(g => g.pernotti)), 'Posti letto (notte più piena)') : '') + '</div>'
+    + '<div class="grp">Disponibilità per giorno</div><div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Giorno</th><th>Volontari</th>' + (conOrari ? '<th>Giornata intera</th><th>Con orario</th>' : '')
+    + tipologie.map(t => '<th>' + aggEsc(t) + '</th>').join('') + (senzaTip ? '<th>Non indicata</th>' : '') + (conPat ? '<th class="sx">Patenti</th>' : '') + '<th>Mezzi</th></tr></thead><tbody>'
     + giorni.map(g => '<tr><td class="sx">' + aggEsc(evGiornoBreve(g.giorno)) + '</td><td><b>' + g.volontari + '</b></td>'
-      + (conOrari ? '<td>' + g.intera + '</td><td class="sx">' + g.conOrario + (g.conOrario ? '<div class="sub">' + aggEsc(evConteggi(g.fasce)) + '</div>' : '') + '</td>' : '')
+      + (conOrari ? '<td>' + g.intera + '</td><td>' + g.conOrario + (g.conOrario ? '<div class="sub">' + aggEsc(evConteggi(g.fasce)) + '</div>' : '') + '</td>' : '')
       + tipologie.map(t => '<td>' + (g.tipologie[t] || 0) + '</td>').join('') + (senzaTip ? '<td>' + (g.tipologie[''] || 0) + '</td>' : '')
-      + (conPat ? '<td class="sx">' + aggEsc(evConteggi(g.patenti) || '—') + '</td>' : '') + '<td>' + g.mezzi + '</td><td>' + g.pasti + '</td></tr>').join('')
+      + (conPat ? '<td class="sx">' + aggEsc(evConteggi(g.patenti) || '—') + '</td>' : '') + '<td>' + g.mezzi + '</td></tr>').join('')
     + '</tbody></table></div>'
+    + (c.e.tipo === 'ESERCITAZIONE' && conPasti ? '<div class="grp mt14">Pasti e pernotti per giorno</div><div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Giorno</th>' + EV_SERVIZI.map(s => '<th>' + s[1] + '</th>').join('') + '</tr></thead><tbody>'
+      + elenco.map(g => '<tr><td class="sx">' + aggEsc(evGiornoBreve(g)) + '</td>' + EV_SERVIZI.map(s => '<td>' + cella(g, s[0]) + '</td>').join('') + '</tr>').join('')
+      + '<tr><td class="sx"><b>Totale</b></td>' + EV_SERVIZI.map(s => '<td><b>' + elenco.reduce((t, g) => t + cella(g, s[0]), 0) + '</b></td>').join('') + '</tr></tbody></table></div>' : '')
+    + '<div class="ev-due">' + (conPat ? '<div><div class="grp">Patenti</div>' + evBarre(patenti) + '</div>' : '')
+    + (abilitazioni.length ? '<div><div class="grp">Abilitazioni</div>' + evBarre(abilitazioni) + '</div>' : '') + '</div>'
     + (c.disp.length > evDispValide().length ? '<p class="sub mt10">Le righe degli assenti e dei giorni fuori dal periodo non sono conteggiate.</p>' : '');
 }
 
