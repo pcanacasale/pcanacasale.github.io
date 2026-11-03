@@ -139,6 +139,8 @@ p strong{color:var(--fg)}
 .zoom input{flex:1;accent-color:var(--accent-bg);height:32px}
 #cropInfo{margin-bottom:10px}
 .mt{margin-top:6px}
+.m0{margin:0}
+.duo.mb{margin-bottom:10px}
 
 /* ── documenti ── */
 .slot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:20px;margin-bottom:10px}
@@ -196,6 +198,8 @@ details.priv p{margin:10px 0 0}
 </div>
 <main class="wrap" id="app"><p class="center load">Caricamento…</p></main>
 <div class="nav hidden" id="nav"><div class="wrap nav-in" id="navIn"></div></div>
+
+<script src="ottimizza-immagine.js?v=1"></script>
 
 <script>
 'use strict';
@@ -266,6 +270,8 @@ const S = {
   catAperte: new Set(),
   esistenti: [],           // documenti già inviati in attesa (proposta aperta)
   foto: null,              // { blob, url } nuova foto pronta
+  fotoConfermata: false,   // il volontario conferma la foto già in archivio
+  fotoRifai: false,        // ha scelto "Rifai la foto"
   slot: {},                // 'TIPO|LATO' → { file, url }
   attestati: [],           // [{ key, tipo, descrizione, scadenza, file, url }]
   caricati: new Set(),     // chiavi già caricate nell'invio in corso (per i "riprova")
@@ -402,6 +408,8 @@ function inizializza(info) {
   if (p && Array.isArray(p.dpi)) p.dpi.forEach(r => { S.dpi[r.dpi_id] = { ha: r.ha, taglia: r.taglia || '' }; });
   S.esistenti = (p && p.documenti) || [];
   S.catAperte = new Set();
+  S.fotoConfermata = !!(p && p.dati && p.dati._foto_confermata_il);
+  S.fotoRifai = false;
 }
 
 // ---------------- passo 1: anagrafica ----------------
@@ -523,12 +531,27 @@ function setHa(id, ha) {
 function setTaglia(id, t) { (S.dpi[id] = S.dpi[id] || { ha: true, taglia: '' }).taglia = t; }
 
 // ---------------- passo 3: foto ----------------
-const crop = { img: null, base: 1, zoom: 1, x: 0, y: 0, drag: null };
+const crop = { img: null, orig: null, rot: 0, base: 1, zoom: 1, x: 0, y: 0, drag: null };
 function fotoEsistente() { return S.esistenti.find(d => d.tipo === 'FOTO'); }
 function renderFoto() {
   const es = fotoEsistente();
-  let html = '<h1>Foto per il tesserino</h1>'
-    + '<p>Serve una foto recente, a colori, di <strong>viso e spalle</strong>, guardando dritto, su sfondo chiaro. Il viso deve riempire quasi tutta la foto (70–80%).</p>';
+  const att = S.info.foto_attuale;
+  const regole = '<p>Serve una foto recente, a colori, di <strong>viso e spalle</strong>, guardando dritto, su sfondo chiaro. Il viso deve riempire quasi tutta la foto (70–80%).</p>';
+  let html = '<h1>Foto per il tesserino</h1>';
+  if (!S.foto && !es && att && !S.fotoRifai) {
+    // Foto già in archivio: si conferma oppure si rifà
+    html += '<div class="card foto-ok"><img class="foto-prev" src="' + esc(att.url) + '" alt="la tua foto attuale">'
+      + (S.fotoConfermata
+        ? '<div><div class="slot-m ok">✓ Foto confermata</div><div class="slot-m mt">Se vuoi, puoi ancora cambiarla.</div></div></div>'
+          + '<button class="btn sec" onclick="rifaiFoto()">Cambia foto</button>'
+        : '<div><p class="m0"><strong>Questa è la foto che abbiamo. È ancora ok?</strong></p></div></div>'
+          + '<div class="duo"><button class="btn" onclick="confermaFotoAttuale()">✓ È ok, confermo</button>'
+          + '<button class="btn sec" onclick="rifaiFoto()">Rifai la foto</button></div>');
+    $('app').innerHTML = html;
+    navPasso('vai(\'documenti\')', S.fotoConfermata ? 'Avanti →' : 'Salta per ora →');
+    return;
+  }
+  html += (att || es || S.foto ? '' : '<p><strong>Aggiungi la tua foto.</strong></p>') + regole;
   if (S.foto) {
     html += '<div class="card foto-ok"><img class="foto-prev" src="' + S.foto.url + '" alt="foto scelta">'
       + '<div><div class="slot-m ok">✓ Foto pronta</div><div class="slot-m">' + (S.foto.blob.size / 1024).toFixed(0) + ' KB</div>'
@@ -548,35 +571,55 @@ function renderFoto() {
     + '<div class="crop-wrap"><canvas id="cropCanvas" width="196" height="236"></canvas>'
     + '<div class="crop-guide"><svg viewBox="0 0 196 236" preserveAspectRatio="none"><ellipse cx="98" cy="100" rx="56" ry="68" class="crop-oval" fill="none" stroke-width="1.5" stroke-dasharray="4 3"/></svg></div></div>'
     + '<div class="zoom"><span>➖</span><input type="range" id="cropZoom" min="100" max="400" value="100" oninput="crop.zoom=this.value/100;ridisegna()" aria-label="Zoom"><span>➕</span></div>'
+    + '<div class="duo mb"><button class="btn sec" onclick="ruotaFoto(-90)" aria-label="Ruota a sinistra">⟲ Ruota</button><button class="btn sec" onclick="ruotaFoto(90)" aria-label="Ruota a destra">Ruota ⟳</button></div>'
     + '<div id="cropInfo" class="slot-m center"></div>'
     + '<button class="btn" onclick="confermaFoto()">Usa questa foto</button></div>';
+  if (att && !S.foto && !es) html += '<button class="link-btn" onclick="S.fotoRifai=false;renderFoto()">← Tieni la foto attuale</button>';
   $('app').innerHTML = html;
   navPasso('vai(\'documenti\')', (S.foto || es) ? 'Avanti →' : 'Salta per ora →');
 }
+function confermaFotoAttuale() { S.fotoConfermata = true; S.caricati.delete('FOTO_CONF'); renderFoto(); }
+function rifaiFoto() { S.fotoRifai = true; renderFoto(); }
 function bottoniFoto(cls) {
   return '<div class="duo"><button class="btn ' + cls + '" onclick="scegliFoto(\'cam\')">📷 Scatta foto</button>'
     + '<button class="btn sec" onclick="scegliFoto(\'file\')">📎 Allega file</button></div>'
     + '<p class="note">Con "Allega file" scegli una foto già presente sul telefono o sul computer.</p>';
 }
 function scegliFoto(modo) { $(modo === 'cam' ? 'fotoCam' : 'fotoFile').click(); }
-function fotoScelta(input) {
+function dimImg(i) { return { w: i.naturalWidth || i.width, h: i.naturalHeight || i.height }; }
+async function fotoScelta(input) {
   const f = input.files[0]; if (!f) return;
-  const img = new Image();
-  img.onload = () => {
-    crop.img = img; crop.base = Math.max(196 / img.naturalWidth, 236 / img.naturalHeight);
-    crop.zoom = 1; crop.x = 0; crop.y = 0;
-    $('cropZoom').value = 100; $('cropArea').classList.remove('hidden'); $('cropInfo').textContent = '';
-    ridisegna(); attivaDrag();
-    $('cropArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-  img.onerror = () => alert('Non riesco a leggere questa immagine. Prova con un\'altra foto.');
-  img.src = URL.createObjectURL(f);
+  input.value = '';
+  try { crop.orig = await oiCarica(f); } catch (e) { alert('Non riesco a leggere questa immagine. Prova con un\'altra foto.'); return; }
+  crop.rot = 0;
+  $('cropArea').classList.remove('hidden');
+  attivaDrag();
+  await impostaSorgenteFoto();
+  $('cropArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+// Sorgente ruotata se serve; con FaceDetector propone il viso centrato e zoomato.
+async function impostaSorgenteFoto() {
+  crop.img = crop.rot ? oiRuota(crop.orig, crop.rot) : crop.orig;
+  const { w, h } = dimImg(crop.img);
+  crop.base = Math.max(196 / w, 236 / h);
+  crop.zoom = 1; crop.x = 0; crop.y = 0;
+  const viso = await oiTrovaViso(crop.img);
+  if (viso) {
+    crop.zoom = Math.max(1, Math.min(4, (120 / viso.h) / crop.base));
+    const sc = crop.base * crop.zoom;
+    crop.x = (w * sc) / 2 - (viso.x + viso.w / 2) * sc;
+    crop.y = 100 - 118 + (h * sc) / 2 - (viso.y + viso.h / 2) * sc;
+  }
+  $('cropZoom').value = Math.round(crop.zoom * 100);
+  $('cropInfo').textContent = viso ? 'Abbiamo centrato il viso: sistemalo a mano se serve.' : '';
+  ridisegna();
+}
+async function ruotaFoto(gradi) { if (!crop.orig) return; crop.rot = (crop.rot + gradi + 360) % 360; await impostaSorgenteFoto(); }
 function ridisegna() {
   const cv = $('cropCanvas'); if (!cv || !crop.img) return;
   const ctx = cv.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 196, 236);
-  const sc = crop.base * crop.zoom, w = crop.img.naturalWidth * sc, h = crop.img.naturalHeight * sc;
+  const d = dimImg(crop.img), sc = crop.base * crop.zoom, w = d.w * sc, h = d.h * sc;
   const mx = Math.max(0, (w - 196) / 2), my = Math.max(0, (h - 236) / 2);
   crop.x = Math.max(-mx, Math.min(mx, crop.x)); crop.y = Math.max(-my, Math.min(my, crop.y));
   ctx.drawImage(crop.img, 98 - w / 2 + crop.x, 118 - h / 2 + crop.y, w, h);
@@ -611,6 +654,7 @@ async function confermaFoto() {
   if (!blob) { info.textContent = 'Foto troppo pesante, prova con un\'altra.'; return; }
   if (S.foto) URL.revokeObjectURL(S.foto.url);
   S.foto = { blob, url: URL.createObjectURL(blob) };
+  S.fotoConfermata = false; // una nuova foto sostituisce la conferma
   S.caricati.delete('FOTO');
   renderFoto();
 }
@@ -689,32 +733,19 @@ function bottoniSlot(key, cls) {
 }
 function scegliSlot(key, modo) { $((modo === 'cam' ? 'cam_' : 'in_') + key).click(); }
 
-// Le foto dei documenti scattate col telefono possono pesare molto: le
-// riduciamo (lato lungo max 2000 px, JPG) prima dell'invio.
+// Foto di documenti e attestati: anteprima con versione migliorata
+// (orientamento, bordi tagliati, luce, max 1800 px, JPG sotto 1 MB) oppure
+// originale, con rotazione. I PDF restano invariati. null = annullato.
 async function preparaFile(file) {
   const tipo = (file.type || '').toLowerCase();
-  if (!['image/jpeg', 'image/png', 'application/pdf'].includes(tipo)) {
-    if (tipo.startsWith('image/')) { const r = await riduciImmagine(file); if (r) return r; }
-    throw new Error('Formato non ammesso: usa JPG, PNG o PDF.');
+  if (tipo !== 'application/pdf' && (tipo.startsWith('image/') || !tipo)) {
+    const scelto = await oiScegli(file);
+    if (!scelto) return null;
+    file = scelto;
   }
-  if (tipo !== 'application/pdf' && file.size > 1.5 * 1024 * 1024) { const r = await riduciImmagine(file); if (r && r.size < file.size) return r; }
+  if (!['image/jpeg', 'image/png', 'application/pdf'].includes((file.type || '').toLowerCase())) throw new Error('Formato non ammesso: usa JPG, PNG o PDF.');
   if (file.size > MAX_BYTES) throw new Error('Il file supera i 10 MB.');
   return file;
-}
-function riduciImmagine(file) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
-      const cv = document.createElement('canvas');
-      cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-      cv.toBlob(b => resolve(b ? new File([b], 'documento.jpg', { type: 'image/jpeg' }) : null), 'image/jpeg', 0.85);
-      URL.revokeObjectURL(img.src);
-    };
-    img.onerror = () => resolve(null);
-    img.src = URL.createObjectURL(file);
-  });
 }
 function limiteRaggiunto(sostituisce) {
   const max = (S.info.limiti && S.info.limiti.max_file) || 15;
@@ -727,6 +758,8 @@ async function slotScelto(key, input) {
   if (limiteRaggiunto(!!S.slot[key] || !!esistenteSlot(t, l))) return;
   try {
     const file = await preparaFile(f);
+    input.value = '';
+    if (!file) return;
     if (S.slot[key] && S.slot[key].url) URL.revokeObjectURL(S.slot[key].url);
     S.slot[key] = { file, url: file.type !== 'application/pdf' ? URL.createObjectURL(file) : null };
     S.caricati.delete(key);
@@ -739,6 +772,8 @@ async function aggiungiAttestato(input) {
   if (limiteRaggiunto(false)) return;
   try {
     const file = await preparaFile(f);
+    input.value = '';
+    if (!file) return;
     S.attestati.push({
       key: 'ATT' + Date.now(), tipo: $('attTipo').value, descrizione: $('attDesc').value.trim().slice(0, 150),
       scadenza: $('attScad').value || null, file, url: file.type !== 'application/pdf' ? URL.createObjectURL(file) : null,
@@ -782,7 +817,7 @@ function renderRiepilogo(errore) {
     html += '<ul>' + mod.map(k => '<li><span class="k">' + esc(LABEL[k]) + ':</span> ' + esc(k === 'data_nascita' ? fmtData(S.dati[k]) : S.dati[k]) + '</li>').join('') + '</ul>';
   }
   html += '<li><strong>Taglie e DPI:</strong> ' + dpi.length + ' capi indicati' + (senzaTaglia.length ? ' <span class="amb">(' + senzaTaglia.length + ' senza taglia)</span>' : '') + '</li>';
-  html += '<li><strong>Foto:</strong> ' + (S.foto ? 'nuova foto pronta' : (fotoEsistente() ? 'già inviata' : '<span class="amb">non caricata</span>')) + '</li>';
+  html += '<li><strong>Foto:</strong> ' + ((S.foto || fotoEsistente()) ? 'Nuova foto caricata' : (S.fotoConfermata ? 'Foto confermata' : (S.info.foto_attuale ? '<span class="amb">non confermata</span>' : '<span class="amb">non caricata</span>'))) + '</li>';
   html += '<li><strong>Documenti:</strong> ' + (nuoviDoc ? nuoviDoc + ' nuovi file' : 'nessun nuovo file') + (S.esistenti.filter(d => d.tipo !== 'FOTO').length ? ', ' + S.esistenti.filter(d => d.tipo !== 'FOTO').length + ' già inviati' : '') + '</li>';
   html += '</ul></div>';
   html += '<h2>Informativa privacy</h2><details class="priv"><summary>Leggi l\'informativa</summary>' + INFORMATIVA_HTML + '</details>'
@@ -889,6 +924,7 @@ async function invia() {
     const coda = [];
     if (S.firma) coda.push({ key: 'FIRMA', run: () => carica('FIRMA', S.firma.blob, 'firma.png') });
     if (S.foto) coda.push({ key: 'FOTO', run: () => carica('FOTO', S.foto.blob, 'foto.jpg') });
+    else if (S.fotoConfermata && S.info.foto_attuale && !fotoEsistente()) coda.push({ key: 'FOTO_CONF', run: () => chiama('foto_conferma') });
     Object.keys(S.slot).filter(k => S.slot[k]).forEach(k => {
       const [tipo, lato] = k.split('|');
       if (tipo === 'PATENTE' && !patenteIndicata()) return;
@@ -924,7 +960,7 @@ function renderFatto() {
 async function ricomincia() {
   try {
     const info = await chiama('apri');
-    S.foto = null; S.slot = {}; S.attestati = []; S.caricati = new Set(); S.privacy = false; S.firma = null;
+    S.foto = null; S.slot = {}; S.attestati = []; S.caricati = new Set(); S.privacy = false; S.firma = null; S.fotoRifai = false;
     inizializza(info);
     vai('anagrafica');
   } catch (e) {

@@ -670,6 +670,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         proposta: {
           id: p.id, creato_il: p.creato_il, inviata_il: p.inviata_il || p.creato_il,
           privacy_accettata_il: datiProp._privacy_accettata_il || null,
+          foto_confermata: datiProp._foto_confermata_il || null,
           campi, dpi, documenti: await docRes.json(),
         },
       });

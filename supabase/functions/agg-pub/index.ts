@@ -16,7 +16,7 @@
 //   cambiano solo quando il master approva la proposta (agg-api → proposta_approva).
 // - Messaggi d'errore generici, nessun dettaglio interno al client.
 //
-// Body JSON: { t, data_nascita, action, ... }   (action: apri | invia | doc_rimuovi)
+// Body JSON: { t, data_nascita, action, ... }   (action: apri | invia | foto_conferma | doc_rimuovi)
 // Upload:    multipart/form-data con t, data_nascita, action=upload, tipo, descrizione, scadenza, file
 // Risposta:  { ok: true, ... } oppure { ok: false, error }
 
@@ -32,6 +32,8 @@ const MAX_FIRMA_BYTES = 300 * 1024;
 const DESCR_FIRMA = 'Firma per il consenso al trattamento dei dati personali';
 
 const MSG_LINK = 'Link non valido o scaduto. Chiedi alla segreteria un nuovo link.';
+// Campo interno di agg_proposte.dati: il volontario conferma la foto già in archivio.
+const FOTO_CONF = '_foto_confermata_il';
 
 // Campi anagrafica che il volontario può vedere e proporre di modificare.
 const CAMPI_PUB = [
@@ -183,6 +185,18 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
     const arr = await r.json();
     return Array.isArray(arr) ? arr : [];
   }
+  // Foto attuale approvata (documento FOTO già accettato), se c'è.
+  async function fotoAttuale() {
+    const r = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${v.id}&tipo=eq.FOTO&or=(stato.is.null,stato.eq.OK)&select=id,nome_file,storage_path&order=caricato_il.desc&limit=1`, { headers: HSRV });
+    const arr = await r.json();
+    return Array.isArray(arr) && arr.length ? arr[0] : null;
+  }
+  async function patchDatiProposta(p: any, dati: Record<string, unknown>) {
+    const r = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?id=eq.${p.id}&stato=eq.DA_APPROVARE`, {
+      method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify({ dati }),
+    });
+    return r.ok;
+  }
   async function eliminaDocumento(d: { id: number; storage_path: string }) {
     if (d.storage_path) await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${d.storage_path}`, { method: 'DELETE', headers: HSRV });
     await fetch(`${SUPA_URL}/rest/v1/agg_documenti?id=eq.${d.id}`, { method: 'DELETE', headers: HSRV });
@@ -209,10 +223,23 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         documenti: await documentiProposta(p.id),
       } : null;
 
+      // Foto già in archivio: link firmato di 5 minuti per mostrarla al volontario.
+      let foto_attuale: { url: string; nome_file: string } | null = null;
+      const fa = await fotoAttuale();
+      if (fa?.storage_path) {
+        const sr = await fetch(`${SUPA_URL}/storage/v1/object/sign/${BUCKET}/${fa.storage_path}`, {
+          method: 'POST', headers: HSRVJ, body: JSON.stringify({ expiresIn: 300 }),
+        });
+        if (sr.ok) {
+          const sj = await sr.json();
+          if (sj?.signedURL) foto_attuale = { url: `${SUPA_URL}/storage/v1${sj.signedURL}`, nome_file: fa.nome_file || '' };
+        }
+      }
+
       return jsonResponse({
         ok: true, volontario: dati, catalogo: Array.isArray(catalogo) ? catalogo : [],
         dpi: Array.isArray(dpi) ? dpi : [], categorie_suggerite: categorieSuggerite(v),
-        proposta, scade_il: link.scade_il,
+        proposta, foto_attuale, scade_il: link.scade_il,
         limiti: { max_file: MAX_FILE_PER_PROPOSTA, max_bytes: MAX_FILE_BYTES },
       });
     }
@@ -231,6 +258,9 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         dati[k] = (k === 'codice_fiscale' && val) ? val.toUpperCase().replace(/\s+/g, '') : val;
       }
       dati._privacy_accettata_il = ora;
+      const esistente = await propostaAperta();
+      // La conferma della foto (action foto_conferma) resta valida tra un invio e l'altro.
+      if (esistente?.dati?.[FOTO_CONF]) dati[FOTO_CONF] = esistente.dati[FOTO_CONF];
 
       // DPI: solo capi attivi del catalogo, taglia coerente con tipo_taglia.
       const catRes = await fetch(`${SUPA_URL}/rest/v1/agg_dpi_catalogo?attivo=eq.true&select=id,tipo_taglia`, { headers: HSRV });
@@ -249,7 +279,6 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         dpi.push({ dpi_id: id, ha: r.ha, taglia });
       }
 
-      const esistente = await propostaAperta();
       let proposta: any;
       if (esistente) {
         const r = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?id=eq.${esistente.id}&stato=eq.DA_APPROVARE`, {
@@ -337,8 +366,25 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       }
       const doc = (await ins.json())[0];
       for (const d of daSostituire) await eliminaDocumento(d);
+      // Nuova foto caricata: la conferma della foto precedente non vale più.
+      if (tipo === 'FOTO' && p.dati && p.dati[FOTO_CONF]) {
+        const dati = { ...p.dati }; delete dati[FOTO_CONF];
+        await patchDatiProposta(p, dati);
+      }
 
       return jsonResponse({ ok: true, documento: { id: doc.id, tipo: doc.tipo, descrizione: doc.descrizione, scadenza: doc.scadenza, nome_file: doc.nome_file } });
+    }
+
+    // ============================================================
+    // FOTO_CONFERMA — il volontario conferma che la foto in archivio va ancora bene
+    // ============================================================
+    if (action === 'foto_conferma') {
+      const p = await propostaAperta();
+      if (!p) return jsonResponse({ ok: false, error: 'Invia prima il modulo, poi conferma la foto.' }, 409);
+      if (!(await fotoAttuale())) return jsonResponse({ ok: false, error: "Non c'è nessuna foto da confermare." }, 409);
+      const dati = { ...(p.dati || {}), [FOTO_CONF]: ora };
+      if (!(await patchDatiProposta(p, dati))) return jsonResponse({ ok: false, error: 'Conferma non riuscita, riprova.' }, 500);
+      return jsonResponse({ ok: true, foto_confermata_il: ora });
     }
 
     // ============================================================

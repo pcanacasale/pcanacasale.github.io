@@ -173,8 +173,8 @@ const PAGINE = [
      v:"Quando apri il link, per prima cosa ti chiede la tua data di nascita. Serve a essere sicuri che sia proprio tu. Attenzione: dopo cinque tentativi sbagliati il link si blocca, e devi chiederne uno nuovo."},
     {t:"Un passo alla volta", d:"I tuoi dati, la foto, i documenti, le taglie: controlli e correggi una pagina alla volta e premi Continua.", h:"passi",
      v:"Poi ti guida una pagina alla volta. Controlli i tuoi dati e correggi quello che è cambiato, e premi Continua per andare avanti."},
-    {t:"Foto e documenti", d:"Foto per il tesserino: recente, a colori, viso e spalle. Documenti: foto o PDF, fronte e, se serve, retro.", h:"foto",
-     v:"Per la foto del tesserino serve una foto recente, a colori, con viso e spalle. Puoi scattarla al momento o sceglierne una dal telefono. Lo stesso per i documenti: fotografi il fronte e, se c'è, il retro."},
+    {t:"Foto e documenti", d:"Se abbiamo già la tua foto, premi È ok, confermo oppure Rifai la foto. Documenti: foto o PDF, fronte e, se serve, retro; prima dell'invio scegli Usa migliorata o Usa originale.", h:"foto",
+     v:"Se la Sezione ha già la tua foto, te la mostra: se va ancora bene premi È ok, confermo, altrimenti Rifai la foto. Per i documenti fotografi il fronte e, se c'è, il retro. Prima di caricarli vedi una versione migliorata, raddrizzata e più leggera: scegli quella o l'originale, e se serve la giri con le frecce."},
     {t:"Taglie e DPI", d:"Per ogni capo indica la taglia: servono per la divisa e i dispositivi di protezione.", h:"passi",
      v:"Nella pagina delle taglie indichi la tua misura per ogni capo. Ci serve per ordinare divise e dispositivi di protezione della taglia giusta."},
     {t:"Firma e invio", d:"Firmi con il dito per autorizzare il trattamento dei dati, controlli il riepilogo e invii.", h:"firma",
@@ -511,7 +511,7 @@ const PAGINE = [
     {t:"Il link", d:"Crea il link personale e mandalo su WhatsApp o condividilo. Il volontario conferma con la data di nascita.", h:"link",
      v:"Per ogni volontario crei un link personale e lo mandi su WhatsApp. Lui lo apre, conferma con la data di nascita, e aggiorna dati, foto, documenti e taglie."},
     {t:"Da controllare", d:"Quello che arriva non va direttamente in scheda: lo controlli tu da Foto e documenti in attesa e Da verificare.", h:"riepilogo",
-     v:"Quello che il volontario invia non finisce subito nella sua scheda: aspetta che tu lo controlli. Qui vedi quanti sono in attesa, i documenti mancanti, e le taglie da gestire."},
+     v:"Quello che il volontario invia non finisce subito nella sua scheda: aspetta che tu lo controlli. Qui vedi quanti sono in attesa, i documenti mancanti, e le taglie da gestire. Se il volontario ha confermato la foto che c'era già, nella proposta trovi la scritta Foto confermata dal volontario: non c'è niente da approvare."},
     {t:"Catalogo DPI", d:"I capi tra cui scegliere la taglia si gestiscono nel Catalogo DPI. Esporta CSV per gli ordini.", h:"catalogo",
      v:"I capi di cui chiedere la taglia li gestisci nel Catalogo DPI. E quando devi fare un ordine, Esporta CSV ti dà l'elenco delle taglie."}
   ]

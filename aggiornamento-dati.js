@@ -306,6 +306,8 @@ function aggCostruisciOverlay() {
           <div class="agg-crop-controls">
             <span class="sub">Zoom</span>
             <input type="range" id="aggCropZoom" min="100" max="400" value="100" oninput="aggFotoZoomCambiato(this.value)">
+            <button class="btn-sm" onclick="aggFotoRuota(-90)" aria-label="Ruota a sinistra">⟲</button>
+            <button class="btn-sm" onclick="aggFotoRuota(90)" aria-label="Ruota a destra">⟳</button>
           </div>
           <div class="agg-crop-info" id="aggCropInfo">trascina per spostare, usa lo zoom per ingrandire</div>
           <button class="btn pri full" onclick="aggFotoConferma()">Usa questa foto</button>
@@ -734,8 +736,9 @@ function aggBloccoProposta(v) {
   }
 
   html += '<div class="agg-prop-sub">Foto e documenti in attesa</div>';
+  if (p.foto_confermata) html += '<div class="mb10"><span class="pill p-blue">Foto confermata dal volontario</span> <span class="note">il ' + aggFmtDataOra(p.foto_confermata) + '</span></div>';
   const docs = p.documenti || [];
-  if (!docs.length) html += '<div class="note">nessun file caricato</div>';
+  if (!docs.length) html += '<div class="note">nessun file caricato' + (p.foto_confermata ? ' (la foto attuale resta quella in archivio)' : '') + '</div>';
   docs.forEach(d => {
     const scad = d.scadenza ? ' — scade ' + new Date(d.scadenza).toLocaleDateString('it-IT') : '';
     html += '<div class="agg-doc-row">'
@@ -984,9 +987,15 @@ function aggApriUploadDoc(volontarioId, tipo) {
 }
 function aggChiudiUploadDoc() { document.getElementById('aggDocOverlay').classList.remove('open'); aggDocUploadCtx = null; }
 
-function aggDocFileSelezionato(input) {
-  const file = input.files[0];
+async function aggDocFileSelezionato(input) {
+  let file = input.files[0];
   if (!file) return;
+  // Immagini: anteprima con versione migliorata (i PDF restano invariati)
+  if ((file.type || '').startsWith('image/') && typeof oiScegli === 'function') {
+    const scelto = await oiScegli(file);
+    if (!scelto) { input.value = ''; return; }
+    file = scelto;
+  }
   if (file.size > 10 * 1024 * 1024) {
     document.getElementById('aggDocUploadErr').textContent = 'File troppo grande (max 10MB).';
     document.getElementById('aggDocUploadErr').style.display = 'block';
@@ -1131,10 +1140,12 @@ let aggCropDragStart = null;
 let aggCropVolontarioId = null;
 let aggCropBlobPronto = null;
 let aggCropRidotto = false;
+let aggCropOrig = null;    // immagine con orientamento EXIF corretto
+let aggCropRot = 0;        // rotazione manuale in gradi
 
 function aggApriEditorFoto(volontarioId) {
   aggCropVolontarioId = volontarioId;
-  aggCropImg = null; aggCropBlobPronto = null; aggCropRidotto = false;
+  aggCropImg = null; aggCropOrig = null; aggCropRot = 0; aggCropBlobPronto = null; aggCropRidotto = false;
   document.getElementById('aggFotoInput').value = '';
   document.getElementById('aggCropArea').style.display = 'none';
   document.getElementById('aggCropInfo').textContent = 'trascina per spostare, usa lo zoom per ingrandire';
@@ -1143,21 +1154,40 @@ function aggApriEditorFoto(volontarioId) {
 }
 function aggChiudiEditorFoto() { document.getElementById('aggFotoOverlay').classList.remove('open'); }
 
-function aggFotoFileSelezionato(input) {
+async function aggFotoFileSelezionato(input) {
   const file = input.files[0];
   if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    aggCropImg = img;
-    aggCropBaseScale = Math.max(196 / img.naturalWidth, 236 / img.naturalHeight);
-    aggCropZoom = 1; aggCropPanX = 0; aggCropPanY = 0;
-    document.getElementById('aggCropZoom').value = 100;
-    document.getElementById('aggCropArea').style.display = 'block';
-    aggFotoRidisegna();
-    aggAttivaDragCrop();
-  };
-  img.onerror = () => alert('Immagine non leggibile.');
-  img.src = URL.createObjectURL(file);
+  try { aggCropOrig = await oiCarica(file); } catch (e) { alert('Immagine non leggibile.'); return; }
+  aggCropRot = 0;
+  document.getElementById('aggCropArea').style.display = 'block';
+  aggAttivaDragCrop();
+  await aggFotoImpostaSorgente();
+}
+
+// Prepara la sorgente (ruotata se serve) e, se il browser lo permette,
+// centra e zooma sul viso come proposta iniziale.
+async function aggFotoImpostaSorgente() {
+  aggCropImg = aggCropRot ? oiRuota(aggCropOrig, aggCropRot) : aggCropOrig;
+  const W = aggCropImg.naturalWidth || aggCropImg.width, H = aggCropImg.naturalHeight || aggCropImg.height;
+  aggCropBaseScale = Math.max(196 / W, 236 / H);
+  aggCropZoom = 1; aggCropPanX = 0; aggCropPanY = 0;
+  const viso = await oiTrovaViso(aggCropImg);
+  if (viso) {
+    aggCropZoom = Math.max(1, Math.min(4, (120 / viso.h) / aggCropBaseScale));
+    const sc = aggCropBaseScale * aggCropZoom;
+    aggCropPanX = (W * sc) / 2 - (viso.x + viso.w / 2) * sc;
+    aggCropPanY = 100 - 118 + (H * sc) / 2 - (viso.y + viso.h / 2) * sc;
+  }
+  document.getElementById('aggCropZoom').value = Math.round(aggCropZoom * 100);
+  document.getElementById('aggCropInfo').className = 'agg-crop-info';
+  document.getElementById('aggCropInfo').textContent = viso ? 'viso centrato: sistema a mano se serve' : 'trascina per spostare, usa lo zoom per ingrandire';
+  aggCropBlobPronto = null;
+  aggFotoRidisegna();
+}
+async function aggFotoRuota(gradi) {
+  if (!aggCropOrig) return;
+  aggCropRot = (aggCropRot + gradi + 360) % 360;
+  await aggFotoImpostaSorgente();
 }
 
 function aggFotoZoomCambiato(v) { aggCropZoom = Number(v) / 100; aggFotoRidisegna(); }
@@ -1168,7 +1198,7 @@ function aggFotoRidisegna() {
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 196, 236);
   const scale = aggCropBaseScale * aggCropZoom;
-  const w = aggCropImg.naturalWidth * scale, h = aggCropImg.naturalHeight * scale;
+  const w = (aggCropImg.naturalWidth || aggCropImg.width) * scale, h = (aggCropImg.naturalHeight || aggCropImg.height) * scale;
   // Clamp pan: i bordi dell'immagine scalata non devono mai entrare dentro il riquadro.
   const maxPanX = Math.max(0, (w - 196) / 2), maxPanY = Math.max(0, (h - 236) / 2);
   aggCropPanX = Math.max(-maxPanX, Math.min(maxPanX, aggCropPanX));
