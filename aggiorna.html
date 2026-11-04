@@ -200,19 +200,16 @@ details.priv p{margin:10px 0 0}
 <div class="nav hidden" id="nav"><div class="wrap nav-in" id="navIn"></div></div>
 
 <script src="ottimizza-immagine.js?v=1"></script>
+<script src="informativa-testo.js?v=1"></script>
 
 <script>
 'use strict';
 
 const PUB_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co/functions/v1/agg-pub';
 
-// Testo dell'informativa privacy: titolare e finalità li stabilisce la Sezione.
-// Sostituire questo testo provvisorio con quello ufficiale.
-const INFORMATIVA_HTML = `
-  <p><strong>Titolare del trattamento:</strong> Associazione Nazionale Alpini — Sezione di Casale Monferrato, Unità di Protezione Civile. <em>[da completare a cura della Sezione: indirizzo e contatti del titolare / referente privacy]</em></p>
-  <p><strong>Finalità:</strong> aggiornamento dell'anagrafica dei volontari, gestione di dotazioni e DPI (taglie), rilascio del tesserino e gestione dei documenti necessari all'attività di volontariato di protezione civile. <em>[da confermare a cura della Sezione]</em></p>
-  <p>I dati sono trattati solo dal personale incaricato della Sezione, conservati in archivi protetti e non sono diffusi. Quanto inviato con questo modulo viene controllato da un incaricato prima di sostituire i dati già presenti.</p>
-  <p>Puoi chiedere in ogni momento l'accesso, la rettifica o la cancellazione dei tuoi dati e gli altri diritti previsti dagli artt. 15–22 del Regolamento UE 2016/679, rivolgendoti alla Sezione.</p>`;
+// Testo dell'informativa privacy: unico per pagina web e modulo cartaceo,
+// sta in informativa-testo.js (da sostituire col testo definitivo).
+const INFORMATIVA_HTML = informativaHtml();
 
 const CAMPI = [
   // [chiave, etichetta, tipo input, attributi extra]

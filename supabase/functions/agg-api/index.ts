@@ -26,7 +26,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const BUCKET = 'agg-privato';
 
-const TIPI_DOCUMENTO = ['FOTO', 'CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE', 'ATTESTATO', 'ABILITAZIONE'];
+const TIPI_DOCUMENTO = ['FOTO', 'CARTA_IDENTITA', 'CODICE_FISCALE', 'PATENTE', 'ATTESTATO', 'ABILITAZIONE', 'MODULO_COMPILATO'];
+// Modulo cartaceo compilato e ricaricato: resta "da registrare" finché un master
+// non lo segna fatto (agg_documenti.registrato_il, vedi supabase/agg_modulo_cartaceo.sql).
 const TIPI_TAGLIA = ['ABITO', 'SCARPA', 'GUANTO', 'UNICA'];
 
 // Documenti "effettivi" del volontario: esclude quelli caricati dal volontario
@@ -218,6 +220,11 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         fetch(`${SUPA_URL}/rest/v1/agg_dpi_catalogo?select=id,categoria`, { headers: HSRV }),
       ]);
       const vols = await volRes.json();
+      const modDaReg = new Set<number>();
+      try {
+        const mr = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?tipo=eq.MODULO_COMPILATO&registrato_il=is.null&select=volontario_id`, { headers: HSRV });
+        if (mr.ok) ((await mr.json()) || []).forEach((r: any) => modDaReg.add(Number(r.volontario_id)));
+      } catch { /* colonne non ancora create */ }
       const dpi = await dpiRes.json();
       const docs = await docRes.json();
       const catalogo = await catRes.json();
@@ -239,6 +246,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
           tipo_volontario: v.tipo_volontario, stato: v.stato, stato_verifica: v.stato_verifica,
           pia_matricola: v.pia_matricola, pia_badge: v.pia_badge,
           completezza: comp.percentuale, blocchi: comp.blocchi, foto_presente: comp.foto_presente,
+          modulo_da_registrare: modDaReg.has(Number(v.id)),
         };
       });
 
@@ -274,6 +282,16 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       (catalogo || []).forEach((c: any) => { catById[c.id] = c; });
       (dpiRows || []).forEach((d: any) => { d._categoria = catById[d.dpi_id]?.categoria || null; d._nome = catById[d.dpi_id]?.nome || null; });
 
+      if (Array.isArray(docRows) && docRows.some((d: any) => d.tipo === 'MODULO_COMPILATO')) {
+        try {
+          const mr = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?volontario_id=eq.${id}&tipo=eq.MODULO_COMPILATO&select=id,registrato_il,registrato_da`, { headers: HSRV });
+          if (mr.ok) {
+            const reg: Record<number, any> = {};
+            ((await mr.json()) || []).forEach((r: any) => { reg[r.id] = r; });
+            docRows.forEach((d: any) => { if (reg[d.id]) { d.registrato_il = reg[d.id].registrato_il; d.registrato_da = reg[d.id].registrato_da; } });
+          }
+        } catch { /* colonne non ancora create */ }
+      }
       const comp = calcolaCompletezza(v, dpiRows || [], docRows || []);
       await logAccesso(master!.nome + ' ha consultato la scheda di ' + v.cognome + ' ' + v.nome);
 
@@ -493,6 +511,23 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         });
       }
       await logAttivita(master!.nome + ' ha eliminato un documento (' + doc.tipo + ') dal volontario #' + doc.volontario_id);
+      return jsonResponse({ ok: true });
+    }
+
+    // ============================================================
+    // DOCUMENTI — modulo cartaceo compilato segnato come registrato
+    // ============================================================
+    if (action === 'doc_registrato') {
+      const id = Number(payload?.id);
+      if (!id) return jsonResponse({ ok: false, error: 'id mancante' }, 400);
+      const r = await fetch(`${SUPA_URL}/rest/v1/agg_documenti?id=eq.${id}&tipo=eq.MODULO_COMPILATO`, {
+        method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=representation' },
+        body: JSON.stringify({ registrato_il: new Date().toISOString(), registrato_da: master!.nome }),
+      });
+      if (!r.ok) return jsonResponse({ ok: false, error: 'errore aggiornamento: ' + await r.text() }, 500);
+      const arr = await r.json();
+      if (!Array.isArray(arr) || !arr.length) return jsonResponse({ ok: false, error: 'modulo non trovato' }, 404);
+      await logAttivita(master!.nome + ' ha segnato come registrato il modulo cartaceo del volontario #' + arr[0].volontario_id);
       return jsonResponse({ ok: true });
     }
 

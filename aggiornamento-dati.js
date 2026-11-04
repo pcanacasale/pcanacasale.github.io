@@ -31,6 +31,7 @@ const AGG_TIPI_DOC_MULTIPLI = ['ATTESTATO', 'ABILITAZIONE'];
 const AGG_DOC_LABEL = {
   CARTA_IDENTITA: '🪪 Carta d\'identità', CODICE_FISCALE: '📄 Codice fiscale', PATENTE: '🚗 Patente',
   ATTESTATO: '📜 Attestato', ABILITAZIONE: '✅ Abilitazione', FOTO: '📷 Foto', FIRMA: '✍️ Firma consenso privacy',
+  MODULO_COMPILATO: '📝 Modulo cartaceo compilato',
 };
 const AGG_TAGLIE = {
   ABITO:  ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'],
@@ -223,6 +224,7 @@ function aggInitUI() {
       <span class="grow"></span>
       <button class="btn sm" onclick="aggApriCatalogo()">Catalogo DPI</button>
       <button class="btn sm" onclick="aggEsportaCSV()">Esporta CSV</button>
+      <button class="btn sm" onclick="aggModuliCartacei()">Moduli cartacei</button>
       <button class="btn sm" id="aggSyncBtn" onclick="aggSincronizzaNuovi()">Sincronizza nuovi volontari</button>
     </div>
 
@@ -437,7 +439,14 @@ function aggApplicaFiltri() {
     if (f.missing === 'proposte' && !v.proposta_aperta) return false;
     return true;
   });
+  aggUltimiFiltrati = filtrati;
   aggRenderGriglia(filtrati);
+}
+
+// Moduli cartacei (modulo-cartaceo.js): volontari dell'elenco mostrato, solo attivi e sospesi.
+let aggUltimiFiltrati = [];
+function aggModuliCartacei() {
+  mcScaricaZip(aggUltimiFiltrati.filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO')));
 }
 
 function aggRenderGriglia(list) {
@@ -462,6 +471,7 @@ function aggCardEl(v) {
     + '<span class="sub">' + (v.squadra || '—') + ' · PIA ' + (v.pia_matricola || '—') + '</span></div></div>'
     + '<div class="pills">'
     + (v.proposta_aperta ? '<span class="pill p-yellow">Proposta da approvare</span>' : '')
+    + (v.modulo_da_registrare ? '<span class="pill p-yellow">Modulo da registrare</span>' : '')
     + '<span class="pill ' + (v.blocchi.foto ? 'p-blue' : 'p-red') + '">' + (v.blocchi.foto ? 'Foto' : 'Senza foto') + '</span>'
     + (docManca ? '<span class="pill p-sand">Documenti mancanti</span>' : '')
     + (!v.blocchi.dpi_valutati ? '<span class="pill p-sand">DPI da fare</span>' : '')
@@ -934,6 +944,12 @@ function aggBloccoDocumenti(v) {
   if (!multipli.length) html += '<div class="note">nessuno</div>';
   multipli.forEach(d => { html += aggDocRigaHtml(d.tipo, d); });
 
+  html += '<div class="agg-prop-sub">Modulo cartaceo</div>';
+  docs.filter(d => d.tipo === 'MODULO_COMPILATO').forEach(d => { html += aggModuloRigaHtml(d); });
+  html += '<div class="agg-row2">'
+    + '<button class="btn-sm" onclick="mcScaricaModulo(aggCorrente)">Scarica modulo (PDF)</button>'
+    + '<button class="btn-sm" onclick="aggApriUploadDoc(' + v.id + ',\'MODULO_COMPILATO\')">Carica modulo compilato</button>'
+    + '</div>';
   html += '<div class="agg-row2">'
     + '<button class="btn-sm" onclick="aggApriUploadDoc(' + v.id + ',\'ATTESTATO\')">+ attestato</button>'
     + '<button class="btn-sm" onclick="aggApriUploadDoc(' + v.id + ',\'ABILITAZIONE\')">+ abilitazione</button>'
@@ -955,6 +971,28 @@ function aggDocRigaHtml(tipo, doc) {
     + '<div class="agg-doc-row-meta">' + descr + (doc.nome_file || '') + scad + '</div></div>'
     + '<button class="btn-sm" onclick="aggApriDocumento(' + doc.id + ')">apri</button>'
     + '<button class="btn-sm btn-danger" onclick="aggEliminaDocumento(' + doc.id + ')">✕</button></div>';
+}
+
+function aggModuloRigaHtml(d) {
+  const stato = d.registrato_il
+    ? '<span class="pill p-blue">Registrato il ' + new Date(d.registrato_il).toLocaleDateString('it-IT') + (d.registrato_da ? ' da ' + aggEsc(d.registrato_da) : '') + '</span>'
+    : '<span class="pill p-yellow">Modulo da registrare</span>';
+  return '<div class="agg-doc-row"><div class="agg-doc-row-info"><div class="agg-doc-row-name">' + AGG_DOC_LABEL.MODULO_COMPILATO + ' ' + stato + '</div>'
+    + '<div class="agg-doc-row-meta">' + aggEsc(d.nome_file || '') + (d.caricato_il ? ' — caricato il ' + new Date(d.caricato_il).toLocaleDateString('it-IT') : '') + '</div></div>'
+    + '<button class="btn-sm" onclick="aggApriDocumento(' + d.id + ')">apri</button>'
+    + (d.registrato_il ? '' : '<button class="btn-sm btn-ok" onclick="aggModuloRegistrato(' + d.id + ')">segna registrato</button>')
+    + '<button class="btn-sm btn-danger" onclick="aggEliminaDocumento(' + d.id + ')">✕</button></div>';
+}
+
+async function aggModuloRegistrato(id) {
+  if (!confirm('Hai riportato nella scheda i dati del modulo cartaceo? Il modulo verrà segnato come registrato.')) return;
+  try {
+    await aggCall('doc_registrato', { id });
+    aggCorrente = await aggCall('get', { id: aggCorrente.volontario.id });
+    aggRenderScheda();
+    const c = aggVolontari.find(x => x.id === aggCorrente.volontario.id);
+    if (c) { c.modulo_da_registrare = (aggCorrente.documenti || []).some(d => d.tipo === 'MODULO_COMPILATO' && !d.registrato_il); aggApplicaFiltri(); }
+  } catch (e) { alert('Errore: ' + e.message); }
 }
 
 async function aggApriDocumento(id) {
@@ -981,7 +1019,7 @@ function aggApriUploadDoc(volontarioId, tipo) {
   document.getElementById('aggDocDescrizione').value = '';
   document.getElementById('aggDocScadenza').value = '';
   document.getElementById('aggDocFileInput').value = '';
-  document.getElementById('aggDocFileLabel').textContent = 'PDF o JPG, max 10MB';
+  document.getElementById('aggDocFileLabel').textContent = 'PDF, JPG o PNG, max 10MB';
   document.getElementById('aggDocUploadErr').style.display = 'none';
   document.getElementById('aggDocOverlay').classList.add('open');
 }
@@ -1023,7 +1061,9 @@ async function aggEseguiUploadDoc() {
       content_type: file.type || 'application/octet-stream',
       file_base64: base64,
     });
+    const eraModulo = aggDocUploadCtx.tipo === 'MODULO_COMPILATO';
     aggChiudiUploadDoc();
+    if (eraModulo) { const c = aggVolontari.find(x => x.id === aggCorrente.volontario.id); if (c) { c.modulo_da_registrare = true; aggApplicaFiltri(); } }
     const data = await aggCall('get', { id: aggCorrente.volontario.id });
     aggCorrente = data;
     aggRenderScheda();

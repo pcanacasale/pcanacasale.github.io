@@ -152,9 +152,13 @@ function svRenderTesta() {
   document.getElementById('svTesta').innerHTML = '<span id="svAvatar">' + _volAvatar(v) + '</span>'
     + '<div class="mid"><h2 id="volDetailTitle">' + aggEsc(v.cognome + ' ' + v.nome) + '</h2>'
     + '<span class="sub">' + aggEsc(riga.join(' · ')) + '</span></div>'
+    + (svHaAgg() ? '<button class="btn sm" onclick="svModuloPdf()">Modulo cartaceo (PDF)</button>' : '')
     + (hasPerm('eventi') && ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO') ? '<button class="btn sm" onclick="btApriLink(' + v.id + ',\'' + aggEsc(v.cognome + ' ' + v.nome).replace(/'/g, '&#39;') + '\')">Link bot</button>' : '')
     + '<span class="pill ' + stato[1] + '">' + stato[0] + '</span>';
 }
+
+// Modulo cartaceo da stampare su carta intestata (modulo-cartaceo.js)
+function svModuloPdf() { if (sv) mcScaricaModulo(sv.agg, sv.id); }
 
 // Foto dell'archivio PIA: il file è privato e serve un link temporaneo
 async function svCaricaFoto() {
@@ -193,6 +197,7 @@ function svVociDaSistemare() {
   if (p.visita) add('visita', 'Visita');
   p.formazione.forEach(l => add('formazione', l));
   if (p.taglie) add('dati', 'Taglie');
+  if (svDocAgg().some(d => d.tipo === 'MODULO_COMPILATO' && !d.registrato_il)) add('documenti', 'Modulo da registrare');
   return voci;
 }
 
@@ -505,10 +510,10 @@ const SV_DOC_SLOT = [
   { tipo: 'PATENTE', label: 'Patente', soloPatenti: true },
 ];
 
-function svCartaDoc(titolo, d, azioni) {
+function svCartaDoc(titolo, d, azioni, pillFissa) {
   const img = d && !d.agg && svEImmagine(d.url) ? '<img src="' + aggEsc(d.url) + '" alt="" onerror="this.remove()">' : '';
   const st = d ? svStatoScadenza(d.scadenza) : '';
-  const pill = !d ? '<span class="pill p-sand">Mancante</span>' : (st ? svPillScadenza(st) : '<span class="pill p-blue">Presente</span>');
+  const pill = pillFissa || (!d ? '<span class="pill p-sand">Mancante</span>' : (st ? svPillScadenza(st) : '<span class="pill p-blue">Presente</span>'));
   return '<div class="card sv-doc"><div class="thumb b"' + (d && d.agg ? ' id="svThumb_' + d.id + '"' : '') + '>' + (img || navIc('file', 34)) + '</div>'
     + '<b>' + aggEsc(titolo) + '</b>' + (d && d.nome !== titolo ? '<span class="sub">' + aggEsc(d.nome) + '</span>' : '')
     + (d && d.scadenza ? '<span class="sub">Scade il ' + svData(d.scadenza) + '</span>' : '')
@@ -548,6 +553,15 @@ function svRenderDocumenti() {
   // Firma del consenso (arriva dal link del volontario) e altri file
   agg.filter(d => d.tipo === 'FIRMA').map(svRigaDaAgg).forEach(r => { html += svCartaDoc('Firma consenso privacy', r, svAzioniDoc(r)); });
   sv.docs.filter(d => d.tipo === 'ALTRO').map(svRigaDaDocumenti).forEach(r => { html += svCartaDoc('Altro', r, svAzioniDoc(r)); });
+
+  // Modulo cartaceo compilato e ricaricato: "da registrare" finché un master non lo segna fatto
+  agg.filter(d => d.tipo === 'MODULO_COMPILATO').forEach(d => {
+    const r = svRigaDaAgg(d);
+    const pill = d.registrato_il ? '<span class="pill p-blue">Registrato</span>' : '<span class="pill p-yellow">Modulo da registrare</span>';
+    const segna = !d.registrato_il && puoAgg ? '<button class="btn sm" onclick="aggModuloRegistrato(' + d.id + ')">Segna registrato</button>' : '';
+    html += svCartaDoc('Modulo cartaceo compilato', r, segna + svAzioniDoc(r), pill);
+  });
+  if (puoAgg) html += '<button class="sv-doc sv-doc-add" onclick="svCaricaArchivio(\'MODULO_COMPILATO\')">' + navIc('file', 28) + '<span>Carica modulo compilato</span></button>';
 
   if (svPuoDoc()) html += '<button class="sv-doc sv-doc-add" onclick="apriUploadDoc(' + sv.id + ')">' + navIc('file', 28) + '<span>Carica documento</span></button>';
   box.innerHTML = '<div class="sv-docs">' + html + '</div>'

@@ -506,14 +506,16 @@ const PAGINE = [
   schermo: () => app("altro","Aggiornamento dati", `
     <div class="m-griglia2">${box("Da fare",[tag("12","g")+" Foto e documenti in attesa",tag("8","r")+" Documenti mancanti",tag("15","g")+" DPI da fare"],"riepilogo")}
     ${box("Link per il volontario",["Rossi Mario · "+btn("Invia su WhatsApp","","mini")+" "+btn("Condividi","","mini")],"link")}</div>
-    <div class="m-azioni">${btn("Catalogo DPI","catalogo","grigio")}${btn("Esporta CSV","","grigio")}</div>`),
+    <div class="m-azioni">${btn("Catalogo DPI","catalogo","grigio")}${btn("Esporta CSV","","grigio")}${btn("Moduli cartacei","moduli","grigio")}</div>`),
   passi:[
     {t:"Il link", d:"Crea il link personale e mandalo su WhatsApp o condividilo. Il volontario conferma con la data di nascita.", h:"link",
      v:"Per ogni volontario crei un link personale e lo mandi su WhatsApp. Lui lo apre, conferma con la data di nascita, e aggiorna dati, foto, documenti e taglie."},
     {t:"Da controllare", d:"Quello che arriva non va direttamente in scheda: lo controlli tu da Foto e documenti in attesa e Da verificare.", h:"riepilogo",
      v:"Quello che il volontario invia non finisce subito nella sua scheda: aspetta che tu lo controlli. Qui vedi quanti sono in attesa, i documenti mancanti, e le taglie da gestire. Se il volontario ha confermato la foto che c'era già, nella proposta trovi la scritta Foto confermata dal volontario: non c'è niente da approvare."},
     {t:"Catalogo DPI", d:"I capi tra cui scegliere la taglia si gestiscono nel Catalogo DPI. Esporta CSV per gli ordini.", h:"catalogo",
-     v:"I capi di cui chiedere la taglia li gestisci nel Catalogo DPI. E quando devi fare un ordine, Esporta CSV ti dà l'elenco delle taglie."}
+     v:"I capi di cui chiedere la taglia li gestisci nel Catalogo DPI. E quando devi fare un ordine, Esporta CSV ti dà l'elenco delle taglie."},
+    {t:"Modulo cartaceo", d:"Per chi non usa il link: Moduli cartacei crea uno ZIP con un PDF per ogni volontario dell'elenco (attivi e sospesi). Dalla scheda c'è anche Modulo cartaceo (PDF) per uno solo. Stampa su carta intestata, fai compilare e firmare, poi Carica modulo compilato: resta Modulo da registrare finché non riporti i dati e premi Segna registrato.", h:"moduli",
+     v:"Per chi non usa il telefono c'è il modulo di carta. Moduli cartacei prepara un PDF per ogni volontario dell'elenco, tutti in un file ZIP; dalla scheda del volontario puoi farne anche uno solo. Lo stampi sulla carta intestata, il volontario lo compila a mano e firma. Poi lo scansioni e lo carichi con Carica modulo compilato: resta segnato come Modulo da registrare finché non hai riportato i dati in scheda e premuto Segna registrato."}
   ]
 },
 {
