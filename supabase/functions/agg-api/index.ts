@@ -235,7 +235,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
         const dc = docsByVol[v.id] || [];
         const comp = calcolaCompletezza(v, dr, dc);
         return {
-          id: v.id, cognome: v.cognome, nome: v.nome, squadra: v.squadra,
+          id: v.id, volontario_id: v.volontario_id ?? null, cognome: v.cognome, nome: v.nome, squadra: v.squadra,
           tipo_volontario: v.tipo_volontario, stato: v.stato, stato_verifica: v.stato_verifica,
           pia_matricola: v.pia_matricola, pia_badge: v.pia_badge,
           completezza: comp.percentuale, blocchi: comp.blocchi, foto_presente: comp.foto_presente,

@@ -72,10 +72,22 @@ async function apriDettaglio(id, tab) {
   }
 }
 
+// id = volontari.id; agg-api lavora con agg_volontari.id: prima si converte con la RPC.
+async function svIdAgg(id) {
+  if (!auClient) return null;
+  const { data, error } = await auClient.rpc('agg_id_da_volontario', { p_volontario_id: id });
+  return error ? null : (data || null);
+}
 async function svCaricaAgg(id) {
   if (!svHaAgg()) return null;
-  try { return await aggCall('get', { id }); } catch(e) { return null; } // volontario non ancora sincronizzato
+  try {
+    const aggId = await svIdAgg(id);
+    if (!aggId) return null; // non ancora sincronizzato
+    return await aggCall('get', { id: aggId });
+  } catch(e) { return null; }
 }
+// id agg_volontari del volontario aperto nella scheda (null se non sincronizzato)
+function svAggId() { return sv && sv.agg && sv.agg.volontario ? sv.agg.volontario.id : null; }
 
 async function svOreAnno(id) {
   if (!hasPerm('interventi')) return null;
@@ -304,7 +316,8 @@ async function svCaricaProblemi(vols) {
   const docsPerVol = {};
   docs.forEach(d => { (docsPerVol[d.volontario_id] = docsPerVol[d.volontario_id] || []).push(d); });
   const cardPerVol = {};
-  ((lista && lista.cards) || []).forEach(c => { cardPerVol[c.id] = c; });
+  // c.id è agg_volontari.id: l'abbinamento con volontari passa da volontario_id
+  ((lista && lista.cards) || []).forEach(c => { if (c.volontario_id != null) cardPerVol[c.volontario_id] = c; });
   svProblemiPerVol = {};
   vols.forEach(v => {
     const card = cardPerVol[v.id] || null;
@@ -541,8 +554,8 @@ function svRenderDocumenti() {
     + (svHaAgg() && !sv.agg ? '<p class="note">Questo volontario non è ancora in Aggiornamento dati: usa "Sincronizza nuovi volontari" per caricare foto PIA e documenti d\'archivio.</p>' : '');
 }
 
-function svCaricaFotoPIA() { svPreparaAgg(); aggApriEditorFoto(sv.id); }
-function svCaricaArchivio(tipo) { svPreparaAgg(); aggApriUploadDoc(sv.id, tipo); }
+function svCaricaFotoPIA() { const id = svAggId(); if (!id) return; svPreparaAgg(); aggApriEditorFoto(id); }
+function svCaricaArchivio(tipo) { const id = svAggId(); if (!id) return; svPreparaAgg(); aggApriUploadDoc(id, tipo); }
 
 // Anteprime dell'archivio privato: richieste solo aprendo la scheda (ognuna finisce nel log accessi)
 function svCaricaAnteprime() {
@@ -691,7 +704,8 @@ function svRenderDotazioni() {
 }
 
 function svApriAggDati() {
-  const id = sv.id;
+  const id = svAggId();
+  if (!id) { alert('Questo volontario non è ancora in Aggiornamento dati: usa "Sincronizza nuovi volontari".'); return; }
   if (sv.dirty.size && !confirm('Chiudere senza salvare le modifiche?')) return;
   chiudiDettaglio();
   showPanel('aggDati', null);
