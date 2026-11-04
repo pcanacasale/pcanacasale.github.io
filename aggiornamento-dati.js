@@ -101,10 +101,11 @@ function aggHaAccesso() {
 // ============================================================
 // CHIAMATA ALLA EDGE FUNCTION
 // ============================================================
-async function aggCall(action, payload) {
+// url facoltativo: altre Edge Function con la stessa chiamata (es. vp-api di verifica-piattaforme.js)
+async function aggCall(action, payload, url) {
   const token = await auToken();
   if (!token) throw new Error('Per questa pagina entra con Google o con il codice email.');
-  const res = await fetch(AGG_API_URL, {
+  const res = await fetch(url || AGG_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'apikey': SUPA_KEY },
     body: JSON.stringify({ action, payload: payload || {} }),

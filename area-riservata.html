@@ -1149,6 +1149,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <button id="siVisite" class="sidebar-item" onclick="navTo('visite','Visite mediche',this)" style="display:none"></button>
     <button id="siFormazione" class="sidebar-item" onclick="navTo('formazione','Formazione',this)" style="display:none"></button>
     <button id="siAggDati" class="sidebar-item" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none"></button>
+    <button id="siVerificaPiattaforme" class="sidebar-item" onclick="navTo('verificaPiattaforme','Verifica piattaforme',this)" style="display:none"></button>
     <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Registro accessi',this)" style="display:none"></button>
     <button id="siGestioneAccessi" class="sidebar-item" onclick="navTo('gestioneAccessi','Gestione accessi',this)" style="display:none"></button>
     <button id="siStatistiche" class="sidebar-item" onclick="navTo('statistiche','Statistiche',this)" style="display:none"></button>
@@ -1998,6 +1999,12 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div id="aggRoot"><div class="loading-msg">caricamento...</div></div>
     </div>
 
+    <!-- VERIFICA PIATTAFORME (permesso aggiornamento_dati — UI generata da verifica-piattaforme.js) -->
+    <div class="panel" id="panelVerificaPiattaforme">
+      <div class="phead"><div><h1>Verifica piattaforme</h1></div></div>
+      <div id="vpRoot"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
     <!-- IMPOSTAZIONI -->
     <div class="panel" id="panelImpostazioni">
       <div class="phead"><div><h1>Impostazioni</h1></div></div>
@@ -2155,9 +2162,11 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=205"></script>
+<script src="area-riservata.js?v=206"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
-<script src="aggiornamento-dati.js?v=14"></script>
+<script src="aggiornamento-dati.js?v=15"></script>
+<script src="verifica-piattaforme-core.js?v=1"></script>
+<script src="verifica-piattaforme.js?v=1"></script>
 <script src="informativa-testo.js?v=1"></script>
 <script src="modulo-cartaceo.js?v=1"></script>
 <script src="scheda-volontario.js?v=9"></script>

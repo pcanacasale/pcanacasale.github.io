@@ -274,6 +274,7 @@ const NAV_VOCI = [
   { id:'siVisite',          label:'Visite mediche',     ic:'heart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siFormazione',      label:'Formazione',         ic:'clip',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siVerificaPiattaforme', label:'Verifica piattaforme', ic:'table', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:NAV_RUOLI_TUTTI },
   { id:'siRichieste',       label:'Richieste',          ic:'inbox',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
@@ -501,7 +502,7 @@ const PANEL_PERM = {
   pianiCarico: ['pianicarico'], mezzi: ['mezzi'], tlc: ['tlc'], galleria: ['galleria'],
   editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], eventi: ['eventi'], statistiche: ['statistiche'],
   db: ['db'], accessi: ['accessi'], richieste: ['richieste'], impostazioni: ['impostazioni'],
-  aggDati: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
+  aggDati: ['aggiornamento_dati'], verificaPiattaforme: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
 };
 function puoAprirePannello(name) {
   if (name === 'gestioneAccessi') return !!currentUser && currentUser.tipo_accesso === 'master';

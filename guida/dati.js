@@ -20,7 +20,7 @@ const GUIDA = {
   percorsi: {
     volontari: { titolo:"Sono un volontario", breve:"Volontari", icona:"ti-user", nota:"Entrare, vedere la tua scheda, aggiornare i dati e usare il bot Telegram." },
     staff:     { titolo:"Gestisco l'Area Riservata", breve:"Staff", icona:"ti-users", nota:"Volontari, interventi, eventi, logistica e amministrazione.",
-      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","visite","formazione","aggiornamento-dati","statistiche","segnalazioni-staff","richieste","db","accessi","gestione-accessi","impostazioni"] }
+      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","visite","formazione","aggiornamento-dati","verifica-piattaforme","statistiche","segnalazioni-staff","richieste","db","accessi","gestione-accessi","impostazioni"] }
   }
 };
 
@@ -516,6 +516,30 @@ const PAGINE = [
      v:"I capi di cui chiedere la taglia li gestisci nel Catalogo DPI. E quando devi fare un ordine, Esporta CSV ti dà l'elenco delle taglie."},
     {t:"Modulo cartaceo", d:"Per chi non usa il link: Moduli cartacei crea uno ZIP con un PDF per ogni volontario dell'elenco (attivi e sospesi). Dalla scheda c'è anche Modulo cartaceo (PDF) per uno solo. Stampa su carta intestata, fai compilare e firmare, poi Carica modulo compilato: resta Modulo da registrare finché non riporti i dati e premi Segna registrato.", h:"moduli",
      v:"Per chi non usa il telefono c'è il modulo di carta. Moduli cartacei prepara un PDF per ogni volontario dell'elenco, tutti in un file ZIP; dalla scheda del volontario puoi farne anche uno solo. Lo stampi sulla carta intestata, il volontario lo compila a mano e firma. Poi lo scansioni e lo carichi con Carica modulo compilato: resta segnato come Modulo da registrare finché non hai riportato i dati in scheda e premuto Segna registrato."}
+  ]
+},
+{
+  id:"verifica-piattaforme", percorso:["staff"], titolo:"Verifica piattaforme", icona:"ti-table",
+  perche:"Il controllo di ogni anno: confrontare i dati del portale con quelli di PIA e Volter e decidere, persona per persona, quale valore è giusto.",
+  chi:"Chi ha il permesso Aggiornamento dati.", video:"",
+  intro:"Verifica piattaforme mette uno accanto all'altro i dati del portale, di PIA e di Volter, e ti fa vedere solo dove non coincidono.",
+  schermo: () => app("altro","Verifica piattaforme", `
+    <div class="m-griglia2">${box("File da confrontare",["PIA · pia_volontari.json "+tag("caricato","b"),"Volter · report volontari "+tag("caricato","b"),btn("Copia script","script","mini")],"file")}
+    ${box("Rossi Mario",["Indirizzo · Portale: Via Roma 12 · PIA: V. Roma 12 · Volter: Via Roma 14","Valore da usare: "+tag("Via Roma 12","g"),btn("Segna come verificato","","mini")+" "+btn("Da chiedere al volontario","","mini")],"scheda")}</div>
+    <div class="m-azioni">${btn("Da decidere","filtri","grigio")}${btn("Applica i suggerimenti","sugg","grigio")}${btn("Applica al portale","applica")}${btn("Resoconto PDF","pdf","grigio")}</div>`),
+  passi:[
+    {t:"I file", d:"Carica il file di PIA (lo crea lo script: Copia script, poi incollalo nella console di PIA, Schede Volontari) e il report volontari di Volter; la rubrica di Volter è facoltativa e serve per telefoni ed email. I file restano sul tuo computer.", h:"file",
+     v:"Per prima cosa carichi i file. Quello di PIA lo prepari con lo script che trovi nella pagina: premi Copia script, entri in PIA nelle Schede Volontari, premi F12 e lo incolli nella console. Poi carichi il report volontari di Volter, e se vuoi anche la rubrica per telefoni ed email. Non preoccuparti: i file non vanno su internet, restano sul tuo computer."},
+    {t:"Decidere", d:"Per ogni differenza tocca il valore giusto tra Portale, PIA e Volter, oppure scrivi un altro valore. Le scelte si salvano da sole. Il valore suggerito ha il bordo tratteggiato.", h:"scheda",
+     v:"A sinistra hai l'elenco delle persone, a destra la scheda con i tre valori uno accanto all'altro. Dove non coincidono tocchi quello giusto, o ne scrivi un altro. Quando due fonti su tre sono d'accordo, la pagina te lo suggerisce con un bordo tratteggiato. Non c'è niente da salvare: lo fa da sola."},
+    {t:"Filtri e suggerimenti", d:"I filtri mostrano chi è da decidere, da chiedere, verificato o manca in una fonte. Applica i suggerimenti sceglie in un colpo il valore suggerito per tutti i campi ancora aperti.", h:"sugg",
+     v:"Con i filtri in alto vedi solo chi è ancora da decidere, chi devi chiamare, o chi manca in una delle piattaforme. Se ti fidi dei suggerimenti, Applica i suggerimenti li sceglie tutti in un colpo, e poi controlli solo quello che resta."},
+    {t:"Presenza e stato", d:"Sotto la tabella indica se la persona deve essere aggiunta o tolta da una fonte, e se è attiva, sospesa o dimessa. Segna come verificato quando hai finito, o Da chiedere al volontario.", h:"scheda",
+     v:"Sotto la tabella dici se una persona va aggiunta o tolta da una piattaforma, e se è attiva, sospesa o dimessa. Quando hai finito con lei premi Segna come verificato; se invece devi sentirla, premi Da chiedere al volontario."},
+    {t:"Applica e resoconto", d:"Nel Riepilogo: Applica al portale scrive le correzioni decise, dopo un'anteprima; i dimessi diventano Dimesso, nessuno viene cancellato. Resoconto PDF elenca il fatto e quello che resta da correggere a mano in PIA e Volter.", h:"applica",
+     v:"Alla fine vai nel Riepilogo. Applica al portale ti fa vedere l'anteprima e poi scrive tutte le correzioni nel portale; chi è dimesso viene segnato come dimesso, non si cancella nessuno. Con Resoconto PDF hai l'elenco di quello che è fatto e di quello che resta da sistemare a mano in PIA e in Volter."},
+    {t:"Gli anni", d:"Ogni anno si riparte da zero con i file nuovi. Gli anni passati si consultano dal menu Anno, in sola lettura.", h:"pdf",
+     v:"Ogni anno il controllo riparte da capo, con i file nuovi. Le decisioni degli anni passati restano: le ritrovi scegliendo l'anno, e si possono solo guardare."}
   ]
 },
 {
