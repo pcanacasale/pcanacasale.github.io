@@ -59,15 +59,27 @@ function renderVisite(data) {
   const list = document.getElementById('visiteList');
   if (!data.length) { list.innerHTML = '<div class="empty">Nessun volontario trovato.</div>'; return; }
   list.innerHTML = '<div class="card tbl db-wrap"><table class="db-table visite-tbl"><thead><tr>'
-    + '<th>Cognome</th><th>Nome</th><th>Codice fiscale</th><th>Stato visita</th><th>Data visita</th><th>CDC 1°</th><th>CDC 2°</th><th>Note</th>'
+    + '<th>Cognome</th><th>Nome</th><th>Codice fiscale</th><th>Stato visita</th><th>Esito visita</th><th>Data visita</th><th>Scadenza</th><th>CDC 1°</th><th>CDC 2°</th><th>Note</th>'
     + '</tr></thead><tbody>' + data.map(v => '<tr>'
       + '<td><b>' + aggEsc(v.cognome || '') + '</b></td><td>' + aggEsc(v.nome || '') + '</td><td>' + aggEsc(v.codice_fiscale || '—') + '</td>'
       + '<td><select aria-label="Stato visita" onchange="cambiaVisitaCampo(' + v.id + ',\'stato_visita\',this.value)">' + visitaOpzioniHtml(visitaStatoNorm(v)) + '</select></td>'
+      + '<td><select aria-label="Esito visita" onchange="cambiaVisitaCampo(' + v.id + ',\'esito_visita\',this.value)">' + visitaEsitoOpzioniHtml(v.esito_visita) + '</select></td>'
       + '<td><input type="date" aria-label="Data visita" value="' + aggEsc(v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ',\'data_visita\',this.value)"></td>'
+      + '<td><input type="date" aria-label="Scadenza visita" value="' + aggEsc(v.scadenza_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ',\'scadenza_visita\',this.value)">'
+        + (svStatoScadenza(v.scadenza_visita) ? '<div style="margin-top:4px">' + svPillScadenza(svStatoScadenza(v.scadenza_visita)) + '</div>' : '') + '</td>'
       + '<td><input type="checkbox" aria-label="CDC 1° Step"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ',\'cdc_1_step\',this.checked)"></td>'
       + '<td><input type="checkbox" aria-label="CDC 2° Step"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ',\'cdc_2_step\',this.checked)"></td>'
       + '<td><textarea class="visite-note" rows="1" aria-label="Note visita di ' + aggEsc((v.cognome || '') + ' ' + (v.nome || '')) + '" placeholder="Note" onchange="cambiaVisitaCampo(' + v.id + ',\'note_visita\',this.value.trim())">' + aggEsc(v.note_visita || '') + '</textarea></td>'
       + '</tr>').join('') + '</tbody></table></div>';
+}
+
+// Esito della visita (volontari.esito_visita, supabase/visite_esito_scadenza.sql)
+const VISITA_ESITI = {
+  IDONEO: 'Idoneo', IDONEO_LIMITAZIONI: 'Idoneo con Limitazioni', IDONEO_PRESCRIZIONI: 'Idoneo con Prescrizioni', INIDONEO: 'Inidoneo',
+};
+function visitaEsitoOpzioniHtml(sel) {
+  return '<option value="">—</option>' + Object.keys(VISITA_ESITI).map(k =>
+    '<option value="' + k + '"' + (sel === k ? ' selected' : '') + '>' + VISITA_ESITI[k] + '</option>').join('');
 }
 
 async function cambiaVisitaCampo(volId, campo, valore) {
@@ -83,6 +95,7 @@ async function cambiaVisitaCampo(volId, campo, valore) {
     if (!res.ok) throw new Error('errore');
     v[campo] = valore;
     if (campo === 'stato_visita') renderDashboardVisite();
+    if (campo === 'scadenza_visita') filtraVisite();     // aggiorna l'avviso di scadenza
     logAttivita('ha modificato la visita di: ' + v.cognome + ' ' + v.nome);
   } catch(e) {
     err.textContent = 'Modifica non salvata per ' + v.cognome + ' ' + v.nome + ': riprova.';
