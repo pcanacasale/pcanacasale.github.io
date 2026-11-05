@@ -50,7 +50,7 @@ function filtraVisite() {
   const q = document.getElementById('visiteSearch').value.toLowerCase().trim();
   const stato = document.getElementById('visiteFiltroStato').value;
   renderVisite(visiteData.filter(v => {
-    if (q && !((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '')).toLowerCase().includes(q)) return false;
+    if (q && !((v.cognome || '') + ' ' + (v.nome || '') + ' ' + (v.codice_fiscale || '') + ' ' + (v.note_visita || '')).toLowerCase().includes(q)) return false;
     return !stato || (visitaStatoNorm(v) || 'VUOTO') === stato;
   }));
 }
@@ -59,13 +59,14 @@ function renderVisite(data) {
   const list = document.getElementById('visiteList');
   if (!data.length) { list.innerHTML = '<div class="empty">Nessun volontario trovato.</div>'; return; }
   list.innerHTML = '<div class="card tbl db-wrap"><table class="db-table visite-tbl"><thead><tr>'
-    + '<th>Cognome</th><th>Nome</th><th>Codice fiscale</th><th>Stato visita</th><th>Data visita</th><th>CDC 1°</th><th>CDC 2°</th>'
+    + '<th>Cognome</th><th>Nome</th><th>Codice fiscale</th><th>Stato visita</th><th>Data visita</th><th>CDC 1°</th><th>CDC 2°</th><th>Note</th>'
     + '</tr></thead><tbody>' + data.map(v => '<tr>'
       + '<td><b>' + aggEsc(v.cognome || '') + '</b></td><td>' + aggEsc(v.nome || '') + '</td><td>' + aggEsc(v.codice_fiscale || '—') + '</td>'
       + '<td><select aria-label="Stato visita" onchange="cambiaVisitaCampo(' + v.id + ',\'stato_visita\',this.value)">' + visitaOpzioniHtml(visitaStatoNorm(v)) + '</select></td>'
       + '<td><input type="date" aria-label="Data visita" value="' + aggEsc(v.data_visita || '') + '" onchange="cambiaVisitaCampo(' + v.id + ',\'data_visita\',this.value)"></td>'
       + '<td><input type="checkbox" aria-label="CDC 1° Step"' + (v.cdc_1_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ',\'cdc_1_step\',this.checked)"></td>'
       + '<td><input type="checkbox" aria-label="CDC 2° Step"' + (v.cdc_2_step ? ' checked' : '') + ' onchange="cambiaVisitaCampo(' + v.id + ',\'cdc_2_step\',this.checked)"></td>'
+      + '<td><textarea class="visite-note" rows="1" aria-label="Note visita di ' + aggEsc((v.cognome || '') + ' ' + (v.nome || '')) + '" placeholder="Note" onchange="cambiaVisitaCampo(' + v.id + ',\'note_visita\',this.value.trim())">' + aggEsc(v.note_visita || '') + '</textarea></td>'
       + '</tr>').join('') + '</tbody></table></div>';
 }
 

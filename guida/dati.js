@@ -474,11 +474,13 @@ const PAGINE = [
   chi:"Chi ha il permesso Visite mediche.", video:"",
   intro:"In Visite mediche vedi a colpo d'occhio a che punto è ogni volontario con la visita.",
   schermo: () => app("altro","Visite mediche", `
-    <div class="m-barra">${cerca("Cerca per nome o CF")}<span class="m-sp"></span>${btn("Esporta PDF","pdf")}</div>
-    ${tab([["Volontario","Stato","Scadenza"],["Rossi Mario",tag("Completata","v"),"03/2027"],["Bianchi Laura",tag("Da Fare","r"),"—"],["Verdi Paolo",tag("Verifica","g"),"11/2026"]],"elenco")}`),
+    <div class="m-barra">${cerca("Cerca per nome, CF o note")}<span class="m-sp"></span>${btn("Esporta PDF","pdf")}</div>
+    ${tab([["Volontario","Stato","Scadenza","Note"],["Rossi Mario",tag("Completata","v"),"03/2027","<span data-h='note'>Portare esami del sangue</span>"],["Bianchi Laura",tag("Da Fare","r"),"—",""],["Verdi Paolo",tag("Verifica","g"),"11/2026",""]],"elenco")}`),
   passi:[
     {t:"Gli stati", d:"Completata, Da Fare, Verifica, Solo Esami, Esonero o Non impostato.", h:"elenco",
      v:"Ogni volontario ha uno stato: completata, da fare, verifica, solo esami, esonero, oppure non impostato se nessuno l'ha ancora indicato."},
+    {t:"Le note", d:"Nella colonna Note scrivi un appunto per ogni volontario: si salva quando esci dal campo. La ricerca trova anche le note.", h:"note",
+     v:"Accanto a ogni volontario c'è il campo Note, dove puoi scrivere un appunto, per esempio cosa deve portare alla visita. Si salva da solo quando passi ad altro. E se cerchi una parola, la pagina guarda anche dentro le note."},
     {t:"Esportare", d:"Esporta PDF: scegli quali stati e colonne includere, ed eventualmente un intervallo di date.", h:"pdf",
      v:"Con Esporta PDF prepari l'elenco da mandare al medico o all'ufficio: scegli quali stati includere, quali colonne, e se vuoi un intervallo di date."}
   ]
