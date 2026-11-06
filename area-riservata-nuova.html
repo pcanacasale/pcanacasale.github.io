@@ -1084,12 +1084,13 @@ body.cv-solo-vede .cv-gestione{display:none}
   --tint:rgba(11,79,168,.06);
   --veil:rgba(16,38,74,.22);
   --bg-grad:radial-gradient(620px 520px at 12% 8%,rgba(52,132,235,.55),transparent 70%),radial-gradient(520px 460px at 88% 14%,rgba(255,194,26,.50),transparent 70%),radial-gradient(720px 560px at 72% 92%,rgba(90,175,255,.50),transparent 70%),radial-gradient(520px 460px at 8% 88%,rgba(255,206,100,.42),transparent 70%),linear-gradient(135deg,#C7DCF6 0%,#E6EFFB 50%,#F7EBC8 100%);
+  --av-bg:#BFD8F5;--yellow-ink:#7A5200;--hover:rgba(11,79,168,.08);
   --side-w:248px;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--glass:rgba(18,30,51,.62);--glass-strong:rgba(18,30,51,.86);--glass-bdr:rgba(255,255,255,.12);--glass-shadow:0 10px 36px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);--glass-pop:var(--shadow);--glass-blur:blur(22px) saturate(160%);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
+  :root:not([data-theme="light"]){--glass:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));--glass-strong:linear-gradient(135deg,rgba(32,48,80,.88),rgba(20,33,58,.82));--glass-bdr:rgba(255,255,255,.16);--glass-shadow:0 10px 36px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.16),inset 0 -1px 0 rgba(255,255,255,.04);--glass-pop:0 28px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.16);--glass-blur:blur(22px) saturate(170%);--field-bg:rgba(255,255,255,.07);--field-bdr:rgba(255,255,255,.16);--tint:rgba(141,187,247,.10);--veil:rgba(2,8,20,.55);--av-bg:rgba(141,187,247,.28);--yellow-ink:#FFD866;--hover:rgba(255,255,255,.08);--bg-grad:radial-gradient(620px 520px at 12% 8%,rgba(47,111,196,.55),transparent 70%),radial-gradient(520px 460px at 88% 14%,rgba(255,194,26,.20),transparent 70%),radial-gradient(720px 560px at 72% 92%,rgba(47,111,196,.40),transparent 70%),radial-gradient(520px 460px at 8% 88%,rgba(255,194,26,.14),transparent 70%),linear-gradient(135deg,#0B1424,#0E1B33 55%,#101626);}
 }
-:root[data-theme="dark"]{--glass:rgba(18,30,51,.62);--glass-strong:rgba(18,30,51,.86);--glass-bdr:rgba(255,255,255,.12);--glass-shadow:0 10px 36px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);--glass-pop:var(--shadow);--glass-blur:blur(22px) saturate(160%);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
+:root[data-theme="dark"]{--glass:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.04));--glass-strong:linear-gradient(135deg,rgba(32,48,80,.88),rgba(20,33,58,.82));--glass-bdr:rgba(255,255,255,.16);--glass-shadow:0 10px 36px rgba(0,0,0,.40),inset 0 1px 0 rgba(255,255,255,.16),inset 0 -1px 0 rgba(255,255,255,.04);--glass-pop:0 28px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.16);--glass-blur:blur(22px) saturate(170%);--field-bg:rgba(255,255,255,.07);--field-bdr:rgba(255,255,255,.16);--tint:rgba(141,187,247,.10);--veil:rgba(2,8,20,.55);--av-bg:rgba(141,187,247,.28);--yellow-ink:#FFD866;--hover:rgba(255,255,255,.08);--bg-grad:radial-gradient(620px 520px at 12% 8%,rgba(47,111,196,.55),transparent 70%),radial-gradient(520px 460px at 88% 14%,rgba(255,194,26,.20),transparent 70%),radial-gradient(720px 560px at 72% 92%,rgba(47,111,196,.40),transparent 70%),radial-gradient(520px 460px at 8% 88%,rgba(255,194,26,.14),transparent 70%),linear-gradient(135deg,#0B1424,#0E1B33 55%,#101626);}
 
 body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
 h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
@@ -1115,14 +1116,14 @@ select,input[type=text],input[type=number],input[type=month],input[type=date],in
 .irow,.arow,.lr,.cfoot{border-color:var(--line)}
 .dt{background:var(--accent-bg);color:#fff}
 .dt span{color:rgba(255,255,255,.8)}
-.av{background:#BFD8F5;color:var(--fg)}
+.av{background:var(--av-bg);color:var(--fg)}
 .targa{background:var(--field-bg);border-color:var(--field-bdr)}
 
 /* ── stati: colori morbidi ── */
 .pill{padding:4px 12px}
 .p-blue{background:var(--soft);color:var(--accent)}
-.p-yellow,.p-sand{background:var(--yellow-soft);color:#7A5200}
-.p-red{background:var(--red-soft);color:#B42318}
+.p-yellow,.p-sand{background:var(--yellow-soft);color:var(--yellow-ink)}
+.p-red{background:var(--red-soft);color:var(--red)}
 
 /* ── finestre (modali) ── */
 .ov,.vista-form-overlay,.doc-upload-overlay,.db-cols-overlay,.db-record-overlay,.vol-detail,.vol-form{
@@ -1170,7 +1171,7 @@ select,input[type=text],input[type=number],input[type=month],input[type=date],in
   .sn-item{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:7px 12px;border:0;border-radius:12px;background:transparent;color:var(--fg);font-weight:500;font-size:14px;text-align:left}
   .sn-item svg{flex:none;color:var(--muted)}
   .sn-item span{flex:1;min-width:0}
-  .sn-item:hover{background:rgba(11,79,168,.08)}
+  .sn-item:hover{background:var(--hover)}
   .sn-item.on{background:var(--accent-bg);color:var(--accent-fg);font-weight:600}
   .sn-item.on svg{color:var(--accent-fg)}
   .who{border-top:1px solid var(--line);padding-top:12px;margin-top:6px}
