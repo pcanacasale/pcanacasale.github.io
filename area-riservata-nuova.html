@@ -1063,30 +1063,74 @@ body.cv-solo-vede .cv-gestione{display:none}
 <style>
 /* ══ TEMA "VETRO SOFT" — barra laterale + card semi-trasparenti ═════════════
    Si carica DOPO lo <style> di area-riservata-nuova.html e cambia solo la grafica:
-   sfondo sfumato, card, menu laterale su desktop. La logica non cambia.
+   sfondo sfumato, card, tabelle, pillole, finestre e schede. La logica non cambia.
    Su telefono (≤899px) resta barra in basso + pannello "Altro" come prima. */
 
 :root{
+  /* palette (solo tema chiaro: il tema scuro ha i suoi valori, con specificità maggiore) */
+  --fg:#10264A;--muted:#3B4F70;--accent:#0B4FA8;--accent-bg:#0B4FA8;--soft:#DCE8F9;
+  --yellow:#FFC21A;--yellow-soft:#FFEDB8;--red-soft:#FDE1DE;--grey-bg:#E6EAF1;
+  --line:rgba(16,38,74,.09);--line2:rgba(16,38,74,.16);
+  --r:24px;--r-md:24px;--r-lg:24px;
+  /* vetro */
   --glass:rgba(255,255,255,.80);
-  --glass-strong:rgba(255,255,255,.90);
+  --glass-strong:rgba(255,255,255,.94);
   --glass-bdr:#FFFFFF;
   --glass-shadow:0 8px 30px rgba(16,38,74,.08);
+  --glass-pop:0 24px 60px rgba(16,38,74,.22);
+  --field-bg:rgba(255,255,255,.92);
+  --field-bdr:rgba(16,38,74,.14);
+  --tint:rgba(11,79,168,.06);
+  --veil:rgba(16,38,74,.28);
   --bg-grad:linear-gradient(135deg,#BFD8F5 0%,#DDE9F8 45%,#F6E7B8 100%);
   --side-w:248px;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--bg-grad:var(--bg)}
+  :root:not([data-theme="light"]){--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--glass-pop:var(--shadow);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
 }
-:root[data-theme="dark"]{--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--bg-grad:var(--bg)}
+:root[data-theme="dark"]{--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--glass-pop:var(--shadow);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
 
 body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
+h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
+h2{font-weight:700}
 
 /* ── card ── */
 .card:not(.bday):not(.al-card){background:var(--glass);border-color:var(--glass-bdr);border-radius:24px;box-shadow:var(--glass-shadow)}
 .al-card{border-radius:24px;box-shadow:var(--glass-shadow)}
-.search,.chip{border-color:var(--glass-bdr);background:var(--glass-strong)}
-.chip.on{background:var(--accent-bg);border-color:var(--accent-bg)}
-.btn:not(.pri){background:var(--glass-strong);border-color:var(--glass-bdr)}
+button.card:hover,.card.clk:hover{border-color:var(--accent);box-shadow:0 10px 34px rgba(11,79,168,.14)}
+.empty{background:rgba(255,255,255,.45);border-color:var(--field-bdr);border-radius:24px}
+
+/* ── pulsanti, campi, filtri ── */
+.btn,.chip,.search,.seg,.x,.msg,
+select,input[type=text],input[type=number],input[type=month],input[type=date],input[type=time],input[type=email],input[type=tel],input[type=password],input[type=search],input[type=url],input:not([type]),textarea{
+  background:var(--field-bg);border-color:var(--field-bdr)}
+.btn.pri{background:var(--yellow);border-color:var(--yellow);box-shadow:0 4px 14px rgba(255,194,26,.35)}
+.chip.on,.seg button.on{background:var(--accent-bg);border-color:var(--accent-bg)}
+.search input,.search input[type]{background:none;border:0}
+.draft,.todo{background:var(--tint)}
+
+/* ── tabelle ed elenchi ── */
+.ihead{background:var(--tint);color:var(--muted)}
+.irow,.arow,.lr,.cfoot{border-color:var(--line)}
+.dt{background:var(--accent-bg);color:#fff}
+.dt span{color:rgba(255,255,255,.8)}
+.av{background:#BFD8F5;color:var(--fg)}
+.targa{background:var(--field-bg);border-color:var(--field-bdr)}
+
+/* ── stati: colori morbidi ── */
+.pill{padding:4px 12px}
+.p-blue{background:var(--soft);color:var(--accent)}
+.p-yellow,.p-sand{background:var(--yellow-soft);color:#7A5200}
+.p-red{background:var(--red-soft);color:#B42318}
+
+/* ── finestre (modali) ── */
+.ov,.vista-form-overlay,.doc-upload-overlay,.db-cols-overlay,.db-record-overlay,.vol-detail,.vol-form{
+  background:var(--veil);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sheet{background:var(--glass-strong);border-color:var(--glass-bdr);border-radius:28px;box-shadow:var(--glass-pop)}
+.shead{background:var(--glass-strong)}
+.x{border-color:var(--field-bdr)}
+.vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot{background:var(--glass-strong);border-color:var(--glass-bdr)}
+.toast{border-radius:999px;box-shadow:var(--glass-pop)}
 
 /* ── menu laterale: solo desktop ── */
 .sidenav{display:none}
@@ -1097,7 +1141,7 @@ body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
 
   /* l'intestazione diventa la barra laterale */
   .top{position:sticky;top:18px;flex:0 0 var(--side-w);width:var(--side-w);height:calc(100vh - 36px);height:calc(100dvh - 36px);
-       background:var(--glass);color:var(--fg);border:1px solid var(--glass-bdr);border-radius:24px;box-shadow:var(--glass-shadow);overflow:hidden}
+       background:var(--glass);color:var(--fg);border:1px solid var(--glass-bdr);border-radius:28px;box-shadow:var(--glass-shadow);overflow:hidden}
   .top .wrap{max-width:none;margin:0;padding:0}
   .topin{height:100%;flex-direction:column;align-items:stretch;gap:6px;padding:18px 14px 14px}
   .brand{padding:2px 8px 12px}
@@ -1109,7 +1153,7 @@ body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
   .sn-item{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:7px 12px;border:0;border-radius:12px;background:transparent;color:var(--fg);font-weight:500;font-size:14px;text-align:left}
   .sn-item svg{flex:none;color:var(--muted)}
   .sn-item span{flex:1;min-width:0}
-  .sn-item:hover{background:rgba(10,76,158,.08)}
+  .sn-item:hover{background:rgba(11,79,168,.08)}
   .sn-item.on{background:var(--accent-bg);color:var(--accent-fg);font-weight:600}
   .sn-item.on svg{color:var(--accent-fg)}
   .who{border-top:1px solid var(--line);padding-top:12px;margin-top:6px}
@@ -1120,10 +1164,17 @@ body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
   /* contenuto */
   .main-content{flex:1;min-width:0;max-width:none;margin:0;padding:8px 8px 48px}
   .main-content.wrap{padding-left:8px;padding-right:8px}
+
+  /* scheda volontario: pannello a destra, non più finestra al centro */
+  .sv-ov{justify-content:flex-end;align-items:stretch;padding:18px}
+  .sheet.sv{width:min(660px,100%);height:100%;max-height:none;border-radius:28px}
+  .vol-detail,.vol-form{padding:18px 18px 18px 0}
+  .vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot{width:min(640px,calc(100% - 18px));margin:0 0 0 auto}
+  .vol-detail-top,.vol-form-top{border-radius:28px 28px 0 0}
+  .vol-detail-body{border-radius:0 0 28px 28px;min-height:calc(100dvh - 36px - 76px)}
 }
 
 /* ── titolo Home con saluto ── */
-#panelHome .phead h1{font-size:30px}
 .home-data{display:block;margin-top:4px;font-size:14px;font-weight:500;color:var(--muted)}
 
 </style>
