@@ -1073,22 +1073,23 @@ body.cv-solo-vede .cv-gestione{display:none}
   --line:rgba(16,38,74,.09);--line2:rgba(16,38,74,.16);
   --r:24px;--r-md:24px;--r-lg:24px;
   /* vetro */
-  --glass:rgba(255,255,255,.80);
-  --glass-strong:rgba(255,255,255,.94);
-  --glass-bdr:#FFFFFF;
-  --glass-shadow:0 8px 30px rgba(16,38,74,.08);
-  --glass-pop:0 24px 60px rgba(16,38,74,.22);
-  --field-bg:rgba(255,255,255,.92);
+  --glass:linear-gradient(135deg,rgba(255,255,255,.66),rgba(255,255,255,.38));
+  --glass-strong:linear-gradient(135deg,rgba(255,255,255,.82),rgba(255,255,255,.62));
+  --glass-bdr:rgba(255,255,255,.75);
+  --glass-shadow:0 10px 36px rgba(16,38,74,.13),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.3);
+  --glass-blur:blur(22px) saturate(180%);
+  --glass-pop:0 28px 70px rgba(16,38,74,.28),inset 0 1px 0 rgba(255,255,255,.95);
+  --field-bg:rgba(255,255,255,.78);
   --field-bdr:rgba(16,38,74,.14);
   --tint:rgba(11,79,168,.06);
-  --veil:rgba(16,38,74,.28);
-  --bg-grad:linear-gradient(135deg,#BFD8F5 0%,#DDE9F8 45%,#F6E7B8 100%);
+  --veil:rgba(16,38,74,.22);
+  --bg-grad:radial-gradient(620px 520px at 12% 8%,rgba(52,132,235,.55),transparent 70%),radial-gradient(520px 460px at 88% 14%,rgba(255,194,26,.50),transparent 70%),radial-gradient(720px 560px at 72% 92%,rgba(90,175,255,.50),transparent 70%),radial-gradient(520px 460px at 8% 88%,rgba(255,206,100,.42),transparent 70%),linear-gradient(135deg,#C7DCF6 0%,#E6EFFB 50%,#F7EBC8 100%);
   --side-w:248px;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--glass-pop:var(--shadow);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
+  :root:not([data-theme="light"]){--glass:rgba(18,30,51,.62);--glass-strong:rgba(18,30,51,.86);--glass-bdr:rgba(255,255,255,.12);--glass-shadow:0 10px 36px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);--glass-pop:var(--shadow);--glass-blur:blur(22px) saturate(160%);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
 }
-:root[data-theme="dark"]{--glass:var(--surface);--glass-strong:var(--surface);--glass-bdr:var(--line);--glass-shadow:none;--glass-pop:var(--shadow);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
+:root[data-theme="dark"]{--glass:rgba(18,30,51,.62);--glass-strong:rgba(18,30,51,.86);--glass-bdr:rgba(255,255,255,.12);--glass-shadow:0 10px 36px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);--glass-pop:var(--shadow);--glass-blur:blur(22px) saturate(160%);--field-bg:var(--surface);--field-bdr:var(--line2);--tint:rgba(141,187,247,.08);--veil:rgba(5,15,35,.6);--bg-grad:var(--bg)}
 
 body{background:var(--bg-grad);background-attachment:fixed;min-height:100vh}
 h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
@@ -1131,6 +1132,22 @@ select,input[type=text],input[type=number],input[type=month],input[type=date],in
 .x{border-color:var(--field-bdr)}
 .vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot{background:var(--glass-strong);border-color:var(--glass-bdr)}
 .toast{border-radius:999px;box-shadow:var(--glass-pop)}
+
+
+/* ── liquid glass: sfocatura + riflesso sui bordi ── */
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .card:not(.bday):not(.al-card),.al-card,.top,.sheet,.vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot,.seg,.search,.chip,.btn:not(.pri),.x{
+    -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+}
+.shead,.sv-foot{background:transparent}
+.sv-foot{border-top-color:var(--line)}
+.top{background:var(--glass)}
+.sheet,.vol-detail-top,.vol-form-top,.vol-detail-body,.vol-form-body,.vol-form-foot{background:var(--glass-strong)}
+.chip,.search,.seg,.btn:not(.pri),.x{box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.chip.on,.seg button.on,.sn-item.on{box-shadow:0 6px 16px rgba(11,79,168,.28),inset 0 1px 0 rgba(255,255,255,.25)}
+@media (max-width:899px){
+  .card:not(.bday):not(.al-card),.al-card{-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%)}
+}
 
 /* ── menu laterale: solo desktop ── */
 .sidenav{display:none}
