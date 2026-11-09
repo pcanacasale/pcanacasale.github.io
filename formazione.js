@@ -138,7 +138,7 @@ function fzPuoScrivere() { return canModificaVolontari() || hasPerm('formazione'
 function fzNomeVol(id) { const v = fzVolontari.find(x => x.id === id); return v ? v.cognome + ' ' + v.nome : '—'; }
 
 async function fzCaricaVolontari() {
-  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato&order=cognome,nome', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato,tipo_volontario&order=cognome,nome', { headers: H });
   if (!res.ok) throw new Error('errore');
   fzVolontari = await res.json();
 }
@@ -159,6 +159,7 @@ async function caricaFormazione() {
     if (!res.ok) throw new Error('errore');
     fzRighe = await res.json();
     fzCalcolaAttuali();
+    fzRenderDash();
     fzRenderChip();
     fzRenderLista();
   } catch(e) {
@@ -201,6 +202,82 @@ function fzPillOrigine(r) {
   if (!r.origine) return '<span class="pill p-sand" title="Segnato nella vecchia scheda, attestato non trovato su Drive">Senza attestato</span>';
   return r.origine === 'INTERNO' ? '<span class="pill p-blue">Interno</span>' : '<span class="pill p-sand">Esterno</span>';
 }
+// -- DASHBOARD CORSI OBBLIGATORI --
+// Volontari attivi e sospesi: 4 ore e 12 ore per tutti, Caposquadra solo per tipo_volontario "CAPO SQUADRA".
+// Per ogni volontario conta l'ultima riga del registro (fzOrdineData): mai fatto > scaduto > in scadenza > senza attestato.
+const FZ_DASH = [
+  { codice: '4_ORE',  titolo: 'Corso 4 ore',       perChi: () => true },
+  { codice: '12_ORE', titolo: 'Corso 12 ore',      perChi: () => true },
+  { codice: 'CAPOSQ', titolo: 'Corso Caposquadra', perChi: v => String(v.tipo_volontario || '').toUpperCase().replace(/\s+/g, '') === 'CAPOSQUADRA', nota: 'solo capisquadra' },
+];
+const FZ_DASH_CAT = [['mai', 'Mai fatto'], ['scaduto', 'Scaduto'], ['scadenza', 'In scadenza'], ['senza', 'Senza attestato']];
+let fzDashSel = null;   // 'CODICE|categoria' dell'elenco aperto
+
+function fzDashUltima(volId, codice) {
+  const righe = fzRighe.filter(r => r.volontario_id === volId && r.codice === codice);
+  return righe.length ? { righe, ultima: righe.reduce((m, r) => fzOrdineData(r) > fzOrdineData(m) ? r : m) } : null;
+}
+function fzDashStato(volId, codice) {
+  const u = fzDashUltima(volId, codice);
+  if (!u) return 'mai';
+  const st = arcScadenza(u.ultima.scadenza);
+  if (st) return st;
+  return u.righe.some(r => r.drive_file_id) ? 'ok' : 'senza';
+}
+function fzDashCalcola() {
+  const vol = fzVolontari.filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO'));
+  return FZ_DASH.map(c => {
+    const per = { mai: [], scaduto: [], scadenza: [], senza: [], ok: [] };
+    const tocca = vol.filter(c.perChi);
+    tocca.forEach(v => per[fzDashStato(v.id, c.codice)].push(v));
+    return Object.assign({}, c, { tot: tocca.length, per });
+  });
+}
+function fzDashScegli(codice, cat) {
+  const k = codice ? codice + '|' + cat : null;
+  fzDashSel = fzDashSel === k ? null : k;
+  fzRenderDash();
+}
+function fzRenderDash() {
+  const box = document.getElementById('fzDash');
+  if (!box) return;
+  const d = fzDashCalcola();
+  let html = '<div class="fz-dash">' + d.map(c => '<div class="card fz-dash-c"><div class="fz-dash-h"><b>' + c.titolo + '</b>'
+    + '<span class="sub">' + c.per.ok.length + ' in regola su ' + c.tot + (c.nota ? ' · ' + c.nota : '') + '</span></div><div class="chips">'
+    + FZ_DASH_CAT.map(([k, lab]) => {
+        const n = c.per[k].length;
+        return '<button class="chip' + (fzDashSel === c.codice + '|' + k ? ' on' : '') + '"' + (n ? '' : ' disabled')
+          + ' onclick="fzDashScegli(\'' + c.codice + '\',\'' + k + '\')">' + lab + ' <span class="n">' + n + '</span></button>';
+      }).join('') + '</div></div>').join('') + '</div>';
+  if (fzDashSel) {
+    const [cod, k] = fzDashSel.split('|');
+    const c = d.find(x => x.codice === cod);
+    const lab = FZ_DASH_CAT.find(x => x[0] === k)[1];
+    const elenco = c.per[k];
+    const det = v => {
+      const u = fzDashUltima(v.id, cod);
+      if (k === 'scaduto' && u) return 'scaduto il ' + svData(u.ultima.scadenza);
+      if (k === 'scadenza' && u) return 'scade il ' + svData(u.ultima.scadenza);
+      return '';
+    };
+    html += '<div class="card fz-dash-l"><div class="fz-dash-h"><b>' + c.titolo + ' · ' + lab + ' (' + elenco.length + ')</b>'
+      + '<span><button class="btn sm" onclick="fzDashCopia()">Copia nomi</button> <button class="btn sm" onclick="fzDashScegli()">Chiudi</button></span></div>'
+      + elenco.map(v => '<div class="lr clk" onclick="apriDettaglio(' + v.id + ',\'formazione\')"><div class="mid"><b>' + aggEsc(v.cognome + ' ' + v.nome) + '</b>'
+        + '<span class="sub">' + aggEsc([v.squadra, v.stato === 'SOSPESO' ? 'sospeso' : '', det(v)].filter(Boolean).join(' · ')) + '</span></div></div>').join('')
+      + '</div>';
+  }
+  box.innerHTML = html;
+}
+// Nomi dell'elenco aperto negli appunti, uno per riga (per convocazioni e iscrizioni ai corsi)
+function fzDashCopia() {
+  if (!fzDashSel) return;
+  const [cod, k] = fzDashSel.split('|');
+  const c = fzDashCalcola().find(x => x.codice === cod);
+  const testo = c.per[k].map(v => v.cognome + ' ' + v.nome).join('\n');
+  if (navigator.clipboard) navigator.clipboard.writeText(testo).then(() => alert('Copiati ' + c.per[k].length + ' nomi.'), () => prompt('Copia i nomi:', testo));
+  else prompt('Copia i nomi:', testo);
+}
+
 // -- SCADENZE --
 // Per ogni volontario e corso conta solo l'attestato più recente (data del corso, poi scadenza):
 // quelli precedenti sono "Rinnovato" e non risultano scaduti. Avviso giallo entro 60 giorni (arcScadenza).

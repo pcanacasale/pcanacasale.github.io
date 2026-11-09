@@ -503,10 +503,13 @@ const PAGINE = [
   intro:"Formazione è il registro di tutti i corsi fatti dai volontari.",
   schermo: () => app("altro","Formazione", `
     <div class="m-barra">${cerca("Cerca volontario o corso","cerca")}<span class="m-sp"></span>${btn("Catalogo","catalogo","grigio")}${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
+    <div class="m-modale" data-h="dash"><div class="m-box-t">Corso 12 ore · 37 in regola su 68</div><div class="m-campi"><span>Mai fatto <b>${tag("15","r")}</b></span><span>Scaduto <b>${tag("15","r")}</b></span><span>Senza attestato <b>${tag("1","g")}</b></span></div></div>
     ${tab([["Corso o abilitazione","Volontari","Validità"],["Corso 12 ore","55","5 anni"],["PLE – Piattaforme di lavoro elevabili","6","5 anni"],["Gru per autocarro","4","5 anni"]],"elenco")}`),
   passi:[
     {t:"Cercare", d:"Cerca per volontario o corso.", h:"cerca",
      v:"Cerchi per nome del volontario oppure per nome del corso."},
+    {t:"Corsi obbligatori", d:"In alto, un riquadro per Corso 4 ore, 12 ore e Caposquadra (solo per i capisquadra): quanti sono in regola e i contatori Mai fatto, Scaduto, In scadenza, Senza attestato. Tocca un contatore per l'elenco dei nomi; Copia nomi li mette negli appunti.", h:"dash",
+     v:"In cima alla pagina trovi la situazione dei corsi obbligatori: il 4 ore e il 12 ore per tutti, il caposquadra solo per chi è caposquadra. Per ognuno vedi quanti sono in regola e quanti non l'hanno mai fatto, l'hanno scaduto o sono senza attestato. Tocchi il numero e ti compare l'elenco dei nomi; da lì apri la scheda del volontario, oppure con Copia nomi li incolli dove ti servono, per esempio per un'iscrizione."},
     {t:"Un blocco per corso", d:"Ogni corso o abilitazione del catalogo è un blocco. Dentro, una riga per volontario: data dell'ultimo corso, date precedenti, pulsante Attestato per aprire il PDF (un trattino se manca, da cercare) e stato: Valido, In scadenza (entro 60 giorni) o Scaduto. Con Modifica cambi il nome del corso.", h:"elenco",
      v:"Ogni corso o abilitazione è un blocco unico, anche se sugli attestati il nome è scritto in modi diversi. Aprendolo trovi una riga per volontario: la data dell'ultimo corso, le date di quelli precedenti, e il pulsante Attestato che apre il PDF. Se al posto del pulsante c'è un trattino, l'attestato non è in archivio e va cercato. In fondo vedi lo stato: valido, in scadenza o scaduto. Con Modifica puoi cambiare il nome del corso."},
     {t:"Registra corso", d:"Scegli il corso dal catalogo e i volontari: compare anche nella loro scheda. Se la scadenza resta vuota la calcola dalla validità.", h:"nuovo",
