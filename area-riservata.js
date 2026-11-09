@@ -6961,12 +6961,12 @@ function renderSchedaPersonale(v) {
     });
     html += '</div>';
   });
-  html += '<div class="card" id="spFormazione" hidden></div><div class="card" id="spDocumenti" hidden></div><div class="card" id="spArchivio"></div><div class="card" id="spListe" hidden></div></div>';
+  html += '<div class="card" id="spFormazione" hidden></div><div class="card" id="spArcCorsi" hidden></div><div class="card" id="spArcAttestati" hidden></div><div class="card" id="spDocumenti" hidden></div><div class="card" id="spArcDocumenti" hidden></div><div class="card" id="spListe" hidden></div></div>';
 
   content.innerHTML = html;
   fzRenderPersonale(v.id);
   spRenderDocumenti(v.id);
-  arcMostra('spArchivio', v.id);
+  arcRenderPersonale(v);
   cvRenderPersonale();
 }
 

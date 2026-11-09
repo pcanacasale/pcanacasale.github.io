@@ -115,16 +115,17 @@ const PAGINE = [
   schermo: () => app("scheda","La mia scheda", `
     <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Dotazioni","Interventi"],"schede")}
       <div class="m-campi"><span>Cognome e nome <b>Rossi Mario</b></span><span>Squadra <b>CASALE</b></span><span>Mansione <b>LOGISTICA</b></span><span>Telefono <b>333 1234567</b></span></div></div>
-    <div class="m-modale" data-h="archivio"><div class="m-box-t">Archivio documenti</div>${tabs(["Attestati 3","Documenti 2"])}
-      <div class="m-campi"><span>Corso base 12 ore <b>15/03/2024</b></span><span>Abilitazione BLSD <b>${tag("In scadenza","g")}</b></span></div></div>
+    <div class="m-modale" data-h="archivio"><div class="m-box-t">Corsi obbligatori</div>
+      <div class="m-campi"><span>Corso 12 ore <b>${tag("Svolto","b")}</b></span><span>DAE <b>${tag("In scadenza","g")}</b></span></div>
+      <div class="m-box-t">Attestati (12)</div><div class="m-campi"><span>Cartografia e orientamento <b>22/05/2014</b></span><span>Operatori radio 1 livello <b>23/10/2020</b></span></div></div>
     <div class="m-azioni">${btn("Segnala un errore","errore","giallo")}</div>`, true),
   passi:[
     {t:"Le schede", d:"Dati: anagrafica e contatti. Documenti: documento d'identità, attestati e altri file. Visita medica: lo stato della tua visita. Formazione: i corsi fatti. Dotazioni: cosa ti è stato consegnato. Interventi: i servizi a cui hai partecipato, con le ore.", h:"schede",
      v:"La scheda è divisa in parti. In Dati trovi anagrafica e contatti. In Documenti i file caricati, come il documento d'identità e gli attestati. In Visita medica lo stato della tua visita. In Formazione i corsi che hai fatto. In Dotazioni quello che ti è stato consegnato, dalla divisa ai dispositivi di protezione. E in Interventi tutti i servizi a cui hai partecipato, con le ore."},
     {t:"Controlla i tuoi dati", d:"Dai un'occhiata ogni tanto: telefono ed email servono per contattarti e per entrare.", h:"schede",
      v:"Vale la pena darci un'occhiata ogni tanto, soprattutto telefono ed email: sono quelli che usiamo per contattarti, e l'email serve anche per entrare."},
-    {t:"Archivio documenti", d:"In fondo alla scheda trovi i tuoi attestati e documenti archiviati dalla Sezione, divisi in Attestati e Documenti. Tocca una riga per aprire il PDF. Rosso vuol dire scaduto, giallo che scade entro due mesi.", h:"archivio",
-     v:"In fondo alla scheda c'è l'archivio documenti: sono gli attestati e i documenti che la Sezione ha archiviato per te, divisi in Attestati e Documenti. Tocchi una riga e il PDF si apre. Se vedi un'etichetta rossa il documento è scaduto, se è gialla scade entro un paio di mesi."},
+    {t:"Attestati e documenti archiviati", d:"Corsi obbligatori: 4 ore, 12 ore, Caposquadra e DAE, ognuno con il suo attestato. Attestati: tutti gli altri. Documenti archiviati: adesione, privacy e simili. Tocca una riga per aprire il PDF. Rosso vuol dire scaduto, giallo che scade entro due mesi.", h:"archivio",
+     v:"Più in basso trovi gli attestati e i documenti che la Sezione ha archiviato per te. In Corsi obbligatori ci sono il corso 4 ore, il 12 ore, il caposquadra e il DAE, ognuno con il suo attestato. In Attestati tutti gli altri corsi ed esercitazioni, e in Documenti archiviati cose come la scheda di adesione. Tocchi una riga e il PDF si apre. Un'etichetta rossa vuol dire scaduto, gialla che scade entro un paio di mesi."},
     {t:"Se c'è un errore", d:"Premi Segnala un errore e scrivi cosa non va: la segreteria lo corregge.", h:"errore",
      v:"Se trovi qualcosa di sbagliato, non serve telefonare: premi Segnala un errore, scrivi cosa non va, e la segreteria lo corregge."}
   ]
@@ -266,7 +267,7 @@ const PAGINE = [
       <div class="m-card"><b>Rossi Mario</b><small>CASALE · LOGISTICA</small>${tag("Attivo","v")}</div>
       <div class="m-card"><b>Bianchi Laura</b><small>COLLINA · GENERICO</small>${tag("Da sistemare","g")}</div>
       <div class="m-card"><b>Verdi Paolo</b><small>ALFA · CAPO SQUADRA</small>${tag("Attivo","v")}</div></div>
-    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Dotazioni","Interventi","Archivio"],"schede")}
+    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Attestati","Dotazioni","Interventi"],"schede")}
       <div class="m-azioni">${btn("Link bot","link","grigio")}</div></div>`),
   passi:[
     {t:"Cercare", d:"Cerca per nome, squadra o codice fiscale.", h:"cerca",
@@ -277,8 +278,8 @@ const PAGINE = [
      v:"Ogni riquadro è un volontario. Se compare Da sistemare, vuol dire che manca qualcosa nei suoi dati o nei documenti: aprendo la scheda vedi cosa."},
     {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Dotazioni, Interventi: le stesse parti che vede il volontario, ma modificabili.", h:"schede",
      v:"La scheda ha le stesse parti che vede il volontario: dati, documenti, visita medica, formazione, dotazioni e interventi. La differenza è che tu, se hai il permesso, puoi modificarle."},
-    {t:"Archivio", d:"La scheda Archivio mostra attestati e documenti archiviati su Google Drive, in sola lettura. La vede chi ha il permesso Volontari oppure Vedere archivio documenti volontari. Ogni apertura viene registrata.", h:"schede",
-     v:"Nella scheda Archivio trovi gli attestati e i documenti del volontario archiviati su Google Drive. Si possono solo aprire, non modificare. La vede chi ha il permesso Volontari, oppure chi è abilitato solo all'archivio, e ogni file aperto resta registrato."},
+    {t:"Archivio su Drive", d:"I file archiviati su Google Drive compaiono da soli: gli attestati di 4 ore, 12 ore, Caposquadra e DAE in Formazione sotto il loro corso, gli altri nella scheda Attestati, adesione e simili in fondo a Documenti. Si possono solo aprire. Li vede chi ha il permesso Volontari oppure Vedere archivio documenti volontari; ogni apertura viene registrata.", h:"schede",
+     v:"I file archiviati su Google Drive compaiono da soli nella scheda. Gli attestati dei corsi 4 ore, 12 ore, caposquadra e DAE li trovi in Formazione, sotto il loro corso. Tutti gli altri attestati sono nella scheda Attestati, e la scheda di adesione e simili in fondo a Documenti. Si possono solo aprire, e ogni file aperto resta registrato."},
     {t:"Link per il bot", d:"Dalla scheda, Link bot crea un link personale che collega il volontario al bot Telegram con un tocco.", h:"link",
      v:"Dalla scheda puoi creare il link personale per il bot Telegram: lo mandi al volontario, e con un tocco si collega, senza passare dal numero di telefono."},
     {t:"Nuovo volontario", d:"Nuovo volontario apre una scheda vuota. Il codice fiscale viene controllato.", h:"nuovo",

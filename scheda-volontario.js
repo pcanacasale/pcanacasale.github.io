@@ -2,7 +2,8 @@
 // SCHEDA VOLONTARIO — finestra con le schede Dati, Documenti, Visita medica,
 // Formazione, Dotazioni e Interventi. Prefisso funzioni: sv*
 // ============================================================
-// Scheda Archivio: documenti su Google Drive, vedi archivio-volontario.js.
+// Archivio Google Drive (archivio-volontario.js): attestati dei corsi fissi in Formazione,
+// altri attestati nella scheda Attestati, documenti archiviati in Documenti.
 // Si appoggia alle tabelle già in uso: volontari, documenti, interventi_con_stato,
 // intervento_volontari e, per chi ha il permesso "aggiornamento_dati", alla Edge
 // Function agg-api (agg_documenti, agg_dpi_volontario).
@@ -15,9 +16,9 @@ const SV_TABS = [
   { id: 'documenti',  label: 'Documenti' },
   { id: 'visita',     label: 'Visita medica' },
   { id: 'formazione', label: 'Formazione' },
+  { id: 'attestati',  label: 'Attestati' },
   { id: 'dotazioni',  label: 'Dotazioni' },
   { id: 'interventi', label: 'Interventi' },
-  { id: 'archivio',   label: 'Archivio' },
 ];
 
 let sv = null;      // { id, v, docs, agg, tab, ore, dirty, interventiOk, anteprimeOk }
@@ -30,7 +31,7 @@ function svPuoDoc()    { return canModificaVolontari() || hasPerm('documenti'); 
 function svHaAgg()     { return typeof aggHaAccesso === 'function' && aggHaAccesso(); }
 function svTabVisibile(tab) {
   if (tab === 'interventi') return hasPerm('interventi');
-  if (tab === 'archivio') return hasPerm('documenti_volontari') || hasPerm('volontari');
+  if (tab === 'attestati') return arcPuoStaff();
   if (hasPerm('volontari')) return true;
   if (tab === 'documenti') return hasPerm('documenti');
   if (tab === 'visita') return hasPerm('visite');
@@ -65,11 +66,12 @@ async function apriDettaglio(id, tab) {
     const docs = dRes.ok ? await dRes.json() : [];
     await Promise.all([sbFirmaRighe(docs, 'url'), sbFirmaRighe([v], 'foto_url')]);
     if (token !== svToken) return;
-    sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false };
+    sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false, drive: null };
     aggCorrente = agg;
     svRender();
     svMostraTab(tab || SV_TABS.map(t => t.id).filter(svTabVisibile)[0]);
     svCaricaFoto();
+    svCaricaDrive();
   } catch(e) {
     if (token === svToken) document.getElementById('svTesta').innerHTML = '<div class="empty">Non disponibile.</div>';
   }
@@ -144,7 +146,39 @@ function svRender() {
   svRenderFormazione();
   svRenderDocumenti();
   svRenderDotazioni();
+  svRenderDrive();
   if (svPuoDati()) riempiFormVolontario(sv.v);
+}
+
+// -- ARCHIVIO GOOGLE DRIVE --
+async function svCaricaDrive(ricarica) {
+  if (!sv || !arcPuoStaff()) return;
+  const token = svToken, id = sv.id;
+  sv.drive = null;
+  svRenderDrive();
+  const esito = await arcCarica(id, ricarica);
+  if (!sv || token !== svToken) return;
+  sv.drive = esito;
+  svRenderDrive();
+}
+
+// Riempie i posti dell'archivio nelle schede Formazione, Attestati e Documenti
+function svRenderDrive() {
+  if (!sv || !arcPuoStaff()) return;
+  const el = id => document.getElementById(id);
+  const e = sv.drive;
+  const d = e && e.file ? arcDividi(e.file) : null;
+  const stato = d ? '' : arcStatoHtml(e, 'svCaricaDrive(true)');
+  ARC_CORSI.forEach(c => {
+    const box = el('svDrive_' + c.tipo);
+    if (box) box.innerHTML = d ? arcRighe(sv.id, d.corsi[c.tipo]) : '';
+  });
+  const att = el('svP_attestati');
+  if (att) att.innerHTML = '<div class="grp">Attestati in archivio' + (d ? ' (' + d.attestati.length + ')' : '') + '</div>'
+    + (d ? arcRighe(sv.id, d.attestati, 'Nessun attestato archiviato.') : stato);
+  const doc = el('svDriveDoc');
+  if (doc) doc.innerHTML = '<div class="grp sv-mt">Documenti archiviati</div>'
+    + (d ? arcRighe(sv.id, d.documenti, 'Nessun documento archiviato.') : stato);
 }
 
 function svRenderTesta() {
@@ -217,7 +251,6 @@ function svMostraTab(tab) {
   if (c) c.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (tab === 'interventi' && !sv.interventiOk) svCaricaInterventi();
   if (tab === 'documenti' && !sv.anteprimeOk) svCaricaAnteprime();
-  if (tab === 'archivio' && !sv.archivioOk) { sv.archivioOk = true; arcMostra('svP_archivio', sv.id); }
   document.getElementById('svBody').scrollTop = 0;
 }
 
@@ -569,7 +602,9 @@ function svRenderDocumenti() {
 
   if (svPuoDoc()) html += '<button class="sv-doc sv-doc-add" onclick="apriUploadDoc(' + sv.id + ')">' + navIc('file', 28) + '<span>Carica documento</span></button>';
   box.innerHTML = '<div class="sv-docs">' + html + '</div>'
-    + (svHaAgg() && !sv.agg ? '<p class="note">Questo volontario non è ancora in Aggiornamento dati: usa "Sincronizza nuovi volontari" per caricare foto PIA e documenti d\'archivio.</p>' : '');
+    + (svHaAgg() && !sv.agg ? '<p class="note">Questo volontario non è ancora in Aggiornamento dati: usa "Sincronizza nuovi volontari" per caricare foto PIA e documenti d\'archivio.</p>' : '')
+    + (arcPuoStaff() ? '<div id="svDriveDoc"></div>' : '');
+  svRenderDrive();
 }
 
 function svCaricaFotoPIA() { const id = svAggId(); if (!id) return; svPreparaAgg(); aggApriEditorFoto(id); }
@@ -664,10 +699,11 @@ function svRenderFormazione() {
       ? '<div class="vol-form-field sv-corso-sc"><label class="vol-form-lbl" for="fScadDae">Scadenza</label><input class="vol-form-inp" type="date" id="fScadDae" value="' + aggEsc(v[c.scadenza] || '') + '"></div>'
       : (v[c.scadenza] ? '<span class="sub">Scade il ' + svData(v[c.scadenza]) + '</span>' : '');
     if (c.storico && v[c.storico]) dett += '<span class="sub">Attestato in archivio: ' + aggEsc(v[c.storico]) + '</span>';
-    return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + pill + '</div>' + dett + '<div id="svAll_' + c.tipo + '"></div></div>';
+    return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + pill + '</div>' + dett + '<div id="svDrive_' + c.tipo + '"></div><div id="svAll_' + c.tipo + '"></div></div>';
   }).join('') + '</div>'
     + '<div class="grp sv-mt">Altri corsi e attestati</div><div id="svAltriCorsi"></div>';
   svRenderAllegatiFormazione();
+  svRenderDrive();
   fzRenderScheda();
   svOsservaModifiche(box);
 }
