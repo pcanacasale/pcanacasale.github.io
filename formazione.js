@@ -124,6 +124,7 @@ const FZ_FILTRI = [
   ['INTERNO',      'Interni',      r => r.origine === 'INTERNO'],
   ['ESTERNO',      'Esterni',      r => r.origine === 'ESTERNO'],
   ['SCADENZA',     'Scaduti o in scadenza', r => fzStatoRiga(r) === 'scaduto' || fzStatoRiga(r) === 'scadenza'],
+  ['SENZA',        'Senza attestato', r => !r.origine && !r.drive_file_id],
 ];
 
 let fzRighe = [];
@@ -196,7 +197,7 @@ async function fzImportaDrive() {
 
 function fzPillOrigine(r) {
   if (!r.origine && r.drive_file_id) return '<span class="pill p-grey">Da Drive</span>';
-  if (!r.origine) return '<span class="pill p-grey">Pregresso</span>';
+  if (!r.origine) return '<span class="pill p-sand" title="Segnato nella vecchia scheda, attestato non trovato su Drive">Senza attestato</span>';
   return r.origine === 'INTERNO' ? '<span class="pill p-blue">Interno</span>' : '<span class="pill p-sand">Esterno</span>';
 }
 // -- SCADENZE --
@@ -224,8 +225,8 @@ function fzStatoRiga(r) {
 function fzCellaScadenza(r) {
   if (!r.scadenza) return '<span class="sub">—</span>';
   const st = fzStatoRiga(r);
-  if (st === 'scaduto') return '<span class="pill p-red">Scaduto ' + svData(r.scadenza) + '</span>';
-  if (st === 'scadenza') return '<span class="pill p-yellow">Scade ' + svData(r.scadenza) + '</span>';
+  if (st === 'scaduto') return '<span class="fz-scad"><span class="pill p-red">Scaduto</span><span class="sub">' + svData(r.scadenza) + '</span></span>';
+  if (st === 'scadenza') return '<span class="fz-scad"><span class="pill p-yellow">In scadenza</span><span class="sub">' + svData(r.scadenza) + '</span></span>';
   if (st === 'rinnovato') return '<span class="pill p-grey" title="Scadenza ' + svData(r.scadenza) + '">Rinnovato</span>';
   return '<span class="sub">' + svData(r.scadenza) + '</span>';
 }
@@ -269,7 +270,15 @@ function fzGruppoHtml(g, i, aperto, scrive) {
   const info = [g.tipo === 'ABILITAZIONE' ? 'Abilitazione' : 'Corso', persone + (persone === 1 ? ' volontario' : ' volontari'),
     g.validita ? 'vale ' + g.validita + (g.validita === 1 ? ' anno' : ' anni') : '',
     date.length ? 'ultimo il ' + svData(date[date.length - 1]) : ''].filter(Boolean).join(' · ');
-  const righe = g.righe.slice().sort((a, b) => (b.data_corso || '').localeCompare(a.data_corso || '') || fzNomeVol(a.volontario_id).localeCompare(fzNomeVol(b.volontario_id), 'it'));
+  // una riga per volontario: l'attestato più recente; le date precedenti sotto, in piccolo
+  const perVol = new Map();
+  g.righe.forEach(r => { if (!perVol.has(r.volontario_id)) perVol.set(r.volontario_id, []); perVol.get(r.volontario_id).push(r); });
+  const righe = [...perVol.values()].map(l => {
+    l.sort((a, b) => fzOrdineData(b).localeCompare(fzOrdineData(a)));
+    const r = l[0];
+    const precedenti = [...new Set(l.slice(1).map(x => x.data_corso).filter(d => d && d !== r.data_corso))].map(svData);
+    return { r, precedenti };
+  }).sort((a, b) => (b.r.data_corso || '').localeCompare(a.r.data_corso || '') || fzNomeVol(a.r.volontario_id).localeCompare(fzNomeVol(b.r.volontario_id), 'it'));
   return '<div class="card fz-gruppo"><div class="fz-gruppo-h"><button class="fz-gruppo-t" aria-expanded="' + aperto + '" onclick="fzApriGruppo(' + i + ')">'
     + '<span class="pst-chev" aria-hidden="true">' + (aperto ? '▾' : '▸') + '</span><span class="mid"><b>' + aggEsc(g.titolo) + '</b><span class="sub">' + info + '</span></span>'
     + (scaduti ? '<span class="pill p-red">' + scaduti + (scaduti === 1 ? ' scaduto' : ' scaduti') + '</span>' : '')
@@ -277,10 +286,11 @@ function fzGruppoHtml(g, i, aperto, scrive) {
     + (scrive && g.catalogo_id ? '<button class="btn sm" onclick="fzApriVoce(' + g.catalogo_id + ')">Modifica</button>' : '')
     + (scrive ? '<button class="btn sm" onclick="fzApriForm(null,null,' + i + ')">Aggiungi</button>' : '') + '</div>'
     + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Titolo sull\'attestato</span><span>Origine</span><span>Scadenza</span></div>'
-      + righe.map(r => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
+      + righe.map(({ r, precedenti }) => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
         + '<span>' + (svData(r.data_corso) || '—') + '</span>'
         + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
-        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
+        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—')
+        + (precedenti.length ? '<br>Precedenti: ' + precedenti.join(', ') : '') + '</span>'
         + '<span>' + fzPillOrigine(r) + '</span>'
         + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
 }
