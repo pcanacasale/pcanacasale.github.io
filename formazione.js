@@ -223,13 +223,14 @@ function fzStatoRiga(r) {
   if (fzAttuali.size && !fzAttuali.has(r.id)) return 'rinnovato';
   return arcScadenza(r.scadenza);
 }
+// Stato della riga più recente: Valido (fino al…), In scadenza, Scaduto; senza scadenza = Valido
 function fzCellaScadenza(r) {
-  if (!r.scadenza) return '<span class="sub">—</span>';
+  if (!r.scadenza) return '<span class="pill p-blue">Valido</span>';
   const st = fzStatoRiga(r);
   if (st === 'scaduto') return '<span class="fz-scad"><span class="pill p-red">Scaduto</span><span class="sub">' + svData(r.scadenza) + '</span></span>';
   if (st === 'scadenza') return '<span class="fz-scad"><span class="pill p-yellow">In scadenza</span><span class="sub">' + svData(r.scadenza) + '</span></span>';
   if (st === 'rinnovato') return '<span class="pill p-grey" title="Scadenza ' + svData(r.scadenza) + '">Rinnovato</span>';
-  return '<span class="sub">' + svData(r.scadenza) + '</span>';
+  return '<span class="fz-scad"><span class="pill p-blue">Valido</span><span class="sub">fino al ' + svData(r.scadenza) + '</span></span>';
 }
 function fzDettaglio(r) {
   return [r.tipo === 'ABILITAZIONE' ? 'Abilitazione' : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).map(aggEsc).join(' · ');
@@ -278,7 +279,9 @@ function fzGruppoHtml(g, i, aperto, scrive) {
     l.sort((a, b) => fzOrdineData(b).localeCompare(fzOrdineData(a)));
     const r = l[0];
     const precedenti = [...new Set(l.slice(1).map(x => x.data_corso).filter(d => d && d !== r.data_corso))].map(svData);
-    return { r, precedenti };
+    // attestato: quello della riga più recente, altrimenti il più recente che ha un file
+    const conFile = l.find(x => x.drive_file_id);
+    return { r, precedenti, file: conFile ? conFile.drive_file_id : null };
   }).sort((a, b) => (b.r.data_corso || '').localeCompare(a.r.data_corso || '') || fzNomeVol(a.r.volontario_id).localeCompare(fzNomeVol(b.r.volontario_id), 'it'));
   return '<div class="card fz-gruppo"><div class="fz-gruppo-h"><button class="fz-gruppo-t" aria-expanded="' + aperto + '" onclick="fzApriGruppo(' + i + ')">'
     + '<span class="pst-chev" aria-hidden="true">' + (aperto ? '▾' : '▸') + '</span><span class="mid"><b>' + aggEsc(g.titolo) + '</b><span class="sub">' + info + '</span></span>'
@@ -286,14 +289,12 @@ function fzGruppoHtml(g, i, aperto, scrive) {
     + (inScadenza ? '<span class="pill p-yellow">' + inScadenza + ' in scadenza</span>' : '') + '</button>'
     + (scrive && g.catalogo_id ? '<button class="btn sm" onclick="fzApriVoce(' + g.catalogo_id + ')">Modifica</button>' : '')
     + (scrive ? '<button class="btn sm" onclick="fzApriForm(null,null,' + i + ')">Aggiungi</button>' : '') + '</div>'
-    + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Titolo sull\'attestato</span><span>Origine</span><span>Scadenza</span></div>'
-      + righe.map(({ r, precedenti }) => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
+    + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Date precedenti</span><span>Attestato</span><span>Stato</span></div>'
+      + righe.map(({ r, precedenti, file }) => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
         + '<span>' + (svData(r.data_corso) || '—') + '</span>'
         + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
-        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—')
-        + (precedenti.length ? '<br>Precedenti: ' + precedenti.join(', ') : '') + '</span>'
-        + '<span>' + fzPillOrigine(r)
-        + (r.drive_file_id ? ' <button class="btn sm" onclick="event.stopPropagation();arcApri(' + r.volontario_id + ',\'' + aggEsc(r.drive_file_id) + '\')">Attestato</button>' : '') + '</span>'
+        + '<span class="sub minw0">' + (precedenti.length ? precedenti.join(', ') : '—') + '</span>'
+        + '<span>' + (file ? '<button class="btn sm" onclick="event.stopPropagation();arcApri(' + r.volontario_id + ',\'' + aggEsc(file) + '\')">Attestato</button>' : '—') + '</span>'
         + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
 }
 
