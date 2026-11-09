@@ -226,7 +226,12 @@ async function scarica(req: Request, volId: number, fileId: string, utente: stri
 }
 
 // -- IMPORT NEL REGISTRO FORMAZIONE --
-// Stesse regole di archivio-volontario.js (ARC_CORSI): il corso fisso si riconosce dal titolo del file
+// Il corso fisso si riconosce dalle parole chiave del catalogo (formazione_catalogo, stessa regola di
+// formazione_voce() nel database e di arcVoce() nel browser). Le espressioni qui sotto servono solo
+// se il catalogo non c'è ancora.
+function norm(t: string) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
 const CORSI_FISSI = [
   { codice: '4_ORE',  titolo: 'Corso 4 ore',       campo: 'quattro_ore',  re: /sensibilizzazione\s+(al\s+)?rischio|\b4\s*ore\b|quattro\s+ore/i },
   { codice: '12_ORE', titolo: 'Corso 12 ore',      campo: 'dodici_ore',   re: /rischio\s+alto|\b12\s*ore\b|dodici\s+ore/i },
@@ -242,6 +247,15 @@ async function importa(utente: string) {
   const vols = await db('GET', 'volontari?drive_folder_id=not.is.null&select=id,drive_folder_id');
   const reg: any[] = await db('GET', 'formazione_registro?select=id,volontario_id,tipo,codice,titolo,data_corso,scadenza,drive_file_id');
   const giaImportati = new Set(reg.map(r => r.drive_file_id).filter(Boolean));
+  let catalogo: any[] = [];
+  try { catalogo = await db('GET', 'formazione_catalogo?attivo=eq.true&tipo=eq.CORSO&select=codice,parole_chiave,ordine&order=ordine,id'); } catch (_) { /* catalogo non ancora creato */ }
+  catalogo = catalogo.filter(c => CORSI_FISSI.some(x => x.codice === c.codice));
+  const corsoDi = (testo: string) => {
+    if (!catalogo.length) return CORSI_FISSI.find(c => c.re.test(testo));
+    const t = ' ' + norm(testo) + ' ';
+    const voce = catalogo.find(c => (c.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k))));
+    return voce ? CORSI_FISSI.find(c => c.codice === voce.codice) : undefined;
+  };
   const nuove: any[] = [];
   const modifiche: { id: number; volontario_id: number; codice: string | null; corpo: any }[] = [];
   const corsiToccati = new Map<number, Set<string>>();   // volontario → codici fissi con almeno un file
@@ -256,7 +270,7 @@ async function importa(utente: string) {
         .sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''));   // il più recente per primo
       for (const f of file) {
         const testo = (f.titolo || '') + ' ' + f.nome;
-        const corso = CORSI_FISSI.find(c => c.re.test(testo));
+        const corso = corsoDi(testo);
         const abil = !corso && /^abilitazion/i.test(f.tipo || '');
         if (!corso && !abil) continue;
         const base = { data_corso: f.data, scadenza: f.scadenza, drive_file_id: f.id };

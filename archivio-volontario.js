@@ -58,7 +58,7 @@ async function arcCaricaCatalogo() {
   return arcCatalogo;
 }
 function arcNorm(t) {
-  return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 // Voce del catalogo per tipo e titolo: la prima (per ordine) con una parola chiave a inizio parola
 function arcVoce(tipo, titolo) {
@@ -96,9 +96,14 @@ async function arcCarica(volId, ricarica) {
   return esito;
 }
 
+// Corso fisso dal catalogo (parole chiave); senza catalogo valgono le espressioni di ARC_CORSI
 function arcCorsoDi(f) {
   if (f.categoria !== 'Attestati') return null;
   const testo = (f.titolo || '') + ' ' + (f.nome_file || '');
+  if (arcCatalogo && arcCatalogo.length) {
+    const v = arcVoce('CORSO', testo);
+    return v && ARC_CORSI.some(x => x.tipo === v.codice) ? v.codice : null;
+  }
   const c = ARC_CORSI.find(x => x.re.test(testo));
   return c ? c.tipo : null;
 }
