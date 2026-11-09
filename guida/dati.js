@@ -502,13 +502,15 @@ const PAGINE = [
   chi:"Chi ha il permesso Formazione.", video:"",
   intro:"Formazione è il registro di tutti i corsi fatti dai volontari.",
   schermo: () => app("altro","Formazione", `
-    <div class="m-barra">${cerca("Cerca volontario, corso o ente","cerca")}<span class="m-sp"></span>${btn("Registra corso","nuovo")}</div>
+    <div class="m-barra">${cerca("Cerca volontario, corso o ente","cerca")}<span class="m-sp"></span>${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
     ${tab([["Volontario","Corso","Ente","Data"],["Rossi Mario","Corso base 12 ore","Regione Piemonte","03/2026"],["Verdi Paolo","Caposquadra","ANA","05/2025"]],"elenco")}`),
   passi:[
     {t:"Cercare", d:"Cerca per volontario, corso o ente.", h:"cerca",
      v:"Cerchi per nome del volontario, per corso o per ente che l'ha organizzato."},
     {t:"Registra corso", d:"Inserisci il corso fatto da uno o più volontari: compare anche nella loro scheda.", h:"nuovo",
-     v:"Con Registra corso inserisci un corso, e compare in automatico anche nella scheda di ogni volontario, nella parte Formazione."}
+     v:"Con Registra corso inserisci un corso, e compare in automatico anche nella scheda di ogni volontario, nella parte Formazione."},
+    {t:"Importa da Drive", d:"Legge gli attestati archiviati su Google Drive e porta nel registro data e scadenza dei corsi 4 ore, 12 ore, Caposquadra e DAE, più le abilitazioni. Rilancialo quando aggiungi file: quelli già importati vengono saltati.", h:"drive",
+     v:"Con Importa da Drive il registro si riempie da solo con gli attestati archiviati su Google Drive: data e scadenza dei corsi 4 ore, 12 ore, caposquadra e DAE, e tutte le abilitazioni. Quando aggiungi nuovi file su Drive, rilancialo: quelli già importati vengono saltati, quindi non si creano doppioni."}
   ]
 },
 {

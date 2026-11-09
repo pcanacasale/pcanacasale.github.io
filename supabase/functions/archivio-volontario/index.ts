@@ -10,6 +10,10 @@
 //
 // GET ?azione=lista&volontario_id=N            → elenco file di Attestati e Documenti
 // GET ?azione=file&volontario_id=N&file_id=X   → il file in streaming (solo se sta in una delle due cartelle)
+// POST ?azione=importa                         → porta nel registro formazione (formazione_registro) data e
+//   scadenza dei corsi fissi (4 ore, 12 ore, Caposquadra, DAE) e le abilitazioni prese dai file Attestati di
+//   tutti i volontari. Solo con permesso formazione o modifica_volontari. Ogni riga importata ricorda il file
+//   (drive_file_id): rilanciando, i file già importati si saltano. Nessuna riga viene cancellata.
 //
 // Secrets: GOOGLE_SA_JSON (service account con accesso in lettura al Drive condiviso).
 // Ogni apertura di file finisce in log_attivita.
@@ -26,7 +30,7 @@ function cors(req: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': ORIGINI.includes(o) || LOCALE.test(o) ? o : ORIGINI[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Expose-Headers': 'content-disposition, content-type',
     'Vary': 'Origin',
   };
@@ -40,7 +44,7 @@ function ambiente() {
 class Errore extends Error { constructor(public status: number, msg: string) { super(msg); } }
 
 // -- AUTENTICAZIONE (con il token di chi chiede) --
-async function chiEChiede(req: Request) {
+async function chiEChiede(req: Request, perImport = false) {
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) throw new Errore(401, 'Accesso richiesto.');
   const { supaUrl, anon } = ambiente();
@@ -51,15 +55,21 @@ async function chiEChiede(req: Request) {
     const r = await fetch(supaUrl + '/rest/v1/rpc/' + nome, { method: 'POST', headers: h, body: JSON.stringify(corpo) });
     return r.ok ? await r.json() : null;
   };
-  const [permArchivio, permVolontari, mioId, prof] = await Promise.all([
+  const [permArchivio, permVolontari, mioId, prof, permFormazione, permModifica] = await Promise.all([
     rpc('ho_permesso', { chiave: 'documenti_volontari' }),
     rpc('ho_permesso', { chiave: 'volontari' }),
     rpc('mio_volontario_id', {}),
     rpc('mio_profilo', {}),
+    perImport ? rpc('ho_permesso', { chiave: 'formazione' }) : null,
+    perImport ? rpc('ho_permesso', { chiave: 'modifica_volontari' }) : null,
   ]);
   const p = Array.isArray(prof) ? prof[0] : prof;
   const nome = p ? [p.cognome, p.nome].filter(Boolean).join(' ') : '';
-  return { staff: permArchivio === true || permVolontari === true, mioId: mioId == null ? null : Number(mioId), nome: nome || 'Utente' };
+  return {
+    staff: permArchivio === true || permVolontari === true,
+    importa: permFormazione === true || permModifica === true,
+    mioId: mioId == null ? null : Number(mioId), nome: nome || 'Utente',
+  };
 }
 
 // -- DATABASE (service role, solo lato server) --
@@ -133,19 +143,26 @@ async function elenco(q: string, campi: string) {
   return out;
 }
 
-// Cartella del volontario e le sue due sottocartelle: { Attestati: id, Documenti: id }
-async function cartelle(volId: number) {
-  const [v] = await db('GET', 'volontari?id=eq.' + volId + '&select=id,cognome,nome,drive_folder_id');
-  if (!v) throw new Errore(404, 'Volontario non trovato.');
+// Sottocartelle di una cartella volontario: { Attestati: id, Documenti: id }
+async function sottocartelle(cartella: string) {
   const sotto: Record<string, string> = {};
-  if (!v.drive_folder_id) return { v, sotto };
-  const radice = String(v.drive_folder_id).replace(/'/g, '');
+  const radice = String(cartella).replace(/'/g, '');
   const f = await elenco("'" + radice + "' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'", 'id,name');
   f.forEach(x => {
     const nome = SOTTOCARTELLE.find(s => s.toLowerCase() === String(x.name).trim().toLowerCase());
     if (nome && !sotto[nome]) sotto[nome] = x.id;
   });
-  return { v, sotto };
+  return sotto;
+}
+
+async function cartelle(volId: number) {
+  const [v] = await db('GET', 'volontari?id=eq.' + volId + '&select=id,cognome,nome,drive_folder_id');
+  if (!v) throw new Errore(404, 'Volontario non trovato.');
+  return { v, sotto: v.drive_folder_id ? await sottocartelle(v.drive_folder_id) : {} as Record<string, string> };
+}
+
+function fileDi(cartella: string, campi = 'id,name') {
+  return elenco("'" + cartella + "' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'", campi);
 }
 
 // -- NOME FILE → tipo, titolo, data, scadenza --
@@ -178,7 +195,7 @@ async function lista(volId: number) {
   const file: any[] = [];
   for (const categoria of SOTTOCARTELLE) {
     if (!sotto[categoria]) continue;
-    const f = await elenco("'" + sotto[categoria] + "' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'", 'id,name,mimeType,size');
+    const f = await fileDi(sotto[categoria], 'id,name,mimeType,size');
     f.forEach(x => file.push({ id: x.id, nome_file: x.name, categoria, ...leggiNome(x.name), dimensione: x.size ? Number(x.size) : null }));
   }
   file.sort((a, b) => (b.data || '').localeCompare(a.data || '') || a.nome_file.localeCompare(b.nome_file, 'it'));
@@ -208,13 +225,100 @@ async function scarica(req: Request, volId: number, fileId: string, utente: stri
   });
 }
 
+// -- IMPORT NEL REGISTRO FORMAZIONE --
+// Stesse regole di archivio-volontario.js (ARC_CORSI): il corso fisso si riconosce dal titolo del file
+const CORSI_FISSI = [
+  { codice: '4_ORE',  titolo: 'Corso 4 ore',       campo: 'quattro_ore',  re: /sensibilizzazione\s+(al\s+)?rischio|\b4\s*ore\b|quattro\s+ore/i },
+  { codice: '12_ORE', titolo: 'Corso 12 ore',      campo: 'dodici_ore',   re: /rischio\s+alto|\b12\s*ore\b|dodici\s+ore/i },
+  { codice: 'CAPOSQ', titolo: 'Corso Caposquadra', campo: 'corso_caposq', re: /capo\s*squadra/i },
+  { codice: 'DAE',    titolo: 'DAE',               campo: 'dae',          re: /defibrillat|\bDAE\b|\bBLSD\b|\bAED\b/i },
+];
+
+async function aGruppi<T>(elenco: T[], quanti: number, fn: (x: T) => Promise<void>) {
+  for (let i = 0; i < elenco.length; i += quanti) await Promise.all(elenco.slice(i, i + quanti).map(fn));
+}
+
+async function importa(utente: string) {
+  const vols = await db('GET', 'volontari?drive_folder_id=not.is.null&select=id,drive_folder_id');
+  const reg: any[] = await db('GET', 'formazione_registro?select=id,volontario_id,tipo,codice,titolo,data_corso,scadenza,drive_file_id');
+  const giaImportati = new Set(reg.map(r => r.drive_file_id).filter(Boolean));
+  const nuove: any[] = [];
+  const modifiche: { id: number; volontario_id: number; codice: string | null; corpo: any }[] = [];
+  const corsiToccati = new Map<number, Set<string>>();   // volontario → codici fissi con almeno un file
+  let errori = 0;
+
+  await aGruppi(vols, 6, async (v: any) => {
+    try {
+      const sotto = await sottocartelle(v.drive_folder_id);
+      if (!sotto.Attestati) return;
+      const file = (await fileDi(sotto.Attestati)).map((x: any) => ({ id: x.id, nome: x.name, ...leggiNome(x.name) }))
+        .filter((f: any) => !giaImportati.has(f.id))
+        .sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''));   // il più recente per primo
+      for (const f of file) {
+        const testo = (f.titolo || '') + ' ' + f.nome;
+        const corso = CORSI_FISSI.find(c => c.re.test(testo));
+        const abil = !corso && /^abilitazion/i.test(f.tipo || '');
+        if (!corso && !abil) continue;
+        const base = { data_corso: f.data, scadenza: f.scadenza, drive_file_id: f.id };
+        // riga già presente senza file: si completa (pregressi dei corsi fissi, abilitazioni inserite a mano)
+        const esistente = reg.find(r => r.volontario_id === v.id && !r.drive_file_id && (corso
+          ? r.codice === corso.codice && !r.data_corso
+          : r.tipo === 'ABILITAZIONE' && String(r.titolo).trim().toLowerCase() === String(f.titolo).trim().toLowerCase() && (!r.data_corso || r.data_corso === f.data)));
+        if (esistente) {
+          esistente.drive_file_id = f.id;
+          const corpo = { ...base, data_corso: f.data || esistente.data_corso, scadenza: f.scadenza || esistente.scadenza };
+          esistente.scadenza = corpo.scadenza;
+          modifiche.push({ id: esistente.id, volontario_id: v.id, codice: esistente.codice, corpo });
+        } else {
+          nuove.push({ volontario_id: v.id, tipo: corso ? 'CORSO' : 'ABILITAZIONE', codice: corso ? corso.codice : null,
+            titolo: corso ? corso.titolo : f.titolo, note: 'Da archivio Drive: ' + f.nome, ...base });
+        }
+        if (corso) {
+          if (!corsiToccati.has(v.id)) corsiToccati.set(v.id, new Set());
+          corsiToccati.get(v.id)!.add(corso.codice);
+        }
+      }
+    } catch (e) {
+      errori++;
+      console.error('importa volontario ' + v.id + ':', e instanceof Error ? e.message : e);
+    }
+  });
+
+  for (const m of modifiche) await db('PATCH', 'formazione_registro?id=eq.' + m.id, m.corpo);
+  for (let i = 0; i < nuove.length; i += 200) await db('POST', 'formazione_registro', nuove.slice(i, i + 200));
+
+  // Spunte dei corsi fissi in volontari: si aggiungono, mai si tolgono. DAE prende la scadenza più lontana.
+  const tutte = reg.concat(nuove);
+  for (const [volId, codici] of corsiToccati) {
+    const corpo: Record<string, unknown> = {};
+    codici.forEach(cod => {
+      const c = CORSI_FISSI.find(x => x.codice === cod)!;
+      corpo[c.campo] = true;
+      if (cod === 'DAE') {
+        const sc = tutte.filter(r => r.volontario_id === volId && r.codice === 'DAE').map(r => r.scadenza).filter(Boolean).sort().pop();
+        if (sc) corpo.scad_dae = sc;
+      }
+    });
+    await db('PATCH', 'volontari?id=eq.' + volId, corpo);
+  }
+
+  const esito = { volontari: vols.length, completate: modifiche.length, aggiunte: nuove.length, errori };
+  await logAttivita(utente, 'ha importato da Drive il registro formazione: ' + esito.completate + ' righe completate, ' + esito.aggiunte + ' aggiunte');
+  return esito;
+}
+
 Deno.serve(async (req) => {
   const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...cors(req), 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors(req) });
-  if (req.method !== 'GET') return json({ ok: false, error: 'Metodo non ammesso.' }, 405);
   try {
     const url = new URL(req.url);
     const azione = url.searchParams.get('azione');
+    if (req.method === 'POST' && azione === 'importa') {
+      const chi = await chiEChiede(req, true);
+      if (!chi.importa) return json({ ok: false, error: 'Non autorizzato.' }, 403);
+      return json({ ok: true, ...(await importa(chi.nome)) });
+    }
+    if (req.method !== 'GET') return json({ ok: false, error: 'Metodo non ammesso.' }, 405);
     const volId = Number(url.searchParams.get('volontario_id'));
     if (!Number.isInteger(volId) || volId <= 0) return json({ ok: false, error: 'Volontario non valido.' }, 400);
     const chi = await chiEChiede(req);

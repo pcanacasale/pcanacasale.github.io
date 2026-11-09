@@ -178,6 +178,7 @@ function svRenderDrive() {
   if (abil) abil.innerHTML = '<div class="grp sv-mt">Abilitazioni in archivio' + (d ? ' (' + d.abilitazioni.length + ')' : '') + '</div>'
     + (d ? arcRighe(sv.id, d.abilitazioni, 'Nessuna abilitazione archiviata.') : stato);
   svRenderCorsi();
+  svRenderRegistro(fzPuoScrivere());
   const att = el('svP_attestati');
   if (att) att.innerHTML = '<div class="grp">Attestati in archivio' + (d ? ' (' + d.attestati.length + ')' : '') + '</div>'
     + (d ? arcRighe(sv.id, d.attestati, 'Nessun attestato archiviato.') : stato);
@@ -737,7 +738,9 @@ function svRenderRegistro(scrive) {
   const righe = sv.registro;
   const fissi = SV_CORSI.map(c => c.tipo);
   const corsi = righe.filter(r => !fissi.includes(r.codice) && r.tipo !== 'ABILITAZIONE');
-  const abil = righe.filter(r => !fissi.includes(r.codice) && r.tipo === 'ABILITAZIONE');
+  // le abilitazioni importate da Drive compaiono già nell'elenco dell'archivio, con il PDF
+  const suDrive = new Set(sv.drive && sv.drive.file ? sv.drive.file.map(f => f.id) : []);
+  const abil = righe.filter(r => !fissi.includes(r.codice) && r.tipo === 'ABILITAZIONE' && !suDrive.has(r.drive_file_id));
   const reg = document.getElementById('svRegistro');
   if (reg) reg.innerHTML = (fzRigheHtml(corsi, scrive) || '<p class="note m0 mb10">Nessun altro corso registrato.</p>')
     + (scrive ? '<button class="doc-add-btn" onclick="fzApriForm(null,' + sv.id + ')">+ Registra corso o abilitazione</button>' : '');

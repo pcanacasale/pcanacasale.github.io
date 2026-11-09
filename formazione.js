@@ -146,6 +146,7 @@ async function caricaFormazione() {
   const list = document.getElementById('fzList');
   if (!list) return;
   document.getElementById('fzBtnNuovo').hidden = !fzPuoScrivere();
+  document.getElementById('fzBtnDrive').hidden = !fzPuoScrivere();
   list.innerHTML = '<div class="loading-msg">Caricamento…</div>';
   try {
     const [res] = await Promise.all([
@@ -167,7 +168,31 @@ function fzRenderChip() {
 }
 function fzImpostaFiltro(k) { fzFiltro = fzFiltro === k ? '' : k; fzRenderChip(); fzRenderLista(); }
 
+// Import dall'archivio Google Drive (Edge Function archivio-volontario, azione importa):
+// completa data e scadenza dei corsi fissi e aggiunge le abilitazioni. Si può rilanciare.
+async function fzImportaDrive() {
+  if (!confirm('Leggo gli attestati di tutti i volontari su Google Drive e porto nel registro data e scadenza dei corsi 4 ore, 12 ore, Caposquadra e DAE, più le abilitazioni.\n\nI file già importati vengono saltati. Procedo?')) return;
+  const btn = document.getElementById('fzBtnDrive');
+  btn.disabled = true;
+  btn.textContent = 'Importazione…';
+  try {
+    const res = await sbFetch(SUPA_URL + '/functions/v1/archivio-volontario?azione=importa', { method: 'POST', headers: {}, silenzioso: true });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || !d.ok) throw new Error(d.error || arcErrore(res.status));
+    alert('Import completato.\n\nRighe completate con data e scadenza: ' + d.completate + '\nRighe aggiunte: ' + d.aggiunte
+      + (d.errori ? '\nVolontari non letti (riprova più tardi): ' + d.errori : ''));
+    arcCache = {};
+    await caricaFormazione();
+  } catch(e) {
+    alert('Import non riuscito: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Importa da Drive';
+  }
+}
+
 function fzPillOrigine(r) {
+  if (!r.origine && r.drive_file_id) return '<span class="pill p-grey">Da Drive</span>';
   if (!r.origine) return '<span class="pill p-grey">Pregresso</span>';
   return r.origine === 'INTERNO' ? '<span class="pill p-blue">Interno</span>' : '<span class="pill p-sand">Esterno</span>';
 }
@@ -404,7 +429,8 @@ async function fzRenderPersonale(volId) {
     const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + volId + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
     if (!res.ok) throw new Error('errore');
     // i corsi fissi stanno già nella card Corsi obbligatori (archivio-volontario.js)
-    const righe = (await res.json()).filter(r => !FZ_CORSI_FISSI[r.codice]);
+    // e quelle importate da Drive stanno già nelle card dell'archivio
+    const righe = (await res.json()).filter(r => !FZ_CORSI_FISSI[r.codice] && !r.drive_file_id);
     if (!righe.length) return;
     box.innerHTML = '<h2>Altri corsi e abilitazioni</h2>' + fzRigheHtml(righe, false);
     box.hidden = false;
