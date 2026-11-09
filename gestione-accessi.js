@@ -10,7 +10,7 @@
 // Tutte le chiavi usate da menu, hasPerm e ho_permesso, raggruppate come il menu.
 // scheda_personale e segnalazioni non ci sono: valgono solo per i volontari.
 const GA_GRUPPI = [
-  ['Principali', [['volontari', 'Volontari'], ['modifica_volontari', 'Modifica volontari'], ['documenti', 'Documenti volontari'], ['interventi', 'Interventi']]],
+  ['Principali', [['volontari', 'Volontari'], ['modifica_volontari', 'Modifica volontari'], ['documenti', 'Documenti volontari'], ['documenti_volontari', 'Vedere archivio documenti volontari'], ['interventi', 'Interventi']]],
   ['Logistica', [['mezzi', 'Mezzi'], ['dotazioni', 'Dotazioni'], ['pianicarico', 'Piani di carico'], ['tlc', 'TLC']]],
   ['Strumenti', [['postazioni', 'Postazioni'], ['galleria', 'Galleria'], ['editor_pdf', 'Editor PDF base'], ['editor_pdf_completo', 'Editor PDF completo'], ['convocazioni', 'Convocazioni (vede)'], ['convocazioni_gestione', 'Convocazioni: crea e gestisce liste'], ['eventi', 'Eventi']]],
   ['Amministrazione', [['visite', 'Visite mediche'], ['formazione', 'Formazione'], ['aggiornamento_dati', 'Aggiornamento dati'], ['statistiche', 'Statistiche'], ['gestione_segnalazioni', 'Gestione segnalazioni'], ['richieste', 'Richieste'], ['db', 'DB avanzato'], ['accessi', 'Registro accessi'], ['impostazioni', 'Impostazioni']]],

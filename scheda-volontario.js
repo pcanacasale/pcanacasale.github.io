@@ -2,6 +2,7 @@
 // SCHEDA VOLONTARIO — finestra con le schede Dati, Documenti, Visita medica,
 // Formazione, Dotazioni e Interventi. Prefisso funzioni: sv*
 // ============================================================
+// Scheda Archivio: documenti su Google Drive, vedi archivio-volontario.js.
 // Si appoggia alle tabelle già in uso: volontari, documenti, interventi_con_stato,
 // intervento_volontari e, per chi ha il permesso "aggiornamento_dati", alla Edge
 // Function agg-api (agg_documenti, agg_dpi_volontario).
@@ -16,6 +17,7 @@ const SV_TABS = [
   { id: 'formazione', label: 'Formazione' },
   { id: 'dotazioni',  label: 'Dotazioni' },
   { id: 'interventi', label: 'Interventi' },
+  { id: 'archivio',   label: 'Archivio' },
 ];
 
 let sv = null;      // { id, v, docs, agg, tab, ore, dirty, interventiOk, anteprimeOk }
@@ -28,6 +30,7 @@ function svPuoDoc()    { return canModificaVolontari() || hasPerm('documenti'); 
 function svHaAgg()     { return typeof aggHaAccesso === 'function' && aggHaAccesso(); }
 function svTabVisibile(tab) {
   if (tab === 'interventi') return hasPerm('interventi');
+  if (tab === 'archivio') return hasPerm('documenti_volontari') || hasPerm('volontari');
   if (hasPerm('volontari')) return true;
   if (tab === 'documenti') return hasPerm('documenti');
   if (tab === 'visita') return hasPerm('visite');
@@ -214,6 +217,7 @@ function svMostraTab(tab) {
   if (c) c.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (tab === 'interventi' && !sv.interventiOk) svCaricaInterventi();
   if (tab === 'documenti' && !sv.anteprimeOk) svCaricaAnteprime();
+  if (tab === 'archivio' && !sv.archivioOk) { sv.archivioOk = true; arcMostra('svP_archivio', sv.id); }
   document.getElementById('svBody').scrollTop = 0;
 }
 
