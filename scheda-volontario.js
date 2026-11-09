@@ -176,7 +176,7 @@ function svRenderDrive() {
   });
   const abil = el('svDriveAbil');
   if (abil) abil.innerHTML = '<div class="grp sv-mt">Abilitazioni in archivio' + (d ? ' (' + d.abilitazioni.length + ')' : '') + '</div>'
-    + (d ? arcRighe(sv.id, d.abilitazioni, 'Nessuna abilitazione archiviata.') : stato);
+    + (d ? arcRigheVoci(sv.id, d.abilitazioni, 'Nessuna abilitazione archiviata.') : stato);
   svRenderCorsi();
   svRenderRegistro(fzPuoScrivere());
   const att = el('svP_attestati');

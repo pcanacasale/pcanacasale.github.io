@@ -47,15 +47,51 @@ function arcScadenza(iso) {
   return giorni <= ARC_GIORNI_AVVISO ? 'scadenza' : '';
 }
 
+// -- CATALOGO CORSI (formazione_catalogo): stesse regole di formazione_voce() nel database --
+let arcCatalogo = null;   // null = non ancora letto; [] = non disponibile
+async function arcCaricaCatalogo() {
+  if (arcCatalogo) return arcCatalogo;
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_catalogo?attivo=eq.true&select=id,tipo,codice,titolo,parole_chiave,ordine&order=ordine,id', { headers: H });
+    arcCatalogo = res.ok ? await res.json() : [];
+  } catch(e) { arcCatalogo = []; }
+  return arcCatalogo;
+}
+function arcNorm(t) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+// Voce del catalogo per tipo e titolo: la prima (per ordine) con una parola chiave a inizio parola
+function arcVoce(tipo, titolo) {
+  if (!arcCatalogo || !arcCatalogo.length) return null;
+  const t = ' ' + arcNorm(titolo) + ' ';
+  return arcCatalogo.find(c => c.tipo === tipo && (c.parole_chiave || []).some(k => arcNorm(k) && t.includes(' ' + arcNorm(k))))
+    || (tipo === 'ABILITAZIONE' ? arcCatalogo.find(c => c.codice === 'DA_VERIFICARE') || null : null);
+}
+// Righe divise per voce di catalogo (senza catalogo: elenco semplice)
+function arcRigheVoci(volId, elenco, vuoto) {
+  if (!elenco.length || !arcCatalogo || !arcCatalogo.length) return arcRighe(volId, elenco, vuoto);
+  const gruppi = new Map();
+  elenco.forEach(f => {
+    const v = arcVoce('ABILITAZIONE', f.titolo);
+    const k = v ? v.id : 0;
+    if (!gruppi.has(k)) gruppi.set(k, { titolo: v ? v.titolo : 'Altro', ordine: v ? v.ordine : 1000, file: [] });
+    gruppi.get(k).file.push(f);
+  });
+  return [...gruppi.values()].sort((a, b) => a.ordine - b.ordine).map(g =>
+    '<div class="sub mt10"><b>' + aggEsc(g.titolo) + '</b> (' + g.file.length + ')</div>' + arcRighe(volId, g.file)).join('');
+}
+
 // Elenco dei file: { file: [...] } oppure { errore: '...' }. ricarica = true ignora la copia in memoria
 async function arcCarica(volId, ricarica) {
   if (!ricarica && arcCache[volId] && arcCache[volId].file) return arcCache[volId];
+  const catalogo = arcCaricaCatalogo();   // in parallelo: serve a dividere le abilitazioni per voce
   let esito;
   try {
     const res = await sbFetch(ARC_URL + '?azione=lista&volontario_id=' + encodeURIComponent(volId), { headers: {} });
     const d = await res.json().catch(() => ({}));
     esito = res.ok && d.ok ? { file: d.file || [] } : { errore: arcErrore(res.status) };
   } catch(e) { esito = { errore: arcErrore(0) }; }
+  await catalogo;
   arcCache[volId] = esito;
   return esito;
 }
@@ -169,7 +205,7 @@ async function arcRenderPersonale(v, ricarica) {
       + (info.testo ? '<span class="sub">' + info.testo + '</span>' : '')
       + arcRighe(v.id, file) + '</div>';
   }).join('');
-  box('spArcAbilitazioni').innerHTML = '<h2>Abilitazioni (' + d.abilitazioni.length + ')</h2>' + arcRighe(v.id, d.abilitazioni, 'Nessuna abilitazione archiviata.');
+  box('spArcAbilitazioni').innerHTML = '<h2>Abilitazioni (' + d.abilitazioni.length + ')</h2>' + arcRigheVoci(v.id, d.abilitazioni, 'Nessuna abilitazione archiviata.');
   box('spArcAttestati').innerHTML = '<h2>Attestati (' + d.attestati.length + ')</h2>' + arcRighe(v.id, d.attestati, 'Nessun attestato archiviato.');
   box('spArcDocumenti').innerHTML = '<h2>Documenti archiviati</h2>' + arcRighe(v.id, d.documenti, 'Nessun documento archiviato.');
 }

@@ -152,7 +152,9 @@ async function caricaFormazione() {
     const [res] = await Promise.all([
       sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&order=data_corso.desc.nullslast,id.desc', { headers: H }),
       fzCaricaVolontari(),
+      fzCaricaCatalogo(),
     ]);
+    document.getElementById('fzBtnCatalogo').hidden = !fzCatalogo.length;
     if (!res.ok) throw new Error('errore');
     fzRighe = await res.json();
     fzRenderChip();
@@ -204,23 +206,40 @@ function fzDettaglio(r) {
   return [r.tipo === 'ABILITAZIONE' ? 'Abilitazione' : '', r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).map(aggEsc).join(' · ');
 }
 
-// Un blocco per corso: quelli fissi per codice, gli altri per titolo. Si apre sui partecipanti.
+// -- CATALOGO (formazione_catalogo, supabase/formazione_catalogo.sql) --
+// Una voce per corso o abilitazione: le righe del registro si collegano con catalogo_id
+// (lo assegna il database dalle parole chiave); qui si raggruppa per voce.
+let fzCatalogo = [];
+
+async function fzCaricaCatalogo() {
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_catalogo?select=*&order=ordine,titolo', { headers: H });
+    fzCatalogo = res.ok ? await res.json() : [];
+  } catch(e) { fzCatalogo = []; }
+}
+function fzVoce(id) { return id ? fzCatalogo.find(c => c.id === id) || null : null; }
+function fzVociAttive() { return fzCatalogo.filter(c => c.attivo); }
+
+// Un blocco per voce di catalogo (righe senza voce: per codice o titolo). Si apre sui partecipanti.
 function fzRaggruppa(righe) {
   const gruppi = new Map();
   righe.forEach(r => {
-    const k = r.codice || r.titolo.trim().toLowerCase();
-    if (!gruppi.has(k)) gruppi.set(k, { k, titolo: r.titolo, tipo: r.tipo, codice: r.codice, righe: [] });
+    const v = fzVoce(r.catalogo_id);
+    const k = v ? 'c' + v.id : (r.codice || r.titolo.trim().toLowerCase());
+    if (!gruppi.has(k)) gruppi.set(k, v
+      ? { k, titolo: v.titolo, tipo: v.tipo, codice: v.codice, catalogo_id: v.id, validita: v.validita_anni, ordine: v.ordine, righe: [] }
+      : { k, titolo: r.titolo, tipo: r.tipo, codice: r.codice, catalogo_id: null, validita: null, ordine: 500, righe: [] });
     gruppi.get(k).righe.push(r);
   });
-  const fissi = Object.keys(FZ_CORSI_FISSI);
-  const pos = g => g.codice ? fissi.indexOf(g.codice) : fissi.length;
-  return [...gruppi.values()].sort((a, b) => pos(a) - pos(b) || a.titolo.localeCompare(b.titolo, 'it'));
+  return [...gruppi.values()].sort((a, b) => a.ordine - b.ordine || a.titolo.localeCompare(b.titolo, 'it'));
 }
 
 function fzGruppoHtml(g, i, aperto, scrive) {
   const date = g.righe.map(r => r.data_corso).filter(Boolean).sort();
   const scad = g.righe.filter(r => svStatoScadenza(r.scadenza)).length;
-  const info = [g.tipo === 'ABILITAZIONE' ? 'Abilitazione' : 'Corso', g.righe.length + (g.righe.length === 1 ? ' volontario' : ' volontari'),
+  const persone = new Set(g.righe.map(r => r.volontario_id)).size;
+  const info = [g.tipo === 'ABILITAZIONE' ? 'Abilitazione' : 'Corso', persone + (persone === 1 ? ' volontario' : ' volontari'),
+    g.validita ? 'vale ' + g.validita + (g.validita === 1 ? ' anno' : ' anni') : '',
     date.length ? 'ultimo il ' + svData(date[date.length - 1]) : ''].filter(Boolean).join(' · ');
   const righe = g.righe.slice().sort((a, b) => (b.data_corso || '').localeCompare(a.data_corso || '') || fzNomeVol(a.volontario_id).localeCompare(fzNomeVol(b.volontario_id), 'it'));
   return '<div class="card fz-gruppo"><div class="fz-gruppo-h"><button class="fz-gruppo-t" aria-expanded="' + aperto + '" onclick="fzApriGruppo(' + i + ')">'
@@ -231,8 +250,8 @@ function fzGruppoHtml(g, i, aperto, scrive) {
       + righe.map(r => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
         + '<span>' + (svData(r.data_corso) || '—') + '</span>'
         + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
-        + '<span class="sub minw0">' + aggEsc([r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
-        + '<span>' + fzPillOrigine(r) + '</span>'
+        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
+        + '<span>' + fzPillOrigine(r) + (r.aggiornamento ? ' <span class="pill p-blue">Aggiornamento</span>' : '') + '</span>'
         + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
 }
 
@@ -240,7 +259,7 @@ function fzRenderLista() {
   const list = document.getElementById('fzList');
   const q = document.getElementById('fzSearch').value.toLowerCase().trim();
   const filtro = FZ_FILTRI.find(f => f[0] === fzFiltro)[2];
-  const righe = fzRighe.filter(r => filtro(r) && (!q || (fzNomeVol(r.volontario_id) + ' ' + r.titolo + ' ' + (r.ente || '')).toLowerCase().includes(q)));
+  const righe = fzRighe.filter(r => filtro(r) && (!q || (fzNomeVol(r.volontario_id) + ' ' + r.titolo + ' ' + ((fzVoce(r.catalogo_id) || {}).titolo || '') + ' ' + (r.ente || '')).toLowerCase().includes(q)));
   fzGruppi = fzRaggruppa(righe);
   document.getElementById('fzMostrati').textContent = fzGruppi.length + (fzGruppi.length === 1 ? ' corso' : ' corsi') + ' · ' + righe.length + (righe.length === 1 ? ' registrazione' : ' registrazioni');
   if (!righe.length) { list.innerHTML = '<div class="empty">' + (fzRighe.length ? 'Nessuna registrazione trovata.' : 'Nessun corso registrato.') + '</div>'; return; }
@@ -256,9 +275,20 @@ function fzApriGruppo(i) {
 }
 
 // -- FINESTRA REGISTRA / MODIFICA --
-function fzCatalogoHtml(codice) {
-  return Object.keys(FZ_CORSI_FISSI).map(k => '<option value="' + k + '"' + (codice === k ? ' selected' : '') + '>' + FZ_CORSI_FISSI[k].titolo + '</option>').join('')
-    + '<option value=""' + (codice ? '' : ' selected') + '>Altro corso o abilitazione</option>';
+// Valori: 'c:<id>' voce di catalogo, 'k:<codice>' corso fisso (senza catalogo), '' nuova voce / titolo libero
+function fzCatalogoHtml(sel) {
+  const opz = (val, lab) => '<option value="' + val + '"' + (sel === val ? ' selected' : '') + '>' + aggEsc(lab) + '</option>';
+  if (!fzCatalogo.length) return Object.keys(FZ_CORSI_FISSI).map(k => opz('k:' + k, FZ_CORSI_FISSI[k].titolo)).join('') + opz('', 'Altro corso o abilitazione');
+  const voci = fzVociAttive().filter(c => c.codice !== 'DA_VERIFICARE' || sel === 'c:' + c.id);
+  return ['CORSO', 'ABILITAZIONE'].map(t => '<optgroup label="' + (t === 'CORSO' ? 'Corsi' : 'Abilitazioni') + '">'
+    + voci.filter(c => c.tipo === t).map(c => opz('c:' + c.id, c.titolo)).join('') + '</optgroup>').join('')
+    + opz('', fzCatalogo.length ? 'Nuova voce di catalogo…' : 'Altro corso o abilitazione');
+}
+function fzSelDa(base) {
+  if (!base) return fzCatalogo.length ? 'c:' + ((fzVociAttive()[0] || {}).id || '') : 'k:4_ORE';
+  if (base.catalogo_id && fzVoce(base.catalogo_id)) return 'c:' + base.catalogo_id;
+  if (base.codice) { const v = fzCatalogo.find(c => c.codice === base.codice); return v ? 'c:' + v.id : 'k:' + base.codice; }
+  return '';
 }
 
 // id: riga da modificare; volFisso: volontario già scelto (dalla scheda volontario);
@@ -270,8 +300,10 @@ async function fzApriForm(id, volFisso, gruppo) {
   const g = gruppo != null ? fzGruppi[gruppo] : null;
   const base = r || g;
   if (!fzVolontari.length) { try { await fzCaricaVolontari(); } catch(e) {} }
+  if (!fzCatalogo.length) await fzCaricaCatalogo();
   fzForm = { id: id || null, volFisso: r ? r.volontario_id : (volFisso || null), scelti: new Set() };
   const titoli = [...new Set(fzRighe.filter(x => !x.codice).map(x => x.titolo))];
+  const sel = fzSelDa(base);
   const opz = (val, lab, cor) => '<option value="' + val + '"' + (cor === val ? ' selected' : '') + '>' + lab + '</option>';
   ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Registro formazione"><div class="shead"><h2>' + (id ? 'Modifica registrazione' : 'Registra corso') + '</h2>'
     + '<button class="x" onclick="fzChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
@@ -279,13 +311,13 @@ async function fzApriForm(id, volFisso, gruppo) {
     + (fzForm.volFisso ? '<div class="kv"><span>Volontario</span><b>' + aggEsc(fzNomeVol(fzForm.volFisso)) + '</b></div>'
       : '<label>Volontari<input type="search" id="fzVolCerca" placeholder="Cerca per cognome o squadra" autocomplete="off" oninput="fzRenderPicker()"></label>'
         + '<div class="fz-picker" id="fzPicker"></div><span class="sub" id="fzSceltiN"></span>')
-    + '<label>Corso<select id="fzCodice" onchange="fzAggiornaCatalogo()">' + fzCatalogoHtml(base ? base.codice : '') + '</select></label>'
-    + '<div id="fzLibero"><div class="row2"><label>Titolo<input id="fzTitolo" list="fzTitoli" value="' + aggEsc(base && !base.codice ? base.titolo : '') + '"><datalist id="fzTitoli">' + titoli.map(t => '<option value="' + aggEsc(t) + '">').join('') + '</datalist></label>'
+    + '<label>Corso o abilitazione<select id="fzCodice" onchange="fzAggiornaCatalogo()">' + fzCatalogoHtml(sel) + '</select></label>'
+    + '<div id="fzLibero"><div class="row2"><label>' + (fzCatalogo.length ? 'Nome della nuova voce' : 'Titolo') + '<input id="fzTitolo" list="fzTitoli" value="' + aggEsc(base && !sel ? base.titolo : '') + '"><datalist id="fzTitoli">' + titoli.map(t => '<option value="' + aggEsc(t) + '">').join('') + '</datalist></label>'
     + '<label>Tipo<select id="fzTipo">' + opz('CORSO', 'Corso', base ? base.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', base ? base.tipo : '') + '</select></label></div></div>'
     + '<div class="row2"><label>Origine<select id="fzOrigine">' + opz('INTERNO', 'Interno (nostro)', r ? r.origine : 'INTERNO') + opz('ESTERNO', 'Esterno', r ? r.origine : '') + '</select></label>'
     + '<label>Ente o docente<input id="fzEnte" value="' + aggEsc(r ? r.ente || '' : '') + '"></label></div>'
     + '<div class="row2"><label>Data<input type="date" id="fzData" value="' + aggEsc(r ? r.data_corso || '' : '') + '"></label>'
-    + '<label>Scadenza (se prevista)<input type="date" id="fzScadenza" value="' + aggEsc(r ? r.scadenza || '' : '') + '"></label></div>'
+    + '<label>Scadenza' + (fzCatalogo.length ? ' (vuota: calcolata dalla validità)' : ' (se prevista)') + '<input type="date" id="fzScadenza" value="' + aggEsc(r ? r.scadenza || '' : '') + '"></label></div>'
     + '<label>Ore<input type="number" id="fzOre" min="0" step="0.5" value="' + aggEsc(r && r.ore != null ? r.ore : '') + '"></label>'
     + '<label>Note<textarea id="fzNote" rows="2">' + aggEsc(r ? r.note || '' : '') + '</textarea></label>'
     + '<div class="actions">' + (id ? '<button class="btn danger" onclick="fzElimina()">Elimina</button>' : '')
@@ -315,20 +347,35 @@ function fzErrore(msg) { const e = document.getElementById('fzErr'); e.textConte
 
 async function fzSalva() {
   const val = id => document.getElementById(id).value.trim() || null;
-  const codice = val('fzCodice');
+  const sel = val('fzCodice') || '';
   const vol = fzForm.volFisso ? [fzForm.volFisso] : [...fzForm.scelti];
-  const titolo = codice ? FZ_CORSI_FISSI[codice].titolo : val('fzTitolo');
+  const prima = fzForm.id ? fzRighe.find(x => x.id === fzForm.id) : null;
+  let voce = sel.startsWith('c:') ? fzVoce(Number(sel.slice(2))) : null;
+  let codice = sel.startsWith('k:') ? sel.slice(2) : (voce && FZ_CORSI_FISSI[voce.codice] ? voce.codice : null);
+  // con una voce scelta il titolo è quello della voce; modificando senza cambiarla resta il titolo originale
+  let titolo = voce ? (prima && prima.catalogo_id === voce.id ? prima.titolo : voce.titolo) : codice ? FZ_CORSI_FISSI[codice].titolo : val('fzTitolo');
+  const tipo = voce ? voce.tipo : codice ? 'CORSO' : val('fzTipo');
   const dati = {
-    codice, titolo, tipo: codice ? 'CORSO' : val('fzTipo'), origine: val('fzOrigine'), ente: val('fzEnte'),
+    codice, titolo, tipo, origine: val('fzOrigine'), ente: val('fzEnte'),
     data_corso: val('fzData'), scadenza: val('fzScadenza'), ore: val('fzOre'), note: val('fzNote'),
   };
   if (!vol.length) return fzErrore('Scegli almeno un volontario.');
-  if (!titolo) return fzErrore('Indica il titolo del corso.');
+  if (!titolo) return fzErrore('Indica il ' + (fzCatalogo.length ? 'nome della nuova voce.' : 'titolo del corso.'));
   if (!dati.data_corso) return fzErrore('Indica la data.');
   if (dati.scadenza && dati.scadenza < dati.data_corso) return fzErrore('La scadenza non può essere prima della data.');
   const btn = document.getElementById('fzSalvaBtn');
   btn.disabled = true;
-  const prima = fzForm.id ? fzRighe.find(x => x.id === fzForm.id) : null;
+  if (fzCatalogo.length) {
+    // nuova voce: se ne esiste già una con lo stesso nome si usa quella
+    if (!voce && !codice) {
+      voce = fzVociAttive().find(c => c.tipo === tipo && c.titolo.trim().toLowerCase() === titolo.trim().toLowerCase()) || null;
+      if (!voce) {
+        try { voce = await fzSalvaVoce(null, { tipo, titolo }); }
+        catch(e) { btn.disabled = false; return fzErrore('Nuova voce non creata: ' + e.message); }
+      }
+    }
+    dati.catalogo_id = voce ? voce.id : null;   // scadenza vuota: la calcola il database dalla validità della voce
+  }
   try {
     const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro' + (prima ? '?id=eq.' + prima.id : ''), {
       method: prima ? 'PATCH' : 'POST', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
@@ -341,6 +388,128 @@ async function fzSalva() {
   }
   logAttivita('ha registrato ' + titolo + ' per ' + vol.length + ' volontari');
   await fzDopoModifica(vol, [codice, prima && prima.codice]);
+}
+
+// -- GESTIONE CATALOGO (permesso formazione o modifica_volontari, ricontrollato dalle regole del database) --
+// Le voci non si cancellano: si disattivano o si uniscono in un'altra (le righe passano alla voce di arrivo).
+const FZ_VOCI_BLOCCATE = ['4_ORE', '12_ORE', 'CAPOSQ', 'DAE', 'DA_VERIFICARE'];
+
+async function fzSalvaVoce(id, dati) {
+  const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_catalogo' + (id ? '?id=eq.' + id : ''), {
+    method: id ? 'PATCH' : 'POST', silenzioso: true,
+    headers: Object.assign({}, HJ, { 'Prefer': 'return=representation' }), body: JSON.stringify(dati),
+  });
+  const d = await res.json().catch(() => null);
+  if (!res.ok || !Array.isArray(d) || !d.length) throw new Error(res.status === 409 ? 'esiste già una voce con questo codice.' : 'operazione non consentita o non riuscita.');
+  const v = d[0];
+  const i = fzCatalogo.findIndex(c => c.id === v.id);
+  if (i >= 0) fzCatalogo[i] = v; else fzCatalogo.push(v);
+  return v;
+}
+
+function fzContaVoce(id) { return fzRighe.filter(r => r.catalogo_id === id).length; }
+
+function fzApriCatalogo() {
+  const ov = document.getElementById('fzOv');
+  const scrive = fzPuoScrivere();
+  const riga = c => '<div class="lr' + (scrive ? ' clk" onclick="fzApriVoce(' + c.id + ')' : '') + '"><div class="mid"><b>' + aggEsc(c.titolo) + '</b>'
+    + '<span class="sub">' + aggEsc([fzContaVoce(c.id) + ' registrazioni', c.validita_anni ? 'vale ' + c.validita_anni + ' anni' : 'senza scadenza',
+      (c.parole_chiave || []).length ? 'parole: ' + c.parole_chiave.join(', ') : ''].filter(Boolean).join(' · ')) + '</span></div>'
+    + (c.attivo ? '' : '<span class="pill p-grey">' + (c.unita_in ? 'Unita in ' + aggEsc((fzVoce(c.unita_in) || {}).titolo || '') : 'Disattivata') + '</span>') + '</div>';
+  const blocco = (t, lab) => {
+    const voci = fzCatalogo.filter(c => c.tipo === t).sort((a, b) => (b.attivo - a.attivo) || a.ordine - b.ordine || a.titolo.localeCompare(b.titolo, 'it'));
+    return '<div class="grp">' + lab + '</div>' + (voci.map(riga).join('') || '<p class="note m0 mb10">Nessuna voce.</p>');
+  };
+  const daVer = fzCatalogo.find(c => c.codice === 'DA_VERIFICARE');
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Catalogo corsi"><div class="shead"><h2>Catalogo corsi e abilitazioni</h2>'
+    + '<button class="x" onclick="fzChiudiForm()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
+    + '<p class="note m0 mb10">Ogni registrazione è collegata a una voce. Le parole chiave servono a riconoscere i titoli (anche dei file su Drive): basta l\'inizio di una parola, senza maiuscole né accenti.</p>'
+    + '<div class="form-err" id="fzErr"></div>'
+    + blocco('CORSO', 'Corsi') + blocco('ABILITAZIONE', 'Abilitazioni')
+    + (scrive ? '<div class="actions">' + (daVer ? '<button class="btn" onclick="fzRiapplica()">Riapplica parole chiave a "Da verificare" (' + fzContaVoce(daVer.id) + ')</button>' : '')
+      + '<button class="btn pri" onclick="fzApriVoce(null)">Nuova voce</button></div>' : '')
+    + '</div></div>';
+  ov.hidden = false;
+}
+
+function fzApriVoce(id) {
+  const c = id ? fzVoce(id) : null;
+  if (id && !c) return;
+  const bloccata = c && FZ_VOCI_BLOCCATE.includes(c.codice);
+  const opz = (val, lab, cor) => '<option value="' + val + '"' + (String(cor) === String(val) ? ' selected' : '') + '>' + aggEsc(lab) + '</option>';
+  const altre = c ? fzVociAttive().filter(x => x.id !== c.id && x.tipo === c.tipo) : [];
+  const ov = document.getElementById('fzOv');
+  ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Voce di catalogo"><div class="shead"><h2>' + (c ? 'Modifica voce' : 'Nuova voce') + '</h2>'
+    + '<button class="x" onclick="fzApriCatalogo()" aria-label="Indietro">✕</button></div><div class="sbody form">'
+    + '<div class="form-err" id="fzErr"></div>'
+    + '<label>Nome<input id="fzVTitolo" value="' + aggEsc(c ? c.titolo : '') + '"' + (bloccata ? ' disabled' : '') + '></label>'
+    + '<div class="row2"><label>Tipo<select id="fzVTipo"' + (bloccata ? ' disabled' : '') + '>' + opz('CORSO', 'Corso', c ? c.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', c ? c.tipo : '') + '</select></label>'
+    + '<label>Validità in anni (vuoto = non scade)<input type="number" id="fzVAnni" min="1" max="50" value="' + aggEsc(c && c.validita_anni ? c.validita_anni : '') + '"></label></div>'
+    + '<label>Parole chiave (separate da virgola)<input id="fzVParole" value="' + aggEsc(c ? (c.parole_chiave || []).join(', ') : '') + '" placeholder="es. gru per autocarro, gru su autocarro"></label>'
+    + '<div class="row2"><label>Ordine (più basso = controllata prima)<input type="number" id="fzVOrdine" value="' + aggEsc(c ? c.ordine : 100) + '"></label>'
+    + (c && !bloccata ? '<label class="chk"><input type="checkbox" id="fzVAttivo"' + (c.attivo ? ' checked' : '') + '> Attiva</label>' : '<span></span>') + '</div>'
+    + (c && !bloccata && c.attivo && altre.length ? '<div class="grp sv-mt">Unisci in un\'altra voce</div><p class="note m0 mb10">Le ' + fzContaVoce(c.id) + ' registrazioni passano alla voce scelta e questa viene disattivata.</p>'
+      + '<div class="row2"><select id="fzVUnisci"><option value="">Scegli la voce…</option>' + altre.map(x => opz(x.id, x.titolo, '')).join('') + '</select>'
+      + '<button class="btn" onclick="fzUnisciVoce(' + c.id + ')">Unisci</button></div>' : '')
+    + '<div class="actions"><button class="btn" onclick="fzApriCatalogo()">Indietro</button><button class="btn pri" id="fzSalvaBtn" onclick="fzSalvaVoceForm(' + (c ? c.id : 'null') + ')">Salva</button></div>'
+    + '</div></div>';
+}
+
+async function fzSalvaVoceForm(id) {
+  const c = id ? fzVoce(id) : null;
+  const bloccata = c && FZ_VOCI_BLOCCATE.includes(c.codice);
+  const el = x => document.getElementById(x);
+  const anni = el('fzVAnni').value ? Number(el('fzVAnni').value) : null;
+  const dati = {
+    validita_anni: anni,
+    parole_chiave: el('fzVParole').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
+    ordine: Number(el('fzVOrdine').value) || 100,
+  };
+  if (!bloccata) { dati.titolo = el('fzVTitolo').value.trim(); dati.tipo = el('fzVTipo').value; }
+  if (c && !bloccata && el('fzVAttivo')) dati.attivo = el('fzVAttivo').checked;
+  if (!bloccata && !dati.titolo) return fzErrore('Indica il nome della voce.');
+  if (anni !== null && (!Number.isInteger(anni) || anni < 1 || anni > 50)) return fzErrore('La validità va da 1 a 50 anni.');
+  if (!bloccata && fzVociAttive().some(x => x.id !== id && x.tipo === dati.tipo && x.titolo.trim().toLowerCase() === dati.titolo.toLowerCase()))
+    return fzErrore('Esiste già una voce con questo nome: usa "Unisci".');
+  el('fzSalvaBtn').disabled = true;
+  try { await fzSalvaVoce(id, dati); }
+  catch(e) { el('fzSalvaBtn').disabled = false; return fzErrore('Voce non salvata: ' + e.message); }
+  logAttivita((id ? 'ha modificato' : 'ha creato') + ' la voce di catalogo formazione ' + (dati.titolo || c.titolo));
+  fzRenderLista();
+  fzApriCatalogo();
+}
+
+async function fzUnisciVoce(id) {
+  const c = fzVoce(id);
+  const dest = fzVoce(Number(document.getElementById('fzVUnisci').value));
+  if (!c || !dest) return fzErrore('Scegli la voce in cui unire.');
+  if (!confirm('Unire "' + c.titolo + '" in "' + dest.titolo + '"?\n\nLe ' + fzContaVoce(c.id) + ' registrazioni passano a "' + dest.titolo + '" (il titolo originale resta). "' + c.titolo + '" viene disattivata.')) return;
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?catalogo_id=eq.' + c.id, {
+      method: 'PATCH', silenzioso: true, headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify({ catalogo_id: dest.id }),
+    });
+    if (!res.ok) throw new Error('registrazioni non spostate.');
+    await fzSalvaVoce(c.id, { attivo: false, unita_in: dest.id });
+  } catch(e) { return fzErrore('Unione non riuscita: ' + e.message); }
+  logAttivita('ha unito la voce di catalogo formazione ' + c.titolo + ' in ' + dest.titolo);
+  await caricaFormazione();
+  fzApriCatalogo();
+}
+
+// Le righe in "Da verificare" (o senza voce) ripassano dalle parole chiave: quelle riconosciute cambiano voce
+async function fzRiapplica() {
+  const daVer = fzCatalogo.find(c => c.codice === 'DA_VERIFICARE');
+  if (!daVer) return;
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?or=(catalogo_id.is.null,catalogo_id.eq.' + daVer.id + ')', {
+      method: 'PATCH', silenzioso: true, headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify({ catalogo_id: null }),
+    });
+    if (!res.ok) throw new Error('errore');
+  } catch(e) { return fzErrore('Operazione non riuscita: riprova.'); }
+  const prima = fzContaVoce(daVer.id);
+  await caricaFormazione();
+  fzApriCatalogo();
+  alert('Riconosciute ' + (prima - fzContaVoce(daVer.id)) + ' registrazioni; in "Da verificare" ne restano ' + fzContaVoce(daVer.id) + '.');
 }
 
 async function fzElimina() {

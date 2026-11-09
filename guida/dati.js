@@ -502,13 +502,17 @@ const PAGINE = [
   chi:"Chi ha il permesso Formazione.", video:"",
   intro:"Formazione è il registro di tutti i corsi fatti dai volontari.",
   schermo: () => app("altro","Formazione", `
-    <div class="m-barra">${cerca("Cerca volontario, corso o ente","cerca")}<span class="m-sp"></span>${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
-    ${tab([["Volontario","Corso","Ente","Data"],["Rossi Mario","Corso base 12 ore","Regione Piemonte","03/2026"],["Verdi Paolo","Caposquadra","ANA","05/2025"]],"elenco")}`),
+    <div class="m-barra">${cerca("Cerca volontario, corso o ente","cerca")}<span class="m-sp"></span>${btn("Catalogo","catalogo","grigio")}${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
+    ${tab([["Corso o abilitazione","Volontari","Validità"],["Corso 12 ore","55","5 anni"],["PLE – Piattaforme di lavoro elevabili","6","5 anni"],["Gru per autocarro","4","5 anni"]],"elenco")}`),
   passi:[
     {t:"Cercare", d:"Cerca per volontario, corso o ente.", h:"cerca",
      v:"Cerchi per nome del volontario, per corso o per ente che l'ha organizzato."},
-    {t:"Registra corso", d:"Inserisci il corso fatto da uno o più volontari: compare anche nella loro scheda.", h:"nuovo",
-     v:"Con Registra corso inserisci un corso, e compare in automatico anche nella scheda di ogni volontario, nella parte Formazione."},
+    {t:"Un blocco per corso", d:"Ogni corso o abilitazione del catalogo è un blocco: dentro ci sono i volontari, con data, scadenza e il titolo scritto sull'attestato. Aggiornamento indica un rinnovo.", h:"elenco",
+     v:"Ogni corso o abilitazione è un blocco unico, anche se sugli attestati il nome è scritto in modi diversi. Aprendolo vedi i volontari, con la data, la scadenza e il titolo originale dell'attestato. L'etichetta Aggiornamento indica un rinnovo."},
+    {t:"Registra corso", d:"Scegli il corso dal catalogo e i volontari: compare anche nella loro scheda. Se la scadenza resta vuota la calcola dalla validità.", h:"nuovo",
+     v:"Con Registra corso scegli il corso dal catalogo e i volontari che l'hanno fatto, e compare in automatico anche nella loro scheda. Se lasci vuota la scadenza, viene calcolata dalla validità del corso. Se il corso non c'è, scegli Nuova voce di catalogo."},
+    {t:"Catalogo", d:"Elenco ufficiale di corsi e abilitazioni: nome, validità e parole chiave per riconoscere i titoli. Le voci doppie si uniscono, non si cancellano. Da verificare raccoglie le abilitazioni non riconosciute.", h:"catalogo",
+     v:"Il Catalogo è l'elenco ufficiale dei corsi e delle abilitazioni. Per ogni voce imposti il nome, quanti anni vale e le parole chiave che servono a riconoscere i titoli degli attestati. Se trovi due voci doppie, le unisci. In Da verificare finiscono le abilitazioni che non sono state riconosciute: aggiungi le parole chiave giuste e premi Riapplica."},
     {t:"Importa da Drive", d:"Legge gli attestati archiviati su Google Drive e porta nel registro data e scadenza dei corsi 4 ore, 12 ore, Caposquadra e DAE, più le abilitazioni. Rilancialo quando aggiungi file: quelli già importati vengono saltati.", h:"drive",
      v:"Con Importa da Drive il registro si riempie da solo con gli attestati archiviati su Google Drive: data e scadenza dei corsi 4 ore, 12 ore, caposquadra e DAE, e tutte le abilitazioni. Quando aggiungi nuovi file su Drive, rilancialo: quelli già importati vengono saltati, quindi non si creano doppioni."}
   ]
