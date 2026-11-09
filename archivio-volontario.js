@@ -108,7 +108,13 @@ function arcCorsoDi(f) {
   return c ? c.tipo : null;
 }
 
-function arcEAbilitazione(f) { return /^abilitazion/i.test(f.tipo || ''); }
+// Abilitazione: nome "Abilitazione - …" oppure titolo riconosciuto da una voce abilitazione del catalogo
+// ("Da verificare" esclusa), come nell'import della Edge Function
+function arcEAbilitazione(f) {
+  if (/^abilitazion/i.test(f.tipo || '')) return true;
+  const v = arcVoce('ABILITAZIONE', f.titolo || '');
+  return !!v && v.codice !== 'DA_VERIFICARE';
+}
 
 // { corsi: { '4_ORE': [...] … }, abilitazioni: [...], attestati: [...], documenti: [...] }
 function arcDividi(file) {

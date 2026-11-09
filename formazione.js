@@ -184,6 +184,7 @@ async function fzImportaDrive() {
     const d = await res.json().catch(() => ({}));
     if (!res.ok || !d.ok) throw new Error(d.error || arcErrore(res.status));
     alert('Import completato.\n\nRighe completate con data e scadenza: ' + d.completate + '\nRighe aggiunte: ' + d.aggiunte
+      + (d.saltati ? '\nDoppioni saltati: ' + d.saltati : '')
       + (d.errori ? '\nVolontari non letti (riprova più tardi): ' + d.errori : ''));
     arcCache = {};
     await caricaFormazione();

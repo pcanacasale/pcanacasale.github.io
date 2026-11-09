@@ -12,7 +12,8 @@
 // GET ?azione=file&volontario_id=N&file_id=X   → il file in streaming (solo se sta in una delle due cartelle)
 // POST ?azione=importa                         → porta nel registro formazione (formazione_registro) data e
 //   scadenza dei corsi fissi (4 ore, 12 ore, Caposquadra, DAE) e le abilitazioni prese dai file Attestati di
-//   tutti i volontari. Solo con permesso formazione o modifica_volontari. Ogni riga importata ricorda il file
+//   tutti i volontari (anche file senza "Abilitazione -" nel nome, se il titolo è di una voce abilitazione del
+//   catalogo). Salta le copie "(copia)/(2)" e i doppioni stesso volontario + voce + data. Solo con permesso formazione o modifica_volontari. Ogni riga importata ricorda il file
 //   (drive_file_id): rilanciando, i file già importati si saltano. Nessuna riga viene cancellata.
 //
 // Secrets: GOOGLE_SA_JSON (service account con accesso in lettura al Drive condiviso).
@@ -175,8 +176,10 @@ function isoData(a: string, m: string, g?: string) {
   if (gg < 1 || gg > 31) return null;
   return a + '-' + String(mm).padStart(2, '0') + '-' + String(gg).padStart(2, '0');
 }
+// "(copia)", "(2)"… alla fine del nome: copie dello stesso file
+const COPIA = /\s*\((copia|\d+)\)(?=\.[a-z0-9]{2,5}$|$)/i;
 function leggiNome(nomeFile: string) {
-  let s = nomeFile.replace(/\.[a-z0-9]{2,5}$/i, '').trim();
+  let s = nomeFile.replace(/\.[a-z0-9]{2,5}$/i, '').replace(COPIA, '').trim();
   let scadenza: string | null = null, data: string | null = null;
   const sc = s.match(new RegExp(String.raw`[\s\-–]*scad(?:e|enza)?[\s:]+` + DATA + String.raw`\s*$`, 'i'));
   if (sc) { scadenza = isoData(sc[1], sc[2], sc[3]); s = s.slice(0, sc.index).trim(); }
@@ -245,17 +248,24 @@ async function aGruppi<T>(elenco: T[], quanti: number, fn: (x: T) => Promise<voi
 
 async function importa(utente: string) {
   const vols = await db('GET', 'volontari?drive_folder_id=not.is.null&select=id,drive_folder_id');
-  const reg: any[] = await db('GET', 'formazione_registro?select=id,volontario_id,tipo,codice,titolo,data_corso,scadenza,drive_file_id');
+  const reg: any[] = await db('GET', 'formazione_registro?select=id,volontario_id,tipo,codice,titolo,data_corso,scadenza,drive_file_id,catalogo_id');
   const giaImportati = new Set(reg.map(r => r.drive_file_id).filter(Boolean));
   let catalogo: any[] = [];
-  try { catalogo = await db('GET', 'formazione_catalogo?attivo=eq.true&tipo=eq.CORSO&select=codice,parole_chiave,ordine&order=ordine,id'); } catch (_) { /* catalogo non ancora creato */ }
-  catalogo = catalogo.filter(c => CORSI_FISSI.some(x => x.codice === c.codice));
+  try { catalogo = await db('GET', 'formazione_catalogo?attivo=eq.true&select=id,tipo,codice,parole_chiave,ordine&order=ordine,id'); } catch (_) { /* catalogo non ancora creato */ }
+  // voce del catalogo dalle parole chiave ("Da verificare" esclusa)
+  const voceDi = (tipo: string, testo: string) => {
+    const t = ' ' + norm(testo) + ' ';
+    return catalogo.find(c => c.tipo === tipo && c.codice !== 'DA_VERIFICARE'
+      && (c.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k)))) || null;
+  };
   const corsoDi = (testo: string) => {
     if (!catalogo.length) return CORSI_FISSI.find(c => c.re.test(testo));
-    const t = ' ' + norm(testo) + ' ';
-    const voce = catalogo.find(c => (c.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k))));
+    const voce = voceDi('CORSO', testo);
     return voce ? CORSI_FISSI.find(c => c.codice === voce.codice) : undefined;
   };
+  // Doppioni: stesso volontario, stessa voce, stessa data (es. attestato e tesserino dello stesso corso)
+  const chiavi = new Set(reg.filter(r => r.catalogo_id && r.data_corso).map(r => r.volontario_id + '|' + r.catalogo_id + '|' + r.data_corso));
+  let saltati = 0;
   const nuove: any[] = [];
   const modifiche: { id: number; volontario_id: number; codice: string | null; corpo: any }[] = [];
   const corsiToccati = new Map<number, Set<string>>();   // volontario → codici fissi con almeno un file
@@ -265,14 +275,26 @@ async function importa(utente: string) {
     try {
       const sotto = await sottocartelle(v.drive_folder_id);
       if (!sotto.Attestati) return;
-      const file = (await fileDi(sotto.Attestati)).map((x: any) => ({ id: x.id, nome: x.name, ...leggiNome(x.name) }))
+      const tutti = (await fileDi(sotto.Attestati)).map((x: any) => ({ id: x.id, nome: x.name, ...leggiNome(x.name) }));
+      const nomi = new Set(tutti.map((f: any) => f.nome.toLowerCase()));
+      const file = tutti
         .filter((f: any) => !giaImportati.has(f.id))
+        // "nome (copia).pdf" con l'originale nella stessa cartella: si salta
+        .filter((f: any) => { const orig = f.nome.replace(COPIA, ''); const copia = orig !== f.nome && nomi.has(orig.toLowerCase()); if (copia) saltati++; return !copia; })
         .sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''));   // il più recente per primo
       for (const f of file) {
         const testo = (f.titolo || '') + ' ' + f.nome;
         const corso = corsoDi(testo);
-        const abil = !corso && /^abilitazion/i.test(f.tipo || '');
+        // abilitazione: nome "Abilitazione - …" oppure titolo riconosciuto da una voce abilitazione del catalogo
+        const voceAbil = corso ? null : voceDi('ABILITAZIONE', f.titolo || '');
+        const abil = !corso && (!!voceAbil || /^abilitazion/i.test(f.tipo || ''));
         if (!corso && !abil) continue;
+        const voceId = corso ? (catalogo.find(c => c.codice === corso.codice) || {}).id : voceAbil ? voceAbil.id : null;
+        if (voceId && f.data) {
+          const k = v.id + '|' + voceId + '|' + f.data;
+          if (chiavi.has(k)) { saltati++; continue; }
+          chiavi.add(k);
+        }
         const base = { data_corso: f.data, scadenza: f.scadenza, drive_file_id: f.id };
         // riga già presente senza file: si completa (pregressi dei corsi fissi, abilitazioni inserite a mano)
         const esistente = reg.find(r => r.volontario_id === v.id && !r.drive_file_id && (corso
@@ -316,8 +338,8 @@ async function importa(utente: string) {
     await db('PATCH', 'volontari?id=eq.' + volId, corpo);
   }
 
-  const esito = { volontari: vols.length, completate: modifiche.length, aggiunte: nuove.length, errori };
-  await logAttivita(utente, 'ha importato da Drive il registro formazione: ' + esito.completate + ' righe completate, ' + esito.aggiunte + ' aggiunte');
+  const esito = { volontari: vols.length, completate: modifiche.length, aggiunte: nuove.length, saltati, errori };
+  await logAttivita(utente, 'ha importato da Drive il registro formazione: ' + esito.completate + ' righe completate, ' + esito.aggiunte + ' aggiunte, ' + saltati + ' doppioni saltati');
   return esito;
 }
 
