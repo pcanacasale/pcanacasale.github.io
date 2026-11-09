@@ -112,7 +112,11 @@ async function googleToken(): Promise<string> {
 async function drive(percorso: string): Promise<Response> {
   const r = await fetch(DRIVE + percorso, { headers: { Authorization: 'Bearer ' + await googleToken() } });
   if (r.status === 404) throw new Errore(404, 'File non trovato.');
-  if (!r.ok) throw new Error('Drive ' + percorso.split('?')[0] + ': ' + r.status);
+  if (!r.ok) {
+    let motivo = '';
+    try { const e = await r.json(); motivo = [e.error?.errors?.[0]?.reason, e.error?.message].filter(Boolean).join(' – '); } catch (_) { /* corpo non JSON */ }
+    throw new Error('Drive ' + percorso.split('?')[0] + ': ' + r.status + (motivo ? ' ' + motivo.slice(0, 300) : ''));
+  }
   return r;
 }
 

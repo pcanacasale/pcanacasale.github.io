@@ -382,9 +382,8 @@ async function fzRenderScheda() {
   } catch(e) { box.innerHTML = '<p class="note m0 mb10">Registro non disponibile.</p>'; return; }
   if (!sv || sv.id !== id) return;
   righe.forEach(r => { if (!fzRighe.some(x => x.id === r.id)) fzRighe.push(r); else fzRighe[fzRighe.findIndex(x => x.id === r.id)] = r; });
-  const scrive = fzPuoScrivere();
-  box.innerHTML = (fzRigheHtml(righe, scrive) || '<p class="note m0 mb10">Nessun corso registrato.</p>')
-    + (scrive ? '<button class="doc-add-btn" onclick="fzApriForm(null,' + id + ')">+ Registra corso o abilitazione</button>' : '');
+  sv.registro = righe;
+  svRenderRegistro(fzPuoScrivere());   // scheda-volontario.js: corsi fissi in alto, abilitazioni nella loro scheda
 }
 
 // Dopo una registrazione: aggiorna spunte e scadenza senza perdere le altre modifiche in corso
@@ -404,8 +403,10 @@ async function fzRenderPersonale(volId) {
   try {
     const res = await sbFetch(SUPA_URL + '/rest/v1/formazione_registro?select=*&volontario_id=eq.' + volId + '&order=data_corso.desc.nullslast,id.desc', { headers: H });
     if (!res.ok) throw new Error('errore');
-    const righe = await res.json();
-    box.innerHTML = '<h2>Corsi e abilitazioni</h2>' + (fzRigheHtml(righe, false) || '<p class="note">Nessun corso registrato.</p>');
+    // i corsi fissi stanno già nella card Corsi obbligatori (archivio-volontario.js)
+    const righe = (await res.json()).filter(r => !FZ_CORSI_FISSI[r.codice]);
+    if (!righe.length) return;
+    box.innerHTML = '<h2>Altri corsi e abilitazioni</h2>' + fzRigheHtml(righe, false);
     box.hidden = false;
   } catch(e) { /* registro non ancora attivo: la scheda resta com'era */ }
 }

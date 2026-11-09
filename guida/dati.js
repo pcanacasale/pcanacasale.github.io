@@ -124,8 +124,8 @@ const PAGINE = [
      v:"La scheda è divisa in parti. In Dati trovi anagrafica e contatti. In Documenti i file caricati, come il documento d'identità e gli attestati. In Visita medica lo stato della tua visita. In Formazione i corsi che hai fatto. In Dotazioni quello che ti è stato consegnato, dalla divisa ai dispositivi di protezione. E in Interventi tutti i servizi a cui hai partecipato, con le ore."},
     {t:"Controlla i tuoi dati", d:"Dai un'occhiata ogni tanto: telefono ed email servono per contattarti e per entrare.", h:"schede",
      v:"Vale la pena darci un'occhiata ogni tanto, soprattutto telefono ed email: sono quelli che usiamo per contattarti, e l'email serve anche per entrare."},
-    {t:"Attestati e documenti archiviati", d:"Corsi obbligatori: 4 ore, 12 ore, Caposquadra e DAE, ognuno con il suo attestato. Attestati: tutti gli altri. Documenti archiviati: adesione, privacy e simili. Tocca una riga per aprire il PDF. Rosso vuol dire scaduto, giallo che scade entro due mesi.", h:"archivio",
-     v:"Più in basso trovi gli attestati e i documenti che la Sezione ha archiviato per te. In Corsi obbligatori ci sono il corso 4 ore, il 12 ore, il caposquadra e il DAE, ognuno con il suo attestato. In Attestati tutti gli altri corsi ed esercitazioni, e in Documenti archiviati cose come la scheda di adesione. Tocchi una riga e il PDF si apre. Un'etichetta rossa vuol dire scaduto, gialla che scade entro un paio di mesi."},
+    {t:"Attestati e documenti archiviati", d:"Corsi obbligatori: 4 ore, 12 ore, Caposquadra e DAE, ognuno con data, scadenza e attestato. Abilitazioni: carrelli, escavatori e simili. Attestati: tutti gli altri. Documenti archiviati: adesione, privacy e simili. Tocca una riga per aprire il PDF. Rosso vuol dire scaduto, giallo che scade entro due mesi.", h:"archivio",
+     v:"Più in basso trovi gli attestati e i documenti che la Sezione ha archiviato per te. In Corsi obbligatori ci sono il corso 4 ore, il 12 ore, il caposquadra e il DAE, ognuno con la data, la scadenza e il suo attestato. In Abilitazioni trovi carrelli, escavatori e simili, in Attestati tutti gli altri corsi ed esercitazioni, e in Documenti archiviati cose come la scheda di adesione. Tocchi una riga e il PDF si apre. Un'etichetta rossa vuol dire scaduto, gialla che scade entro un paio di mesi."},
     {t:"Se c'è un errore", d:"Premi Segnala un errore e scrivi cosa non va: la segreteria lo corregge.", h:"errore",
      v:"Se trovi qualcosa di sbagliato, non serve telefonare: premi Segnala un errore, scrivi cosa non va, e la segreteria lo corregge."}
   ]
@@ -267,7 +267,7 @@ const PAGINE = [
       <div class="m-card"><b>Rossi Mario</b><small>CASALE · LOGISTICA</small>${tag("Attivo","v")}</div>
       <div class="m-card"><b>Bianchi Laura</b><small>COLLINA · GENERICO</small>${tag("Da sistemare","g")}</div>
       <div class="m-card"><b>Verdi Paolo</b><small>ALFA · CAPO SQUADRA</small>${tag("Attivo","v")}</div></div>
-    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Attestati","Dotazioni","Interventi"],"schede")}
+    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Abilitazioni","Attestati","Interventi"],"schede")}
       <div class="m-azioni">${btn("Link bot","link","grigio")}</div></div>`),
   passi:[
     {t:"Cercare", d:"Cerca per nome, squadra o codice fiscale.", h:"cerca",
@@ -276,10 +276,12 @@ const PAGINE = [
      v:"Con Filtri restringi l'elenco: per squadra, per tipo, per mansione, solo gli attivi o i non attivi, oppure per stato della visita medica."},
     {t:"Le schede", d:"Ogni riquadro è un volontario. Da sistemare indica dati o documenti mancanti.", h:"card",
      v:"Ogni riquadro è un volontario. Se compare Da sistemare, vuol dire che manca qualcosa nei suoi dati o nei documenti: aprendo la scheda vedi cosa."},
-    {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Dotazioni, Interventi: le stesse parti che vede il volontario, ma modificabili.", h:"schede",
-     v:"La scheda ha le stesse parti che vede il volontario: dati, documenti, visita medica, formazione, dotazioni e interventi. La differenza è che tu, se hai il permesso, puoi modificarle."},
-    {t:"Archivio su Drive", d:"I file archiviati su Google Drive compaiono da soli: gli attestati di 4 ore, 12 ore, Caposquadra e DAE in Formazione sotto il loro corso, gli altri nella scheda Attestati, adesione e simili in fondo a Documenti. Si possono solo aprire. Li vede chi ha il permesso Volontari oppure Vedere archivio documenti volontari; ogni apertura viene registrata.", h:"schede",
-     v:"I file archiviati su Google Drive compaiono da soli nella scheda. Gli attestati dei corsi 4 ore, 12 ore, caposquadra e DAE li trovi in Formazione, sotto il loro corso. Tutti gli altri attestati sono nella scheda Attestati, e la scheda di adesione e simili in fondo a Documenti. Si possono solo aprire, e ogni file aperto resta registrato."},
+    {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Abilitazioni, Attestati, Interventi. Le taglie DPI sono in Dati.", h:"schede",
+     v:"La scheda è divisa in parti: dati, documenti, visita medica, formazione, abilitazioni, attestati e interventi. Le taglie dei DPI le trovi dentro Dati. Se hai il permesso, puoi modificare quello che serve."},
+    {t:"Formazione", d:"In alto i corsi obbligatori (4 ore, 12 ore, Caposquadra, DAE), ognuno una volta sola con data, scadenza e attestato. Sotto gli altri corsi registrati.", h:"schede",
+     v:"In Formazione trovi in alto i corsi obbligatori: 4 ore, 12 ore, caposquadra e DAE. Ognuno compare una volta sola, con la data, la scadenza e il suo attestato. Un'etichetta rossa vuol dire scaduto, gialla che scade entro due mesi. Sotto ci sono gli altri corsi registrati."},
+    {t:"Archivio su Drive", d:"I file archiviati su Google Drive compaiono da soli: gli attestati di 4 ore, 12 ore, Caposquadra e DAE in Formazione sotto il loro corso, le abilitazioni (carrelli, escavatori…) nella scheda Abilitazioni, gli altri nella scheda Attestati, adesione e simili in fondo a Documenti. Si possono solo aprire. Li vede chi ha il permesso Volontari oppure Vedere archivio documenti volontari; ogni apertura viene registrata.", h:"schede",
+     v:"I file archiviati su Google Drive compaiono da soli nella scheda. Gli attestati dei corsi 4 ore, 12 ore, caposquadra e DAE li trovi in Formazione, sotto il loro corso. Le abilitazioni, come carrelli elevatori o escavatori, sono nella scheda Abilitazioni. Tutti gli altri attestati sono nella scheda Attestati, e la scheda di adesione e simili in fondo a Documenti. Si possono solo aprire, e ogni file aperto resta registrato."},
     {t:"Link per il bot", d:"Dalla scheda, Link bot crea un link personale che collega il volontario al bot Telegram con un tocco.", h:"link",
      v:"Dalla scheda puoi creare il link personale per il bot Telegram: lo mandi al volontario, e con un tocco si collega, senza passare dal numero di telefono."},
     {t:"Nuovo volontario", d:"Nuovo volontario apre una scheda vuota. Il codice fiscale viene controllato.", h:"nuovo",

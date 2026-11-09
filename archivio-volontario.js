@@ -5,6 +5,7 @@
 // tramite la Edge Function archivio-volontario (token della sessione, mai link diretti a Drive).
 // I file si dividono così:
 //   - attestati dei corsi fissi (4 ore, 12 ore, Caposquadra, DAE) → scheda Formazione
+//   - abilitazioni (file "Abilitazione - …" nella cartella Attestati) → scheda Abilitazioni
 //   - altri attestati (cartella Attestati)                          → scheda Attestati
 //   - cartella Documenti (adesione, privacy…)                       → scheda Documenti
 // Staff: permesso volontari o documenti_volontari (master di default), in scheda-volontario.js.
@@ -66,16 +67,34 @@ function arcCorsoDi(f) {
   return c ? c.tipo : null;
 }
 
-// { corsi: { '4_ORE': [...] … }, attestati: [...], documenti: [...] }
+function arcEAbilitazione(f) { return /^abilitazion/i.test(f.tipo || ''); }
+
+// { corsi: { '4_ORE': [...] … }, abilitazioni: [...], attestati: [...], documenti: [...] }
 function arcDividi(file) {
-  const out = { corsi: {}, attestati: [], documenti: [] };
+  const out = { corsi: {}, abilitazioni: [], attestati: [], documenti: [] };
   ARC_CORSI.forEach(c => { out.corsi[c.tipo] = []; });
   (file || []).forEach(f => {
     if (f.categoria === 'Documenti') { out.documenti.push(f); return; }
     const corso = arcCorsoDi(f);
-    if (corso) out.corsi[corso].push(f); else out.attestati.push(f);
+    if (corso) out.corsi[corso].push(f);
+    else if (arcEAbilitazione(f)) out.abilitazioni.push(f);
+    else out.attestati.push(f);
   });
   return out;
+}
+
+// Stato di un corso fisso da più fonti: date e scadenze di file Drive, righe di registro, campi del volontario.
+// date/scadenze: elenchi di 'AAAA-MM-GG' (anche null). Vale la data più recente e la scadenza più lontana.
+function arcInfoCorso(svolto, date, scadenze) {
+  const ultima = l => l.filter(Boolean).sort().pop() || null;
+  const data = ultima(date), scadenza = ultima(scadenze);
+  const sc = svolto ? arcScadenza(scadenza) : '';
+  const pill = !svolto ? '<span class="pill p-grey">Non svolto</span>'
+    : sc === 'scaduto' ? '<span class="pill p-red">Scaduto</span>'
+    : sc === 'scadenza' ? '<span class="pill p-yellow">In scadenza</span>'
+    : '<span class="pill p-blue">Svolto</span>';
+  const testo = [data ? 'Svolto il ' + arcData(data) : '', scadenza ? (sc === 'scaduto' ? 'scaduto il ' : 'valido fino al ') + arcData(scadenza) : ''].filter(Boolean).join(' · ');
+  return { data, scadenza, pill, testo };
 }
 
 function arcRiga(volId, f) {
@@ -128,7 +147,7 @@ async function arcApri(volId, fileId) {
 
 // -- SCHEDA PERSONALE DEL VOLONTARIO --
 // Tre card: Corsi obbligatori (con i loro attestati), Attestati, Documenti archiviati
-const ARC_CARD_PERS = { spArcCorsi: 'Corsi obbligatori', spArcAttestati: 'Attestati', spArcDocumenti: 'Documenti archiviati' };
+const ARC_CARD_PERS = { spArcCorsi: 'Corsi obbligatori', spArcAbilitazioni: 'Abilitazioni', spArcAttestati: 'Attestati', spArcDocumenti: 'Documenti archiviati' };
 
 async function arcRenderPersonale(v, ricarica) {
   const box = id => document.getElementById(id);
@@ -139,17 +158,18 @@ async function arcRenderPersonale(v, ricarica) {
   if (!box('spArcCorsi') || arcVolPersonale !== v) return;
   if (esito.errore) {
     box('spArcCorsi').innerHTML = '<h2>Archivio documenti</h2>' + arcStatoHtml(esito, 'arcRiprovaPersonale()');
-    box('spArcAttestati').hidden = true;
-    box('spArcDocumenti').hidden = true;
+    ['spArcAbilitazioni', 'spArcAttestati', 'spArcDocumenti'].forEach(id => { box(id).hidden = true; });
     return;
   }
   const d = arcDividi(esito.file);
   box('spArcCorsi').innerHTML = '<h2>Corsi obbligatori</h2>' + ARC_CORSI.map(c => {
-    const svolto = !!v[c.campo] || d.corsi[c.tipo].length > 0;
-    return '<div class="sv-corso"><div class="sv-corso-h"><b class="sv-corso-t">' + c.label + '</b>'
-      + (svolto ? '<span class="pill p-blue">Svolto</span>' : '<span class="pill p-grey">Non svolto</span>') + '</div>'
-      + arcRighe(v.id, d.corsi[c.tipo]) + '</div>';
+    const file = d.corsi[c.tipo];
+    const info = arcInfoCorso(!!v[c.campo] || file.length > 0, file.map(f => f.data), file.map(f => f.scadenza).concat(c.tipo === 'DAE' ? [v.scad_dae] : []));
+    return '<div class="sv-corso"><div class="sv-corso-h"><b class="sv-corso-t">' + c.label + '</b>' + info.pill + '</div>'
+      + (info.testo ? '<span class="sub">' + info.testo + '</span>' : '')
+      + arcRighe(v.id, file) + '</div>';
   }).join('');
+  box('spArcAbilitazioni').innerHTML = '<h2>Abilitazioni (' + d.abilitazioni.length + ')</h2>' + arcRighe(v.id, d.abilitazioni, 'Nessuna abilitazione archiviata.');
   box('spArcAttestati').innerHTML = '<h2>Attestati (' + d.attestati.length + ')</h2>' + arcRighe(v.id, d.attestati, 'Nessun attestato archiviato.');
   box('spArcDocumenti').innerHTML = '<h2>Documenti archiviati</h2>' + arcRighe(v.id, d.documenti, 'Nessun documento archiviato.');
 }
