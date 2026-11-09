@@ -74,11 +74,11 @@ function arcRigheVoci(volId, elenco, vuoto) {
   elenco.forEach(f => {
     const v = arcVoce('ABILITAZIONE', f.titolo);
     const k = v ? v.id : 0;
-    if (!gruppi.has(k)) gruppi.set(k, { titolo: v ? v.titolo : 'Altro', ordine: v ? v.ordine : 1000, file: [] });
+    if (!gruppi.has(k)) gruppi.set(k, { titolo: v ? v.titolo : 'Altro', codice: v ? v.codice : null, ordine: v ? v.ordine : 1000, file: [] });
     gruppi.get(k).file.push(f);
   });
   return [...gruppi.values()].sort((a, b) => a.ordine - b.ordine).map(g =>
-    '<div class="sub mt10"><b>' + aggEsc(g.titolo) + '</b> (' + g.file.length + ')</div>' + arcRighe(volId, g.file)).join('');
+    '<div class="sub mt10"><b>' + aggEsc(g.titolo) + '</b> (' + g.file.length + ')</div>' + arcRighe(volId, g.file, '', g.titolo !== 'Altro' && g.codice !== 'DA_VERIFICARE')).join('');
 }
 
 // Elenco dei file: { file: [...] } oppure { errore: '...' }. ricarica = true ignora la copia in memoria
@@ -133,9 +133,10 @@ function arcInfoCorso(svolto, date, scadenze) {
   return { data, scadenza, pill, testo };
 }
 
-function arcRiga(volId, f) {
-  const sc = arcScadenza(f.scadenza);
-  const pill = sc === 'scaduto' ? '<span class="pill p-red">Scaduto</span>' : sc === 'scadenza' ? '<span class="pill p-yellow">In scadenza</span>' : '';
+function arcRiga(volId, f, rinnovato) {
+  const sc = rinnovato ? 'rinnovato' : arcScadenza(f.scadenza);
+  const pill = sc === 'scaduto' ? '<span class="pill p-red">Scaduto</span>' : sc === 'scadenza' ? '<span class="pill p-yellow">In scadenza</span>'
+    : sc === 'rinnovato' ? '<span class="pill p-grey">Rinnovato</span>' : '';
   const meta = [f.tipo, arcData(f.data), f.scadenza ? 'scade il ' + arcData(f.scadenza) : ''].filter(Boolean).join(' · ');
   const apri = 'arcApri(' + Number(volId) + ',\'' + aggEsc(f.id) + '\')';
   return '<div class="doc-item"><div class="doc-item-info" style="cursor:pointer" onclick="' + apri + '">'
@@ -144,8 +145,13 @@ function arcRiga(volId, f) {
     + pill + '<div class="doc-item-actions"><button class="btn sm" onclick="' + apri + '">Apri</button></div></div>';
 }
 
-function arcRighe(volId, elenco, vuoto) {
-  return elenco.length ? elenco.map(f => arcRiga(volId, f)).join('') : (vuoto ? '<p class="note m0 mb10">' + vuoto + '</p>' : '');
+// stessoCorso: i file sono attestati dello stesso corso; conta il più recente (data, poi scadenza),
+// i precedenti con scadenza sono "Rinnovato" e non risultano scaduti
+function arcRighe(volId, elenco, vuoto, stessoCorso) {
+  if (!elenco.length) return vuoto ? '<p class="note m0 mb10">' + vuoto + '</p>' : '';
+  const chiave = f => (f.data || '') + '|' + (f.scadenza || '');
+  const ultimo = stessoCorso ? elenco.reduce((m, f) => chiave(f) > chiave(m) ? f : m) : null;
+  return elenco.map(f => arcRiga(volId, f, !!ultimo && f !== ultimo && !!f.scadenza)).join('');
 }
 
 // Caricamento, oppure errore con Riprova
@@ -203,7 +209,7 @@ async function arcRenderPersonale(v, ricarica) {
     const info = arcInfoCorso(!!v[c.campo] || file.length > 0, file.map(f => f.data), file.map(f => f.scadenza).concat(c.tipo === 'DAE' ? [v.scad_dae] : []));
     return '<div class="sv-corso"><div class="sv-corso-h"><b class="sv-corso-t">' + c.label + '</b>' + info.pill + '</div>'
       + (info.testo ? '<span class="sub">' + info.testo + '</span>' : '')
-      + arcRighe(v.id, file) + '</div>';
+      + arcRighe(v.id, file, '', true) + '</div>';
   }).join('');
   box('spArcAbilitazioni').innerHTML = '<h2>Abilitazioni (' + d.abilitazioni.length + ')</h2>' + arcRigheVoci(v.id, d.abilitazioni, 'Nessuna abilitazione archiviata.');
   box('spArcAttestati').innerHTML = '<h2>Attestati (' + d.attestati.length + ')</h2>' + arcRighe(v.id, d.attestati, 'Nessun attestato archiviato.');

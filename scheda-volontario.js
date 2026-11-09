@@ -172,7 +172,7 @@ function svRenderDrive() {
   const stato = d ? '' : arcStatoHtml(e, 'svCaricaDrive(true)');
   ARC_CORSI.forEach(c => {
     const box = el('svDrive_' + c.tipo);
-    if (box) box.innerHTML = d ? arcRighe(sv.id, d.corsi[c.tipo]) : '';
+    if (box) box.innerHTML = d ? arcRighe(sv.id, d.corsi[c.tipo], '', true) : '';
   });
   const abil = el('svDriveAbil');
   if (abil) abil.innerHTML = '<div class="grp sv-mt">Abilitazioni in archivio' + (d ? ' (' + d.abilitazioni.length + ')' : '') + '</div>'

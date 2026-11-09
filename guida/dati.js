@@ -502,13 +502,13 @@ const PAGINE = [
   chi:"Chi ha il permesso Formazione.", video:"",
   intro:"Formazione è il registro di tutti i corsi fatti dai volontari.",
   schermo: () => app("altro","Formazione", `
-    <div class="m-barra">${cerca("Cerca volontario, corso o ente","cerca")}<span class="m-sp"></span>${btn("Catalogo","catalogo","grigio")}${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
+    <div class="m-barra">${cerca("Cerca volontario o corso","cerca")}<span class="m-sp"></span>${btn("Catalogo","catalogo","grigio")}${btn("Importa da Drive","drive","grigio")}${btn("Registra corso","nuovo")}</div>
     ${tab([["Corso o abilitazione","Volontari","Validità"],["Corso 12 ore","55","5 anni"],["PLE – Piattaforme di lavoro elevabili","6","5 anni"],["Gru per autocarro","4","5 anni"]],"elenco")}`),
   passi:[
-    {t:"Cercare", d:"Cerca per volontario, corso o ente.", h:"cerca",
-     v:"Cerchi per nome del volontario, per corso o per ente che l'ha organizzato."},
-    {t:"Un blocco per corso", d:"Ogni corso o abilitazione del catalogo è un blocco: dentro ci sono i volontari, con data, scadenza e il titolo scritto sull'attestato. Aggiornamento indica un rinnovo.", h:"elenco",
-     v:"Ogni corso o abilitazione è un blocco unico, anche se sugli attestati il nome è scritto in modi diversi. Aprendolo vedi i volontari, con la data, la scadenza e il titolo originale dell'attestato. L'etichetta Aggiornamento indica un rinnovo."},
+    {t:"Cercare", d:"Cerca per volontario o corso.", h:"cerca",
+     v:"Cerchi per nome del volontario oppure per nome del corso."},
+    {t:"Un blocco per corso", d:"Ogni corso o abilitazione del catalogo è un blocco: dentro ci sono i volontari, con data, scadenza e il titolo scritto sull'attestato. Per ogni volontario conta l'attestato più recente: quelli vecchi diventano Rinnovato. Rosso = scaduto, giallo = scade entro 60 giorni. Con Modifica cambi il nome del corso.", h:"elenco",
+     v:"Ogni corso o abilitazione è un blocco unico, anche se sugli attestati il nome è scritto in modi diversi. Aprendolo vedi i volontari, con la data, la scadenza e il titolo originale dell'attestato. Per ogni volontario conta l'attestato più recente: quando ne arriva uno nuovo, quello vecchio diventa Rinnovato e non risulta più scaduto. In rosso vedi chi è scaduto, in giallo chi scade entro due mesi. Con Modifica puoi cambiare il nome del corso."},
     {t:"Registra corso", d:"Scegli il corso dal catalogo e i volontari: compare anche nella loro scheda. Se la scadenza resta vuota la calcola dalla validità.", h:"nuovo",
      v:"Con Registra corso scegli il corso dal catalogo e i volontari che l'hanno fatto, e compare in automatico anche nella loro scheda. Se lasci vuota la scadenza, viene calcolata dalla validità del corso. Se il corso non c'è, scegli Nuova voce di catalogo."},
     {t:"Catalogo", d:"Elenco ufficiale di corsi e abilitazioni: nome, validità e parole chiave per riconoscere i titoli. Le voci doppie si uniscono, non si cancellano. Da verificare raccoglie le abilitazioni non riconosciute.", h:"catalogo",

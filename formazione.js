@@ -123,7 +123,7 @@ const FZ_FILTRI = [
   ['ABILITAZIONE', 'Abilitazioni', r => r.tipo === 'ABILITAZIONE'],
   ['INTERNO',      'Interni',      r => r.origine === 'INTERNO'],
   ['ESTERNO',      'Esterni',      r => r.origine === 'ESTERNO'],
-  ['SCADENZA',     'In scadenza',  r => !!svStatoScadenza(r.scadenza)],
+  ['SCADENZA',     'Scaduti o in scadenza', r => fzStatoRiga(r) === 'scaduto' || fzStatoRiga(r) === 'scadenza'],
 ];
 
 let fzRighe = [];
@@ -157,6 +157,7 @@ async function caricaFormazione() {
     document.getElementById('fzBtnCatalogo').hidden = !fzCatalogo.length;
     if (!res.ok) throw new Error('errore');
     fzRighe = await res.json();
+    fzCalcolaAttuali();
     fzRenderChip();
     fzRenderLista();
   } catch(e) {
@@ -198,12 +199,38 @@ function fzPillOrigine(r) {
   if (!r.origine) return '<span class="pill p-grey">Pregresso</span>';
   return r.origine === 'INTERNO' ? '<span class="pill p-blue">Interno</span>' : '<span class="pill p-sand">Esterno</span>';
 }
+// -- SCADENZE --
+// Per ogni volontario e corso conta solo l'attestato più recente (data del corso, poi scadenza):
+// quelli precedenti sono "Rinnovato" e non risultano scaduti. Avviso giallo entro 60 giorni (arcScadenza).
+let fzAttuali = new Set();   // id delle righe più recenti per volontario e voce
+
+function fzChiaveVoce(r) { return r.catalogo_id ? 'c' + r.catalogo_id : (r.codice || r.titolo.trim().toLowerCase()); }
+function fzOrdineData(r) { return (r.data_corso || '') + '|' + (r.scadenza || ''); }
+function fzCalcolaAttuali() {
+  const ultima = new Map();
+  fzRighe.forEach(r => {
+    const k = fzChiaveVoce(r) + '|' + r.volontario_id;
+    const m = ultima.get(k);
+    if (!m || fzOrdineData(r) > fzOrdineData(m)) ultima.set(k, r);
+  });
+  fzAttuali = new Set([...ultima.values()].map(r => r.id));
+}
+// 'rinnovato' | 'scaduto' | 'scadenza' | ''
+function fzStatoRiga(r) {
+  if (!r.scadenza) return '';
+  if (fzAttuali.size && !fzAttuali.has(r.id)) return 'rinnovato';
+  return arcScadenza(r.scadenza);
+}
 function fzCellaScadenza(r) {
-  const st = svStatoScadenza(r.scadenza);
-  return st ? svPillScadenza(st) : (r.scadenza ? '<span class="sub">' + svData(r.scadenza) + '</span>' : '<span class="sub">—</span>');
+  if (!r.scadenza) return '<span class="sub">—</span>';
+  const st = fzStatoRiga(r);
+  if (st === 'scaduto') return '<span class="pill p-red">Scaduto ' + svData(r.scadenza) + '</span>';
+  if (st === 'scadenza') return '<span class="pill p-yellow">Scade ' + svData(r.scadenza) + '</span>';
+  if (st === 'rinnovato') return '<span class="pill p-grey" title="Scadenza ' + svData(r.scadenza) + '">Rinnovato</span>';
+  return '<span class="sub">' + svData(r.scadenza) + '</span>';
 }
 function fzDettaglio(r) {
-  return [r.tipo === 'ABILITAZIONE' ? 'Abilitazione' : '', r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).map(aggEsc).join(' · ');
+  return [r.tipo === 'ABILITAZIONE' ? 'Abilitazione' : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).map(aggEsc).join(' · ');
 }
 
 // -- CATALOGO (formazione_catalogo, supabase/formazione_catalogo.sql) --
@@ -236,7 +263,8 @@ function fzRaggruppa(righe) {
 
 function fzGruppoHtml(g, i, aperto, scrive) {
   const date = g.righe.map(r => r.data_corso).filter(Boolean).sort();
-  const scad = g.righe.filter(r => svStatoScadenza(r.scadenza)).length;
+  const scaduti = g.righe.filter(r => fzStatoRiga(r) === 'scaduto').length;
+  const inScadenza = g.righe.filter(r => fzStatoRiga(r) === 'scadenza').length;
   const persone = new Set(g.righe.map(r => r.volontario_id)).size;
   const info = [g.tipo === 'ABILITAZIONE' ? 'Abilitazione' : 'Corso', persone + (persone === 1 ? ' volontario' : ' volontari'),
     g.validita ? 'vale ' + g.validita + (g.validita === 1 ? ' anno' : ' anni') : '',
@@ -244,14 +272,16 @@ function fzGruppoHtml(g, i, aperto, scrive) {
   const righe = g.righe.slice().sort((a, b) => (b.data_corso || '').localeCompare(a.data_corso || '') || fzNomeVol(a.volontario_id).localeCompare(fzNomeVol(b.volontario_id), 'it'));
   return '<div class="card fz-gruppo"><div class="fz-gruppo-h"><button class="fz-gruppo-t" aria-expanded="' + aperto + '" onclick="fzApriGruppo(' + i + ')">'
     + '<span class="pst-chev" aria-hidden="true">' + (aperto ? '▾' : '▸') + '</span><span class="mid"><b>' + aggEsc(g.titolo) + '</b><span class="sub">' + info + '</span></span>'
-    + (scad ? '<span class="pill p-yellow">' + scad + ' in scadenza</span>' : '') + '</button>'
+    + (scaduti ? '<span class="pill p-red">' + scaduti + (scaduti === 1 ? ' scaduto' : ' scaduti') + '</span>' : '')
+    + (inScadenza ? '<span class="pill p-yellow">' + inScadenza + ' in scadenza</span>' : '') + '</button>'
+    + (scrive && g.catalogo_id ? '<button class="btn sm" onclick="fzApriVoce(' + g.catalogo_id + ')">Modifica</button>' : '')
     + (scrive ? '<button class="btn sm" onclick="fzApriForm(null,null,' + i + ')">Aggiungi</button>' : '') + '</div>'
-    + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Ente o docente</span><span>Origine</span><span>Scadenza</span></div>'
+    + (aperto ? '<div class="fz-gruppo-b"><div class="fz-row ihead"><span>Data</span><span>Volontario</span><span>Titolo sull\'attestato</span><span>Origine</span><span>Scadenza</span></div>'
       + righe.map(r => '<div class="fz-row' + (scrive ? ' clk" onclick="fzApriForm(' + r.id + ')' : '') + '">'
         + '<span>' + (svData(r.data_corso) || '—') + '</span>'
         + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
-        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ente, r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
-        + '<span>' + fzPillOrigine(r) + (r.aggiornamento ? ' <span class="pill p-blue">Aggiornamento</span>' : '') + '</span>'
+        + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—') + '</span>'
+        + '<span>' + fzPillOrigine(r) + '</span>'
         + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
 }
 
@@ -259,7 +289,7 @@ function fzRenderLista() {
   const list = document.getElementById('fzList');
   const q = document.getElementById('fzSearch').value.toLowerCase().trim();
   const filtro = FZ_FILTRI.find(f => f[0] === fzFiltro)[2];
-  const righe = fzRighe.filter(r => filtro(r) && (!q || (fzNomeVol(r.volontario_id) + ' ' + r.titolo + ' ' + ((fzVoce(r.catalogo_id) || {}).titolo || '') + ' ' + (r.ente || '')).toLowerCase().includes(q)));
+  const righe = fzRighe.filter(r => filtro(r) && (!q || (fzNomeVol(r.volontario_id) + ' ' + r.titolo + ' ' + ((fzVoce(r.catalogo_id) || {}).titolo || '')).toLowerCase().includes(q)));
   fzGruppi = fzRaggruppa(righe);
   document.getElementById('fzMostrati').textContent = fzGruppi.length + (fzGruppi.length === 1 ? ' corso' : ' corsi') + ' · ' + righe.length + (righe.length === 1 ? ' registrazione' : ' registrazioni');
   if (!righe.length) { list.innerHTML = '<div class="empty">' + (fzRighe.length ? 'Nessuna registrazione trovata.' : 'Nessun corso registrato.') + '</div>'; return; }
@@ -315,10 +345,9 @@ async function fzApriForm(id, volFisso, gruppo) {
     + '<div id="fzLibero"><div class="row2"><label>' + (fzCatalogo.length ? 'Nome della nuova voce' : 'Titolo') + '<input id="fzTitolo" list="fzTitoli" value="' + aggEsc(base && !sel ? base.titolo : '') + '"><datalist id="fzTitoli">' + titoli.map(t => '<option value="' + aggEsc(t) + '">').join('') + '</datalist></label>'
     + '<label>Tipo<select id="fzTipo">' + opz('CORSO', 'Corso', base ? base.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', base ? base.tipo : '') + '</select></label></div></div>'
     + '<div class="row2"><label>Origine<select id="fzOrigine">' + opz('INTERNO', 'Interno (nostro)', r ? r.origine : 'INTERNO') + opz('ESTERNO', 'Esterno', r ? r.origine : '') + '</select></label>'
-    + '<label>Ente o docente<input id="fzEnte" value="' + aggEsc(r ? r.ente || '' : '') + '"></label></div>'
+    + '<label>Ore<input type="number" id="fzOre" min="0" step="0.5" value="' + aggEsc(r && r.ore != null ? r.ore : '') + '"></label></div>'
     + '<div class="row2"><label>Data<input type="date" id="fzData" value="' + aggEsc(r ? r.data_corso || '' : '') + '"></label>'
     + '<label>Scadenza' + (fzCatalogo.length ? ' (vuota: calcolata dalla validità)' : ' (se prevista)') + '<input type="date" id="fzScadenza" value="' + aggEsc(r ? r.scadenza || '' : '') + '"></label></div>'
-    + '<label>Ore<input type="number" id="fzOre" min="0" step="0.5" value="' + aggEsc(r && r.ore != null ? r.ore : '') + '"></label>'
     + '<label>Note<textarea id="fzNote" rows="2">' + aggEsc(r ? r.note || '' : '') + '</textarea></label>'
     + '<div class="actions">' + (id ? '<button class="btn danger" onclick="fzElimina()">Elimina</button>' : '')
     + '<button class="btn" onclick="fzChiudiForm()">Annulla</button><button class="btn pri" id="fzSalvaBtn" onclick="fzSalva()">Salva</button></div></div></div>';
@@ -356,7 +385,7 @@ async function fzSalva() {
   let titolo = voce ? (prima && prima.catalogo_id === voce.id ? prima.titolo : voce.titolo) : codice ? FZ_CORSI_FISSI[codice].titolo : val('fzTitolo');
   const tipo = voce ? voce.tipo : codice ? 'CORSO' : val('fzTipo');
   const dati = {
-    codice, titolo, tipo, origine: val('fzOrigine'), ente: val('fzEnte'),
+    codice, titolo, tipo, origine: val('fzOrigine'),
     data_corso: val('fzData'), scadenza: val('fzScadenza'), ore: val('fzOre'), note: val('fzNote'),
   };
   if (!vol.length) return fzErrore('Scegli almeno un volontario.');
@@ -392,6 +421,7 @@ async function fzSalva() {
 
 // -- GESTIONE CATALOGO (permesso formazione o modifica_volontari, ricontrollato dalle regole del database) --
 // Le voci non si cancellano: si disattivano o si uniscono in un'altra (le righe passano alla voce di arrivo).
+// Le voci fisse (corsi della scheda volontario e "Da verificare") si possono solo rinominare.
 const FZ_VOCI_BLOCCATE = ['4_ORE', '12_ORE', 'CAPOSQ', 'DAE', 'DA_VERIFICARE'];
 
 async function fzSalvaVoce(id, dati) {
@@ -442,7 +472,7 @@ function fzApriVoce(id) {
   ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Voce di catalogo"><div class="shead"><h2>' + (c ? 'Modifica voce' : 'Nuova voce') + '</h2>'
     + '<button class="x" onclick="fzApriCatalogo()" aria-label="Indietro">✕</button></div><div class="sbody form">'
     + '<div class="form-err" id="fzErr"></div>'
-    + '<label>Nome<input id="fzVTitolo" value="' + aggEsc(c ? c.titolo : '') + '"' + (bloccata ? ' disabled' : '') + '></label>'
+    + '<label>Nome<input id="fzVTitolo" value="' + aggEsc(c ? c.titolo : '') + '"></label>'
     + '<div class="row2"><label>Tipo<select id="fzVTipo"' + (bloccata ? ' disabled' : '') + '>' + opz('CORSO', 'Corso', c ? c.tipo : 'CORSO') + opz('ABILITAZIONE', 'Abilitazione', c ? c.tipo : '') + '</select></label>'
     + '<label>Validità in anni (vuoto = non scade)<input type="number" id="fzVAnni" min="1" max="50" value="' + aggEsc(c && c.validita_anni ? c.validita_anni : '') + '"></label></div>'
     + '<label>Parole chiave (separate da virgola)<input id="fzVParole" value="' + aggEsc(c ? (c.parole_chiave || []).join(', ') : '') + '" placeholder="es. gru per autocarro, gru su autocarro"></label>'
@@ -453,6 +483,7 @@ function fzApriVoce(id) {
       + '<button class="btn" onclick="fzUnisciVoce(' + c.id + ')">Unisci</button></div>' : '')
     + '<div class="actions"><button class="btn" onclick="fzApriCatalogo()">Indietro</button><button class="btn pri" id="fzSalvaBtn" onclick="fzSalvaVoceForm(' + (c ? c.id : 'null') + ')">Salva</button></div>'
     + '</div></div>';
+  ov.hidden = false;
 }
 
 async function fzSalvaVoceForm(id) {
@@ -465,16 +496,18 @@ async function fzSalvaVoceForm(id) {
     parole_chiave: el('fzVParole').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
     ordine: Number(el('fzVOrdine').value) || 100,
   };
-  if (!bloccata) { dati.titolo = el('fzVTitolo').value.trim(); dati.tipo = el('fzVTipo').value; }
+  dati.titolo = el('fzVTitolo').value.trim();
+  if (!bloccata) dati.tipo = el('fzVTipo').value;
+  const tipo = dati.tipo || c.tipo;
   if (c && !bloccata && el('fzVAttivo')) dati.attivo = el('fzVAttivo').checked;
-  if (!bloccata && !dati.titolo) return fzErrore('Indica il nome della voce.');
+  if (!dati.titolo) return fzErrore('Indica il nome della voce.');
   if (anni !== null && (!Number.isInteger(anni) || anni < 1 || anni > 50)) return fzErrore('La validità va da 1 a 50 anni.');
-  if (!bloccata && fzVociAttive().some(x => x.id !== id && x.tipo === dati.tipo && x.titolo.trim().toLowerCase() === dati.titolo.toLowerCase()))
+  if (fzVociAttive().some(x => x.id !== id && x.tipo === tipo && x.titolo.trim().toLowerCase() === dati.titolo.toLowerCase()))
     return fzErrore('Esiste già una voce con questo nome: usa "Unisci".');
   el('fzSalvaBtn').disabled = true;
   try { await fzSalvaVoce(id, dati); }
   catch(e) { el('fzSalvaBtn').disabled = false; return fzErrore('Voce non salvata: ' + e.message); }
-  logAttivita((id ? 'ha modificato' : 'ha creato') + ' la voce di catalogo formazione ' + (dati.titolo || c.titolo));
+  logAttivita((id ? 'ha modificato' : 'ha creato') + ' la voce di catalogo formazione ' + dati.titolo);
   fzRenderLista();
   fzApriCatalogo();
 }
