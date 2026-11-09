@@ -328,6 +328,8 @@ async function svSalvaCampi() {
   if (sv.dirty.has('visita')) { body.data_visita = val('fDataVisita'); body.stato_visita = val('fStatoVisita'); body.cdc_1_step = chk('fCdc1'); body.cdc_2_step = chk('fCdc2'); }
   if (sv.dirty.has('formazione')) {
     if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq'), dae: chk('fDae'), scad_dae: val('fScadDae') });
+    // esoneri: solo se le colonne esistono (supabase/formazione_esoneri.sql)
+    if (svPuoDati() && 'esonero_12_ore' in sv.v) Object.assign(body, { esonero_12_ore: chk('fEso12Ore'), esonero_caposq: chk('fEsoCaposq') });
   }
   try {
     const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + sv.id, {
@@ -413,7 +415,7 @@ function svPassaFiltro(v) {
 // -- DASHBOARD: CARD "DA SISTEMARE" --
 async function svCardDashboard() {
   if (window.isVolUser || !(hasPerm('volontari') || hasPerm('documenti') || hasPerm('visite'))) return '';
-  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,stato,stato_visita,quattro_ore,dodici_ore,dae,scad_dae,foto_url', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=*', { headers: H });
   if (!res.ok) return '';
   const vols = await res.json();
   await svCaricaProblemi(vols);
@@ -461,7 +463,7 @@ function svProblemi(v, aggCard, docs) {
   } else if (!haIdentita) docMancanti.push("Carta d'identità");
   const formazione = [];
   if (!v.quattro_ore) formazione.push('Corso 4 ore');
-  if (!v.dodici_ore) formazione.push('Corso 12 ore');
+  if (!v.dodici_ore && !v.esonero_12_ore) formazione.push('Corso 12 ore');
   const dae = svStatoScadenza(v.dae ? v.scad_dae : null);
   if (dae) formazione.push(dae === 'scaduto' ? 'DAE scaduto' : 'DAE in scadenza');
   return {
@@ -684,8 +686,8 @@ function svRenderAllegatiVisita() {
 // I corsi sono i campi già presenti in volontari; gli attestati sono righe di documenti
 const SV_CORSI = [
   { id: 'f4Ore',        campo: 'quattro_ore',  label: 'Corso 4 ore',       tipo: '4_ORE',  storico: 'quattro_ore_att' },
-  { id: 'f12Ore',       campo: 'dodici_ore',   label: 'Corso 12 ore',      tipo: '12_ORE', storico: 'dodici_ore_att' },
-  { id: 'fCorsoCaposq', campo: 'corso_caposq', label: 'Corso Caposquadra', tipo: 'CAPOSQ', storico: 'caposq_att' },
+  { id: 'f12Ore',       campo: 'dodici_ore',   label: 'Corso 12 ore',      tipo: '12_ORE', storico: 'dodici_ore_att', esonero: 'esonero_12_ore', idEso: 'fEso12Ore' },
+  { id: 'fCorsoCaposq', campo: 'corso_caposq', label: 'Corso Caposquadra', tipo: 'CAPOSQ', storico: 'caposq_att', esonero: 'esonero_caposq', idEso: 'fEsoCaposq' },
   { id: 'fDae',         campo: 'dae',          label: 'DAE',               tipo: 'DAE',    scadenza: 'scad_dae' },
 ];
 
@@ -701,7 +703,10 @@ function svRenderFormazione() {
     const scad = c.scadenza && svPuoDati()
       ? '<div class="vol-form-field sv-corso-sc"><label class="vol-form-lbl" for="fScadDae">Scadenza</label><input class="vol-form-inp" type="date" id="fScadDae" value="' + aggEsc(v[c.scadenza] || '') + '"></div>'
       : '';
-    return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + '<span id="svCorsoPill_' + c.tipo + '"></span></div>'
+    // esonero (12 ore e Caposquadra): casella per chi modifica i volontari, altrimenti solo l'etichetta in svRenderCorsi
+    const eso = c.esonero && svPuoDati() && c.esonero in v
+      ? '<label class="sv-corso-eso"><input type="checkbox" id="' + c.idEso + '"' + (v[c.esonero] ? ' checked' : '') + '> Esonerato</label>' : '';
+    return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + eso + '<span id="svCorsoPill_' + c.tipo + '"></span></div>'
       + '<div id="svCorsoInfo_' + c.tipo + '"></div>' + scad
       + '<div id="svDrive_' + c.tipo + '"></div><div id="svAll_' + c.tipo + '"></div></div>';
   }).join('') + '</div>'
@@ -726,7 +731,8 @@ function svRenderCorsi() {
     const i = arcInfoCorso(!!sv.v[c.campo] || file.length > 0 || reg.length > 0,
       file.map(f => f.data).concat(reg.map(r => r.data_corso)),
       file.map(f => f.scadenza).concat(reg.map(r => r.scadenza), c.scadenza ? [sv.v[c.scadenza]] : []));
-    pill.innerHTML = i.pill;
+    const esonerato = c.esonero && sv.v[c.esonero];
+    pill.innerHTML = esonerato && i.pill.indexOf('p-blue') < 0 ? '<span class="pill p-grey">Esonerato</span>' : i.pill;
     const modifica = reg.length && fzPuoScrivere() ? ' <button class="btn sm" onclick="fzApriForm(' + reg[0].id + ')">Registro</button>' : '';
     info.innerHTML = i.testo || modifica ? '<span class="sub">' + i.testo + '</span>' + modifica : '';
   });

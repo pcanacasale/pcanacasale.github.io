@@ -835,7 +835,7 @@ async function caricaVolontari() {
   list.innerHTML = '<p class="note">Caricamento…</p>';
   if (!visteCache.length) caricaViste();
   try {
-    const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
+    const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,esonero_12_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
     sbOk(res);
     volontariData = await res.json();
     await sbFirmaRighe(volontariData, 'foto_url');

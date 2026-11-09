@@ -138,7 +138,7 @@ function fzPuoScrivere() { return canModificaVolontari() || hasPerm('formazione'
 function fzNomeVol(id) { const v = fzVolontari.find(x => x.id === id); return v ? v.cognome + ' ' + v.nome : '—'; }
 
 async function fzCaricaVolontari() {
-  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato,tipo_volontario&order=cognome,nome', { headers: H });
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,stato,tipo_volontario,esonero_12_ore,esonero_caposq&order=cognome,nome', { headers: H });
   if (!res.ok) throw new Error('errore');
   fzVolontari = await res.json();
 }
@@ -207,10 +207,10 @@ function fzPillOrigine(r) {
 // Per ogni volontario conta l'ultima riga del registro (fzOrdineData): mai fatto > scaduto > in scadenza > senza attestato.
 const FZ_DASH = [
   { codice: '4_ORE',  titolo: 'Corso 4 ore',       perChi: () => true },
-  { codice: '12_ORE', titolo: 'Corso 12 ore',      perChi: () => true },
-  { codice: 'CAPOSQ', titolo: 'Corso Caposquadra', perChi: v => String(v.tipo_volontario || '').toUpperCase().replace(/\s+/g, '') === 'CAPOSQUADRA', nota: 'solo capisquadra' },
+  { codice: '12_ORE', titolo: 'Corso 12 ore',      perChi: () => true, esonero: 'esonero_12_ore' },
+  { codice: 'CAPOSQ', titolo: 'Corso Caposquadra', perChi: v => String(v.tipo_volontario || '').toUpperCase().replace(/\s+/g, '') === 'CAPOSQUADRA', nota: 'solo capisquadra', esonero: 'esonero_caposq' },
 ];
-const FZ_DASH_CAT = [['mai', 'Mai fatto'], ['scaduto', 'Scaduto'], ['scadenza', 'In scadenza'], ['senza', 'Senza attestato']];
+const FZ_DASH_CAT = [['mai', 'Mai fatto'], ['scaduto', 'Scaduto'], ['scadenza', 'In scadenza'], ['senza', 'Senza attestato'], ['esonero', 'Esonerati']];
 let fzDashSel = null;   // 'CODICE|categoria' dell'elenco aperto
 
 function fzDashUltima(volId, codice) {
@@ -227,10 +227,14 @@ function fzDashStato(volId, codice) {
 function fzDashCalcola() {
   const vol = fzVolontari.filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO'));
   return FZ_DASH.map(c => {
-    const per = { mai: [], scaduto: [], scadenza: [], senza: [], ok: [] };
+    const per = { mai: [], scaduto: [], scadenza: [], senza: [], esonero: [], ok: [] };
     const tocca = vol.filter(c.perChi);
-    tocca.forEach(v => per[fzDashStato(v.id, c.codice)].push(v));
-    return Object.assign({}, c, { tot: tocca.length, per });
+    tocca.forEach(v => {
+      const st = fzDashStato(v.id, c.codice);
+      // esonerato: non conta tra mancanti e scaduti (se il corso è valido resta "in regola")
+      per[c.esonero && v[c.esonero] && st !== 'ok' ? 'esonero' : st].push(v);
+    });
+    return Object.assign({}, c, { tot: tocca.length - per.esonero.length, per });
   });
 }
 function fzDashScegli(codice, cat) {
@@ -244,7 +248,7 @@ function fzRenderDash() {
   const d = fzDashCalcola();
   let html = '<div class="fz-dash">' + d.map(c => '<div class="card fz-dash-c"><div class="fz-dash-h"><b>' + c.titolo + '</b>'
     + '<span class="sub">' + c.per.ok.length + ' in regola su ' + c.tot + (c.nota ? ' · ' + c.nota : '') + '</span></div><div class="chips">'
-    + FZ_DASH_CAT.map(([k, lab]) => {
+    + FZ_DASH_CAT.filter(([k]) => k !== 'esonero' || c.esonero).map(([k, lab]) => {
         const n = c.per[k].length;
         return '<button class="chip' + (fzDashSel === c.codice + '|' + k ? ' on' : '') + '"' + (n ? '' : ' disabled')
           + ' onclick="fzDashScegli(\'' + c.codice + '\',\'' + k + '\')">' + lab + ' <span class="n">' + n + '</span></button>';
@@ -263,11 +267,28 @@ function fzRenderDash() {
     html += '<div class="card fz-dash-l"><div class="fz-dash-h"><b>' + c.titolo + ' · ' + lab + ' (' + elenco.length + ')</b>'
       + '<span><button class="btn sm" onclick="fzDashCopia()">Copia nomi</button> <button class="btn sm" onclick="fzDashScegli()">Chiudi</button></span></div>'
       + elenco.map(v => '<div class="lr clk" onclick="apriDettaglio(' + v.id + ',\'formazione\')"><div class="mid"><b>' + aggEsc(v.cognome + ' ' + v.nome) + '</b>'
-        + '<span class="sub">' + aggEsc([v.squadra, v.stato === 'SOSPESO' ? 'sospeso' : '', det(v)].filter(Boolean).join(' · ')) + '</span></div></div>').join('')
+        + '<span class="sub">' + aggEsc([v.squadra, v.stato === 'SOSPESO' ? 'sospeso' : '', det(v)].filter(Boolean).join(' · ')) + '</span></div>'
+        + (c.esonero && canModificaVolontari() && c.esonero in v
+          ? '<button class="btn sm" onclick="event.stopPropagation();fzEsonera(' + v.id + ',\'' + c.esonero + '\',' + (k !== 'esonero') + ')">' + (k === 'esonero' ? 'Togli esonero' : 'Esonera') + '</button>' : '')
+        + '</div>').join('')
       + '</div>';
   }
   box.innerHTML = html;
 }
+// Esonero dal corso (colonne esonero_12_ore / esonero_caposq di volontari, supabase/formazione_esoneri.sql)
+async function fzEsonera(volId, campo, si) {
+  const v = fzVolontari.find(x => x.id === volId);
+  const corso = campo === 'esonero_caposq' ? ' dal corso Caposquadra' : ' dal corso 12 ore';
+  if (!v || !confirm((si ? 'Esonerare ' : 'Togliere l\'esonero a ') + v.cognome + ' ' + v.nome + corso + '?')) return;
+  const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + volId, {
+    method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify({ [campo]: si }),
+  });
+  if (!res.ok) { alert('Modifica non salvata: serve il permesso di modifica dei volontari.'); return; }
+  v[campo] = si;
+  logAttivita((si ? 'ha esonerato ' : 'ha tolto l\'esonero a ') + v.cognome + ' ' + v.nome + corso);
+  fzRenderDash();
+}
+
 // Nomi dell'elenco aperto negli appunti, uno per riga (per convocazioni e iscrizioni ai corsi)
 function fzDashCopia() {
   if (!fzDashSel) return;
