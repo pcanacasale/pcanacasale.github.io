@@ -292,7 +292,8 @@ function fzGruppoHtml(g, i, aperto, scrive) {
         + '<b>' + aggEsc(fzNomeVol(r.volontario_id)) + '</b>'
         + '<span class="sub minw0">' + aggEsc([r.titolo !== g.titolo ? r.titolo : '', r.ore ? r.ore + ' h' : ''].filter(Boolean).join(' · ') || '—')
         + (precedenti.length ? '<br>Precedenti: ' + precedenti.join(', ') : '') + '</span>'
-        + '<span>' + fzPillOrigine(r) + '</span>'
+        + '<span>' + fzPillOrigine(r)
+        + (r.drive_file_id ? ' <button class="btn sm" onclick="event.stopPropagation();arcApri(' + r.volontario_id + ',\'' + aggEsc(r.drive_file_id) + '\')">Attestato</button>' : '') + '</span>'
         + '<span>' + fzCellaScadenza(r) + '</span></div>').join('') + '</div>' : '') + '</div>';
 }
 

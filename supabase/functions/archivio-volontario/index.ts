@@ -5,7 +5,7 @@
 //
 // verify_jwt = false perché il controllo è qui: ogni richiesta porta il token della sessione
 // (Supabase Auth, staff e volontari) e passa se:
-//   - chi chiede ha ho_permesso('documenti_volontari') o ho_permesso('volontari') (i master li hanno di default), oppure
+//   - chi chiede ha ho_permesso('documenti_volontari'), 'volontari' o 'formazione' (i master li hanno di default), oppure
 //   - chi chiede è proprio quel volontario (mio_volontario_id() = volontario_id).
 //
 // GET ?azione=lista&volontario_id=N            → elenco file di Attestati e Documenti
@@ -61,13 +61,13 @@ async function chiEChiede(req: Request, perImport = false) {
     rpc('ho_permesso', { chiave: 'volontari' }),
     rpc('mio_volontario_id', {}),
     rpc('mio_profilo', {}),
-    perImport ? rpc('ho_permesso', { chiave: 'formazione' }) : null,
+    rpc('ho_permesso', { chiave: 'formazione' }),
     perImport ? rpc('ho_permesso', { chiave: 'modifica_volontari' }) : null,
   ]);
   const p = Array.isArray(prof) ? prof[0] : prof;
   const nome = p ? [p.cognome, p.nome].filter(Boolean).join(' ') : '';
   return {
-    staff: permArchivio === true || permVolontari === true,
+    staff: permArchivio === true || permVolontari === true || permFormazione === true,
     importa: permFormazione === true || permModifica === true,
     mioId: mioId == null ? null : Number(mioId), nome: nome || 'Utente',
   };
