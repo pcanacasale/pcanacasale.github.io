@@ -111,12 +111,16 @@ function apriExportVisitePagina() {
 }
 
 // -- REGISTRO FORMAZIONE --
+// Corsi obbligatori (campi di volontari). Il DAE è un'abilitazione, ma il suo esito resta nei campi
+// volontari.dae e scad_dae: per questo è in FZ_CAMPI_VOL (riallineo dei campi), non in FZ_CORSI_FISSI.
 const FZ_CORSI_FISSI = {
   '4_ORE':  { titolo: 'Corso 4 ore',       campo: 'quattro_ore' },
   '12_ORE': { titolo: 'Corso 12 ore',      campo: 'dodici_ore' },
   'CAPOSQ': { titolo: 'Corso Caposquadra', campo: 'corso_caposq' },
-  'DAE':    { titolo: 'DAE',               campo: 'dae', scadenza: 'scad_dae' },
 };
+const FZ_CAMPI_VOL = Object.assign({}, FZ_CORSI_FISSI, {
+  'DAE':    { titolo: 'DAE',               campo: 'dae', scadenza: 'scad_dae' },
+});
 const FZ_FILTRI = [
   ['',             'Tutti',        () => true],
   ['CORSO',        'Corsi',        r => r.tipo === 'CORSO'],
@@ -176,7 +180,7 @@ function fzImpostaFiltro(k) { fzFiltro = fzFiltro === k ? '' : k; fzRenderChip()
 // Import dall'archivio Google Drive (Edge Function archivio-volontario, azione importa):
 // completa data e scadenza dei corsi fissi e aggiunge le abilitazioni. Si può rilanciare.
 async function fzImportaDrive() {
-  if (!confirm('Leggo gli attestati di tutti i volontari su Google Drive e porto nel registro data e scadenza dei corsi 4 ore, 12 ore, Caposquadra e DAE, più le abilitazioni.\n\nI file già importati vengono saltati. Procedo?')) return;
+  if (!confirm('Leggo gli attestati di tutti i volontari su Google Drive e porto nel registro data e scadenza dei corsi 4 ore, 12 ore e Caposquadra, più le abilitazioni (DAE compreso).\n\nI file già importati vengono saltati. Procedo?')) return;
   const btn = document.getElementById('fzBtnDrive');
   btn.disabled = true;
   btn.textContent = 'Importazione…';
@@ -491,9 +495,10 @@ async function fzSalva() {
   const vol = fzForm.volFisso ? [fzForm.volFisso] : [...fzForm.scelti];
   const prima = fzForm.id ? fzRighe.find(x => x.id === fzForm.id) : null;
   let voce = sel.startsWith('c:') ? fzVoce(Number(sel.slice(2))) : null;
-  let codice = sel.startsWith('k:') ? sel.slice(2) : (voce && FZ_CORSI_FISSI[voce.codice] ? voce.codice : null);
+  // codice anche per il DAE: serve a ricopiare esito e scadenza nei campi del volontario
+  let codice = sel.startsWith('k:') ? sel.slice(2) : (voce && FZ_CAMPI_VOL[voce.codice] ? voce.codice : null);
   // con una voce scelta il titolo è quello della voce; modificando senza cambiarla resta il titolo originale
-  let titolo = voce ? (prima && prima.catalogo_id === voce.id ? prima.titolo : voce.titolo) : codice ? FZ_CORSI_FISSI[codice].titolo : val('fzTitolo');
+  let titolo = voce ? (prima && prima.catalogo_id === voce.id ? prima.titolo : voce.titolo) : codice ? FZ_CAMPI_VOL[codice].titolo : val('fzTitolo');
   const tipo = voce ? voce.tipo : codice ? 'CORSO' : val('fzTipo');
   const dati = {
     codice, titolo, tipo, origine: val('fzOrigine'),
@@ -687,7 +692,7 @@ async function fzRiallinea(vol, codici) {
   await Promise.all(vol.map(async id => {
     const body = {};
     codici.forEach(cod => {
-      const c = FZ_CORSI_FISSI[cod];
+      const c = FZ_CAMPI_VOL[cod];
       const sue = righe.filter(r => r.volontario_id === id && r.codice === cod);
       body[c.campo] = sue.length > 0;
       if (c.scadenza) body[c.scadenza] = sue.map(r => r.scadenza).filter(Boolean).sort().pop() || null;
@@ -727,10 +732,13 @@ async function fzRenderScheda() {
 // Dopo una registrazione: aggiorna spunte e scadenza senza perdere le altre modifiche in corso
 function fzAggiornaScheda() {
   svRenderBarra();
+  // DAE (scheda Abilitazioni): spunta e scadenza seguono il registro se non ci sono modifiche in corso
+  if (!sv.dirty.has('abilitazioni')) {
+    const dae = document.getElementById('fDae'); if (dae) dae.checked = !!sv.v.dae;
+    const sc = document.getElementById('fScadDae'); if (sc) sc.value = sv.v.scad_dae || '';
+  }
   if (!sv.dirty.has('formazione')) { svRenderFormazione(); return; }
   SV_CORSI.forEach(c => { const el = document.getElementById(c.id); if (el) el.checked = !!sv.v[c.campo]; });
-  const sc = document.getElementById('fScadDae');
-  if (sc) sc.value = sv.v.scad_dae || '';
   fzRenderScheda();
 }
 

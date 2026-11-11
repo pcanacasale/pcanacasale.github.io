@@ -191,6 +191,8 @@ function sbAvatarRotto(img) {
 }
 
 function sbLinkFile(rif, url, scarica) {
+  // link non firmato (es. sessione in rinnovo al ritorno dalla fotocamera): si firma al clic
+  if (!url && rif) return '<a href="#" class="btn sm" data-sb-file="' + escapeHtmlNav(rif) + '" data-sb-t="0">Apri</a>';
   if (!url) return '<span class="sub">File non disponibile</span>';
   const attr = ' class="btn sm" data-sb-file="' + escapeHtmlNav(rif) + '" data-sb-t="' + Date.now() + '"';
   let h = '<a href="' + escapeHtmlNav(url) + '" target="_blank" rel="noopener"' + attr + '>Apri</a>';

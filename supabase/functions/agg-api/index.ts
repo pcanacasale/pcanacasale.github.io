@@ -36,7 +36,8 @@ const TIPI_TAGLIA = ['ABITO', 'SCARPA', 'GUANTO', 'UNICA'];
 const FILTRO_DOC_ATTIVI = 'or=(stato.is.null,stato.not.in.(IN_ATTESA,RIFIUTATO))';
 
 // Fase 2 — link personale per i volontari (vedi agg-pub).
-const LINK_BASE_URL = 'https://pcanacasale.com/aggiorna.html?t=';
+// token nell'hash (#t=…): resta nell'indirizzo anche se il telefono ricarica la pagina e non arriva ai server nei log
+const LINK_BASE_URL = 'https://pcanacasale.com/aggiorna.html#t=';
 const LINK_DURATA_GIORNI = 14;
 const LINK_MAX_TENTATIVI = 5;
 

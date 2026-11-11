@@ -11,7 +11,7 @@
 // GET ?azione=lista&volontario_id=N            → elenco file di Attestati e Documenti
 // GET ?azione=file&volontario_id=N&file_id=X   → il file in streaming (solo se sta in una delle due cartelle)
 // POST ?azione=importa                         → porta nel registro formazione (formazione_registro) data e
-//   scadenza dei corsi fissi (4 ore, 12 ore, Caposquadra, DAE) e le abilitazioni prese dai file Attestati di
+//   scadenza dei corsi fissi (4 ore, 12 ore, Caposquadra) e le abilitazioni (DAE compreso) prese dai file Attestati di
 //   tutti i volontari (anche file senza "Abilitazione -" nel nome, se il titolo è di una voce abilitazione del
 //   catalogo). Salta le copie "(copia)/(2)" e i doppioni stesso volontario + voce + data. Solo con permesso formazione o modifica_volontari. Ogni riga importata ricorda il file
 //   (drive_file_id): rilanciando, i file già importati si saltano. Nessuna riga viene cancellata.
@@ -258,10 +258,20 @@ async function importa(utente: string) {
     return catalogo.find(c => c.tipo === tipo && c.codice !== 'DA_VERIFICARE'
       && (c.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k)))) || null;
   };
+  // Corso obbligatorio (4 ore, 12 ore, Caposquadra). Il DAE è un'abilitazione: si riconosce a parte
+  // (voce DAE del catalogo, qualunque tipo abbia) e tiene il codice DAE per aggiornare volontari.dae / scad_dae.
+  const OBBLIGATORI = CORSI_FISSI.filter(c => c.codice !== 'DAE');
+  const DAE = CORSI_FISSI.find(c => c.codice === 'DAE')!;
   const corsoDi = (testo: string) => {
-    if (!catalogo.length) return CORSI_FISSI.find(c => c.re.test(testo));
+    if (!catalogo.length) return OBBLIGATORI.find(c => c.re.test(testo));
     const voce = voceDi('CORSO', testo);
-    return voce ? CORSI_FISSI.find(c => c.codice === voce.codice) : undefined;
+    return voce ? OBBLIGATORI.find(c => c.codice === voce.codice) : undefined;
+  };
+  const eDae = (testo: string) => {
+    const voce = catalogo.find(c => c.codice === 'DAE');
+    if (!voce) return DAE.re.test(testo);
+    const t = ' ' + norm(testo) + ' ';
+    return (voce.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k)));
   };
   // Doppioni: stesso volontario, stessa voce, stessa data (es. attestato e tesserino dello stesso corso)
   const chiavi = new Set(reg.filter(r => r.catalogo_id && r.data_corso).map(r => r.volontario_id + '|' + r.catalogo_id + '|' + r.data_corso));
@@ -284,7 +294,7 @@ async function importa(utente: string) {
         .sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''));   // il più recente per primo
       for (const f of file) {
         const testo = (f.titolo || '') + ' ' + f.nome;
-        const corso = corsoDi(testo);
+        const corso = eDae(testo) ? DAE : corsoDi(testo);
         // abilitazione: nome "Abilitazione - …" oppure titolo riconosciuto da una voce abilitazione del catalogo
         const voceAbil = corso ? null : voceDi('ABILITAZIONE', f.titolo || '');
         const abil = !corso && (!!voceAbil || /^abilitazion/i.test(f.tipo || ''));
@@ -306,7 +316,7 @@ async function importa(utente: string) {
           esistente.scadenza = corpo.scadenza;
           modifiche.push({ id: esistente.id, volontario_id: v.id, codice: esistente.codice, corpo });
         } else {
-          nuove.push({ volontario_id: v.id, tipo: corso ? 'CORSO' : 'ABILITAZIONE', codice: corso ? corso.codice : null,
+          nuove.push({ volontario_id: v.id, tipo: corso && corso.codice !== 'DAE' ? 'CORSO' : 'ABILITAZIONE', codice: corso ? corso.codice : null,
             titolo: corso ? corso.titolo : f.titolo, note: 'Da archivio Drive: ' + f.nome, ...base });
         }
         if (corso) {

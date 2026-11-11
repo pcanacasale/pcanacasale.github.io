@@ -66,7 +66,7 @@ async function apriDettaglio(id, tab) {
     const docs = dRes.ok ? await dRes.json() : [];
     await Promise.all([sbFirmaRighe(docs, 'url'), sbFirmaRighe([v], 'foto_url')]);
     if (token !== svToken) return;
-    sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false, drive: null };
+    sv = { id, v, docs, agg, ore, tab: null, dirty: new Set(), interventiOk: false, anteprimeOk: false, drive: null, firmatoIl: Date.now() };
     aggCorrente = agg;
     svRender();
     svMostraTab(tab || SV_TABS.map(t => t.id).filter(svTabVisibile)[0]);
@@ -172,16 +172,16 @@ function svRenderDrive() {
   const stato = d ? '' : arcStatoHtml(e, 'svCaricaDrive(true)');
   ARC_CORSI.forEach(c => {
     const box = el('svDrive_' + c.tipo);
-    if (box) box.innerHTML = d ? arcRighe(sv.id, d.corsi[c.tipo], '', true) : '';
+    if (box) box.innerHTML = d ? arcRigheCorso(sv.id, d.corsi[c.tipo]) : '';
   });
   const abil = el('svDriveAbil');
-  if (abil) abil.innerHTML = '<div class="grp sv-mt">Abilitazioni in archivio' + (d ? ' (' + d.abilitazioni.length + ')' : '') + '</div>'
+  if (abil) abil.innerHTML = '<div class="grp sv-mt">Abilitazioni in archivio</div>'
     + (d ? arcRigheVoci(sv.id, d.abilitazioni, 'Nessuna abilitazione archiviata.') : stato);
   svRenderCorsi();
   svRenderRegistro(fzPuoScrivere());
   const att = el('svP_attestati');
   if (att) att.innerHTML = '<div class="grp">Attestati in archivio' + (d ? ' (' + d.attestati.length + ')' : '') + '</div>'
-    + (d ? arcRighe(sv.id, d.attestati, 'Nessun attestato archiviato.') : stato);
+    + (d ? arcRigheAttestati(sv.id, d.attestati, 'Nessun attestato archiviato.') : stato);
   const doc = el('svDriveDoc');
   if (doc) doc.innerHTML = '<div class="grp sv-mt">Documenti archiviati</div>'
     + (d ? arcRighe(sv.id, d.documenti, 'Nessun documento archiviato.') : stato);
@@ -239,6 +239,7 @@ function svVociDaSistemare() {
   });
   if (p.visita) add('visita', 'Visita');
   p.formazione.forEach(l => add('formazione', l));
+  p.abilitazioni.forEach(l => add('abilitazioni', l));
   if (p.taglie) add('dati', 'Taglie');
   if (svDocAgg().some(d => d.tipo === 'MODULO_COMPILATO' && !d.registrato_il)) add('documenti', 'Modulo da registrare');
   return voci;
@@ -327,10 +328,12 @@ async function svSalvaCampi() {
   const body = {};
   if (sv.dirty.has('visita')) { body.data_visita = val('fDataVisita'); body.stato_visita = val('fStatoVisita'); body.cdc_1_step = chk('fCdc1'); body.cdc_2_step = chk('fCdc2'); }
   if (sv.dirty.has('formazione')) {
-    if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq'), dae: chk('fDae'), scad_dae: val('fScadDae') });
+    if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq') });
     // esoneri: solo se le colonne esistono (supabase/formazione_esoneri.sql)
     if (svPuoDati() && 'esonero_12_ore' in sv.v) Object.assign(body, { esonero_12_ore: chk('fEso12Ore'), esonero_caposq: chk('fEsoCaposq') });
   }
+  if (sv.dirty.has('abilitazioni') && svPuoDati()) Object.assign(body, { dae: chk('fDae'), scad_dae: val('fScadDae') });
+  if (!Object.keys(body).length) { chiudiDettaglio(); return; }
   try {
     const res = await sbFetch(SUPA_URL + '/rest/v1/volontari?id=eq.' + sv.id, {
       method: 'PATCH', headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }), body: JSON.stringify(body),
@@ -372,7 +375,7 @@ async function svCaricaProblemi(vols) {
   vols.forEach(v => {
     const card = cardPerVol[v.id] || null;
     const p = svProblemi(v, card, docsPerVol[v.id] || []);
-    p.incompleta = card ? card.completezza < 100 : (p.foto || p.visita || p.formazione.length > 0 || p.docMancanti.length > 0);
+    p.incompleta = card ? card.completezza < 100 : (p.foto || p.visita || p.formazione.length > 0 || p.abilitazioni.length > 0 || p.docMancanti.length > 0);
     svProblemiPerVol[v.id] = p;
   });
 }
@@ -464,11 +467,13 @@ function svProblemi(v, aggCard, docs) {
   const formazione = [];
   if (!v.quattro_ore) formazione.push('Corso 4 ore');
   if (!v.dodici_ore && !v.esonero_12_ore) formazione.push('Corso 12 ore');
+  // il DAE è un'abilitazione: l'avviso va nella scheda Abilitazioni
+  const abilitazioni = [];
   const dae = svStatoScadenza(v.dae ? v.scad_dae : null);
-  if (dae) formazione.push(dae === 'scaduto' ? 'DAE scaduto' : 'DAE in scadenza');
+  if (dae) abilitazioni.push(dae === 'scaduto' ? 'DAE scaduto' : 'DAE in scadenza');
   return {
     foto: !v.foto_url && !(blocchi && blocchi.foto) && !docs.some(d => d.tipo === 'FOTO'),
-    docMancanti, visita: svVisitaDaSistemare(v), formazione,
+    docMancanti, visita: svVisitaDaSistemare(v), formazione, abilitazioni,
     taglie: !!blocchi && !blocchi.dpi_valutati,
   };
 }
@@ -509,6 +514,13 @@ async function svApriAgg(id, scarica) {
   } catch(e) { finestra.close(); alert('Errore: ' + e.message); }
 }
 
+// Ritorno dalla fotocamera o da un'altra app: i link firmati mancanti o vecchi si rigenerano
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !sv) return;
+  const vecchi = Date.now() - (sv.firmatoIl || 0) > (SB_FILE_DURATA - 600) * 1000;
+  if (vecchi || sv.docs.some(d => d.url && !d._file)) svRicaricaDocumenti();
+});
+
 // Dopo caricamenti ed eliminazioni: i campi non salvati delle schede restano intatti
 async function svRicaricaDocumenti() {
   if (!sv) return;
@@ -518,6 +530,7 @@ async function svRicaricaDocumenti() {
   await sbFirmaRighe(docs, 'url');
   if (!sv || token !== svToken) return;
   sv.docs = docs;
+  sv.firmatoIl = Date.now();
   const foto = docs.find(d => d.tipo === 'FOTO');
   sv.v.foto_url = foto ? foto.url : null;
   sv.v._file = foto ? foto._file : null;
@@ -688,11 +701,12 @@ const SV_CORSI = [
   { id: 'f4Ore',        campo: 'quattro_ore',  label: 'Corso 4 ore',       tipo: '4_ORE',  storico: 'quattro_ore_att' },
   { id: 'f12Ore',       campo: 'dodici_ore',   label: 'Corso 12 ore',      tipo: '12_ORE', storico: 'dodici_ore_att', esonero: 'esonero_12_ore', idEso: 'fEso12Ore' },
   { id: 'fCorsoCaposq', campo: 'corso_caposq', label: 'Corso Caposquadra', tipo: 'CAPOSQ', storico: 'caposq_att', esonero: 'esonero_caposq', idEso: 'fEsoCaposq' },
-  { id: 'fDae',         campo: 'dae',          label: 'DAE',               tipo: 'DAE',    scadenza: 'scad_dae' },
 ];
+// DAE: abilitazione (non corso obbligatorio), in cima alla scheda Abilitazioni; campi volontari.dae e scad_dae
+const SV_DAE = { id: 'fDae', campo: 'dae', label: 'DAE', tipo: 'DAE', scadenza: 'scad_dae' };
 
-// Ogni corso fisso compare una volta sola: spunta, stato, data e scadenza (da Drive, registro e
-// campi del volontario) e gli attestati. Le righe di registro dei corsi fissi non si ripetono sotto.
+// Ogni corso obbligatorio compare una volta sola: spunta, stato, data e scadenza (da Drive, registro e
+// campi del volontario) e l'attestato in vigore; i precedenti in "Storico attestati".
 function svRenderFormazione() {
   const box = document.getElementById('svP_formazione');
   const v = sv.v;
@@ -700,14 +714,11 @@ function svRenderFormazione() {
     const titolo = svPuoDati()
       ? '<label class="sv-corso-t"><input type="checkbox" id="' + c.id + '"' + (v[c.campo] ? ' checked' : '') + '> ' + c.label + '</label>'
       : '<b class="sv-corso-t">' + c.label + '</b>';
-    const scad = c.scadenza && svPuoDati()
-      ? '<div class="vol-form-field sv-corso-sc"><label class="vol-form-lbl" for="fScadDae">Scadenza</label><input class="vol-form-inp" type="date" id="fScadDae" value="' + aggEsc(v[c.scadenza] || '') + '"></div>'
-      : '';
     // esonero (12 ore e Caposquadra): casella per chi modifica i volontari, altrimenti solo l'etichetta in svRenderCorsi
     const eso = c.esonero && svPuoDati() && c.esonero in v
       ? '<label class="sv-corso-eso"><input type="checkbox" id="' + c.idEso + '"' + (v[c.esonero] ? ' checked' : '') + '> Esonerato</label>' : '';
     return '<div class="sv-corso"><div class="sv-corso-h">' + titolo + eso + '<span id="svCorsoPill_' + c.tipo + '"></span></div>'
-      + '<div id="svCorsoInfo_' + c.tipo + '"></div>' + scad
+      + '<div id="svCorsoInfo_' + c.tipo + '"></div>'
       + '<div id="svDrive_' + c.tipo + '"></div><div id="svAll_' + c.tipo + '"></div></div>';
   }).join('') + '</div>'
     + '<div class="grp sv-mt">Altri corsi</div><div id="svRegistro"><p class="note m0 mb10">Caricamento…</p></div><div id="svAltriCorsi"></div>';
@@ -718,56 +729,73 @@ function svRenderFormazione() {
   svOsservaModifiche(box);
 }
 
-// Stato, data e scadenza dei corsi fissi: si ridisegna quando arrivano Drive o registro
+// Stato, data e scadenza dei corsi obbligatori e del DAE: si ridisegna quando arrivano Drive o registro
 function svRenderCorsi() {
   if (!sv) return;
   const d = sv.drive && sv.drive.file ? arcDividi(sv.drive.file) : null;
-  SV_CORSI.forEach(c => {
+  SV_CORSI.concat([SV_DAE]).forEach(c => {
     const pill = document.getElementById('svCorsoPill_' + c.tipo);
     const info = document.getElementById('svCorsoInfo_' + c.tipo);
     if (!pill || !info) return;
-    const file = d ? d.corsi[c.tipo] : [];
+    const file = d ? (c.tipo === 'DAE' ? d.dae : d.corsi[c.tipo]) : [];
     const reg = (sv.registro || []).filter(r => r.codice === c.tipo);
     const i = arcInfoCorso(!!sv.v[c.campo] || file.length > 0 || reg.length > 0,
       file.map(f => f.data).concat(reg.map(r => r.data_corso)),
       file.map(f => f.scadenza).concat(reg.map(r => r.scadenza), c.scadenza ? [sv.v[c.scadenza]] : []));
     const esonerato = c.esonero && sv.v[c.esonero];
     pill.innerHTML = esonerato && i.pill.indexOf('p-blue') < 0 ? '<span class="pill p-grey">Esonerato</span>' : i.pill;
-    const modifica = reg.length && fzPuoScrivere() ? ' <button class="btn sm" onclick="fzApriForm(' + reg[0].id + ')">Registro</button>' : '';
+    const modifica = reg.length && fzPuoScrivere() ? ' <button class="btn sm" onclick="fzApriForm(' + arcPiuRecentiPrima(reg)[0].id + ')">Registro</button>' : '';
     info.innerHTML = i.testo || modifica ? '<span class="sub">' + i.testo + '</span>' + modifica : '';
   });
 }
 
-// Righe del registro (formazione.js): i corsi fissi stanno sopra, le abilitazioni nella loro scheda
+// Righe del registro divise in valide e storico (per voce di catalogo: vale la più recente non scaduta)
+function svRegistroHtml(righe, scrive, vuoto) {
+  const { validi, storico } = arcValidiStorico(righe, r => r.catalogo_id || r.codice || String(r.titolo || '').trim().toLowerCase());
+  return (fzRigheHtml(arcPiuRecentiPrima(validi), scrive) || (vuoto ? '<p class="note m0 mb10">' + vuoto + '</p>' : ''))
+    + arcDettagli('Storico (' + storico.length + ')', fzRigheHtml(arcPiuRecentiPrima(storico.map(s => s.x)), scrive));
+}
+
+// Righe del registro (formazione.js): i corsi obbligatori stanno sopra, le abilitazioni (DAE compreso) nella loro scheda
 function svRenderRegistro(scrive) {
   if (!sv || !sv.registro) return;   // registro non ancora arrivato: resta "Caricamento…"
   const righe = sv.registro;
   const fissi = SV_CORSI.map(c => c.tipo);
-  const corsi = righe.filter(r => !fissi.includes(r.codice) && r.tipo !== 'ABILITAZIONE');
+  const eAbil = r => r.tipo === 'ABILITAZIONE' || r.codice === 'DAE';
+  const corsi = righe.filter(r => !fissi.includes(r.codice) && !eAbil(r));
   // le abilitazioni importate da Drive compaiono già nell'elenco dell'archivio, con il PDF
   const suDrive = new Set(sv.drive && sv.drive.file ? sv.drive.file.map(f => f.id) : []);
-  const abil = righe.filter(r => !fissi.includes(r.codice) && r.tipo === 'ABILITAZIONE' && !suDrive.has(r.drive_file_id));
+  const abil = righe.filter(r => !fissi.includes(r.codice) && eAbil(r) && !suDrive.has(r.drive_file_id));
   const reg = document.getElementById('svRegistro');
-  if (reg) reg.innerHTML = (fzRigheHtml(corsi, scrive) || '<p class="note m0 mb10">Nessun altro corso registrato.</p>')
+  if (reg) reg.innerHTML = svRegistroHtml(corsi, scrive, 'Nessun altro corso in corso di validità.')
     + (scrive ? '<button class="doc-add-btn" onclick="fzApriForm(null,' + sv.id + ')">+ Registra corso o abilitazione</button>' : '');
   const ab = document.getElementById('svRegAbil');
-  if (ab) ab.innerHTML = abil.length ? '<div class="grp">Registro</div>' + fzRigheHtml(abil, scrive) : (arcPuoStaff() ? '' : '<p class="note m0 mb10">Nessuna abilitazione registrata.</p>');
+  if (ab) ab.innerHTML = abil.length ? '<div class="grp sv-mt">Registro</div>' + svRegistroHtml(abil, scrive, 'Nessuna abilitazione in corso di validità.')
+    : (arcPuoStaff() ? '' : '<p class="note m0 mb10">Nessuna abilitazione registrata.</p>');
   svRenderCorsi();
 }
 
+// Allegati: in evidenza il più recente (o i validi), il resto in un menu chiuso
+function svAllegatiHtml(righe, sempreUltimo, gruppoDi) {
+  const { validi, storico } = arcValidiStorico(righe, gruppoDi || (() => 1), sempreUltimo);
+  return arcPiuRecentiPrima(validi).map(svRigaAllegato).join('')
+    + arcDettagli('Storico attestati (' + storico.length + ')', arcPiuRecentiPrima(storico.map(s => s.x)).map(svRigaAllegato).join(''));
+}
+
 function svRenderAllegatiFormazione() {
-  SV_CORSI.forEach(c => {
+  SV_CORSI.concat([SV_DAE]).forEach(c => {
     const box = document.getElementById('svAll_' + c.tipo);
     if (!box) return;
     const righe = sv.docs.filter(d => d.tipo === c.tipo).map(svRigaDaDocumenti);
-    box.innerHTML = righe.map(svRigaAllegato).join('')
+    box.innerHTML = svAllegatiHtml(righe, true)
       + (svPuoDoc() ? '<button class="btn sm sv-allega" onclick="apriUploadDoc(' + sv.id + ',\'' + c.tipo + '\')">Allega attestato</button>' : '');
   });
+  const perNome = r => String(r.nome || '').trim().toLowerCase();
   const altri = document.getElementById('svAltriCorsi');
   if (altri) {
     const righe = svDocAgg().filter(d => d.tipo === 'ATTESTATO').map(svRigaDaAgg)
       .concat(sv.docs.filter(d => ['ATTESTATO', 'EMERCOM'].includes(d.tipo)).map(svRigaDaDocumenti));
-    let html = righe.map(svRigaAllegato).join('');
+    let html = svAllegatiHtml(righe, false, perNome);
     if (svHaAgg() && sv.agg) html += '<button class="doc-add-btn" onclick="svCaricaArchivio(\'ATTESTATO\')">+ Aggiungi corso</button>';
     else if (svPuoDoc()) html += '<button class="doc-add-btn" onclick="apriUploadDoc(' + sv.id + ',\'ATTESTATO\')">+ Aggiungi corso</button>';
     altri.innerHTML = html;
@@ -775,20 +803,33 @@ function svRenderAllegatiFormazione() {
   const abil = document.getElementById('svAbilAgg');
   if (abil) {
     const righe = svDocAgg().filter(d => d.tipo === 'ABILITAZIONE').map(svRigaDaAgg);
-    abil.innerHTML = righe.map(svRigaAllegato).join('')
+    abil.innerHTML = svAllegatiHtml(righe, false, perNome)
       + (svHaAgg() && sv.agg ? '<button class="doc-add-btn" onclick="svCaricaArchivio(\'ABILITAZIONE\')">+ Aggiungi abilitazione</button>' : '');
   }
 }
 
 // -- SCHEDA ABILITAZIONI --
+// In cima il DAE (spunta e scadenza modificabili, come prima nella scheda Formazione), poi registro,
+// allegati e archivio Drive divisi per voce.
 function svRenderAbilitazioni() {
   const box = document.getElementById('svP_abilitazioni');
   if (!box) return;
-  box.innerHTML = '<div id="svRegAbil"></div><div id="svAbilAgg"></div>'
+  const v = sv.v, c = SV_DAE;
+  const titolo = svPuoDati()
+    ? '<label class="sv-corso-t"><input type="checkbox" id="' + c.id + '"' + (v[c.campo] ? ' checked' : '') + '> ' + c.label + '</label>'
+    : '<b class="sv-corso-t">' + c.label + '</b>';
+  const scad = svPuoDati()
+    ? '<div class="vol-form-field sv-corso-sc"><label class="vol-form-lbl" for="fScadDae">Scadenza</label><input class="vol-form-inp" type="date" id="fScadDae" value="' + aggEsc(v[c.scadenza] || '') + '"></div>'
+    : '';
+  box.innerHTML = '<div class="grp">DAE</div><div class="sv-corso"><div class="sv-corso-h">' + titolo + '<span id="svCorsoPill_DAE"></span></div>'
+    + '<div id="svCorsoInfo_DAE"></div>' + scad + '<div id="svAll_DAE"></div></div>'
+    + '<div id="svRegAbil"></div><div id="svAbilAgg"></div>'
     + (arcPuoStaff() ? '<div id="svDriveAbil"></div>' : '');
   svRenderAllegatiFormazione();
   svRenderRegistro(fzPuoScrivere());
   svRenderDrive();
+  svRenderCorsi();
+  svOsservaModifiche(box);
 }
 
 // -- TAGLIE (scheda Dati) E DOTAZIONI --
@@ -844,10 +885,11 @@ async function svCaricaInterventi() {
     const interventi = await res.json();
     if (token !== svToken) return;
     if (!interventi.length) { box.innerHTML = '<div class="empty">Nessun intervento registrato.</div>'; return; }
-    box.innerHTML = interventi.map(i => {
+    // sopra quelli dell'anno in corso, sotto un menu chiuso per ogni anno precedente
+    box.innerHTML = arcRigheAnni(interventi, i => {
       const onclick = 'chiudiDettaglio();showPanel(&quot;interventi&quot;,null);apriDettaglioIntervento(' + i.id + ')';
       return '<div class="lr clk" onclick="' + onclick + '"><div class="mid"><b>' + aggEsc(i.evento || '—') + '</b><span class="sub">'
         + aggEsc([svData(i.data) || '—', i.tipo_attivita].filter(Boolean).join(' · ')) + '</span></div><span class="go">→</span></div>';
-    }).join('');
+    }, '', i => i.data);
   } catch(e) { if (token === svToken) box.innerHTML = '<p class="bad">Non disponibile.</p>'; }
 }

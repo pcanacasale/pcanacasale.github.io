@@ -312,19 +312,128 @@ async function carica(tipo, file, nomeFile, descrizione, scadenza) {
   return data.documento;
 }
 
+// ---------------- memoria locale ----------------
+// Sui telefoni la pagina può ricaricarsi da sola (fotocamera, tasto Indietro, browser dentro
+// WhatsApp/Telegram) e il sessionStorage si perde. Per questo:
+//  - il token resta nell'indirizzo come #t=… e in localStorage ('agg_link', con scadenza);
+//  - dopo la verifica anche la data di nascita va in localStorage ('agg_dob_<token>', stessa scadenza);
+//  - dati, passo e file scelti stanno in una bozza in IndexedDB (cancellata dopo l'invio riuscito).
+const LINK_KEY = 'agg_link';
+const SCADENZA_LOCALE_MS = 7 * 86400000;   // massimo: vale anche la scadenza del link, se più vicina
+
+function lsLeggi(k) { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v && v.scade > Date.now() ? v : null; } catch (e) { return null; } }
+function lsScrivi(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function lsTogli(k) { try { localStorage.removeItem(k); } catch (e) {} }
+function scadenzaLocale() {
+  const max = Date.now() + SCADENZA_LOCALE_MS;
+  const link = S.info && S.info.scade_il ? new Date(S.info.scade_il).getTime() : NaN;
+  return isNaN(link) ? max : Math.min(max, link);
+}
+function salvaLink() {
+  if (!S.token) return;
+  const scade = scadenzaLocale();
+  lsScrivi(LINK_KEY, { t: S.token, scade });
+  if (S.dob) lsScrivi('agg_dob_' + S.token, { dob: S.dob, scade });
+}
+
+// Bozza in IndexedDB (i Blob delle foto e dei file si salvano così come sono)
+function bozzaDb() {
+  return new Promise((ok, ko) => {
+    if (!window.indexedDB) return ko(new Error('IndexedDB non disponibile'));
+    const r = indexedDB.open('agg_bozze', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('bozze');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => ko(r.error);
+  });
+}
+async function bozzaOp(modo, fn) {
+  const db = await bozzaDb();
+  return new Promise((ok, ko) => {
+    const tx = db.transaction('bozze', modo);
+    const req = fn(tx.objectStore('bozze'));
+    tx.oncomplete = () => { db.close(); ok(req && req.result); };
+    tx.onerror = () => { db.close(); ko(tx.error); };
+  });
+}
+let bozzaTimer = null;
+function salvaBozza() {
+  if (!S.token || !S.info || S.inviando || ['verifica', 'errore', 'fatto'].includes(S.passo)) return;
+  clearTimeout(bozzaTimer);
+  bozzaTimer = setTimeout(() => {
+    const b = {
+      salvata: Date.now(), passo: S.passo, dati: S.dati, dpi: S.dpi, fotoConfermata: S.fotoConfermata, fotoRifai: S.fotoRifai,
+      foto: S.foto ? S.foto.blob : null,
+      slot: Object.fromEntries(Object.keys(S.slot).filter(k => S.slot[k]).map(k => [k, S.slot[k].file])),
+      attestati: S.attestati.map(a => ({ key: a.key, tipo: a.tipo, descrizione: a.descrizione, scadenza: a.scadenza, file: a.file })),
+      firma: S.firma ? S.firma.blob : null,
+    };
+    bozzaOp('readwrite', st => st.put(b, S.token)).catch(() => {});
+  }, 300);
+}
+async function leggiBozza() { try { return await bozzaOp('readonly', st => st.get(S.token)); } catch (e) { return null; } }
+function cancellaBozza() { clearTimeout(bozzaTimer); return bozzaOp('readwrite', st => st.delete(S.token)).catch(() => {}); }
+// Rimette in S i dati e i file della bozza; restituisce il passo da cui ripartire
+function ripristinaBozza(b) {
+  if (!b || b.salvata < Date.now() - SCADENZA_LOCALE_MS) return null;
+  if (b.dati) Object.keys(S.dati).forEach(k => { if (Object.prototype.hasOwnProperty.call(b.dati, k)) S.dati[k] = b.dati[k]; });
+  if (b.dpi) S.dpi = b.dpi;
+  S.fotoConfermata = !!b.fotoConfermata; S.fotoRifai = !!b.fotoRifai;
+  const url = f => f && f.type !== 'application/pdf' ? URL.createObjectURL(f) : null;
+  if (b.foto) S.foto = { blob: b.foto, url: URL.createObjectURL(b.foto) };
+  S.slot = {};
+  Object.keys(b.slot || {}).forEach(k => { if (b.slot[k]) S.slot[k] = { file: b.slot[k], url: url(b.slot[k]) }; });
+  S.attestati = (b.attestati || []).filter(a => a.file).map(a => Object.assign({}, a, { url: url(a.file) }));
+  if (b.firma) S.firma = { blob: b.firma, url: URL.createObjectURL(b.firma) };
+  return PASSI.some(p => p.id === b.passo) ? b.passo : null;
+}
+// La pagina va in secondo piano (fotocamera, altra app): si salva subito
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { salvaBozza(); clearTimeout(bozzaTimer); bozzaTimer = null; } });
+
 // ---------------- avvio ----------------
-(function avvio() {
+(async function avvio() {
   const qs = new URLSearchParams(location.search);
-  let t = qs.get('t');
-  try {
-    if (t) sessionStorage.setItem('agg_t', t); else t = sessionStorage.getItem('agg_t');
-  } catch (e) { /* storage non disponibile */ }
-  // Toglie il token dalla barra degli indirizzi (resta solo in memoria/sessione)
-  if (qs.get('t')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+  const hs = new URLSearchParams(location.hash.slice(1));
+  let t = qs.get('t') || hs.get('t');
+  const salvato = lsLeggi(LINK_KEY);
+  if (!t && salvato) t = salvato.t;
+  if (!t) return schermataRiapri();
+  if (!/^[A-Za-z0-9_-]{43}$/.test(t)) return schermataRiapri();
   S.token = t;
-  if (!t || !/^[A-Za-z0-9_-]{43}$/.test(t)) return schermataErroreLink('Link non valido o scaduto.');
+  // il token resta nell'indirizzo come #t=… (non va ai server nei log, sopravvive ai ricaricamenti)
+  try { history.replaceState({ passo: 'verifica' }, '', location.pathname + '#t=' + t); } catch (e) {}
+  salvaLink();
+  // data di nascita già verificata su questo dispositivo: si riparte senza ridigitarla
+  const dob = lsLeggi('agg_dob_' + t);
+  if (dob && dob.dob) {
+    S.dob = dob.dob;
+    $('app').innerHTML = '<p class="note">Riapro i tuoi dati…</p>';
+    try {
+      const info = await chiama('apri');
+      inizializza(info);
+      salvaLink();
+      return vai(ripristinaBozza(await leggiBozza()) || 'anagrafica');
+    } catch (e) {
+      S.dob = null;
+      lsTogli('agg_dob_' + t);
+      if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+    }
+  }
   renderVerifica();
 })();
+
+// Tasto Indietro del telefono: torna al passo precedente invece di uscire dalla pagina
+window.addEventListener('popstate', e => {
+  if (!S.info || ['verifica', 'errore', 'fatto'].includes(S.passo)) return;
+  const p = e.state && e.state.passo;
+  if (p && PASSI.some(x => x.id === p)) vai(p, true);
+  else { try { history.pushState({ passo: S.passo }, '', location.pathname + location.hash); } catch (err) {} }
+});
+
+function schermataRiapri() {
+  S.passo = 'errore'; setProg(); setNav('');
+  $('app').innerHTML = '<div class="center"><div class="big-ico">🔗</div><h1>Riapri il link che ti abbiamo mandato</h1></div>'
+    + '<p>Questa pagina si apre dal link personale che hai ricevuto dalla Sezione (WhatsApp, Telegram o email). Toccalo di nuovo per continuare.</p>';
+}
 
 function setNav(html) { $('navIn').innerHTML = html; $('nav').classList.toggle('hidden', !html); }
 function setProg() {
@@ -335,7 +444,13 @@ function setProg() {
   $('progStep').textContent = 'Passo ' + (i + 1) + ' di ' + PASSI.length;
   $('progName').textContent = PASSI[i].nome;
 }
-function vai(passo) { S.passo = passo; setProg(); window.scrollTo(0, 0); ({ anagrafica: renderAnagrafica, dpi: renderDpi, foto: renderFoto, documenti: renderDocumenti, riepilogo: renderRiepilogo })[passo](); }
+// daIndietro: arrivato con il tasto Indietro del telefono (la cronologia c'è già, non si aggiunge)
+function vai(passo, daIndietro) {
+  S.passo = passo; setProg(); window.scrollTo(0, 0);
+  if (!daIndietro) { try { history.pushState({ passo }, '', location.pathname + location.hash); } catch (e) {} }
+  ({ anagrafica: renderAnagrafica, dpi: renderDpi, foto: renderFoto, documenti: renderDocumenti, riepilogo: renderRiepilogo })[passo]();
+  salvaBozza();
+}
 function navPasso(avanti, etichetta) {
   const i = PASSI.findIndex(p => p.id === S.passo);
   setNav((i > 0 ? '<button class="btn sec" onclick="vai(\'' + PASSI[i - 1].id + '\')">← Indietro</button>' : '')
@@ -381,7 +496,8 @@ async function verifica() {
   try {
     const info = await chiama('apri');
     inizializza(info);
-    vai('anagrafica');
+    salvaLink();   // anche la data di nascita: dopo un ricaricamento non va ridigitata
+    vai(ripristinaBozza(await leggiBozza()) || 'anagrafica');
   } catch (e) {
     S.dob = null;
     if (e instanceof ErroreLink) return schermataErroreLink(e.message);
@@ -654,6 +770,7 @@ async function confermaFoto() {
   S.fotoConfermata = false; // una nuova foto sostituisce la conferma
   S.caricati.delete('FOTO');
   renderFoto();
+  salvaBozza();
 }
 
 // ---------------- passo 4: documenti ----------------
@@ -696,6 +813,7 @@ function renderDocumenti() {
     + '<p class="note">File in totale: ' + contaFile() + ' su ' + ((S.info.limiti && S.info.limiti.max_file) || 15) + '.</p>';
   $('app').innerHTML = html;
   navPasso('vai(\'riepilogo\')');
+  salvaBozza();
 }
 function thumbHtml(file, url) {
   return (file && file.type !== 'application/pdf' && url) ? '<img class="thumb" src="' + url + '" alt="">' : '<div class="thumb">📄</div>';
@@ -895,6 +1013,7 @@ function confermaFirma() {
     S.firma = { blob: b, url: URL.createObjectURL(b) };
     S.caricati.delete('FIRMA');
     renderFirma();
+    salvaBozza();
   }, 'image/png');
 }
 function rifaiFirma(daEsistente) {
@@ -948,6 +1067,7 @@ async function invia() {
 
 function renderFatto() {
   S.passo = 'fatto'; setProg(); setNav('');
+  cancellaBozza();   // inviato: la bozza sul dispositivo non serve più
   const scade = S.info.scade_il ? new Date(S.info.scade_il).toLocaleDateString('it-IT') : '';
   $('app').innerHTML = '<div class="center"><div class="big-ico">✅</div><h1>Grazie, dati inviati!</h1></div>'
     + '<div class="msg ok">Un incaricato della Sezione controllerà quello che hai inviato e aggiornerà la tua scheda.</div>'
