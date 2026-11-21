@@ -534,6 +534,24 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .sci-due{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
 .sci-due>*{min-width:0}
 .sci-sq-m{display:none}
+.sci-tile.sci-ok b{color:#1e8e3e}
+.sci-pill-ok{background:#1e8e3e;color:#fff}
+.sci-spento{opacity:.55;cursor:not-allowed}
+.sci-nota-pos{margin:-4px 0 0}
+.sci-anteprima{max-height:320px;overflow:auto}
+.sci-mappa-wrap{display:grid;gap:16px;grid-template-columns:minmax(0,1fr) 320px;align-items:start}
+.sci-tr-lista{max-height:min(65vh,560px);overflow:auto}
+.sci-tr-voce{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.sci-tr-colore{flex:none;width:6px;border-radius:3px;align-self:stretch}
+.sci-tr-testo{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.sci-tr-nome{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--accent);cursor:pointer;text-align:left}
+.sci-tr-perc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.sci-tr-perc input{width:auto;margin:0}
+.leaflet-tooltip.sci-tip{font-size:12px;font-weight:600;padding:2px 6px}
+@media (max-width:899px){
+ .sci-mappa-wrap{grid-template-columns:1fr}
+ .sci-tr-lista{max-height:none}
+}
 @media (max-width:560px){
  #panelSci .sci-sq{display:none}
  #panelSci .sci-sq-m{display:block}
@@ -547,7 +565,7 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .sci-scelti label[hidden]{display:none}
 #panelSci label.perm-check{flex-direction:row;margin:0}
 #panelSci label.perm-check input{width:auto;margin:0}
-#panelSci label[hidden]{display:none}
+#panelSci label[hidden],#panelSci [hidden]{display:none!important}
 .sci-cerca{max-width:none;margin-top:4px}
 .sci-avvisa{margin-top:10px}
 .sci-assegna{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -2250,11 +2268,11 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=17"></script>
 <script src="convocazioni.js?v=3"></script>
-<script src="eventi.js?v=4"></script>
+<script src="eventi.js?v=5"></script>
 <script src="eventi-polo.js?v=2"></script>
 <script src="gestione-accessi.js?v=5"></script>
 <script src="bot-telegram.js?v=2"></script>
-<script src="sci.js?v=1"></script>
+<script src="sci.js?v=2"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

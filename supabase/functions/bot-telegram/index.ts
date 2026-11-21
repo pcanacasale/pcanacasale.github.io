@@ -11,6 +11,11 @@
 // Una foto diventa una riga in evento_segnalazioni: per l'evento IN CORSO (emergenza o
 // esercitazione) oppure, se non ce n'è nessuno, come segnalazione generica (evento_id nullo).
 // Nel frattempo resta in bot_attese per 10 minuti, senza scaricare il file.
+//
+// Tracciamento (S.C.I. fase 2): lo staff manda da S.C.I. la richiesta di posizione per un evento
+// (bot-app 'richiedi_posizione', righe in evento_tracciamento). Le posizioni in tempo reale di Telegram
+// (message.location con live_period, poi edited_message) e quelle singole finiscono in evento_posizioni
+// solo se c'è una richiesta aperta per quel volontario e l'evento è IN CORSO. /stop chiude le richieste.
 
 import { ambiente, uguali, sha256, pulisci, statoAbilitato, dbLeggi, dbScrivi, tg, scaricaFile, logAttivita } from '../_shared/bot.ts';
 import { leggiGpsExif } from '../_shared/exif.ts';
@@ -30,8 +35,9 @@ const AIUTO = 'Come funziona:\n'
   + '• ' + BTN_FOTO + ': invia una foto, con una didascalia facoltativa. Va all\'evento in corso (emergenza o esercitazione); se non ce n\'è nessuno viene salvata come segnalazione generica.\n'
   + '• Se invii la foto come file, la posizione si legge dalla foto, quando c\'è. Altrimenti premi ' + BTN_POS + '.\n'
   + '• Puoi inviare prima la posizione: vale per le foto dei 10 minuti successivi.\n'
-  + '• ' + BTN_ARPA + ': il bollettino di allerta aggiornato.\n\n'
-  + 'Comandi: /bollettino /aiuto';
+  + '• ' + BTN_ARPA + ': il bollettino di allerta aggiornato.\n'
+  + '• Se la Sezione ti chiede la posizione in tempo reale per un evento, condividila da 📎 → Posizione. Per smettere: /stop.\n\n'
+  + 'Comandi: /bollettino /aiuto /stop';
 
 const MENU = {
   reply_markup: {
@@ -228,6 +234,48 @@ async function sceltaEvento(cb: any) {
   await avanza(chat, agg, v);
 }
 
+// -- TRACCIAMENTO --
+const PAUSA_TRACCIA_MS = 20 * 1000;   // posizioni in diretta: al massimo una ogni 20 secondi
+
+// Richieste aperte del volontario per eventi IN CORSO
+async function tracciamentiAperti(volId: number) {
+  const aperti = await dbLeggi('evento_tracciamento?volontario_id=eq.' + volId + '&fermato_il=is.null&select=id,evento_id,iniziato_il,ultimo_il');
+  if (!aperti.length) return [];
+  const ev = await dbLeggi('eventi?id=in.(' + aperti.map(a => a.evento_id).join(',') + ')&stato=eq.' + encodeURIComponent('IN CORSO') + '&select=id,titolo');
+  return aperti.flatMap(a => { const e = ev.find(x => x.id === a.evento_id); return e ? [{ ...a, titolo: e.titolo }] : []; });
+}
+
+// Salva la posizione negli eventi con richiesta aperta. Restituisce i titoli degli eventi (vuoto = nessuna richiesta).
+async function registraTracciamento(v: any, l: any, diretta: boolean, quando: number) {
+  const aperti = await tracciamentiAperti(v.id);
+  const ora = new Date(quando).toISOString();
+  for (const a of aperti) {
+    if (diretta && a.ultimo_il && quando - Date.parse(a.ultimo_il) < PAUSA_TRACCIA_MS) continue;
+    await dbScrivi('POST', 'evento_posizioni', {
+      evento_id: a.evento_id, volontario_id: v.id, lat: l.latitude, lon: l.longitude,
+      precisione: l.horizontal_accuracy ?? null, in_diretta: diretta, creato_il: ora,
+    }, 'return=minimal');
+    await dbScrivi('PATCH', 'evento_tracciamento?id=eq.' + a.id, { ultimo_il: ora, ...(a.iniziato_il ? {} : { iniziato_il: ora }) }, 'return=minimal');
+  }
+  return aperti.map(a => a.titolo);
+}
+
+async function fermaTracciamento(chat: number, v: any) {
+  const chiusi = await dbScrivi('PATCH', 'evento_tracciamento?volontario_id=eq.' + v.id + '&fermato_il=is.null', { fermato_il: adesso(), fermato_da: v.cognome + ' ' + v.nome + ' (bot)' });
+  if (chiusi.length) await logAttivita(NOME_LOG, v.cognome + ' ' + v.nome + ' ha fermato il tracciamento');
+  await manda(chat, chiusi.length
+    ? 'Tracciamento fermato: non salvo più la tua posizione. Ricordati di interrompere anche la condivisione su Telegram (tocca la posizione in tempo reale → Interrompi).'
+    : 'Non c\'è nessun tracciamento attivo.', MENU);
+}
+
+// Aggiornamenti della posizione in tempo reale: arrivano come messaggi modificati, senza risposta
+async function messaggioModificato(m: any) {
+  if (!m.location || m.chat?.type !== 'private') return;
+  const v = await volontarioDiChat(m.chat.id);
+  if (!v) return;
+  await registraTracciamento(v, m.location, true, (m.edit_date || m.date) * 1000 || Date.now());
+}
+
 // -- MESSAGGI --
 async function messaggio(m: any) {
   const chat = m.chat.id;
@@ -250,12 +298,25 @@ async function messaggio(m: any) {
 
   if (start) { await manda(chat, 'Ciao ' + v.nome + '.\n\n' + AIUTO, MENU); return; }
   if (testo === BTN_AIUTO || /^\/aiuto(@\w+)?$/.test(testo)) { await manda(chat, AIUTO, MENU); return; }
+  if (/^\/stop(@\w+)?$/.test(testo)) { await fermaTracciamento(chat, v); return; }
   if (testo === BTN_ARPA || /^\/bollettino(@\w+)?$/.test(testo)) { await manda(chat, await testoArpa(), MENU); return; }
   if (testo === BTN_FOTO) {
     await manda(chat, 'Invia ora la foto, con una didascalia se vuoi. Se la mandi come file conservo la posizione dello scatto; altrimenti premi "' + BTN_POS + '".', MENU);
     return;
   }
-  if (m.location) { await posizioneRicevuta(chat, v, m.location); return; }
+  if (m.location && m.location.live_period) {
+    // Inizio di una condivisione in tempo reale: vale solo per il tracciamento, non per le foto
+    const eventi = await registraTracciamento(v, m.location, true, (m.date || 0) * 1000 || Date.now());
+    await manda(chat, eventi.length
+      ? '📍 Posizione in tempo reale ricevuta per: ' + eventi.join(', ') + '. Grazie! Quando hai finito interrompi la condivisione o scrivi /stop.'
+      : 'Al momento non c\'è nessuna richiesta di posizione in tempo reale per te, quindi non la salvo. Per accompagnare una foto usa "' + BTN_POS + '".', MENU);
+    return;
+  }
+  if (m.location) {
+    await registraTracciamento(v, m.location, false, (m.date || 0) * 1000 || Date.now());
+    await posizioneRicevuta(chat, v, m.location);
+    return;
+  }
   if (fotoDelMessaggio(m)) { await fotoRicevuta(chat, v, m); return; }
   const [ferma] = await dbLeggi('bot_attese?chat_id=eq.' + chat + '&lat=is.null&select=id&limit=1');
   await manda(chat, ferma ? 'Sto aspettando la posizione della foto: premi "' + BTN_POS + '".' : 'Non ho capito. Usa i pulsanti qui sotto o scrivi /aiuto.', MENU);
@@ -269,13 +330,14 @@ export async function gestisci(req: Request): Promise<Response> {
 
   let u: any;
   try { u = await req.json(); } catch { return new Response('ok'); }
-  const chat = u.message?.chat?.id ?? u.callback_query?.message?.chat?.id;
+  const chat = u.message?.chat?.id ?? u.callback_query?.message?.chat?.id;   // edited_message: nessun avviso d'errore
   try {
     // Telegram ripete un aggiornamento se la risposta tarda: il secondo si riconosce e si ignora
     const nuovo = await dbScrivi('POST', 'bot_update_visti?on_conflict=update_id', { update_id: u.update_id }, 'resolution=ignore-duplicates,return=representation');
     if (!nuovo.length) return new Response('ok');
     await dbScrivi('DELETE', 'bot_update_visti?visto_il=lt.' + encodeURIComponent(new Date(Date.now() - 2 * 86400000).toISOString()), undefined, 'return=minimal');
     if (u.message) await messaggio(u.message);
+    else if (u.edited_message) await messaggioModificato(u.edited_message);
     else if (u.callback_query) await sceltaEvento(u.callback_query);
   } catch (e) {
     console.error('errore bot:', pulisci(e));

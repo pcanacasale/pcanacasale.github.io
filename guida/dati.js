@@ -200,6 +200,7 @@ const PAGINE = [
       <div class="m-tg-msg">Collegamento riuscito, Mario!</div>
       <div class="m-tg-msg tu">📷 Foto</div>
       <div class="m-tg-msg" data-h="evento">Segnalazione registrata per: Esercitazione 2026</div>
+      <div class="m-tg-msg" data-h="diretta">📍 Richiesta di posizione in tempo reale · Esercitazione 2026</div>
     </div>
     <div class="m-tg-tasti" data-h="tasti"><span>📷 Invia foto</span><span>📍 Invia posizione</span><span>🌦 Bollettino ARPA</span></div>
     <div class="m-tg-tasti uno" data-h="numero"><span>📱 Invia il mio numero</span></div></div>`,
@@ -212,6 +213,8 @@ const PAGINE = [
      v:"Quando sei in servizio e devi segnalare qualcosa, premi Invia foto e mandala, anche con una breve descrizione. Al bot serve sapere dove l'hai scattata, quindi premi anche Invia posizione. Puoi farlo prima o dopo la foto, basta che sia entro dieci minuti."},
     {t:"Dove finisce", d:"Se c'è un'esercitazione o un'emergenza in corso, la foto va lì; altrimenti è una segnalazione generica. Lo staff riceve subito l'avviso.", h:"evento",
      v:"Se in quel momento c'è un'esercitazione o un'emergenza in corso, la foto viene collegata a quell'evento. Se non c'è niente in corso, la registra come segnalazione generica. In tutti e due i casi lo staff riceve subito l'avviso."},
+    {t:"Posizione in tempo reale", d:"Quando la Sezione te la chiede per un evento: tocca 📎 → Posizione → Condividi posizione in tempo reale → 8 ore. La vede solo lo staff. Per smettere interrompi la condivisione o scrivi /stop.", h:"diretta",
+     v:"Durante un'emergenza o un'esercitazione la Sezione può chiederti di condividere la posizione in tempo reale: te lo scrive il bot. Tocca la graffetta, scegli Posizione, poi Condividi posizione in tempo reale e otto ore. La vede solo lo staff. Quando hai finito interrompi la condivisione, oppure scrivi barra stop."},
     {t:"Allerta e bollettino", d:"Con 🌦 Bollettino ARPA vedi l'allerta del giorno. Quando scatta un'allerta, il bot ti avvisa da solo.", h:"tasti",
      v:"Con il pulsante Bollettino ARPA vedi in ogni momento l'allerta del giorno. E non devi controllare tu: quando scatta un'allerta per la nostra zona, il bot ti scrive da solo, e ti avvisa anche quando si torna al verde."}
   ]
@@ -331,9 +334,9 @@ const PAGINE = [
      v:"Nella scheda Segnalazioni dell'evento vedi le foto arrivate dal bot, con la posizione. L'avviso su Telegram invece arriva solo a chi ha la spunta Riceve le segnalazioni del bot, in Gestione accessi."},
     {t:"Segnalazioni generiche", d:"Il pulsante Segnalazioni generiche apre S.C.I. → Fotosegnalazioni con le foto arrivate senza evento in corso, da assegnare.", h:"generiche",
      v:"Le foto arrivate quando non c'era niente in corso le trovi con il pulsante Segnalazioni generiche. Ti porta nella pagina S.C.I., dove le assegni all'evento giusto."},
-    {t:"Messaggi", d:"Invia messaggio, o Messaggio alla squadra dentro l'evento, apre S.C.I. → Messaggi, con la squadra dell'evento già scelta.", h:"messaggio",
-     v:"Con Invia messaggio, oppure con Messaggio alla squadra dentro un evento, vai nella pagina S.C.I. per scrivere ai volontari collegati al bot. Se parti dall'evento, la sua squadra è già scelta come destinatario."},
-    {t:"A fine evento", d:"Quando lo concludi, l'app crea l'intervento contando solo i presenti, così le ore finiscono nelle schede.", h:"schede",
+    {t:"Messaggi e posizioni", d:"Invia messaggio, o Messaggio alla squadra dentro l'evento, apre S.C.I. → Messaggi, con la squadra dell'evento già scelta. Posizioni apre la mappa delle posizioni in diretta di quell'evento.", h:"messaggio",
+     v:"Con Invia messaggio, oppure con Messaggio alla squadra dentro un evento, vai nella pagina S.C.I. per scrivere ai volontari collegati al bot. Se parti dall'evento, la sua squadra è già scelta come destinatario. Con Posizioni, invece, vedi sulla mappa dove sono i volontari che condividono la posizione."},
+    {t:"A fine evento", d:"Quando lo concludi, l'app crea l'intervento contando solo i presenti, così le ore finiscono nelle schede. Se qualcuno condivide ancora la posizione, ti chiede se terminare il tracciamento e avvisare i volontari.", h:"schede",
      v:"E quando l'evento finisce, non devi ricopiare niente: concludendolo, l'app crea da sola l'intervento, contando solo chi era presente, e le ore finiscono nelle schede dei volontari."}
   ]
 },
@@ -586,21 +589,25 @@ const PAGINE = [
   intro:"S.C.I. vuol dire Sistema di Comunicazione Interattivo: qui c'è tutto quello che passa dal bot Telegram, diviso in sei schede.",
   schermo: () => app("altro","S.C.I.", `
     ${tabs(["Cruscotto","Messaggi","Fotosegnalazioni","Richieste volontari","Mappa","Iscritti"],"schede")}
-    <div class="m-griglia2" data-h="cruscotto">${box("Iscritti al bot",["<b>6 su 67</b>"],"")}${box("Fotosegnalazioni",["<b>2</b> da gestire"],"")}${box("Richieste volontari",["<b>1</b> da gestire"],"")}${box("Allerta ARPA",["Allerta gialla"],"")}</div>
-    <div class="m-modale" data-h="messaggi"><div class="m-box-t">Nuovo messaggio</div><div class="m-campi"><span>Destinatari <b>Tutti · Una squadra · Squadra di un evento · Volontari scelti</b></span><span>Bollettino ARPA <b>☐</b></span></div>${btn("Anteprima","","mini")}</div>
-    <div class="m-card3" data-h="foto"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · Generica ${btn("Assegna a evento…","","mini")}</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso ${tag("Da gestire","g")}</small></div><div class="m-card" data-h="mappa"><div class="m-foto">🗺️</div><small>Mappa dei punti</small></div></div>
+    <div class="m-griglia2" data-h="cruscotto">${box("Iscritti al bot",["<b>6 su 67</b>"],"")}${box("Fotosegnalazioni",["<b>2</b> da gestire"],"")}${box("Richieste volontari",["<b>1</b> da gestire"],"")}${box("In diretta ora",["<b>3</b> volontari"],"")}${box("Allerta ARPA",["Allerta gialla"],"")}</div>
+    <div class="m-modale" data-h="messaggi"><div class="m-box-t">Nuovo messaggio</div><div class="m-campi"><span data-h="posizione">Chiedi la posizione in tempo reale <b>☑</b></span><span>Destinatari <b>Tutti · Una squadra · Squadra di un evento · Volontari scelti</b></span><span>Bollettino ARPA <b>☐</b></span></div>${btn("Anteprima","","mini")}</div>
+    <div class="m-card3" data-h="foto"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · Generica ${btn("Assegna a evento…","","mini")}</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso ${tag("Da gestire","g")}</small></div><div class="m-card" data-h="mappa"><div class="m-foto">🗺️</div><small>Foto e posizioni in diretta ${tag("In diretta","g")} ${btn("Termina tracciamento","termina","mini")}</small></div></div>
     <div class="m-card3"><div class="m-card" data-h="richieste"><b>Rossi Mario</b><small>Il numero di telefono è cambiato</small><small>Avvisa su Telegram <b>☑</b> ${btn("Salva risposta","","mini")}</small></div><div class="m-card" data-h="iscritti"><b>Collegati 6 su 67</b><small>${btn("Link bot","","mini")} ${btn("Crea link","","mini")}</small></div></div>`),
   passi:[
-    {t:"Cruscotto", d:"Quanti volontari sono collegati al bot, le fotosegnalazioni e le richieste da gestire, lo stato dell'allerta. Tocca un riquadro per aprirlo.", h:"cruscotto",
-     v:"Il cruscotto ti dà il quadro in un colpo d'occhio: quanti volontari hanno collegato il bot, quante foto e quante richieste sono ancora da gestire, e com'è l'allerta ARPA. Tocchi un riquadro e vai dritto alla scheda giusta."},
+    {t:"Cruscotto", d:"Quanti volontari sono collegati al bot, le fotosegnalazioni e le richieste da gestire, quanti sono in diretta ora sulla mappa, lo stato dell'allerta. Tocca un riquadro per aprirlo.", h:"cruscotto",
+     v:"Il cruscotto ti dà il quadro in un colpo d'occhio: quanti volontari hanno collegato il bot, quante foto e quante richieste sono ancora da gestire, quanti stanno condividendo la posizione in questo momento, e com'è l'allerta ARPA. Tocchi un riquadro e vai dritto alla scheda giusta."},
     {t:"Messaggi", d:"Scrivi il testo, scegli i destinatari (tutti, una squadra, la squadra di un evento o volontari scelti a mano), guarda l'anteprima e conferma. Sotto ci sono gli ultimi invii.", h:"messaggi",
      v:"In Messaggi scrivi ai volontari collegati al bot. Puoi mandare a tutti, a una squadra, alla squadra di un evento, oppure scegliere tu le persone una per una. Prima di partire vedi l'anteprima con quante persone lo riceveranno, e sotto trovi gli ultimi invii."},
+    {t:"Posizione in tempo reale", d:"Spunta \"Chiedi la posizione in tempo reale\" e scegli l'evento IN CORSO: i destinatari ricevono le istruzioni per condividere la posizione, che vedi poi in Mappa. Senza un evento in corso la casella non si attiva.", h:"posizione",
+     v:"Durante un'emergenza o un'esercitazione in corso puoi chiedere ai volontari di condividere la posizione in tempo reale. Spunta la casella, scegli l'evento e i destinatari: nell'anteprima vedi anche le istruzioni che riceveranno. Da lì in poi le loro posizioni compaiono sulla mappa."},
     {t:"Fotosegnalazioni", d:"Le foto mandate al bot, con volontario, data, evento e posizione. Filtra per stato, evento e periodo; segna Gestita o Riapri; le generiche si assegnano a un evento.", h:"foto",
      v:"Qui arrivano le foto che i volontari mandano al bot, con chi l'ha mandata, quando, per quale evento e la posizione su Google Maps. Le filtri come ti serve, le segni come gestite, e quelle generiche le assegni all'evento giusto."},
     {t:"Richieste volontari", d:"Le correzioni che i volontari chiedono dalla loro scheda. Scrivi la risposta e premi Salva risposta; con Avvisa su Telegram gli arriva anche sul bot. Poi Segna come risolta.", h:"richieste",
      v:"In Richieste volontari trovi le segnalazioni di errori che i volontari mandano dalla loro scheda. Correggi la scheda, scrivi una risposta e salvala. Se il volontario è collegato al bot, lasciando la spunta Avvisa su Telegram la risposta gli arriva anche sul telefono. Alla fine la segni come risolta."},
-    {t:"Mappa", d:"I punti delle fotosegnalazioni sulla mappa: rossi da gestire, grigi gestiti. Tocca un punto per vedere foto, nome, data ed evento.", h:"mappa",
-     v:"La mappa mette tutte le fotosegnalazioni sul territorio. I punti rossi sono da gestire, quelli grigi già gestiti. Tocchi un punto e vedi la foto, chi l'ha mandata e quando."},
+    {t:"Mappa", d:"Fotosegnalazioni (rosse da gestire, grigie gestite) e, scelto l'evento, le posizioni in diretta: verdi se aggiornate da meno di 15 minuti, grigie se più vecchie, con il percorso di ognuno. A lato l'elenco: richiesta inviata, in diretta, fermo, fermato. Si aggiorna da sola ogni 30 secondi.", h:"mappa",
+     v:"La mappa mostra le fotosegnalazioni e, se scegli un evento, dove sono i volontari che condividono la posizione. Il punto è verde se la posizione è di meno di un quarto d'ora fa, grigio se è più vecchia, e la linea è il percorso fatto. Nell'elenco a lato vedi chi non ha ancora iniziato, chi è in diretta e chi si è fermato. Puoi rivedere anche gli eventi chiusi: le posizioni restano."},
+    {t:"Termina tracciamento", d:"A fine servizio premi Termina tracciamento: le richieste si chiudono e i volontari ricevono il messaggio per interrompere la condivisione.", h:"termina",
+     v:"Quando il servizio è finito premi Termina tracciamento. Il bot smette di registrare le posizioni e manda ai volontari un messaggio per dire che possono interrompere la condivisione."},
     {t:"Iscritti", d:"Chi è collegato al bot e chi no, con ricerca. Per i collegati Link bot e Scollega, per gli altri Crea link e il telefono per chiamarli.", h:"iscritti",
      v:"In Iscritti vedi chi ha collegato il bot e chi manca ancora. A chi manca puoi creare il link personale, e hai il telefono sotto mano per chiamarlo. Chi è collegato lo puoi anche scollegare."}
   ]

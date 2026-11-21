@@ -6,7 +6,7 @@
 // controllo. Lo stesso avviso non si ripete prima di 6 ore (24 per le segnalazioni).
 // Il verde non si inventa: se un dato manca, è un problema da segnalare.
 
-import { ambiente, dbLeggi, dbScrivi, pulisci } from '../_shared/bot.ts';
+import { ambiente, dbLeggi, dbScrivi, pulisci, tg } from '../_shared/bot.ts';
 import { avvisaStaff } from '../_shared/avvisi.ts';
 
 const ORE = 3600 * 1000;
@@ -26,6 +26,18 @@ async function daAvvisare(chiave: string, pausaOre: number) {
 }
 const segna = (chiave: string) => dbScrivi('POST', 'bot_avvisi_stato?on_conflict=chiave', { chiave, ultimo_invio: new Date().toISOString() }, 'resolution=merge-duplicates,return=minimal');
 
+// Il tracciamento in diretta arriva come edited_message: se il webhook ha un elenco di aggiornamenti
+// ammessi che non lo comprende, lo si aggiunge (stesso indirizzo e stesso segreto).
+async function controllaWebhook() {
+  const info = await tg('getWebhookInfo', {});
+  if (!info.ok || !info.result?.url) return { ok: false };
+  const ammessi: string[] = info.result.allowed_updates || [];
+  if (!ammessi.length || ammessi.includes('edited_message')) return { ok: true, ammessi: ammessi.length ? ammessi : 'tutti', sistemato: false };
+  const nuovi = [...new Set([...ammessi, 'message', 'edited_message', 'callback_query'])];
+  const r = await tg('setWebhook', { url: info.result.url, secret_token: ambiente().segreto, allowed_updates: nuovi });
+  return { ok: r.ok, ammessi: nuovi, sistemato: r.ok };
+}
+
 Deno.serve(async () => {
   try {
     let s: any;
@@ -44,7 +56,9 @@ Deno.serve(async () => {
       if (!(await daAvvisare(chiave, pausa))) continue;
       if (await avvisaStaff('⚠️ ' + testo, { tipo: chiave === 'segnalazioni' ? 'segnalazioni' : 'tecnici' })) { await segna(chiave); inviati++; }
     }
-    return new Response(JSON.stringify({ problemi: problemi.length, avvisi: inviati }), { headers: { 'Content-Type': 'application/json' } });
+    let webhook: unknown = null;
+    try { webhook = await controllaWebhook(); } catch (e) { console.error('webhook:', pulisci(e)); }
+    return new Response(JSON.stringify({ problemi: problemi.length, avvisi: inviati, webhook }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('errore avvisi:', pulisci(e));
     return new Response('errore', { status: 500 });

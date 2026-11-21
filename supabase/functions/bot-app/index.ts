@@ -5,6 +5,8 @@
 // verify_jwt = false perché il controllo è qui: ogni richiesta porta il token della sessione e
 // passa da ho_permesso eseguito con quel token, prima di qualunque altra cosa.
 // Azioni del bot: permesso 'eventi' o 'sci'. Risposta alle richieste: 'sci' o 'gestione_segnalazioni'.
+// Tracciamento (S.C.I. fase 2): 'richiedi_posizione' apre le richieste in evento_tracciamento e manda le
+// istruzioni ai destinatari scelti; 'termina_tracciamento' le chiude e avvisa chi stava condividendo.
 // Invio a un massimo di 25 messaggi al secondo. Una chat bloccata non ferma gli altri invii.
 
 import { ambiente, sha256, pulisci, statoAbilitato, dbLeggi, dbScrivi, tg, logAttivita } from '../_shared/bot.ts';
@@ -200,6 +202,52 @@ async function invia(b: any, utente: string) {
   return json({ ok: true, n: d.elenco.length, consegnati, falliti });
 }
 
+// -- TRACCIAMENTO --
+async function eventoInCorso(id: number) {
+  const [ev] = id ? await dbLeggi('eventi?id=eq.' + id + '&select=id,titolo,tipo,stato') : [];
+  return ev && ev.stato === 'IN CORSO' ? ev : null;
+}
+
+function istruzioniPosizione(ev: any) {
+  return '📍 Richiesta di posizione in tempo reale\n' + (ev.tipo === 'EMERGENZA' ? 'Emergenza' : ev.tipo === 'ESERCITAZIONE' ? 'Esercitazione' : 'Evento') + ': ' + ev.titolo + '\n\n'
+    + 'Condividi la tua posizione in tempo reale:\n'
+    + '1. tocca la graffetta 📎 qui in basso\n'
+    + '2. scegli Posizione\n'
+    + '3. tocca «Condividi posizione in tempo reale» e scegli 8 ore\n\n'
+    + 'La vede solo lo staff e resta legata a questo evento. Per smettere interrompi la condivisione oppure scrivi /stop.';
+}
+
+async function richiediPosizione(b: any, utente: string) {
+  const ev = await eventoInCorso(Number(b.evento_id));
+  if (!ev) return json({ ok: false, error: 'La richiesta di posizione si manda solo per un evento IN CORSO.' }, 400);
+  const d = await destinatari(b);
+  if (!d) return json({ ok: false, error: 'Destinatari non validi.' }, 400);
+  if (!d.elenco.length) return json({ ok: false, error: 'Nessun destinatario collegato al bot.' }, 400);
+  const ora = new Date().toISOString();
+  await dbScrivi('POST', 'evento_tracciamento?on_conflict=evento_id,volontario_id',
+    d.elenco.map(x => ({ evento_id: ev.id, volontario_id: x.volontario_id, richiesto_il: ora, richiesto_da: utente, fermato_il: null, fermato_da: null })),
+    'resolution=merge-duplicates,return=minimal');
+  const extra = String(b.testo || '').trim();
+  return await invia({ ...b, arpa: false, testo: (extra ? extra + '\n\n' : '') + istruzioniPosizione(ev) }, utente);
+}
+
+async function terminaTracciamento(b: any, utente: string) {
+  const id = Number(b.evento_id);
+  const [ev] = id ? await dbLeggi('eventi?id=eq.' + id + '&select=id,titolo') : [];
+  if (!ev) return json({ ok: false, error: 'Evento non trovato.' }, 400);
+  const chiusi = await dbScrivi('PATCH', 'evento_tracciamento?evento_id=eq.' + id + '&fermato_il=is.null', { fermato_il: new Date().toISOString(), fermato_da: utente });
+  let avvisati = 0;
+  if (b.avvisa !== false && chiusi.length) {
+    const chat = await dbLeggi('bot_chat?volontario_id=in.(' + chiusi.map((c: any) => c.volontario_id).join(',') + ')&select=chat_id');
+    for (const c of chat) {
+      try { if ((await inviaUno(Number(c.chat_id), '✅ Il tracciamento per «' + ev.titolo + '» è terminato: puoi interrompere la condivisione della posizione. Grazie!')).ok) avvisati++; } catch (_) { /* prossimo */ }
+      await dorme(PAUSA_MS);
+    }
+  }
+  await logAttivita(utente, 'ha terminato il tracciamento dell\'evento ' + ev.titolo + ' (' + chiusi.length + ' volontari)');
+  return json({ ok: true, chiusi: chiusi.length, avvisati });
+}
+
 export async function gestisci(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, error: 'metodo non supportato' }, 405);
@@ -226,6 +274,8 @@ export async function gestisci(req: Request): Promise<Response> {
         return d ? json({ ok: true, n: d.elenco.length, destinatari: d.testo }) : json({ ok: false, error: 'Destinatari non validi.' }, 400);
       }
       case 'invia': return await invia(b, utente);
+      case 'richiedi_posizione': return await richiediPosizione(b, utente);
+      case 'termina_tracciamento': return await terminaTracciamento(b, utente);
       default: return json({ ok: false, error: 'azione sconosciuta' }, 400);
     }
   } catch (e) {

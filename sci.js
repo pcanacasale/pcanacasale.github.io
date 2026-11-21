@@ -22,6 +22,7 @@ let sci = {
   iscritti: null, foto: null, eventi: null, richieste: null,
   fStato: 'da', fEvento: '', fPeriodo: '', rStato: 'da', cerca: '',
   invio: null, mappa: null,
+  trEvento: 0, tr: null, trNascosti: new Set(), timer: null,   // posizioni in diretta (Mappa)
 };
 
 function sciEl(id) { return document.getElementById(id); }
@@ -68,6 +69,7 @@ function sciRenderSchede() {
 
 async function sciMostra(tab) {
   if (!sciPuo(tab)) return;
+  clearInterval(sci.timer); sci.timer = null;
   if (sci.mappa && tab !== 'mappa') { sci.mappa.map.remove(); sci.mappa = null; }
   sci.tab = tab;
   sciRenderSchede();
@@ -122,8 +124,8 @@ function sciFiltraFoto(conStato) {
     && (!sci.fEvento || (sci.fEvento === 'generiche' ? !s.evento_id : String(s.evento_id) === sci.fEvento))
     && (!da || new Date(s.creato_il).getTime() >= da));
 }
-function sciFiltriEventoPeriodo(onchange) {
-  return '<label class="sci-sel">Evento<select id="sciFEv" onchange="sci.fEvento=this.value;' + onchange + '">' + sciOpzEventi(sci.fEvento, true) + '</select></label>'
+function sciFiltriEventoPeriodo(onchange, etichetta) {
+  return '<label class="sci-sel">' + (etichetta || 'Evento') + '<select id="sciFEv" onchange="sci.fEvento=this.value;' + onchange + '">' + sciOpzEventi(sci.fEvento, true) + '</select></label>'
     + '<label class="sci-sel">Periodo<select id="sciFPer" onchange="sci.fPeriodo=this.value;' + onchange + '">'
     + SCI_PERIODI.map(p => '<option value="' + p[0] + '"' + (p[0] === sci.fPeriodo ? ' selected' : '') + '>' + p[1] + '</option>').join('') + '</select></label>';
 }
@@ -143,11 +145,12 @@ async function sciAggiornaBadge() {
 
 // -- CRUSCOTTO --
 async function sciCruscotto() {
-  const [isc, foto, rich, allerta] = await Promise.all([
+  const [isc, foto, rich, allerta, diretta] = await Promise.all([
     sciPuoBot() ? sciCaricaIscritti().catch(() => null) : null,
     sciPuoBot() ? sciConta('evento_segnalazioni?gestita=eq.false&select=id') : null,
     sciPuoRich() ? sciConta('segnalazioni?gestita=eq.false&select=id') : null,
     alLeggi(),
+    sciPuoBot() ? sciConta('evento_tracciamento?fermato_il=is.null&ultimo_il=gte.' + encodeURIComponent(new Date(Date.now() - SCI_DIRETTA_MS).toISOString()) + '&select=id') : null,
   ]);
   if (sci.tab !== 'cruscotto') return;
   const tile = (onclick, titolo, valore, sotto, cls) => '<button class="card sci-tile' + (cls ? ' ' + cls : '') + '" onclick="' + onclick + '"><span class="sci-tile-t">' + titolo + '</span><b>' + valore + '</b>' + (sotto ? '<span class="sci-tile-s">' + sotto + '</span>' : '') + '</button>';
@@ -156,6 +159,7 @@ async function sciCruscotto() {
     h += isc ? tile("sciMostra('iscritti')", 'Iscritti al bot', isc.collegati.length + ' su ' + (isc.collegati.length + isc.mancanti.length), 'volontari attivi e sospesi collegati')
              : tile("sciMostra('iscritti')", 'Iscritti al bot', '—', 'Non disponibile');
     h += tile("sci.fStato='da';sci.fEvento='';sciMostra('foto')", 'Fotosegnalazioni', foto == null ? '—' : foto, 'da gestire', foto ? 'sci-attenzione' : '');
+    h += tile("sciMostra('mappa')", 'In diretta ora', diretta == null ? '—' : diretta, 'volontari con posizione aggiornata negli ultimi 15 minuti', diretta ? 'sci-ok' : '');
   }
   if (sciPuoRich()) h += tile("sci.rStato='da';sciMostra('richieste')", 'Richieste volontari', rich == null ? '—' : rich, 'da gestire', rich ? 'sci-attenzione' : '');
   h += sciTileAllerta(allerta.stato, allerta.errore);
@@ -181,10 +185,15 @@ async function sciMessaggi() {
   if (sci.tab !== 'messaggi') return;
   const preEv = sci.pre && sci.pre.evento ? Number(sci.pre.evento) : 0;
   const eventi = sci.eventi || [];
+  const inCorso = eventi.filter(e => e.stato === 'IN CORSO');
   sci.invio = null;
   sciEl('sciCorpo').innerHTML = '<div class="sci-due"><div class="card form" id="sciInvio">'
     + '<h2>Nuovo messaggio</h2><div class="form-err" id="sciErr"></div>'
-    + '<label>Testo<textarea id="sciTesto" rows="5" maxlength="4000"></textarea></label>'
+    + '<label>Testo<span class="sub inl" id="sciTestoNota" hidden> (facoltativo: va prima delle istruzioni)</span><textarea id="sciTesto" rows="5" maxlength="4000"></textarea></label>'
+    + '<label class="perm-check' + (inCorso.length ? '' : ' sci-spento') + '"><input type="checkbox" id="sciPos" onchange="sciAggiornaPos()"' + (inCorso.length ? '' : ' disabled') + '> Chiedi la posizione in tempo reale</label>'
+    + (inCorso.length ? '' : '<p class="sub sci-nota-pos">Serve un\'emergenza o esercitazione IN CORSO.</p>')
+    + '<label id="sciPosEvBox" hidden>Evento IN CORSO<select id="sciPosEv"><option value="">Scegli l\'evento…</option>'
+    + inCorso.map(e => '<option value="' + e.id + '"' + (inCorso.length === 1 || e.id === preEv ? ' selected' : '') + '>' + aggEsc(e.titolo) + '</option>').join('') + '</select></label>'
     + '<label>Destinatari<select id="sciTipo" onchange="sciAggiornaDest()"><option value="tutti">Tutti i collegati (' + sq.n + ')</option>'
     + (sq.squadre.length ? '<option value="squadra">Una squadra</option>' : '')
     + (eventi.length ? '<option value="evento"' + (preEv ? ' selected' : '') + '>La squadra di un evento</option>' : '')
@@ -195,7 +204,7 @@ async function sciMessaggi() {
     + '<div class="sci-scelti" id="sciScelti">' + isc.collegati.map(v => '<label class="perm-check" data-nome="' + aggEsc((v.cognome + ' ' + v.nome + ' ' + v.squadra).toLowerCase()) + '"><input type="checkbox" value="' + v.volontario_id + '" onchange="sciContaScelti()"> '
       + aggEsc(v.cognome + ' ' + v.nome) + (v.squadra ? ' <span class="sub inl">' + aggEsc(v.squadra) + '</span>' : '') + '</label>').join('') + '</div>'
     + '<p class="sub" id="sciSceltiN">Nessuno scelto.</p></div>'
-    + '<label class="perm-check"><input type="checkbox" id="sciArpa"> Allega il bollettino ARPA (livelli e link, solo se il dato è aggiornato)</label>'
+    + '<label class="perm-check" id="sciArpaBox"><input type="checkbox" id="sciArpa"> Allega il bollettino ARPA (livelli e link, solo se il dato è aggiornato)</label>'
     + '<div class="actions"><button class="btn pri" id="sciBtnAnteprima" onclick="sciAnteprima()">Anteprima</button></div></div>'
     + '<div class="card"><h2>Ultimi invii</h2><div id="sciStorico"><div class="loading-msg">Caricamento…</div></div></div></div>';
   sciAggiornaDest();
@@ -203,10 +212,32 @@ async function sciMessaggi() {
 }
 
 function sciAggiornaDest() {
-  const tipo = sciEl('sciTipo').value;
+  const tipo = sciEl('sciTipo').value, pos = sciPosAttiva();
   sciEl('sciSquadraBox').hidden = tipo !== 'squadra';
-  sciEl('sciEventoBox').hidden = tipo !== 'evento';
+  // con la richiesta di posizione la "squadra di un evento" è quella dell'evento scelto sopra
+  sciEl('sciEventoBox').hidden = tipo !== 'evento' || pos;
   sciEl('sciSceltiBox').hidden = tipo !== 'scelti';
+}
+
+// -- RICHIESTA DI POSIZIONE IN TEMPO REALE (bot-app 'richiedi_posizione') --
+function sciPosAttiva() { const c = sciEl('sciPos'); return !!(c && c.checked); }
+function sciAggiornaPos() {
+  const pos = sciPosAttiva();
+  sciEl('sciPosEvBox').hidden = !pos;
+  sciEl('sciArpaBox').hidden = pos;
+  sciEl('sciTestoNota').hidden = !pos;
+  sciEl('sciTesto').maxLength = pos ? 3500 : 4000;   // le istruzioni occupano circa 400 caratteri (limite 4000)
+  if (pos) sciEl('sciArpa').checked = false;
+  sciAggiornaDest();
+}
+// Stesso testo che manda bot-app (istruzioniPosizione): se cambia lì, va cambiato anche qui
+function sciIstruzioniPosizione(ev) {
+  return '📍 Richiesta di posizione in tempo reale\n' + (ev.tipo === 'EMERGENZA' ? 'Emergenza' : ev.tipo === 'ESERCITAZIONE' ? 'Esercitazione' : 'Evento') + ': ' + ev.titolo + '\n\n'
+    + 'Condividi la tua posizione in tempo reale:\n'
+    + '1. tocca la graffetta 📎 qui in basso\n'
+    + '2. scegli Posizione\n'
+    + '3. tocca «Condividi posizione in tempo reale» e scegli 8 ore\n\n'
+    + 'La vede solo lo staff e resta legata a questo evento. Per smettere interrompi la condivisione oppure scrivi /stop.';
 }
 function sciFiltraScelti() {
   const q = sciEl('sciSceltiCerca').value.trim().toLowerCase();
@@ -220,11 +251,13 @@ function sciContaScelti() {
 function sciErrore(t) { const e = sciEl('sciErr'); if (!e) return sbAvviso(t); e.textContent = t; e.style.display = 'block'; }
 
 function sciCorpoInvio() {
-  const tipo = sciEl('sciTipo').value;
+  const tipo = sciEl('sciTipo').value, pos = sciPosAttiva();
+  const posEv = pos ? Number(sciEl('sciPosEv').value) || 0 : 0;
   return {
-    testo: sciEl('sciTesto').value.trim(), tipo, arpa: sciEl('sciArpa').checked,
+    testo: sciEl('sciTesto').value.trim(), tipo, arpa: !pos && sciEl('sciArpa').checked, posizione: pos,
     squadra: tipo === 'squadra' ? sciEl('sciSquadra').value : undefined,
-    evento_id: tipo === 'evento' ? Number(sciEl('sciEvento').value) : undefined,
+    // con la posizione evento_id è l'evento da tracciare (e, se scelta, la sua squadra)
+    evento_id: pos ? posEv : tipo === 'evento' ? Number(sciEl('sciEvento').value) : undefined,
     volontari: tipo === 'scelti' ? sciIdScelti() : undefined,
   };
 }
@@ -232,17 +265,22 @@ function sciCorpoInvio() {
 async function sciAnteprima() {
   const corpo = sciCorpoInvio(), btn = sciEl('sciBtnAnteprima');
   sciEl('sciErr').style.display = 'none';
-  if (!corpo.testo) return sciErrore('Scrivi il testo del messaggio.');
+  if (corpo.posizione && !corpo.evento_id) return sciErrore('Scegli l\'evento IN CORSO per cui chiedere la posizione.');
+  if (!corpo.testo && !corpo.posizione) return sciErrore('Scrivi il testo del messaggio.');
   if (corpo.tipo === 'scelti' && !corpo.volontari.length) return sciErrore('Scegli almeno un volontario.');
+  const ev = corpo.posizione ? (sci.eventi || []).find(e => e.id === corpo.evento_id) : null;
   btn.disabled = true;
   try {
     const d = await btChiama('conta', corpo);
     btn.disabled = false;
     if (!d.n) return sciErrore('Nessun destinatario collegato al bot.');
     sci.invio = { corpo, n: d.n };
-    sciEl('sciInvio').innerHTML = '<h2>Conferma invio</h2><div class="form-err" id="sciErr"></div>'
+    const testo = corpo.posizione ? (corpo.testo ? corpo.testo + '\n\n' : '') + sciIstruzioniPosizione(ev || { titolo: '' }) : corpo.testo;
+    sciEl('sciInvio').innerHTML = '<h2>' + (corpo.posizione ? 'Conferma richiesta di posizione' : 'Conferma invio') + '</h2><div class="form-err" id="sciErr"></div>'
       + '<div class="kv"><span>Destinatari</span><b>' + aggEsc(d.destinatari) + ' (' + d.n + ')</b></div>'
-      + '<p class="em-desc">' + aggEsc(corpo.testo) + '</p>' + (corpo.arpa ? '<p class="sub mt10">Segue un secondo messaggio con il bollettino ARPA.</p>' : '')
+      + (ev ? '<div class="kv"><span>Evento</span><b>' + aggEsc(ev.titolo) + '</b></div>' : '')
+      + (corpo.posizione ? '<p class="sub mt10">Riceveranno questo messaggio:</p>' : '')
+      + '<p class="em-desc sci-anteprima">' + aggEsc(testo) + '</p>' + (corpo.arpa ? '<p class="sub mt10">Segue un secondo messaggio con il bollettino ARPA.</p>' : '')
       + '<div class="actions"><button class="btn" onclick="sciMostra(\'messaggi\')">Annulla</button><button class="btn pri" id="sciBtnInvia" onclick="sciConferma()">Invia a ' + d.n + (d.n === 1 ? ' persona' : ' persone') + '</button></div>';
   } catch(e) { btn.disabled = false; sciErrore(e.message); }
 }
@@ -251,9 +289,11 @@ async function sciConferma() {
   const btn = sciEl('sciBtnInvia');
   btn.disabled = true; btn.textContent = 'Invio in corso…';
   try {
-    const d = await btChiama('invia', sci.invio.corpo);
+    const pos = sci.invio.corpo.posizione;
+    const d = await btChiama(pos ? 'richiedi_posizione' : 'invia', sci.invio.corpo);
     sci.invio = null;
-    sciEl('sciInvio').innerHTML = '<h2>Messaggio inviato</h2><div class="kv"><span>Consegnati</span><b>' + d.consegnati + ' su ' + d.n + '</b></div>'
+    sciEl('sciInvio').innerHTML = '<h2>' + (pos ? 'Richiesta di posizione inviata' : 'Messaggio inviato') + '</h2><div class="kv"><span>Consegnati</span><b>' + d.consegnati + ' su ' + d.n + '</b></div>'
+      + (pos ? '<p class="sub mt10">Le posizioni compaiono in Mappa → Posizioni in diretta appena i volontari iniziano a condividerle.</p>' : '')
       + (d.falliti.length ? '<div class="grp">Non consegnati (' + d.falliti.length + ')</div>' + d.falliti.map(f => '<div class="doc-item"><div class="doc-item-info"><div class="doc-item-name">' + aggEsc(f.nome) + '</div><div class="doc-item-meta">' + aggEsc(f.motivo) + '</div></div></div>').join('') : '')
       + '<div class="actions"><button class="btn pri" onclick="sciMostra(\'messaggi\')">Nuovo messaggio</button></div>';
     sciCaricaStorico();
@@ -394,7 +434,13 @@ async function sciStatoRichiesta(id, gestita) {
 }
 
 // -- MAPPA (Leaflet + OpenStreetMap) --
-// Livelli: fotosegnalazioni; "posizioni in diretta" è pronto ma vuoto (fase 2).
+// Primo livello: fotosegnalazioni. Secondo livello: posizioni in diretta dei volontari per un evento
+// (evento_tracciamento + evento_posizioni, scritte solo dal bot). Le posizioni restano per sempre:
+// si possono rivedere anche per gli eventi chiusi.
+const SCI_DIRETTA_MS = 15 * 60 * 1000;   // posizione "fresca"
+const SCI_AGGIORNA_MS = 30 * 1000;       // aggiornamento automatico mentre la scheda è aperta e visibile
+const SCI_COLORI = ['#1a73e8', '#e37400', '#9334e6', '#00897b', '#c5221f', '#3949ab', '#7cb342', '#d81b60'];
+
 function sciCaricaLeaflet() {
   if (window.L) return Promise.resolve();
   if (sci.leaflet) return sci.leaflet;
@@ -410,24 +456,64 @@ function sciCaricaLeaflet() {
   return sci.leaflet;
 }
 
+function sciFa(iso) {
+  const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  if (min < 1) return 'ora';
+  if (min < 60) return min + ' min fa';
+  if (min < 1440) return Math.floor(min / 60) + ' h fa';
+  return sciData(iso, true);
+}
+
+// Righe in blocchi da 1000 (limite di righe per richiesta)
+async function sciLeggiTutto(percorso) {
+  const out = [];
+  for (let da = 0; ; da += 1000) {
+    const r = await evLeggi(percorso + '&limit=1000&offset=' + da);
+    out.push(...r);
+    if (r.length < 1000) return out;
+  }
+}
+
 async function sciMappa() {
-  await Promise.all([sciCaricaFoto(), sciCaricaLeaflet()]);
+  const [, , tutte] = await Promise.all([sciCaricaFoto(), sciCaricaLeaflet(), sciLeggiTutto('evento_tracciamento?select=evento_id,fermato_il,ultimo_il').catch(() => [])]);
   if (sci.tab !== 'mappa') return;
-  sciEl('sciCorpo').innerHTML = '<div class="bar sci-filtri">' + sciFiltriEventoPeriodo('sciDisegnaPunti()') + '<span class="sub" id="sciMappaN"></span></div>'
-    + '<div class="card sci-mappa-box"><div id="sciMappa" class="sci-mappa" role="region" aria-label="Mappa delle fotosegnalazioni"></div></div>'
-    + '<p class="sub mt10">Punti rossi: da gestire · grigi: gestite. Mappa © OpenStreetMap.</p>';
+  // Evento delle posizioni: quello chiesto (Eventi -> Posizioni), altrimenti quello IN CORSO con richieste aperte, altrimenti l'ultimo con posizioni
+  const eventi = sci.eventi || [];
+  const conTr = new Set(tutte.map(r => r.evento_id)), aperti = new Set(tutte.filter(r => !r.fermato_il).map(r => r.evento_id));
+  const scelta = eventi.filter(e => conTr.has(e.id) || e.stato === 'IN CORSO');
+  const pre = sci.pre && sci.pre.evento && sci.pre.evento !== 'generiche' ? Number(sci.pre.evento) : 0;
+  if (pre) sci.trEvento = pre;
+  if (!sci.trEvento || !eventi.some(e => e.id === sci.trEvento)) {
+    const e = scelta.find(x => x.stato === 'IN CORSO' && aperti.has(x.id)) || scelta.find(x => conTr.has(x.id)) || scelta[0];
+    sci.trEvento = e ? e.id : 0;
+  }
+  if (sci.trEvento && !scelta.some(e => e.id === sci.trEvento)) scelta.unshift(eventi.find(e => e.id === sci.trEvento));
+  sciEl('sciCorpo').innerHTML = '<div class="bar sci-filtri">' + sciFiltriEventoPeriodo('sciDisegnaPunti()', 'Fotosegnalazioni: evento') + '<span class="sub" id="sciMappaN"></span></div>'
+    + '<div class="bar sci-filtri sci-tr-barra"><label class="sci-sel">Posizioni in diretta: evento<select id="sciTrEv" onchange="sciScegliTr(this.value)">'
+    + (scelta.length ? scelta.map(e => '<option value="' + e.id + '"' + (e.id === sci.trEvento ? ' selected' : '') + '>' + aggEsc(e.titolo) + (e.stato === 'IN CORSO' ? ' (in corso)' : '') + '</option>').join('') : '<option value="">Nessun evento con posizioni</option>')
+    + '</select></label><button class="btn sm" onclick="sciAggiornaDiretta(false)">Aggiorna</button>'
+    + '<button class="btn sm danger" id="sciBtnTermina" onclick="sciTermina()" hidden>Termina tracciamento</button><span class="sub" id="sciTrAgg"></span></div>'
+    + '<div class="sci-mappa-wrap"><div class="card sci-mappa-box"><div id="sciMappa" class="sci-mappa" role="region" aria-label="Mappa di fotosegnalazioni e posizioni"></div></div>'
+    + '<div class="card sci-tr-lista"><h2>Posizioni in diretta</h2><div id="sciTrLista"><div class="loading-msg">Caricamento…</div></div></div></div>'
+    + '<p class="sub mt10">Fotosegnalazioni: rosse da gestire, grigie gestite. Posizioni: verdi se aggiornate da meno di 15 minuti, grigie se più vecchie; le linee sono i percorsi. Mappa © OpenStreetMap.</p>';
   if (sci.mappa) sci.mappa.map.remove();
   const map = L.map('sciMappa', { scrollWheelZoom: false }).setView([45.135, 8.45], 11);   // Casale Monferrato
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(map);
-  const foto = L.layerGroup().addTo(map);
-  const diretta = L.layerGroup();   // fase 2: posizioni in diretta dei volontari
-  L.control.layers(null, { 'Fotosegnalazioni': foto, 'Posizioni in diretta (in arrivo)': diretta }, { collapsed: true }).addTo(map);
-  sci.mappa = { map, foto, diretta };
-  sciDisegnaPunti();
+  const foto = L.layerGroup().addTo(map), percorsi = L.layerGroup().addTo(map), diretta = L.layerGroup().addTo(map);
+  L.control.layers(null, { 'Fotosegnalazioni': foto, 'Posizioni in diretta': diretta, 'Percorsi': percorsi }, { collapsed: true }).addTo(map);
+  sci.mappa = { map, foto, diretta, percorsi, marker: {} };
+  sciDisegnaPunti(!sci.trEvento);
   setTimeout(() => sci.mappa && sci.mappa.map.invalidateSize(), 200);
+  await sciAggiornaDiretta(true);
+  clearInterval(sci.timer);
+  sci.timer = setInterval(() => {
+    const pannello = sciEl('panelSci');
+    if (sci.tab !== 'mappa' || !sci.mappa || !pannello || !pannello.classList.contains('active')) { clearInterval(sci.timer); sci.timer = null; return; }
+    if (document.visibilityState === 'visible') sciAggiornaDiretta(false);
+  }, SCI_AGGIORNA_MS);
 }
 
-function sciDisegnaPunti() {
+function sciDisegnaPunti(centra) {
   if (!sci.mappa) return;
   const { map, foto } = sci.mappa;
   foto.clearLayers();
@@ -440,8 +526,107 @@ function sciDisegnaPunti() {
     L.circleMarker([s.lat, s.lon], { radius: 9, weight: 2, color: '#fff', fillOpacity: .9, fillColor: s.gestita ? '#7a869a' : '#d93025' }).bindPopup(popup, { maxWidth: 240 }).addTo(foto);
   });
   const n = sciEl('sciMappaN');
-  if (n) n.textContent = punti.length + (punti.length === 1 ? ' punto' : ' punti');
-  if (punti.length) map.fitBounds(L.latLngBounds(punti.map(s => [s.lat, s.lon])), { padding: [30, 30], maxZoom: 15 });
+  if (n) n.textContent = punti.length + (punti.length === 1 ? ' fotosegnalazione' : ' fotosegnalazioni');
+  if (centra !== false && punti.length) map.fitBounds(L.latLngBounds(punti.map(s => [s.lat, s.lon])), { padding: [30, 30], maxZoom: 15 });
+}
+
+function sciScegliTr(id) {
+  sci.trEvento = Number(id) || 0;
+  sci.trNascosti.clear();
+  sciAggiornaDiretta(true);
+}
+
+async function sciAggiornaDiretta(centra) {
+  if (!sci.mappa) return;
+  const id = sci.trEvento, lista = sciEl('sciTrLista');
+  if (!id) {
+    sci.tr = null; sci.mappa.diretta.clearLayers(); sci.mappa.percorsi.clearLayers();
+    lista.innerHTML = '<p class="sub">Nessun evento con richieste di posizione. Si chiedono da Messaggi, con la casella "Chiedi la posizione in tempo reale".</p>';
+    sciEl('sciBtnTermina').hidden = true;
+    return;
+  }
+  let righe, pos;
+  try {
+    [righe, pos] = await Promise.all([
+      evLeggi('evento_tracciamento?evento_id=eq.' + id + '&select=volontario_id,richiesto_il,richiesto_da,iniziato_il,ultimo_il,fermato_il,fermato_da'),
+      sciLeggiTutto('evento_posizioni?evento_id=eq.' + id + '&select=volontario_id,lat,lon,precisione,in_diretta,creato_il&order=creato_il.asc,id.asc'),
+      evCaricaVolontari(),
+    ]);
+  } catch(e) { if (sciEl('sciTrLista')) sciEl('sciTrLista').innerHTML = SCI_ND; return; }
+  if (!sci.mappa || sci.trEvento !== id) return;
+  sci.tr = { righe, pos };
+  sciDisegnaDiretta(centra);
+  const agg = sciEl('sciTrAgg');
+  if (agg) agg.textContent = 'Aggiornato alle ' + new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+// Stato di una richiesta: fermato, in diretta, fermo da oltre 15 min, richiesta inviata (non ancora iniziato)
+function sciStatoTr(r, ultimo) {
+  if (r.fermato_il) return { k: 4, pill: '<span class="pill p-grey">Fermato</span>', sotto: 'da ' + (r.fermato_da || '—') + ' il ' + sciData(r.fermato_il, true) };
+  if (!ultimo) return { k: 3, pill: '<span class="pill p-sand">Richiesta inviata</span>', sotto: 'non ancora iniziato · richiesta del ' + sciData(r.richiesto_il, true) };
+  if (Date.now() - Date.parse(ultimo.creato_il) < SCI_DIRETTA_MS) return { k: 1, pill: '<span class="pill sci-pill-ok">In diretta</span>', sotto: 'ultima posizione ' + sciFa(ultimo.creato_il) };
+  return { k: 2, pill: '<span class="pill p-yellow">Fermo da oltre 15 min</span>', sotto: 'ultima posizione ' + sciFa(ultimo.creato_il) };
+}
+
+function sciDisegnaDiretta(centra) {
+  const { map, diretta, percorsi } = sci.mappa, { righe, pos } = sci.tr;
+  diretta.clearLayers(); percorsi.clearLayers(); sci.mappa.marker = {};
+  const perVol = new Map();
+  pos.forEach(p => { if (!perVol.has(p.volontario_id)) perVol.set(p.volontario_id, []); perVol.get(p.volontario_id).push(p); });
+  const punti = [], voci = [];
+  righe.forEach((r, i) => {
+    const traccia = perVol.get(r.volontario_id) || [], ultimo = traccia[traccia.length - 1], nome = evNomeVol(r.volontario_id);
+    const colore = SCI_COLORI[i % SCI_COLORI.length];
+    if (traccia.length > 1 && !sci.trNascosti.has(r.volontario_id)) L.polyline(traccia.map(p => [p.lat, p.lon]), { color: colore, weight: 3, opacity: .75 }).addTo(percorsi);
+    if (ultimo) {
+      const fresco = Date.now() - Date.parse(ultimo.creato_il) < SCI_DIRETTA_MS;
+      const popup = '<div class="sci-popup"><b>' + aggEsc(nome) + '</b><br>Ora: ' + aggEsc(sciData(ultimo.creato_il, true)) + ' (' + aggEsc(sciFa(ultimo.creato_il)) + ')'
+        + (ultimo.precisione != null ? '<br>Precisione: ± ' + Math.round(ultimo.precisione) + ' m' : '') + (ultimo.in_diretta === false ? '<br><i>Posizione singola</i>' : '')
+        + '<br><a href="' + sciMappaLink(ultimo) + '" target="_blank" rel="noopener">Google Maps</a></div>';
+      const m = L.circleMarker([ultimo.lat, ultimo.lon], { radius: 10, weight: 3, color: colore, fillOpacity: .95, fillColor: fresco ? '#1e8e3e' : '#7a869a' })
+        .bindTooltip(aggEsc(nome) + ' · ' + aggEsc(sciFa(ultimo.creato_il)), { permanent: true, direction: 'top', offset: [0, -10], className: 'sci-tip' })
+        .bindPopup(popup, { maxWidth: 240 }).addTo(diretta);
+      sci.mappa.marker[r.volontario_id] = m;
+      punti.push([ultimo.lat, ultimo.lon]);
+    }
+    voci.push({ r, nome, colore, ultimo, n: traccia.length, st: sciStatoTr(r, ultimo) });
+  });
+  voci.sort((a, b) => a.st.k - b.st.k || a.nome.localeCompare(b.nome, 'it'));
+  const aperte = righe.filter(r => !r.fermato_il).length;
+  sciEl('sciBtnTermina').hidden = !aperte;
+  sciEl('sciTrLista').innerHTML = !voci.length ? '<p class="sub">Nessuna richiesta di posizione per questo evento.</p>'
+    : '<p class="sub">' + voci.filter(v => v.st.k === 1).length + ' in diretta su ' + voci.length + '.</p>' + voci.map(v => '<div class="sci-tr-voce">'
+      + '<span class="sci-tr-colore" style="background:' + v.colore + '"></span><div class="sci-tr-testo">'
+      + (v.ultimo ? '<button class="sci-tr-nome" onclick="sciCentra(' + v.r.volontario_id + ')">' + aggEsc(v.nome) + '</button>' : '<b>' + aggEsc(v.nome) + '</b>')
+      + ' ' + v.st.pill + '<span class="sub">' + aggEsc(v.st.sotto) + '</span>'
+      + (v.n > 1 ? '<label class="sci-tr-perc"><input type="checkbox"' + (sci.trNascosti.has(v.r.volontario_id) ? '' : ' checked') + ' onchange="sciPercorso(' + v.r.volontario_id + ',this.checked)"> Percorso (' + v.n + ' punti)</label>' : '')
+      + '</div></div>').join('');
+  if (centra && punti.length) map.fitBounds(L.latLngBounds(punti), { padding: [40, 40], maxZoom: 16 });
+}
+
+function sciCentra(id) {
+  const m = sci.mappa && sci.mappa.marker[id];
+  if (!m) return;
+  sci.mappa.map.setView(m.getLatLng(), Math.max(sci.mappa.map.getZoom(), 15));
+  m.openPopup();
+}
+
+function sciPercorso(id, visibile) {
+  if (visibile) sci.trNascosti.delete(id); else sci.trNascosti.add(id);
+  if (sci.tr) sciDisegnaDiretta(false);
+}
+
+async function sciTermina() {
+  const id = sci.trEvento, e = (sci.eventi || []).find(x => x.id === id);
+  if (!confirm('Terminare il tracciamento per "' + (e ? e.titolo : 'questo evento') + '"?\n\nI volontari ricevono un messaggio per interrompere la condivisione. Le posizioni già ricevute restano.')) return;
+  const btn = sciEl('sciBtnTermina');
+  btn.disabled = true;
+  try {
+    const d = await btChiama('termina_tracciamento', { evento_id: id, avvisa: true });
+    sbAvviso('Tracciamento terminato: ' + d.chiusi + (d.chiusi === 1 ? ' volontario, ' : ' volontari, ') + d.avvisati + ' avvisati.');
+  } catch(err) { sbAvviso(err.message); }
+  btn.disabled = false;
+  sciAggiornaDiretta(false);
 }
 
 // -- ISCRITTI --

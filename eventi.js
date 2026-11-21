@@ -191,14 +191,27 @@ async function evSalva() {
     lat: lat === '' ? null : Number(lat), lon: lon === '' ? null : Number(lon),
   };
   const id = evModificaId;
+  const prima = id ? ((evElenco.find(x => x.id === id) || (evCorrente && evCorrente.e) || {}).stato) : null;
   btn.disabled = true;
   try {
     const [riga] = id ? await evScrivi('PATCH', 'eventi?id=eq.' + id, corpo) : await evScrivi('POST', 'eventi', corpo);
     await logAttivita((id ? 'ha modificato' : 'ha creato') + ' evento: ' + titolo);
+    if (prima === 'IN CORSO' && corpo.stato !== 'IN CORSO') await evChiudiTracciamento(id);
     evChiudiForm();
     await caricaEventi();
     if (id) { evCorrente.e = riga; evRender(); } else evApri(riga.id);
   } catch(e) { btn.disabled = false; errore(e.message); }
+}
+
+// Evento non più IN CORSO con richieste di posizione aperte (S.C.I.): si chiede se chiuderle e avvisare
+async function evChiudiTracciamento(id) {
+  let aperti = [];
+  try { aperti = await evLeggi('evento_tracciamento?evento_id=eq.' + id + '&fermato_il=is.null&select=id'); } catch(e) { return; }
+  if (!aperti.length || !confirm('Terminare anche il tracciamento e avvisare i volontari?\n\n' + aperti.length + (aperti.length === 1 ? ' volontario ha' : ' volontari hanno') + ' ancora la richiesta di posizione aperta.')) return;
+  try {
+    const d = await btChiama('termina_tracciamento', { evento_id: id, avvisa: true });
+    sbAvviso('Tracciamento terminato: ' + d.chiusi + (d.chiusi === 1 ? ' volontario, ' : ' volontari, ') + d.avvisati + ' avvisati.');
+  } catch(e) { sbAvviso('Tracciamento non terminato: ' + e.message + ' Puoi farlo da S.C.I. → Mappa.'); }
 }
 
 async function evElimina() {
@@ -289,6 +302,7 @@ function evRender() {
     + '<button class="btn sm" onclick="evStampa()">Stampa squadra</button>'
     + evAzioneIntervento()
     + '<button class="btn sm" onclick="btApriInvio(' + e.id + ')">Messaggio alla squadra</button>'
+    + '<button class="btn sm" onclick="evChiudi();sciApri(\'mappa\',{evento:' + e.id + '})">Posizioni</button>'
     + '<button class="btn sm" onclick="evApriForm(' + e.id + ')">Modifica</button>'
     + '<button class="btn sm danger" onclick="evElimina()">Elimina</button></div></div>'
     + '<div class="chips mt14" role="tablist">' + schede.map(t => '<button class="chip' + (c.tab === t[0] ? ' on' : '') + '" role="tab" onclick="evScheda(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>'
