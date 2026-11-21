@@ -279,24 +279,24 @@ function svRenderDati() {
   const box = document.getElementById('svP_dati');
   const v = sv.v;
   if (svPuoDati()) {
-    box.innerHTML = '<div id="svTaglie"></div>' + volFormSezioniHtml(true);
+    box.innerHTML = volFormSezioniHtml(true);   // contiene il posto per le Taglie DPI dopo il Datore di lavoro
     svRenderTaglie();
     svOsservaModifiche(box);
     return;
   }
-  box.innerHTML = '<div id="svTaglie"></div>' + svSezione('Anagrafica', svCampo('Codice Fiscale', v.codice_fiscale) + svCampo('Data nascita', svData(v.data_nascita))
+  // Stesso ordine del modulo: Anagrafica, Contatti, Unità, Datore di lavoro, Taglie DPI, Amministrativo
+  box.innerHTML = svSezione('Anagrafica', svCampo('Codice Fiscale', v.codice_fiscale) + svCampo('Data nascita', svData(v.data_nascita))
       + svCampo('Luogo nascita', v.luogo_nascita) + svCampo('Indirizzo', v.indirizzo ? v.indirizzo + (v.citta ? ', ' + v.citta : '') : ''))
-    + svSezione('Unità', svCampo('Squadra', v.squadra) + svCampo('Tipo', v.tipo_volontario) + svCampo('Mansione', v.mansione)
-      + svCampo('Specializzazione', v.specializzazione) + svCampo('Gruppo Alpini', v.gruppo_alpini) + svCampo('Professione', v.professione) + svCampo('Patenti', v.patenti))
     + svSezione('Contatti', '<div class="vol-field"><span class="vol-field-label">Telefono</span>'
       + (v.telefono ? '<a href="tel:' + aggEsc(v.telefono) + '">' + aggEsc(v.telefono) + '</a>' : '<span class="vol-field-value null">—</span>') + '</div>'
       + '<div class="vol-field"><span class="vol-field-label">Email</span>'
       + (v.email ? '<a href="mailto:' + aggEsc(v.email) + '">' + aggEsc(v.email) + '</a>' : '<span class="vol-field-value null">—</span>') + '</div>')
-    + svSezione('Abilitazioni', svSi('Comm. Unità', v.comm_unita) + svSi('Radio ANA', v.radio_ana) + svSi('EMERCOM', v.emercom) + svCampo('Cod. EMERCOM', v.cod_emercom))
-    + svSezione('Amministrativo', svSi('Iscrizione', v.iscrizione) + svSi('Tutela legale CAP', v.tutela_legale_cap) + svCampo('Disponibilità', v.dispon)
-      + svCampo('Note dispon.', v.note_dispon) + svCampo('Varchi', v.varchi) + svSi('Attivo', v.attivo))
+    + svSezione('Unità', svCampo('Squadra', v.squadra) + svCampo('Tipo', v.tipo_volontario) + svCampo('Mansione', v.mansione)
+      + svCampo('Specializzazione', v.specializzazione) + svCampo('Gruppo Alpini', v.gruppo_alpini) + svCampo('Professione', v.professione) + svCampo('Patenti', v.patenti))
     + svSezione('Datore di lavoro (Art. 39)', svCampo('Ragione sociale', v.datore_lavoro) + svCampo('Indirizzo ditta', v.indirizzo_lavoro)
-      + svCampo('CAP ditta', v.cap_lavoro) + svCampo('Città ditta', v.citta_lavoro));
+      + svCampo('CAP ditta', v.cap_lavoro) + svCampo('Città ditta', v.citta_lavoro))
+    + '<div id="svTaglie"></div>'
+    + svSezione('Amministrativo', svSi('Commissione di Unità', v.comm_unita) + svSi('Tutela legale CAP', v.tutela_legale_cap) + svCampo('ID EMERCOM', v.cod_emercom));
   svRenderTaglie();
   renderCampiCustomDettaglio(v).then(html => { if (sv && box.isConnected) box.insertAdjacentHTML('beforeend', html); });
 }
@@ -328,7 +328,7 @@ async function svSalvaCampi() {
   const body = {};
   if (sv.dirty.has('visita')) { body.data_visita = val('fDataVisita'); body.stato_visita = val('fStatoVisita'); body.cdc_1_step = chk('fCdc1'); body.cdc_2_step = chk('fCdc2'); }
   if (sv.dirty.has('formazione')) {
-    if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq') });
+    if (svPuoDati()) Object.assign(body, { quattro_ore: chk('f4Ore'), dodici_ore: chk('f12Ore'), corso_caposq: chk('fCorsoCaposq'), radio_ana: chk('fRadioAna'), emercom: chk('fEmercom') });
     // esoneri: solo se le colonne esistono (supabase/formazione_esoneri.sql)
     if (svPuoDati() && 'esonero_12_ore' in sv.v) Object.assign(body, { esonero_12_ore: chk('fEso12Ore'), esonero_caposq: chk('fEsoCaposq') });
   }
@@ -707,6 +707,12 @@ const SV_DAE = { id: 'fDae', campo: 'dae', label: 'DAE', tipo: 'DAE', scadenza: 
 
 // Ogni corso obbligatorio compare una volta sola: spunta, stato, data e scadenza (da Drive, registro e
 // campi del volontario) e l'attestato in vigore; i precedenti in "Storico attestati".
+// Corsi segnati solo in scheda (campi di volontari, senza attestato né scadenza): l'ID EMERCOM resta anche in Dati → Amministrativo
+const SV_CORSI_SCHEDA = [
+  { id: 'fRadioAna', campo: 'radio_ana', label: 'Corso Radio ANA' },
+  { id: 'fEmercom',  campo: 'emercom',   label: 'EMERCOM' },
+];
+
 function svRenderFormazione() {
   const box = document.getElementById('svP_formazione');
   const v = sv.v;
@@ -721,6 +727,10 @@ function svRenderFormazione() {
       + '<div id="svCorsoInfo_' + c.tipo + '"></div>'
       + '<div id="svDrive_' + c.tipo + '"></div><div id="svAll_' + c.tipo + '"></div></div>';
   }).join('') + '</div>'
+    + '<div class="grp sv-mt">Radio ANA ed EMERCOM</div><div class="sv-corsi-scheda">' + SV_CORSI_SCHEDA.map(c => svPuoDati()
+        ? '<label class="perm-check"><input type="checkbox" id="' + c.id + '"' + (v[c.campo] ? ' checked' : '') + '> ' + c.label + '</label>'
+        : svSi(c.label, v[c.campo])).join('')
+    + (v.cod_emercom ? svCampo('ID EMERCOM', v.cod_emercom) : '') + '</div>'
     + '<div class="grp sv-mt">Altri corsi</div><div id="svRegistro"><p class="note m0 mb10">Caricamento…</p></div><div id="svAltriCorsi"></div>';
   svRenderAllegatiFormazione();
   svRenderCorsi();

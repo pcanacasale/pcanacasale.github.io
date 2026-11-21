@@ -1002,6 +1002,11 @@ function apriFormVolontario(id) {
 
 // Sezioni del form. perScheda: corsi e visita stanno nelle schede Formazione e Visita medica,
 // con gli stessi id, così salvaVolontario li legge senza distinzioni.
+// Ordine: Anagrafica, Contatti, Unità, Datore di lavoro, (scheda: Taglie DPI), Amministrativo
+// (Commissione di Unità, Tutela legale CAP, ID EMERCOM). Nella scheda Radio ANA ed EMERCOM stanno nella tab
+// Formazione; nel modulo "Nuovo volontario" in "Formazione e visita".
+// Non più nel modulo (i dati restano in volontari e salvaVolontario() non tocca i campi che non trova):
+// Disponibilità, Varchi, Note disponibilità, Iscrizione, Attivo (fa fede lo Stato; per i nuovi il database mette true).
 function volFormSezioniHtml(perScheda) {
   return `
     <div class="vol-form-section">
@@ -1016,6 +1021,13 @@ function volFormSezioniHtml(perScheda) {
         <div class="vol-form-field full"><label class="vol-form-lbl">Indirizzo</label><input class="vol-form-inp" id="fIndirizzo"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">CAP</label><input class="vol-form-inp" id="fCap"></div>
         <div class="vol-form-field"><label class="vol-form-lbl">Città</label><input class="vol-form-inp" id="fCitta"></div>
+      </div>
+    </div>
+    <div class="vol-form-section">
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Contatti</div>
+      <div class="vol-form-grid">
+        <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
       </div>
     </div>
     <div class="vol-form-section">
@@ -1045,46 +1057,6 @@ function volFormSezioniHtml(perScheda) {
       </div>
     </div>
     <div class="vol-form-section">
-      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Contatti</div>
-      <div class="vol-form-grid">
-        <div class="vol-form-field"><label class="vol-form-lbl">Telefono</label><input class="vol-form-inp" type="tel" id="fTelefono"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Email</label><input class="vol-form-inp" type="email" id="fEmail"></div>
-      </div>
-    </div>
-    <div class="vol-form-section">
-      <div class="vol-form-section-title" onclick="toggleFormSection(this)">${perScheda ? 'Abilitazioni' : 'Abilitazioni e formazione'}</div>
-      <div class="vol-form-checks">
-        <label class="vol-form-check"><input type="checkbox" id="fCommUnita"> Comm. Unità</label>
-        <label class="vol-form-check"><input type="checkbox" id="fRadioAna"> Radio ANA</label>
-        <label class="vol-form-check"><input type="checkbox" id="fEmercom"> EMERCOM</label>
-        ${perScheda ? '' : `<label class="vol-form-check"><input type="checkbox" id="fDae"> DAE</label>
-        <label class="vol-form-check"><input type="checkbox" id="f4Ore"> 4 Ore</label>
-        <label class="vol-form-check"><input type="checkbox" id="f12Ore"> 12 Ore</label>
-        <label class="vol-form-check"><input type="checkbox" id="fCorsoCaposq"> Corso Caposq.</label>
-        <label class="vol-form-check"><input type="checkbox" id="fCdc1"> CDC 1° Step</label>
-        <label class="vol-form-check"><input type="checkbox" id="fCdc2"> CDC 2° Step</label>`}
-        <label class="vol-form-check"><input type="checkbox" id="fIscrizione"> Iscrizione</label>
-        <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale</label>
-        <label class="vol-form-check"><input type="checkbox" id="fAttivo" checked> Attivo</label>
-      </div>
-      <div class="vol-form-grid mt12">
-        ${perScheda ? '' : `<div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Data visita</label><input class="vol-form-inp" type="date" id="fDataVisita"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Stato visita</label>
-          <select class="vol-form-inp" id="fStatoVisita">${visitaOpzioniHtml('')}</select>
-        </div>`}
-        <div class="vol-form-field"><label class="vol-form-lbl">Cod. EMERCOM</label><input class="vol-form-inp" id="fCodEmercom"></div>
-      </div>
-    </div>
-    <div class="vol-form-section">
-      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Note</div>
-      <div class="vol-form-grid">
-        <div class="vol-form-field"><label class="vol-form-lbl">Disponibilità</label><input class="vol-form-inp" id="fDispon"></div>
-        <div class="vol-form-field"><label class="vol-form-lbl">Varchi</label><input class="vol-form-inp" id="fVarchi"></div>
-        <div class="vol-form-field full"><label class="vol-form-lbl">Note disponibilità</label><input class="vol-form-inp" id="fNoteDispon"></div>
-      </div>
-    </div>
-    <div class="vol-form-section">
       <div class="vol-form-section-title" onclick="toggleFormSection(this)">Datore di lavoro (Art. 39)</div>
       <div class="vol-form-grid">
         <div class="vol-form-field full"><label class="vol-form-lbl">Ragione sociale ditta</label><input class="vol-form-inp" id="fDatoreLavoro" placeholder="es. EPTA SPA"></div>
@@ -1093,6 +1065,37 @@ function volFormSezioniHtml(perScheda) {
         <div class="vol-form-field"><label class="vol-form-lbl">Città ditta</label><input class="vol-form-inp" id="fCittaLavoro"></div>
       </div>
     </div>
+    ${perScheda ? '<div id="svTaglie"></div>' : ''}
+    <div class="vol-form-section">
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Amministrativo</div>
+      <div class="vol-form-checks">
+        <label class="vol-form-check"><input type="checkbox" id="fCommUnita"> Commissione di Unità</label>
+        <label class="vol-form-check"><input type="checkbox" id="fTutela"> Tutela legale CAP</label>
+      </div>
+      <div class="vol-form-grid mt12">
+        <div class="vol-form-field"><label class="vol-form-lbl">ID EMERCOM</label><input class="vol-form-inp" id="fCodEmercom"></div>
+      </div>
+    </div>
+    ${perScheda ? '' : `<div class="vol-form-section">
+      <div class="vol-form-section-title" onclick="toggleFormSection(this)">Formazione e visita</div>
+      <div class="vol-form-checks">
+        <label class="vol-form-check"><input type="checkbox" id="f4Ore"> 4 Ore</label>
+        <label class="vol-form-check"><input type="checkbox" id="f12Ore"> 12 Ore</label>
+        <label class="vol-form-check"><input type="checkbox" id="fCorsoCaposq"> Corso Caposq.</label>
+        <label class="vol-form-check"><input type="checkbox" id="fRadioAna"> Corso Radio ANA</label>
+        <label class="vol-form-check"><input type="checkbox" id="fEmercom"> EMERCOM</label>
+        <label class="vol-form-check"><input type="checkbox" id="fDae"> DAE</label>
+        <label class="vol-form-check"><input type="checkbox" id="fCdc1"> CDC 1° Step</label>
+        <label class="vol-form-check"><input type="checkbox" id="fCdc2"> CDC 2° Step</label>
+      </div>
+      <div class="vol-form-grid mt12">
+        <div class="vol-form-field"><label class="vol-form-lbl">Scad. DAE</label><input class="vol-form-inp" type="date" id="fScadDae"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Data visita</label><input class="vol-form-inp" type="date" id="fDataVisita"></div>
+        <div class="vol-form-field"><label class="vol-form-lbl">Stato visita</label>
+          <select class="vol-form-inp" id="fStatoVisita">${visitaOpzioniHtml('')}</select>
+        </div>
+      </div>
+    </div>`}
     ${renderCampiCustomForm()}
     ${perScheda ? '<button class="vol-delete-btn" onclick="eliminaVolontario()">Elimina volontario</button>' : ''}`;
 }
@@ -1265,9 +1268,10 @@ async function salvaVolontario() {
 
   errEl.style.display = 'none';
 
-  const g = (id) => { const el = document.getElementById(id); return el ? el.value || null : null; };
-  const b = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
-  const d = (id) => { const el = document.getElementById(id); return el && el.value ? el.value : null; };
+  // Campo assente dal modulo = undefined: JSON.stringify lo toglie e il dato registrato resta com'è
+  const g = (id) => { const el = document.getElementById(id); return el ? el.value || null : undefined; };
+  const b = (id) => { const el = document.getElementById(id); return el ? el.checked : undefined; };
+  const d = (id) => { const el = document.getElementById(id); return el ? el.value || null : undefined; };
 
   // Raccogli campi custom
   const campi_extra = {};
@@ -1597,7 +1601,8 @@ function applicaVista(v) {
   if (filtri.quattro_ore)    dati = dati.filter(v => v.quattro_ore);
   if (filtri.dodici_ore)     dati = dati.filter(v => v.dodici_ore);
   if (filtri.pronto_impiego) dati = dati.filter(v => v.pronto_impiego);
-  if (filtri.attivo !== undefined) dati = dati.filter(v => v.attivo === filtri.attivo);
+  // vecchie viste salvate con "Attivo": fa fede lo Stato, non più la spunta attivo
+  if (filtri.attivo !== undefined) dati = dati.filter(v => ((v.stato || 'ATTIVO') === 'ATTIVO') === filtri.attivo);
   if (filtri.stato_visita_not) dati = dati.filter(v => v.stato_visita !== filtri.stato_visita_not);
   // Filtri custom da jsonb (campi extra)
   Object.keys(filtri).forEach(k => {
