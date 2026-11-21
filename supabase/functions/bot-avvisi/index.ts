@@ -35,7 +35,7 @@ Deno.serve(async () => {
     else {
       if (s.allerta_eta_min === null || s.allerta_eta_min > 120) problemi.push(['allerta', 'L\'allerta ARPA non si aggiorna' + (s.allerta_eta_min === null ? ': nessun dato.' : ' da ' + s.allerta_eta_min + ' minuti.'), 6]);
       if (s.cron_falliti_2h > 0) problemi.push(['cron', s.cron_falliti_2h + ' attività automatiche non riuscite nelle ultime 2 ore.', 6]);
-      if (s.segnalazioni_vecchie > 0) problemi.push(['segnalazioni', s.segnalazioni_vecchie + ' segnalazioni del bot da gestire da oltre 24 ore (Eventi).', 24]);
+      if (s.segnalazioni_vecchie > 0) problemi.push(['segnalazioni', s.segnalazioni_vecchie + ' segnalazioni del bot da gestire da oltre 24 ore (S.C.I. → Fotosegnalazioni).', 24]);
       const g = s.backup_ultimo && Date.UTC(+s.backup_ultimo.slice(0, 4), +s.backup_ultimo.slice(4, 6) - 1, +s.backup_ultimo.slice(6, 8));
       if (!g || Date.now() - g > 9 * 24 * ORE) problemi.push(['backup', 'La copia settimanale dei dati non è aggiornata.', 24]);
     }
