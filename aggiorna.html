@@ -12,7 +12,10 @@
   Pagina PUBBLICA per i volontari (fase 2 "Aggiornamento dati").
   Autonoma: CSS e JS inline, nessuna dipendenza dall'area riservata, nessun
   service worker. Parla solo con la Edge Function agg-pub, che verifica a
-  ogni chiamata token del link + data di nascita. Quello che il volontario
+  ogni chiamata token del link + data di nascita. Aperta dall'Area Riservata
+  (aggiorna.html#area) usa invece la sessione di quell'accesso (stessa chiave
+  'pcana-auth' di accesso.js, supabase-js caricato solo in quel caso): niente
+  link e niente data di nascita. Quello che il volontario
   invia diventa una PROPOSTA: i dati reali cambiano solo quando un master
   la approva dall'area riservata.
 -->
@@ -206,6 +209,10 @@ details.priv p{margin:10px 0 0}
 'use strict';
 
 const PUB_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co/functions/v1/agg-pub';
+// Solo per l'apertura dall'Area Riservata: stessa sessione di accesso.js (chiave pubblica anon)
+const AREA_SUPA_URL = 'https://pggtmyarpuztfewqgwyc.supabase.co';
+const AREA_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnZ3RteWFycHV6dGZld3Fnd3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNDk4MjksImV4cCI6MjA4ODYyNTgyOX0.NqhNcmN-tqv5XWyeokSkjvOM6PxnmlDtZNcADeHRp9c';
+const AREA_SUPA_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js';
 
 // Testo dell'informativa privacy: unico per pagina web e modulo cartaceo,
 // sta in informativa-testo.js (da sostituire col testo definitivo).
@@ -261,6 +268,7 @@ const PASSI = [
 // ---------------- stato ----------------
 const S = {
   token: null, dob: null, info: null,
+  area: null,              // aperta dall'Area Riservata: { client, chiave } (chiave = bozza per questo utente)
   passo: 'verifica',
   orig: {}, dati: {},
   dpi: {},                 // dpi_id → { ha: true|false|null, taglia }
@@ -284,29 +292,40 @@ function fmtDataOra(iso) { if (!iso) return ''; const d = new Date(iso); return 
 
 // ---------------- chiamate ----------------
 class ErroreLink extends Error {}
+class ErroreArea extends Error {}
+// Dall'Area Riservata: token della sessione (rinnovato da supabase-js se scaduto)
+async function intestazioniArea() {
+  let tok = null;
+  try { const { data } = await S.area.client.auth.getSession(); tok = data.session ? data.session.access_token : null; } catch (e) {}
+  if (!tok) throw new ErroreArea('Sessione scaduta: rientra nell\'Area Riservata.');
+  return { apikey: AREA_SUPA_KEY, Authorization: 'Bearer ' + tok };
+}
 async function chiama(action, extra) {
   let res, data;
+  const corpo = S.area ? Object.assign({ action }, extra || {}) : Object.assign({ t: S.token, data_nascita: S.dob, action }, extra || {});
+  const h = Object.assign({ 'Content-Type': 'application/json' }, S.area ? await intestazioniArea() : {});
   try {
-    res = await fetch(PUB_URL, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ t: S.token, data_nascita: S.dob, action }, extra || {})),
-    });
+    res = await fetch(PUB_URL, { method: 'POST', headers: h, body: JSON.stringify(corpo) });
     data = await res.json();
   } catch (e) { throw new Error('Connessione non riuscita. Controlla la rete e riprova.'); }
+  if (S.area && (res.status === 401 || res.status === 404)) throw new ErroreArea(data.error || 'Accesso non valido.');
   if (res.status === 404 || res.status === 403 && data.bloccato) throw new ErroreLink(data.error || 'Link non valido o scaduto.');
   if (!res.ok || !data.ok) { const e = new Error(data.error || 'Errore, riprova.'); e.dati = data; throw e; }
   return data;
 }
 async function carica(tipo, file, nomeFile, descrizione, scadenza) {
   const fd = new FormData();
-  fd.append('t', S.token); fd.append('data_nascita', S.dob); fd.append('action', 'upload');
+  if (!S.area) { fd.append('t', S.token); fd.append('data_nascita', S.dob); }
+  fd.append('action', 'upload');
   fd.append('tipo', tipo);
   if (descrizione) fd.append('descrizione', descrizione);
   if (scadenza) fd.append('scadenza', scadenza);
   fd.append('file', file, nomeFile || 'file');
   let res, data;
-  try { res = await fetch(PUB_URL, { method: 'POST', body: fd }); data = await res.json(); }
+  const h = S.area ? await intestazioniArea() : {};
+  try { res = await fetch(PUB_URL, { method: 'POST', headers: h, body: fd }); data = await res.json(); }
   catch (e) { throw new Error('Connessione non riuscita durante il caricamento dei file.'); }
+  if (S.area && (res.status === 401 || res.status === 404)) throw new ErroreArea(data.error || 'Accesso non valido.');
   if (res.status === 404) throw new ErroreLink(data.error || 'Link non valido o scaduto.');
   if (!res.ok || !data.ok) throw new Error(data.error || 'Caricamento non riuscito.');
   return data.documento;
@@ -357,7 +376,7 @@ async function bozzaOp(modo, fn) {
 }
 let bozzaTimer = null;
 function salvaBozza() {
-  if (!S.token || !S.info || S.inviando || ['verifica', 'errore', 'fatto'].includes(S.passo)) return;
+  if (!chiaveBozza() || !S.info || S.inviando || ['verifica', 'errore', 'fatto'].includes(S.passo)) return;
   clearTimeout(bozzaTimer);
   bozzaTimer = setTimeout(() => {
     const b = {
@@ -367,11 +386,12 @@ function salvaBozza() {
       attestati: S.attestati.map(a => ({ key: a.key, tipo: a.tipo, descrizione: a.descrizione, scadenza: a.scadenza, file: a.file })),
       firma: S.firma ? S.firma.blob : null,
     };
-    bozzaOp('readwrite', st => st.put(b, S.token)).catch(() => {});
+    bozzaOp('readwrite', st => st.put(b, chiaveBozza())).catch(() => {});
   }, 300);
 }
-async function leggiBozza() { try { return await bozzaOp('readonly', st => st.get(S.token)); } catch (e) { return null; } }
-function cancellaBozza() { clearTimeout(bozzaTimer); return bozzaOp('readwrite', st => st.delete(S.token)).catch(() => {}); }
+function chiaveBozza() { return S.area ? S.area.chiave : S.token; }
+async function leggiBozza() { try { return await bozzaOp('readonly', st => st.get(chiaveBozza())); } catch (e) { return null; } }
+function cancellaBozza() { clearTimeout(bozzaTimer); return bozzaOp('readwrite', st => st.delete(chiaveBozza())).catch(() => {}); }
 // Rimette in S i dati e i file della bozza; restituisce il passo da cui ripartire
 function ripristinaBozza(b) {
   if (!b || b.salvata < Date.now() - SCADENZA_LOCALE_MS) return null;
@@ -392,6 +412,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // ---------------- avvio ----------------
 (async function avvio() {
   const qs = new URLSearchParams(location.search);
+  if (location.hash === '#area' || qs.get('da') === 'area') return avvioArea();
   const hs = new URLSearchParams(location.hash.slice(1));
   let t = qs.get('t') || hs.get('t');
   const salvato = lsLeggi(LINK_KEY);
@@ -415,11 +436,45 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
     } catch (e) {
       S.dob = null;
       lsTogli('agg_dob_' + t);
-      if (e instanceof ErroreLink) return schermataErroreLink(e.message);
+      if (e instanceof ErroreArea) return schermataErroreArea(e.message);
+    if (e instanceof ErroreLink) return schermataErroreLink(e.message);
     }
   }
   renderVerifica();
 })();
+
+// Apertura dall'Area Riservata: stessa sessione (localStorage 'pcana-auth'), nessuna data di nascita
+function caricaSupabase() {
+  if (window.supabase) return Promise.resolve();
+  return new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = AREA_SUPA_JS; s.onload = ok; s.onerror = () => ko(new Error('connessione'));
+    document.head.appendChild(s);
+  });
+}
+async function avvioArea() {
+  $('app').innerHTML = '<p class="note">Apro i tuoi dati…</p>';
+  try {
+    await caricaSupabase();
+    const client = window.supabase.createClient(AREA_SUPA_URL, AREA_SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'pcana-auth' } });
+    const { data } = await client.auth.getSession();
+    if (!data.session) return schermataErroreArea('Per aggiornare i tuoi dati da qui devi essere entrato nell\'Area Riservata.');
+    S.area = { client, chiave: 'area_' + data.session.user.id };
+    try { history.replaceState({ passo: 'verifica' }, '', location.pathname + '#area'); } catch (e) {}
+    const info = await chiama('apri');
+    inizializza(info);
+    return vai(ripristinaBozza(await leggiBozza()) || 'anagrafica');
+  } catch (e) {
+    if (e instanceof ErroreArea) return schermataErroreArea(e.message);
+    schermataErroreArea(e.message === 'connessione' ? 'Connessione non riuscita. Controlla la rete e riprova.' : (e.message || 'Errore, riprova.'));
+  }
+}
+function schermataErroreArea(msg) {
+  S.passo = 'errore'; setProg(); setNav('');
+  $('app').innerHTML = '<div class="center"><div class="big-ico">🔒</div><h1>Non riesco ad aprire i tuoi dati</h1></div>'
+    + '<div class="msg err">' + esc(msg) + '</div>'
+    + '<p><a class="btn" href="area-riservata.html">Torna all\'Area Riservata</a></p>';
+}
 
 // Tasto Indietro del telefono: torna al passo precedente invece di uscire dalla pagina
 window.addEventListener('popstate', e => {
@@ -500,6 +555,7 @@ async function verifica() {
     vai(ripristinaBozza(await leggiBozza()) || 'anagrafica');
   } catch (e) {
     S.dob = null;
+    if (e instanceof ErroreArea) return schermataErroreArea(e.message);
     if (e instanceof ErroreLink) return schermataErroreLink(e.message);
     let msg = e.message;
     if (e.dati && e.dati.tentativi_rimasti != null) msg += ' Tentativi rimasti: ' + e.dati.tentativi_rimasti + '.';
@@ -907,6 +963,7 @@ async function rimuoviEsistente(id) {
     await chiama('doc_rimuovi', { id });
     S.esistenti = S.esistenti.filter(d => d.id !== id);
   } catch (e) {
+    if (e instanceof ErroreArea) return schermataErroreArea(e.message);
     if (e instanceof ErroreLink) return schermataErroreLink(e.message);
     alert(e.message);
   }
@@ -1057,6 +1114,7 @@ async function invia() {
     renderFatto();
   } catch (e) {
     S.inviando = false;
+    if (e instanceof ErroreArea) return schermataErroreArea(e.message);
     if (e instanceof ErroreLink) return schermataErroreLink(e.message);
     stato.innerHTML = '<div class="msg err">' + esc(e.message) + '<br>Premi di nuovo <strong>Invia</strong> per riprovare: i file già caricati non verranno ripetuti.</div>';
     btn.disabled = false; btn.textContent = 'Riprova invio';
@@ -1071,8 +1129,10 @@ function renderFatto() {
   const scade = S.info.scade_il ? new Date(S.info.scade_il).toLocaleDateString('it-IT') : '';
   $('app').innerHTML = '<div class="center"><div class="big-ico">✅</div><h1>Grazie, dati inviati!</h1></div>'
     + '<div class="msg ok">Un incaricato della Sezione controllerà quello che hai inviato e aggiornerà la tua scheda.</div>'
-    + '<p>Se ti accorgi di un errore puoi riaprire questo stesso link e correggere' + (scade ? ', fino al <strong>' + esc(scade) + '</strong>' : '') + ', finché i dati non vengono approvati.</p>'
-    + '<button class="btn sec" onclick="ricomincia()">Correggi i dati inviati</button>';
+    + (S.area ? '<p>Se ti accorgi di un errore puoi correggere da qui, oppure più tardi dalla tua scheda nell\'Area Riservata, finché i dati non vengono approvati.</p>'
+      : '<p>Se ti accorgi di un errore puoi riaprire questo stesso link e correggere' + (scade ? ', fino al <strong>' + esc(scade) + '</strong>' : '') + ', finché i dati non vengono approvati.</p>')
+    + '<button class="btn sec" onclick="ricomincia()">Correggi i dati inviati</button>'
+    + (S.area ? ' <a class="btn" href="area-riservata.html">Torna all\'Area Riservata</a>' : '');
 }
 async function ricomincia() {
   try {
@@ -1081,6 +1141,7 @@ async function ricomincia() {
     inizializza(info);
     vai('anagrafica');
   } catch (e) {
+    if (e instanceof ErroreArea) return schermataErroreArea(e.message);
     if (e instanceof ErroreLink) return schermataErroreLink(e.message);
     alert(e.message);
   }

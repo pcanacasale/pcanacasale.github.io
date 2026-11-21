@@ -6954,15 +6954,15 @@ function renderSchedaPersonale(v) {
 
   let html = '<div class="card vc sp-hero">'
     + sbAvatar(v, 'av')
-    + '<div class="mid"><b>' + (v.cognome||'') + ' ' + (v.nome||'') + '</b>'
-    + '<span class="sub">' + (v.tipo_volontario||'Volontario') + ' · ' + (v.squadra||'—') + '</span></div>'
-    + '<span class="pill ' + ((v.stato || 'ATTIVO') === 'ATTIVO' ? 'p-blue' : 'p-grey') + '">' + (v.stato || 'ATTIVO') + '</span>'
-    + '</div><div class="grid sp-grid">';
+    + '<div class="mid"><b>' + aggEsc((v.cognome||'') + ' ' + (v.nome||'')) + '</b>'
+    + '<span class="sub">' + aggEsc((v.tipo_volontario||'Volontario') + ' · ' + (v.squadra||'—')) + '</span></div>'
+    + '<span class="pill ' + ((v.stato || 'ATTIVO') === 'ATTIVO' ? 'p-blue' : 'p-grey') + '">' + aggEsc(v.stato || 'ATTIVO') + '</span>'
+    + '</div><div class="card sp-agg" id="spAggiorna" hidden></div><div class="grid sp-grid">';
 
   sections.forEach(s => {
     html += '<div class="card"><h2>' + s.titolo + '</h2>';
     s.fields.forEach(f => {
-      html += '<div class="kv"><span>' + f[0] + '</span><b>' + (f[1] || '—') + '</b></div>';
+      html += '<div class="kv"><span>' + f[0] + '</span><b>' + aggEsc(f[1] || '—') + '</b></div>';
     });
     html += '</div>';
   });
@@ -6970,9 +6970,37 @@ function renderSchedaPersonale(v) {
 
   content.innerHTML = html;
   fzRenderPersonale(v.id);
+  spRenderAggiorna();
   spRenderDocumenti(v.id);
   arcRenderPersonale(v);
   cvRenderPersonale();
+}
+
+// "Aggiorna i tuoi dati": apre aggiorna.html#area con la sessione dell'Area Riservata (niente link,
+// niente data di nascita). Stato da agg-pub ('stato'): campi obbligatori mancanti e proposta in attesa.
+// Le modifiche restano una proposta da approvare in Aggiornamento dati.
+const SP_AGG_ETICHETTE = { cognome: 'Cognome', nome: 'Nome', codice_fiscale: 'Codice fiscale', data_nascita: 'Data di nascita', luogo_nascita: 'Luogo di nascita',
+  provincia_nascita: 'Provincia di nascita', squadra: 'Squadra', tipo_volontario: 'Tipo volontario', indirizzo: 'Indirizzo', civico: 'Civico', cap: 'CAP',
+  citta: 'Città', provincia: 'Provincia', telefono: 'Telefono' };
+async function spRenderAggiorna() {
+  const box = document.getElementById('spAggiorna');
+  if (!box) return;
+  let d;
+  try {
+    const res = await sbFetch(SUPA_URL + '/functions/v1/agg-pub', { method: 'POST', headers: HJ, silenzioso: true, body: JSON.stringify({ action: 'stato' }) });
+    d = await res.json();
+    if (!res.ok || !d.ok) return;   // scheda non pronta o accesso non valido: il riquadro non compare
+  } catch(e) { return; }
+  const fatti = d.obbligatori - d.mancanti.length;
+  const corpo = d.proposta
+    ? '<p class="sub">Hai inviato i tuoi dati il ' + aggEsc(new Date(d.proposta.inviata_il).toLocaleDateString('it-IT')) + ': la segreteria li sta controllando. Finché non li approva puoi ancora correggerli.</p>'
+      + '<div class="actions"><span class="pill p-yellow">In attesa di controllo</span><a class="btn" href="aggiorna.html#area">Correggi i dati inviati</a></div>'
+    : '<p class="sub">Controlla i tuoi dati personali, le taglie, la foto per il tesserino e i documenti. Le modifiche le controlla la segreteria prima di salvarle.</p>'
+      + '<div class="sp-agg-bar"><progress max="' + d.obbligatori + '" value="' + fatti + '"></progress><span>Dati obbligatori: ' + fatti + ' su ' + d.obbligatori + '</span></div>'
+      + (d.mancanti.length ? '<p class="sub">Mancano: ' + aggEsc(d.mancanti.map(k => SP_AGG_ETICHETTE[k] || k).join(', ')) + '.</p>' : '')
+      + '<div class="actions"><a class="btn pri" href="aggiorna.html#area">Aggiorna i tuoi dati</a></div>';
+  box.innerHTML = '<h2>Aggiorna i tuoi dati</h2>' + corpo;
+  box.hidden = false;
 }
 
 // Attestati e documenti propri: se non ce ne sono, o non si possono aprire, la card resta nascosta

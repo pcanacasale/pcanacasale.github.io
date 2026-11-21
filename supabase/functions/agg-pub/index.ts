@@ -1,14 +1,17 @@
 // Supabase Edge Function: agg-pub
 //
 // Endpoint PUBBLICO (verify_jwt = false) usato da aggiorna.html: il volontario
-// apre il link personale generato dal master (agg-api → link_genera) e propone
-// l'aggiornamento dei propri dati. Nessun login: l'accesso è dato dal token
-// del link + la data di nascita.
+// propone l'aggiornamento dei propri dati. Due modi di entrare:
+//   1. link personale generato dal master (agg-api → link_genera): token del link + data di nascita;
+//   2. dall'Area Riservata (scheda personale): nessun token nel body, ma il token della sessione
+//      (Supabase Auth) nell'header Authorization; il volontario è mio_volontario_id(), eseguita con
+//      quel token, quindi solo i propri dati. Niente data di nascita e niente link.
 //
 // Sicurezza:
 // - Il token in chiaro non è mai salvato: in agg_link.token_hash c'è solo lo SHA-256.
 // - Ogni chiamata riverifica link (esistente, non revocato, non scaduto, non
 //   bloccato) e data di nascita. 5 tentativi errati → link bloccato.
+// - Con la sessione: ogni chiamata riverifica il token con mio_volontario_id(); senza volontario → 401.
 // - Espone SOLO i dati di quel volontario e il catalogo DPI attivo.
 // - Scrive SOLO in agg_proposte e agg_documenti (stato IN_ATTESA, origine
 //   VOLONTARIO) + storage agg-privato/<volontario>/<proposta>/…, oltre ai
@@ -16,7 +19,8 @@
 //   cambiano solo quando il master approva la proposta (agg-api → proposta_approva).
 // - Messaggi d'errore generici, nessun dettaglio interno al client.
 //
-// Body JSON: { t, data_nascita, action, ... }   (action: apri | invia | foto_conferma | doc_rimuovi)
+// Body JSON: { t, data_nascita, action, ... }   (action: stato | apri | invia | foto_conferma | doc_rimuovi)
+//            dall'Area Riservata: { action, ... } senza t e data_nascita
 // Upload:    multipart/form-data con t, data_nascita, action=upload, tipo, descrizione, scadenza, file
 // Risposta:  { ok: true, ... } oppure { ok: false, error }
 
@@ -32,6 +36,7 @@ const MAX_FIRMA_BYTES = 300 * 1024;
 const DESCR_FIRMA = 'Firma per il consenso al trattamento dei dati personali';
 
 const MSG_LINK = 'Link non valido o scaduto. Chiedi alla segreteria un nuovo link.';
+const MSG_SESSIONE = 'Accesso non valido: esci e rientra nell\'Area Riservata.';
 // Campo interno di agg_proposte.dati: il volontario conferma la foto già in archivio.
 const FOTO_CONF = '_foto_confermata_il';
 
@@ -135,44 +140,63 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
   const token = String(campi.t || '');
   const dataNascita = String(campi.data_nascita || '');
   const action = String(campi.action || '');
-  if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return jsonResponse({ ok: false, error: MSG_LINK }, 404);
-
-  // -- Verifica link --
-  const hash = await sha256Hex(token);
-  const linkRes = await fetch(`${SUPA_URL}/rest/v1/agg_link?token_hash=eq.${hash}&select=*`, { headers: HSRV });
-  const linkArr = await linkRes.json();
-  const link = Array.isArray(linkArr) && linkArr.length ? linkArr[0] : null;
-  if (!link || link.revocato || !link.scade_il || new Date(link.scade_il).getTime() < Date.now()
-      || (link.tentativi_falliti || 0) >= MAX_TENTATIVI) {
-    return jsonResponse({ ok: false, error: MSG_LINK }, 404);
-  }
-
-  const vRes = await fetch(`${SUPA_URL}/rest/v1/agg_volontari?id=eq.${Number(link.volontario_id)}&select=*`, { headers: HSRV });
-  const vArr = await vRes.json();
-  const v = Array.isArray(vArr) && vArr.length ? vArr[0] : null;
-  if (!v || !v.data_nascita) return jsonResponse({ ok: false, error: MSG_LINK }, 404);
-
-  async function patchLink(patch: Record<string, unknown>) {
-    try {
-      await fetch(`${SUPA_URL}/rest/v1/agg_link?id=eq.${link.id}`, {
-        method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
-      });
-    } catch (e) { console.error('patch agg_link fallita', e); }
-  }
-
-  // -- Verifica data di nascita --
-  if (!reData.test(dataNascita) || dataNascita !== String(v.data_nascita).slice(0, 10)) {
-    const falliti = (link.tentativi_falliti || 0) + 1;
-    await patchLink({ tentativi_falliti: falliti });
-    if (falliti >= MAX_TENTATIVI) return jsonResponse({ ok: false, error: 'Troppi tentativi errati: il link è stato bloccato. Chiedi alla segreteria un nuovo link.', bloccato: true }, 403);
-    return jsonResponse({ ok: false, error: 'Data di nascita non corretta.', tentativi_rimasti: MAX_TENTATIVI - falliti, verifica: true }, 401);
-  }
-
   const ora = new Date().toISOString();
-  const patchAccesso: Record<string, unknown> = { ultimo_accesso: ora };
-  if (link.tentativi_falliti) patchAccesso.tentativi_falliti = 0;
-  if (action === 'apri' || action === 'invia') patchAccesso.usi = (link.usi || 0) + 1;
-  await patchLink(patchAccesso);
+  let link: any = null;   // resta null quando si entra dall'Area Riservata
+  let v: any = null;
+
+  if (!token) {
+    // -- Accesso dall'Area Riservata: il volontario è quello della sessione --
+    const auth = req.headers.get('authorization') || '';
+    const ANON = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    if (!ANON || !auth.startsWith('Bearer ') || auth === `Bearer ${ANON}`) return jsonResponse({ ok: false, error: MSG_SESSIONE }, 401);
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/mio_volontario_id`, {
+      method: 'POST', headers: { apikey: ANON, Authorization: auth, 'Content-Type': 'application/json' }, body: '{}',
+    });
+    const mioId = r.ok ? Number(await r.json()) : 0;
+    if (!mioId) return jsonResponse({ ok: false, error: MSG_SESSIONE }, 401);
+    const vRes = await fetch(`${SUPA_URL}/rest/v1/agg_volontari?volontario_id=eq.${mioId}&select=*`, { headers: HSRV });
+    const vArr = await vRes.json();
+    v = Array.isArray(vArr) && vArr.length === 1 ? vArr[0] : null;
+    if (!v) return jsonResponse({ ok: false, error: 'La tua scheda non è ancora pronta per l\'aggiornamento: scrivi in segreteria.' }, 404);
+  } else {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return jsonResponse({ ok: false, error: MSG_LINK }, 404);
+
+    // -- Verifica link --
+    const hash = await sha256Hex(token);
+    const linkRes = await fetch(`${SUPA_URL}/rest/v1/agg_link?token_hash=eq.${hash}&select=*`, { headers: HSRV });
+    const linkArr = await linkRes.json();
+    link = Array.isArray(linkArr) && linkArr.length ? linkArr[0] : null;
+    if (!link || link.revocato || !link.scade_il || new Date(link.scade_il).getTime() < Date.now()
+        || (link.tentativi_falliti || 0) >= MAX_TENTATIVI) {
+      return jsonResponse({ ok: false, error: MSG_LINK }, 404);
+    }
+
+    const vRes = await fetch(`${SUPA_URL}/rest/v1/agg_volontari?id=eq.${Number(link.volontario_id)}&select=*`, { headers: HSRV });
+    const vArr = await vRes.json();
+    v = Array.isArray(vArr) && vArr.length ? vArr[0] : null;
+    if (!v || !v.data_nascita) return jsonResponse({ ok: false, error: MSG_LINK }, 404);
+
+    const patchLink = async (patch: Record<string, unknown>) => {
+      try {
+        await fetch(`${SUPA_URL}/rest/v1/agg_link?id=eq.${link.id}`, {
+          method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=minimal' }, body: JSON.stringify(patch),
+        });
+      } catch (e) { console.error('patch agg_link fallita', e); }
+    };
+
+    // -- Verifica data di nascita --
+    if (!reData.test(dataNascita) || dataNascita !== String(v.data_nascita).slice(0, 10)) {
+      const falliti = (link.tentativi_falliti || 0) + 1;
+      await patchLink({ tentativi_falliti: falliti });
+      if (falliti >= MAX_TENTATIVI) return jsonResponse({ ok: false, error: 'Troppi tentativi errati: il link è stato bloccato. Chiedi alla segreteria un nuovo link.', bloccato: true }, 403);
+      return jsonResponse({ ok: false, error: 'Data di nascita non corretta.', tentativi_rimasti: MAX_TENTATIVI - falliti, verifica: true }, 401);
+    }
+
+    const patchAccesso: Record<string, unknown> = { ultimo_accesso: ora };
+    if (link.tentativi_falliti) patchAccesso.tentativi_falliti = 0;
+    if (action === 'apri' || action === 'invia') patchAccesso.usi = (link.usi || 0) + 1;
+    await patchLink(patchAccesso);
+  }
 
   // Proposta ancora aperta (in attesa) per questo volontario, se c'è.
   async function propostaAperta() {
@@ -203,6 +227,18 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
   }
 
   try {
+    // ============================================================
+    // STATO — per il riquadro della scheda personale: campi obbligatori mancanti e proposta in attesa
+    // (stessa lista di CAMPI_ANAGRAFICA_OBBLIGATORI in agg-api e AGG_CAMPI_OBBLIGATORI in aggiornamento-dati.js)
+    // ============================================================
+    if (action === 'stato') {
+      const OBBLIGATORI = ['cognome', 'nome', 'codice_fiscale', 'data_nascita', 'luogo_nascita', 'provincia_nascita',
+        'squadra', 'tipo_volontario', 'indirizzo', 'civico', 'cap', 'citta', 'provincia', 'telefono'];
+      const mancanti = OBBLIGATORI.filter(k => v[k] === null || v[k] === undefined || String(v[k]).trim() === '');
+      const p = await propostaAperta();
+      return jsonResponse({ ok: true, obbligatori: OBBLIGATORI.length, mancanti, proposta: p ? { inviata_il: p.inviata_il || p.creato_il } : null });
+    }
+
     // ============================================================
     // APRI — dati del volontario, catalogo DPI attivo, eventuale proposta in attesa
     // ============================================================
@@ -239,7 +275,7 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       return jsonResponse({
         ok: true, volontario: dati, catalogo: Array.isArray(catalogo) ? catalogo : [],
         dpi: Array.isArray(dpi) ? dpi : [], categorie_suggerite: categorieSuggerite(v),
-        proposta, foto_attuale, scade_il: link.scade_il,
+        proposta, foto_attuale, scade_il: link ? link.scade_il : null, da_area_riservata: !link,
         limiti: { max_file: MAX_FILE_PER_PROPOSTA, max_bytes: MAX_FILE_BYTES },
       });
     }
@@ -283,14 +319,14 @@ const handler = withSupabase({ auth: 'none' }, async (req: Request, _ctx: any) =
       if (esistente) {
         const r = await fetch(`${SUPA_URL}/rest/v1/agg_proposte?id=eq.${esistente.id}&stato=eq.DA_APPROVARE`, {
           method: 'PATCH', headers: { ...HSRVJ, Prefer: 'return=representation' },
-          body: JSON.stringify({ dati, dpi, link_id: link.id, inviata_il: ora }),
+          body: JSON.stringify({ dati, dpi, ...(link ? { link_id: link.id } : {}), inviata_il: ora }),
         });
         if (!r.ok) { console.error('update proposta', await r.text()); return jsonResponse({ ok: false, error: 'Invio non riuscito, riprova.' }, 500); }
         proposta = (await r.json())[0];
       } else {
         const r = await fetch(`${SUPA_URL}/rest/v1/agg_proposte`, {
           method: 'POST', headers: { ...HSRVJ, Prefer: 'return=representation' },
-          body: JSON.stringify({ volontario_id: v.id, link_id: link.id, stato: 'DA_APPROVARE', dati, dpi, creato_il: ora, inviata_il: ora }),
+          body: JSON.stringify({ volontario_id: v.id, link_id: link ? link.id : null, stato: 'DA_APPROVARE', dati, dpi, creato_il: ora, inviata_il: ora }),
         });
         if (!r.ok) { console.error('insert proposta', await r.text()); return jsonResponse({ ok: false, error: 'Invio non riuscito, riprova.' }, 500); }
         proposta = (await r.json())[0];

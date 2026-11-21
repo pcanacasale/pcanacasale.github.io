@@ -109,10 +109,11 @@ const PAGINE = [
 },
 {
   id:"scheda", percorso:["volontari"], titolo:"La mia scheda", icona:"ti-id",
-  perche:"Tutto quello che la Sezione ha registrato su di te: dati, documenti, visita medica, corsi, dotazioni, interventi e l'archivio dei tuoi attestati.",
+  perche:"Tutto quello che la Sezione ha registrato su di te: dati, documenti, visita medica, corsi, dotazioni, interventi e l'archivio dei tuoi attestati. Da qui aggiorni anche i tuoi dati.",
   chi:"Tutti i volontari.", video:"",
   intro:"La mia scheda è la pagina più importante per te. Qui vedi tutto quello che la Sezione ha registrato su di te.",
   schermo: () => app("scheda","La mia scheda", `
+    <div class="m-box" data-h="aggiorna"><div class="m-box-t">Aggiorna i tuoi dati</div><div class="m-riga">Dati obbligatori: 12 su 14 · Mancano: Civico, CAP</div><div class="m-riga">${btn("Aggiorna i tuoi dati","","mini")}</div></div>
     <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Dotazioni","Interventi"],"schede")}
       <div class="m-campi"><span>Cognome e nome <b>Rossi Mario</b></span><span>Squadra <b>CASALE</b></span><span>Mansione <b>LOGISTICA</b></span><span>Telefono <b>333 1234567</b></span></div></div>
     <div class="m-modale" data-h="archivio"><div class="m-box-t">Corsi obbligatori</div>
@@ -124,6 +125,8 @@ const PAGINE = [
      v:"La scheda è divisa in parti. In Dati trovi anagrafica e contatti. In Documenti i file caricati, come il documento d'identità e gli attestati. In Visita medica lo stato della tua visita. In Formazione i corsi che hai fatto. In Dotazioni quello che ti è stato consegnato, dalla divisa ai dispositivi di protezione. E in Interventi tutti i servizi a cui hai partecipato, con le ore."},
     {t:"Controlla i tuoi dati", d:"Dai un'occhiata ogni tanto: telefono ed email servono per contattarti e per entrare.", h:"schede",
      v:"Vale la pena darci un'occhiata ogni tanto, soprattutto telefono ed email: sono quelli che usiamo per contattarti, e l'email serve anche per entrare."},
+    {t:"Aggiorna i tuoi dati", d:"Il riquadro Aggiorna i tuoi dati apre il modulo per correggere dati personali, taglie, foto per il tesserino e documenti, senza link e senza data di nascita. La segreteria controlla e approva; finché non lo fa puoi correggere.", h:"aggiorna",
+     v:"In cima alla scheda c'è il riquadro Aggiorna i tuoi dati. Ti dice se manca qualcosa e, toccando il pulsante, apre il modulo per correggere i tuoi dati, le taglie, la foto per il tesserino e i documenti. Visto che sei già entrato, non ti chiede né link né data di nascita. Quello che mandi lo controlla la segreteria prima di salvarlo."},
     {t:"Attestati e documenti archiviati", d:"Corsi obbligatori: 4 ore, 12 ore e Caposquadra, con l'attestato in vigore. Abilitazioni: DAE, carrelli, escavatori e simili, solo quelle valide. Attestati: quelli dell'anno in corso; gli anni passati sono nei menu chiusi. Gli attestati vecchi o scaduti stanno in Storico attestati. Tocca una riga per aprire il PDF. Rosso = scaduto, giallo = scade entro due mesi.", h:"archivio",
      v:"Più in basso trovi gli attestati e i documenti che la Sezione ha archiviato per te. In Corsi obbligatori ci sono il 4 ore, il 12 ore e il caposquadra, ognuno con l'attestato in vigore. In Abilitazioni trovi il DAE, i carrelli, gli escavatori e simili. In Attestati vedi quelli di quest'anno, e quelli degli anni passati li apri dai menu sotto. Gli attestati vecchi o scaduti non spariscono: sono nel menu Storico attestati. Tocchi una riga e il PDF si apre."},
     {t:"Se c'è un errore", d:"Premi Segnala un errore e scrivi cosa non va: la segreteria lo corregge.", h:"errore",
@@ -166,7 +169,7 @@ const PAGINE = [
   id:"aggiorna", percorso:["volontari"], titolo:"Aggiornare i tuoi dati dal link", icona:"ti-refresh",
   perche:"Quando la segreteria ti manda un link personale per aggiornare dati, foto, documenti e taglie.",
   chi:"I volontari che ricevono il link.", video:"",
-  intro:"Ogni tanto la segreteria ti manda un link personale, di solito su WhatsApp, per aggiornare i tuoi dati. Non serve entrare nell'Area Riservata: fai tutto da quel link, anche dal telefono.",
+  intro:"Ogni tanto la segreteria ti manda un link personale, di solito su WhatsApp, per aggiornare i tuoi dati. Non serve entrare nell'Area Riservata: fai tutto da quel link, anche dal telefono. Se invece entri nell'Area Riservata, lo stesso modulo lo trovi in La mia scheda, senza link e senza data di nascita.",
   schermo: () => `<div class="m-app solo"><main class="m-main"><div class="m-titolo">Aggiorna i tuoi dati</div><div class="m-body">
     <div class="m-box" data-h="verifica"><div class="m-box-t">Per sicurezza, scrivi la tua data di nascita</div><div class="m-campi"><span>Data di nascita <b>gg/mm/aaaa</b></span></div><small>Dopo 5 tentativi sbagliati il link si blocca.</small></div>
     <div class="m-passi-agg" data-h="passi"><span class="on">I tuoi dati</span><span>Foto</span><span>Documenti</span><span>Taglie e DPI</span><span>Firma</span><span>Riepilogo</span></div>
