@@ -1002,7 +1002,7 @@ function apriFormVolontario(id) {
 
 // Sezioni del form. perScheda: corsi e visita stanno nelle schede Formazione e Visita medica,
 // con gli stessi id, così salvaVolontario li legge senza distinzioni.
-// Ordine: Anagrafica, Contatti, Unità, Datore di lavoro, (scheda: Taglie DPI), Amministrativo
+// Ordine: Anagrafica, Contatti, Unità, Datore di lavoro, Amministrativo (nella scheda le Taglie DPI hanno una scheda a parte)
 // (Commissione di Unità, Tutela legale CAP, ID EMERCOM). Nella scheda Radio ANA ed EMERCOM stanno nella tab
 // Formazione; nel modulo "Nuovo volontario" in "Formazione e visita".
 // Non più nel modulo (i dati restano in volontari e salvaVolontario() non tocca i campi che non trova):
@@ -1065,7 +1065,6 @@ function volFormSezioniHtml(perScheda) {
         <div class="vol-form-field"><label class="vol-form-lbl">Città ditta</label><input class="vol-form-inp" id="fCittaLavoro"></div>
       </div>
     </div>
-    ${perScheda ? '<div id="svTaglie"></div>' : ''}
     <div class="vol-form-section">
       <div class="vol-form-section-title" onclick="toggleFormSection(this)">Amministrativo</div>
       <div class="vol-form-checks">

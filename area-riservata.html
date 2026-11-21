@@ -310,6 +310,7 @@ b.sv-corso-t{cursor:default}
 .vol-form-section-title{display:flex;align-items:center;justify-content:space-between;min-height:44px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none}
 .vol-form-section-title::after{content:'▾';font-size:12px;transition:transform .15s}
 .vol-form-section-title.collapsed::after{transform:rotate(-90deg)}
+.vol-form-section-title.collapsed~*{display:none!important}
 .vol-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .vol-form-field.full{grid-column:1 / -1}
 .vol-form-lbl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
@@ -2259,14 +2260,14 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=214"></script>
+<script src="area-riservata.js?v=215"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
 <script src="aggiornamento-dati.js?v=15"></script>
 <script src="verifica-piattaforme-core.js?v=1"></script>
 <script src="verifica-piattaforme.js?v=2"></script>
 <script src="informativa-testo.js?v=1"></script>
 <script src="modulo-cartaceo.js?v=1"></script>
-<script src="scheda-volontario.js?v=20"></script>
+<script src="scheda-volontario.js?v=21"></script>
 <script src="archivio-volontario.js?v=9"></script>
 <script src="allerta-home.js?v=3"></script>
 <script src="editor-pdf.js?v=3"></script>

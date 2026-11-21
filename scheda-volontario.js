@@ -19,6 +19,7 @@ const SV_TABS = [
   { id: 'abilitazioni', label: 'Abilitazioni' },
   { id: 'attestati',  label: 'Attestati' },
   { id: 'interventi', label: 'Interventi' },
+  { id: 'taglie',     label: 'Taglie DPI' },
 ];
 
 let sv = null;      // { id, v, docs, agg, tab, ore, dirty, interventiOk, anteprimeOk }
@@ -30,6 +31,7 @@ function svPuoVisita() { return canModificaVolontari() || hasPerm('visite'); }
 function svPuoDoc()    { return canModificaVolontari() || hasPerm('documenti'); }
 function svHaAgg()     { return typeof aggHaAccesso === 'function' && aggHaAccesso(); }
 function svTabVisibile(tab) {
+  if (tab === 'taglie') return svHaAgg();   // le taglie arrivano da Aggiornamento dati (agg-api)
   if (tab === 'interventi') return hasPerm('interventi');
   if (tab === 'attestati') return arcPuoStaff();
   if (hasPerm('volontari')) return true;
@@ -147,6 +149,7 @@ function svRender() {
   svRenderAbilitazioni();
   svRenderDocumenti();
   svRenderDotazioni();
+  svRenderPannelloTaglie();
   svRenderDrive();
   if (svPuoDati()) riempiFormVolontario(sv.v);
 }
@@ -240,7 +243,7 @@ function svVociDaSistemare() {
   if (p.visita) add('visita', 'Visita');
   p.formazione.forEach(l => add('formazione', l));
   p.abilitazioni.forEach(l => add('abilitazioni', l));
-  if (p.taglie) add('dati', 'Taglie');
+  if (p.taglie) add('taglie', 'Taglie');
   if (svDocAgg().some(d => d.tipo === 'MODULO_COMPILATO' && !d.registrato_il)) add('documenti', 'Modulo da registrare');
   return voci;
 }
@@ -279,12 +282,11 @@ function svRenderDati() {
   const box = document.getElementById('svP_dati');
   const v = sv.v;
   if (svPuoDati()) {
-    box.innerHTML = volFormSezioniHtml(true);   // contiene il posto per le Taglie DPI dopo il Datore di lavoro
-    svRenderTaglie();
+    box.innerHTML = volFormSezioniHtml(true);
     svOsservaModifiche(box);
     return;
   }
-  // Stesso ordine del modulo: Anagrafica, Contatti, Unità, Datore di lavoro, Taglie DPI, Amministrativo
+  // Stesso ordine del modulo: Anagrafica, Contatti, Unità, Datore di lavoro, Amministrativo (le taglie hanno la loro scheda)
   box.innerHTML = svSezione('Anagrafica', svCampo('Codice Fiscale', v.codice_fiscale) + svCampo('Data nascita', svData(v.data_nascita))
       + svCampo('Luogo nascita', v.luogo_nascita) + svCampo('Indirizzo', v.indirizzo ? v.indirizzo + (v.citta ? ', ' + v.citta : '') : ''))
     + svSezione('Contatti', '<div class="vol-field"><span class="vol-field-label">Telefono</span>'
@@ -295,9 +297,7 @@ function svRenderDati() {
       + svCampo('Specializzazione', v.specializzazione) + svCampo('Gruppo Alpini', v.gruppo_alpini) + svCampo('Professione', v.professione) + svCampo('Patenti', v.patenti))
     + svSezione('Datore di lavoro (Art. 39)', svCampo('Ragione sociale', v.datore_lavoro) + svCampo('Indirizzo ditta', v.indirizzo_lavoro)
       + svCampo('CAP ditta', v.cap_lavoro) + svCampo('Città ditta', v.citta_lavoro))
-    + '<div id="svTaglie"></div>'
     + svSezione('Amministrativo', svSi('Commissione di Unità', v.comm_unita) + svSi('Tutela legale CAP', v.tutela_legale_cap) + svCampo('ID EMERCOM', v.cod_emercom));
-  svRenderTaglie();
   renderCampiCustomDettaglio(v).then(html => { if (sv && box.isConnected) box.insertAdjacentHTML('beforeend', html); });
 }
 
@@ -848,11 +848,19 @@ function svDpiRighe() {
   return (sv.agg.dpi || []).map(d => ({ nome: d._nome || 'Capo', categoria: d._categoria, taglia: d.taglia, consegnato: d.consegnato, data: d.data_consegna }));
 }
 
+// Scheda "Taglie DPI" (dopo Attestati e Interventi)
+function svRenderPannelloTaglie() {
+  const box = document.getElementById('svP_taglie');
+  if (!box) return;
+  box.innerHTML = '<div id="svTaglie"></div>';
+  svRenderTaglie();
+}
+
 function svRenderTaglie() {
   const box = document.getElementById('svTaglie');
   if (!box) return;
   const righe = svDpiRighe();
-  if (!righe) { box.innerHTML = ''; return; }
+  if (!righe) { box.innerHTML = '<p class="note">Taglie non disponibili: il volontario non è ancora in Aggiornamento dati.</p>'; return; }
   const conTaglia = righe.filter(r => r.taglia);
   box.innerHTML = svSezione('Taglie DPI', (conTaglia.length ? conTaglia.map(r => svCampo(aggEsc(r.nome), r.taglia)).join('') : '<p class="note m0">Nessuna taglia registrata.</p>')
     + '<button class="btn sm sv-mt" onclick="svApriAggDati()">Modifica taglie</button>');

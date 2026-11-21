@@ -273,7 +273,7 @@ const PAGINE = [
       <div class="m-card"><b>Rossi Mario</b><small>CASALE · LOGISTICA</small>${tag("Attivo","v")}</div>
       <div class="m-card"><b>Bianchi Laura</b><small>COLLINA · GENERICO</small>${tag("Da sistemare","g")}</div>
       <div class="m-card"><b>Verdi Paolo</b><small>ALFA · CAPO SQUADRA</small>${tag("Attivo","v")}</div></div>
-    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Abilitazioni","Attestati","Interventi"],"schede")}
+    <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Abilitazioni","Attestati","Interventi","Taglie DPI"],"schede")}
       <div class="m-azioni">${btn("Link bot","link","grigio")}</div></div>`),
   passi:[
     {t:"Cercare", d:"Cerca per nome, squadra o codice fiscale.", h:"cerca",
@@ -282,8 +282,8 @@ const PAGINE = [
      v:"Con Filtri restringi l'elenco: per squadra, per tipo, per mansione, solo gli attivi o i non attivi, oppure per stato della visita medica."},
     {t:"Le schede", d:"Ogni riquadro è un volontario. Da sistemare indica dati o documenti mancanti.", h:"card",
      v:"Ogni riquadro è un volontario. Se compare Da sistemare, vuol dire che manca qualcosa nei suoi dati o nei documenti: aprendo la scheda vedi cosa."},
-    {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Abilitazioni, Attestati, Interventi. Le taglie DPI sono in Dati.", h:"schede",
-     v:"La scheda è divisa in parti: dati, documenti, visita medica, formazione, abilitazioni, attestati e interventi. Le taglie dei DPI le trovi dentro Dati. Se hai il permesso, puoi modificare quello che serve."},
+    {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Abilitazioni, Attestati, Interventi e Taglie DPI. Tocca il titolo di una sezione per chiuderla o riaprirla.", h:"schede",
+     v:"La scheda è divisa in parti: dati, documenti, visita medica, formazione, abilitazioni, attestati, interventi e, in fondo, le taglie dei DPI. Le sezioni lunghe si chiudono e si riaprono toccando il titolo. Se hai il permesso, puoi modificare quello che serve."},
     {t:"Formazione", d:"In alto i corsi obbligatori (4 ore, 12 ore, Caposquadra), ognuno una volta sola con data, scadenza e attestato in vigore; i precedenti in Storico attestati. Il DAE è nella scheda Abilitazioni, con spunta e scadenza.", h:"schede",
      v:"In Formazione trovi in alto i corsi obbligatori: 4 ore, 12 ore e caposquadra. Ognuno compare una volta sola, con la data, la scadenza e l'attestato in vigore; quelli vecchi sono nel menu Storico attestati. Il DAE adesso è un'abilitazione: lo trovi in cima alla scheda Abilitazioni, con la spunta e la scadenza."},
     {t:"Archivio su Drive", d:"I file archiviati su Google Drive compaiono da soli: gli attestati di 4 ore, 12 ore e Caposquadra in Formazione sotto il loro corso, le abilitazioni (DAE, carrelli, escavatori…) nella scheda Abilitazioni, solo valide sopra e le altre in Storico attestati, gli altri nella scheda Attestati (anno in corso sopra, anni passati e Interventi nei menu per anno), adesione e simili in fondo a Documenti. Si possono solo aprire. Li vede chi ha il permesso Volontari oppure Vedere archivio documenti volontari; ogni apertura viene registrata.", h:"schede",
