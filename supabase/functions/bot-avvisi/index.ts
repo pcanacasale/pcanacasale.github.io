@@ -1,6 +1,7 @@
 // Supabase Edge Function: bot-avvisi
 //
-// Controllo periodico (pg_cron, ogni ora): se qualcosa non va avvisa i master su Telegram.
+// Controllo periodico (pg_cron, ogni ora): se qualcosa non va avvisa su Telegram chi ha la spunta
+// "Riceve gli avvisi tecnici" (o "Riceve le segnalazioni del bot" per le segnalazioni ferme), vedi _shared/avvisi.ts.
 // Non legge nulla dalla richiesta e non restituisce dati: chi la chiama può solo farle fare un
 // controllo. Lo stesso avviso non si ripete prima di 6 ore (24 per le segnalazioni).
 // Il verde non si inventa: se un dato manca, è un problema da segnalare.
@@ -41,7 +42,7 @@ Deno.serve(async () => {
     let inviati = 0;
     for (const [chiave, testo, pausa] of problemi) {
       if (!(await daAvvisare(chiave, pausa))) continue;
-      if (await avvisaStaff('⚠️ ' + testo, { soloMaster: chiave !== 'segnalazioni' })) { await segna(chiave); inviati++; }
+      if (await avvisaStaff('⚠️ ' + testo, { tipo: chiave === 'segnalazioni' ? 'segnalazioni' : 'tecnici' })) { await segna(chiave); inviati++; }
     }
     return new Response(JSON.stringify({ problemi: problemi.length, avvisi: inviati }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {

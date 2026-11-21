@@ -194,7 +194,7 @@ async function salvaSegnalazione(chat: number, a: any, v: any) {
     : 'Segnalazione registrata come generica (nessun evento in corso).', MENU);
   // Lo staff lo sa subito, senza aprire Eventi (chi ha inviato la foto non riceve l'avviso)
   await avvisaStaff('📷 Nuova segnalazione da ' + v.cognome + ' ' + v.nome + ' — ' + (ev ? ev.titolo : 'generica')
-    + (a.didascalia ? '\n' + a.didascalia : '') + '\nPosizione: https://www.google.com/maps?q=' + a.lat + ',' + a.lon, { escludi: chat });
+    + (a.didascalia ? '\n' + a.didascalia : '') + '\nPosizione: https://www.google.com/maps?q=' + a.lat + ',' + a.lon, { tipo: 'segnalazioni', escludi: chat });
 }
 
 // Le foto ferme da più di 10 minuti non restano appese: si avvisa e si tolgono

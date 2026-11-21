@@ -327,8 +327,8 @@ const PAGINE = [
      v:"Lo stato in corso è importante: finché l'evento è in corso, le foto che i volontari mandano al bot vengono collegate direttamente qui."},
     {t:"Il cruscotto", d:"Riepilogo, Volontari con le disponibilità giorno per giorno, Mezzi e materiali, Ospiti e Cucina con i pasti.", h:"schede",
      v:"Dentro l'evento hai il cruscotto. Il riepilogo con i totali. Volontari, con la disponibilità di ognuno giorno per giorno. Mezzi e materiali. Ospiti. E Cucina, con i pasti da preparare."},
-    {t:"Segnalazioni", d:"Le foto dal bot, con posizione. Quelle generiche si assegnano a un evento con Assegna a evento….", h:"segnalazioni",
-     v:"In Segnalazioni vedi le foto arrivate dal bot, con la posizione. Quelle arrivate quando non c'era niente in corso restano generiche: le puoi assegnare all'evento giusto con Assegna a evento."},
+    {t:"Segnalazioni", d:"Le foto dal bot, con posizione. Quelle generiche si assegnano a un evento con Assegna a evento…. Su Telegram la notifica arriva solo a chi ha la spunta \"Riceve le segnalazioni del bot\" in Gestione accessi.", h:"segnalazioni",
+     v:"In Segnalazioni vedi le foto arrivate dal bot, con la posizione. Quelle arrivate quando non c'era niente in corso restano generiche: le puoi assegnare all'evento giusto con Assegna a evento. L'avviso su Telegram invece arriva solo a chi ha la spunta Riceve le segnalazioni del bot, in Gestione accessi."},
     {t:"Messaggi", d:"Invia messaggio scrive a tutti i volontari collegati al bot Telegram.", h:"messaggio",
      v:"Con Invia messaggio scrivi in un colpo solo a tutti i volontari collegati al bot Telegram. Utile per una convocazione veloce."},
     {t:"A fine evento", d:"Quando lo concludi, l'app crea l'intervento contando solo i presenti, così le ore finiscono nelle schede.", h:"schede",
@@ -632,14 +632,17 @@ const PAGINE = [
   intro:"Gestione accessi è riservata al master: da qui si decide chi entra e cosa può fare.",
   schermo: () => app("altro","Gestione accessi", `<div class="m-barra"><span class="m-sp"></span>${btn("Aggiungi staff","nuovo")}</div>
     ${tab([["Persona","Email di accesso","Tipo"],["Bianchi Laura","laura@…","standard"],["Rossi Mario","mario@…","volontario"]],"elenco")}
-    <div class="m-modale" data-h="permessi"><div class="m-box-t">Permessi di Bianchi Laura</div><div class="m-campi"><span>Volontari <b>☑</b></span><span>Interventi <b>☑</b></span><span>Eventi <b>☐</b></span><span>Dotazioni <b>☑</b></span></div></div>`),
+    <div class="m-modale" data-h="permessi"><div class="m-box-t">Permessi di Bianchi Laura</div><div class="m-campi"><span>Volontari <b>☑</b></span><span>Interventi <b>☑</b></span><span>Eventi <b>☐</b></span><span>Dotazioni <b>☑</b></span></div>
+      <div class="m-campi" data-h="bot"><b>Bot Telegram</b><span>Riceve le segnalazioni del bot <b>☑</b></span><span>Riceve gli avvisi tecnici <b>☐</b></span></div></div>`),
   passi:[
     {t:"Le email di accesso", d:"Per entrare, l'email di una persona deve essere abilitata qui. Ci sono anche i volontari senza email, da completare.", h:"elenco",
      v:"Per entrare, l'email di una persona deve essere abilitata qui. Se a qualcuno compare Questa mail non è abilitata, è qui che devi intervenire. C'è anche l'elenco dei volontari senza email, da completare."},
     {t:"Aggiungi staff", d:"Lo staff ha accesso alle pagine di gestione, in base ai permessi.", h:"nuovo",
      v:"Con Aggiungi staff dai a una persona l'accesso alla parte di gestione."},
     {t:"I permessi", d:"Con la matrice dei permessi scegli pagina per pagina cosa vede ognuno.", h:"permessi",
-     v:"E con la matrice dei permessi scegli, pagina per pagina, cosa può vedere e fare ognuno. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."}
+     v:"E con la matrice dei permessi scegli, pagina per pagina, cosa può vedere e fare ognuno. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."},
+    {t:"Avvisi del bot", d:"Nel gruppo Bot Telegram scegli chi riceve su Telegram le segnalazioni dei volontari e gli avvisi tecnici. Gli altri vedono le segnalazioni solo nell'app.", h:"bot",
+     v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, in Eventi."}
   ]
 },
 {
