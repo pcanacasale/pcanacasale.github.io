@@ -318,6 +318,10 @@ fieldset{border:0;padding:0;margin:0}
    - escludi: pagine da nascondere sempre (es. ["utenti"])
    - L'indirizzo accetta anche: ?solo=tlc,formazione  ?escludi=utenti
      ?profilo=base | completo   e #id-pagina per aprire una pagina
+   - Guida su misura: ?g=CODICE (pagine e profilo codificati, con controllo: un codice
+     modificato a mano non apre niente). Dentro una guida su misura non ci sono il pulsante
+     "Guida su misura" né il collegamento alla guida completa. È un blocco di cortesia:
+     i testi stanno comunque in dati.js, che è pubblico.
    ===================================================================== */
 const CONFIG = { escludi: [] };
 const G = (typeof GUIDA !== "undefined") ? GUIDA : {};
@@ -339,8 +343,27 @@ function listaPerc(k){
 const nelPerc = () => listaPerc(PERC);
 
 const qs = new URLSearchParams(location.search);
-const PROFILO = qs.get("profilo") || "";
-const SOLO = (qs.get("solo") || "").split(",").map(s => s.trim()).filter(Boolean);
+// Codice della guida su misura: base64url("profilo|pag1,pag2") + "." + controllo
+const G_SALE = "pcana-guida-1";
+function gControllo(s){ let h = 0x811c9dc5; for (const c of G_SALE + s){ h ^= c.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(36); }
+function gCodifica(profilo, solo){
+  const s = (profilo || "") + "|" + solo.join(",");
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "." + gControllo(s);
+}
+function gDecodifica(code){
+  try{
+    const [b, ctl] = String(code).split(".");
+    const s = decodeURIComponent(escape(atob(b.replace(/-/g, "+").replace(/_/g, "/"))));
+    if (!ctl || gControllo(s) !== ctl) return null;
+    const [profilo, pagine] = s.split("|");
+    return { profilo: ["", "base", "completo"].includes(profilo) ? profilo : "", solo: (pagine || "").split(",").filter(Boolean) };
+  }catch(e){ return null; }
+}
+const G_CODICE = qs.get("g");
+const G_DATI = G_CODICE ? gDecodifica(G_CODICE) : null;
+const G_ROTTO = !!G_CODICE && (!G_DATI || !G_DATI.solo.length);
+const PROFILO = G_DATI ? G_DATI.profilo : (qs.get("profilo") || "");
+const SOLO = G_ROTTO ? ["__nessuna__"] : G_DATI ? G_DATI.solo : (qs.get("solo") || "").split(",").map(s => s.trim()).filter(Boolean);
 const ESCLUDI = [...CONFIG.escludi, ...(qs.get("escludi") || "").split(",").map(s => s.trim()).filter(Boolean)];
 const MISURA = SOLO.length || ESCLUDI.length > CONFIG.escludi.length || PROFILO;
 
@@ -358,10 +381,13 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">"
 const conQuery = h => (location.search || "") + "#" + h;
 
 /* ---------- avviso guida su misura ---------- */
+// Dentro una guida su misura non si arriva al resto: niente pulsante "Guida su misura", niente link alla guida completa
+if (MISURA) document.getElementById("b-misura").style.display = "none";
 if (MISURA){
   const a = document.getElementById("avviso-misura");
   a.hidden = false;
-  a.innerHTML = `<div><i class="ti ti-filter"></i>Stai vedendo una guida su misura${PROFILO==="base"?" per utenti con permesso base":PROFILO==="completo"?" per utenti con permesso completo":""}. <a href="${location.pathname}">Mostra la guida completa</a></div>`;
+  a.innerHTML = G_ROTTO ? `<div><i class="ti ti-alert-triangle"></i>Questo link della guida non è valido. Chiedi alla segreteria il link giusto.</div>`
+    : `<div><i class="ti ti-filter"></i>Questa guida contiene solo le parti scelte per te dalla segreteria.</div>`;
 }
 
 /* ---------- copertina ---------- */
@@ -588,15 +614,11 @@ dlg.addEventListener("change", aggiornaUrl);
 function aggiornaUrl(){
   const scelti = [...dlg.querySelectorAll("#d-lista input:checked")].map(i => i.value);
   const prof = dlg.querySelector("input[name=prof]:checked").value;
-  const p = new URLSearchParams();
-  if (scelti.length && scelti.length < PAGINE.length){
-    // le pagine comuni a più percorsi restano se è scelta almeno una pagina del loro percorso
-    PAGINE.filter(pg => percDi(pg).length > 1 && !scelti.includes(pg.id) && scelti.some(id => { const q = PAGINE.find(x => x.id === id); return q && percDi(pg).some(k => percDi(q).includes(k)); })).forEach(pg => scelti.push(pg.id));
-    p.set("solo", scelti.join(","));
-  }
-  if (prof) p.set("profilo", prof);
-  const s = p.toString();
-  document.getElementById("d-url").value = location.origin + location.pathname + (s ? "?" + s.replace(/%2C/g, ",") : "");
+  // Solo le pagine spuntate, nient'altro (anche le pagine comuni a volontari e staff vanno spuntate)
+  const solo = scelti.length < PAGINE.length ? scelti : [];
+  // Link con codice (non modificabile a mano); tutte le pagine e nessun profilo = guida completa
+  const codice = solo.length || prof ? gCodifica(prof, solo.length ? solo : PAGINE.map(x => x.id)) : "";
+  document.getElementById("d-url").value = location.origin + location.pathname + (codice ? "?g=" + codice : "");
 }
 document.getElementById("d-copia").addEventListener("click", async () => {
   const inp = document.getElementById("d-url"), b = document.getElementById("d-copia");
