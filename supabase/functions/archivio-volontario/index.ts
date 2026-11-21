@@ -15,6 +15,9 @@
 //   tutti i volontari (anche file senza "Abilitazione -" nel nome, se il titolo è di una voce abilitazione del
 //   catalogo). Salta le copie "(copia)/(2)" e i doppioni stesso volontario + voce + data. Solo con permesso formazione o modifica_volontari. Ogni riga importata ricorda il file
 //   (drive_file_id): rilanciando, i file già importati si saltano. Nessuna riga viene cancellata.
+// Corsi obbligatori (4 ore, 12 ore, Caposquadra): la scadenza è data del corso + validità del catalogo, sia
+//   nell'import sia in lista; quella scritta nel nome del file vale se la voce non ha validità o se ci si
+//   discosta di non più di un mese (scadenzaCorso).
 //
 // Secrets: GOOGLE_SA_JSON (service account con accesso in lettura al Drive condiviso).
 // Ogni apertura di file finisce in log_attivita.
@@ -194,12 +197,19 @@ function leggiNome(nomeFile: string) {
 
 // -- AZIONI --
 async function lista(volId: number) {
-  const { sotto } = await cartelle(volId);
+  const [{ sotto }, catalogo] = await Promise.all([cartelle(volId), leggiCatalogo()]);
   const file: any[] = [];
   for (const categoria of SOTTOCARTELLE) {
     if (!sotto[categoria]) continue;
     const f = await fileDi(sotto[categoria], 'id,name,mimeType,size');
-    f.forEach(x => file.push({ id: x.id, nome_file: x.name, categoria, ...leggiNome(x.name), dimensione: x.size ? Number(x.size) : null }));
+    f.forEach(x => {
+      const n = leggiNome(x.name);
+      // Attestati dei corsi obbligatori: scadenza dalla validità del catalogo (stessa regola dell'import);
+      // quella scritta nel nome resta in scadenza_file.
+      const voce = categoria === 'Attestati' && n.data ? voceCorsoFisso(catalogo, (n.titolo || '') + ' ' + x.name) : null;
+      const scadenza = voce ? scadenzaCorso(n.data!, voce.validita_anni, n.scadenza) : n.scadenza;
+      file.push({ id: x.id, nome_file: x.name, categoria, ...n, scadenza, scadenza_file: n.scadenza, dimensione: x.size ? Number(x.size) : null });
+    });
   }
   file.sort((a, b) => (b.data || '').localeCompare(a.data || '') || a.nome_file.localeCompare(b.nome_file, 'it'));
   return file;
@@ -242,6 +252,38 @@ const CORSI_FISSI = [
   { codice: 'DAE',    titolo: 'DAE',               campo: 'dae',          re: /defibrillat|\bDAE\b|\bBLSD\b|\bAED\b/i },
 ];
 
+// 'AAAA-MM-GG' + n anni (29 febbraio → 28 febbraio, come make_interval nel database)
+function piuAnni(data: string, anni: number) {
+  const [a, m, g] = data.split('-').map(Number);
+  const d = new Date(Date.UTC(a + anni, m - 1, g));
+  if (d.getUTCMonth() !== m - 1) d.setUTCDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
+// Scadenza di un corso obbligatorio: data + validità del catalogo. Quella del nome file si tiene solo se
+// differisce di pochi giorni (es. "+5 anni e 1 giorno" del 12 ore); se è lontana (Caposquadra scritto a
+// 5 anni invece di 2) vince il catalogo.
+function scadenzaCorso(data: string, anni: number, dalNome: string | null) {
+  const calcolata = piuAnni(data, anni);
+  if (!dalNome) return calcolata;
+  return Math.abs(Date.parse(dalNome) - Date.parse(calcolata)) <= 31 * 86400000 ? dalNome : calcolata;
+}
+
+async function leggiCatalogo(): Promise<any[]> {
+  try { return await db('GET', 'formazione_catalogo?attivo=eq.true&select=id,tipo,codice,parole_chiave,ordine,validita_anni&order=ordine,id'); }
+  catch (_) { return []; }   // catalogo non ancora creato
+}
+
+// Voce di un corso obbligatorio (4 ore, 12 ore, Caposquadra) con validità, dalle parole chiave; il DAE no.
+function voceCorsoFisso(catalogo: any[], testo: string) {
+  const voceDae = catalogo.find(c => c.codice === 'DAE');
+  const t = ' ' + norm(testo) + ' ';
+  const ha = (c: any) => (c.parole_chiave || []).some((k: string) => norm(k) && t.includes(' ' + norm(k)));
+  if (voceDae ? ha(voceDae) : CORSI_FISSI[3].re.test(testo)) return null;
+  const voce = catalogo.find(c => c.tipo === 'CORSO' && c.codice !== 'DA_VERIFICARE' && ha(c));
+  return voce && ['4_ORE', '12_ORE', 'CAPOSQ'].includes(voce.codice) && voce.validita_anni ? voce : null;
+}
+
 async function aGruppi<T>(elenco: T[], quanti: number, fn: (x: T) => Promise<void>) {
   for (let i = 0; i < elenco.length; i += quanti) await Promise.all(elenco.slice(i, i + quanti).map(fn));
 }
@@ -250,8 +292,7 @@ async function importa(utente: string) {
   const vols = await db('GET', 'volontari?drive_folder_id=not.is.null&select=id,drive_folder_id');
   const reg: any[] = await db('GET', 'formazione_registro?select=id,volontario_id,tipo,codice,titolo,data_corso,scadenza,drive_file_id,catalogo_id');
   const giaImportati = new Set(reg.map(r => r.drive_file_id).filter(Boolean));
-  let catalogo: any[] = [];
-  try { catalogo = await db('GET', 'formazione_catalogo?attivo=eq.true&select=id,tipo,codice,parole_chiave,ordine&order=ordine,id'); } catch (_) { /* catalogo non ancora creato */ }
+  const catalogo = await leggiCatalogo();
   // voce del catalogo dalle parole chiave ("Da verificare" esclusa)
   const voceDi = (tipo: string, testo: string) => {
     const t = ' ' + norm(testo) + ' ';
@@ -305,14 +346,18 @@ async function importa(utente: string) {
           if (chiavi.has(k)) { saltati++; continue; }
           chiavi.add(k);
         }
-        const base = { data_corso: f.data, scadenza: f.scadenza, drive_file_id: f.id };
+        // Corsi obbligatori: la scadenza la decide la validità del catalogo (es. Caposquadra 2 anni),
+        // non quella scritta nel nome del file, che può essere sbagliata (vedi scadenzaCorso).
+        const voceCorso = corso && corso.codice !== 'DAE' ? catalogo.find(c => c.codice === corso.codice) : null;
+        const scadenza = voceCorso && voceCorso.validita_anni && f.data ? scadenzaCorso(f.data, voceCorso.validita_anni, f.scadenza) : f.scadenza;
+        const base = { data_corso: f.data, scadenza, drive_file_id: f.id };
         // riga già presente senza file: si completa (pregressi dei corsi fissi, abilitazioni inserite a mano)
         const esistente = reg.find(r => r.volontario_id === v.id && !r.drive_file_id && (corso
           ? r.codice === corso.codice && !r.data_corso
           : r.tipo === 'ABILITAZIONE' && String(r.titolo).trim().toLowerCase() === String(f.titolo).trim().toLowerCase() && (!r.data_corso || r.data_corso === f.data)));
         if (esistente) {
           esistente.drive_file_id = f.id;
-          const corpo = { ...base, data_corso: f.data || esistente.data_corso, scadenza: f.scadenza || esistente.scadenza };
+          const corpo = { ...base, data_corso: f.data || esistente.data_corso, scadenza: scadenza || esistente.scadenza };
           esistente.scadenza = corpo.scadenza;
           modifiche.push({ id: esistente.id, volontario_id: v.id, codice: esistente.codice, corpo });
         } else {

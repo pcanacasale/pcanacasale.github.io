@@ -109,7 +109,7 @@ insert into public.formazione_catalogo (codice, tipo, titolo, validita_anni, par
 select * from (values
   ('4_ORE',         'CORSO',        'Corso 4 ore',                                            null::integer, array['4 ore', 'quattro ore', 'sensibilizzazione rischio', 'sensibilizzazione al rischio'], 10),
   ('12_ORE',        'CORSO',        'Corso 12 ore',                                           5,  array['12 ore', 'dodici ore', 'rischio alto'], 11),
-  ('CAPOSQ',        'CORSO',        'Corso Caposquadra',                                      5,  array['caposquadra', 'capo squadra'], 12),
+  ('CAPOSQ',        'CORSO',        'Corso Caposquadra',                                      2,  array['caposquadra', 'capo squadra'], 12),
   ('DAE',           'CORSO',        'DAE',                                                    2,  array['dae', 'defibrillat', 'blsd', 'aed'], 13),
   ('TELESCOPICI',   'ABILITAZIONE', 'Carrelli a braccio telescopico',                         5,  array['braccio telescopico', 'telescopic'], 20),
   ('CARRELLI',      'ABILITAZIONE', 'Carrelli elevatori semoventi con conducente a bordo',    5,  array['carrell'], 21),
