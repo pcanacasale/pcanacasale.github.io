@@ -273,12 +273,13 @@ const NAV_VOCI = [
   { id:'siEditorPdf',       label:'Editor PDF',         ic:'file',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siConvocazioni',    label:'Generatore convocazioni', ic:'send', sez:'Strumenti',      ruoli:NAV_RUOLI_STAFF },
   { id:'siEventi',          label:'Eventi',             ic:'alert',   sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
+  { id:'siSci',             label:'S.C.I.',             ic:'chat',    sez:'Strumenti',       ruoli:NAV_RUOLI_STAFF },
   { id:'siVisite',          label:'Visite mediche',     ic:'heart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siFormazione',      label:'Formazione',         ic:'clip',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siVerificaPiattaforme', label:'Verifica piattaforme', ic:'table', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
-  { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:NAV_RUOLI_TUTTI },
+  { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:['volontario'] },
   { id:'siRichieste',       label:'Richieste',          ic:'inbox',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siDb',              label:'DB',                 ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siAccessi',         label:'Registro accessi',   ic:'shield',  sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
@@ -286,7 +287,7 @@ const NAV_VOCI = [
   { id:'siImpostazioni',    label:'Impostazioni',       ic:'gear',    sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
 ];
 const NAV_IC = {
-  alert:'M12 3l10 18H2zM12 10v5M12 18v.5',
+  alert:'M12 3l10 18H2zM12 10v5M12 18v.5', chat:'M4 4h16v12H9l-5 4zM8 9h8M8 12h5',
   home:'M3 11l9-8 9 8M5 10v10h14V10', users:'M16 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21c0-4 4-6 8-6s8 2 8 6',
   user:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6',
   truck:'M2 6h12v10H2zM14 10h4l4 3v3h-8M6 19a1 1 0 1 0 .01 0M18 19a1 1 0 1 0 .01 0',
@@ -420,7 +421,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siVisite','siFormazione','siConvocazioni','siEventi','siGestioneAccessi'
+      'siVisite','siFormazione','siConvocazioni','siEventi','siSci','siGestioneAccessi'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -458,7 +459,8 @@ function avviaDashboard() {
     if (hasPerm('db'))           showSi('siDb');
     if (hasPerm('accessi'))      showSi('siAccessi');
     if (isMaster)                showSi('siGestioneAccessi');
-    showSi('siSegnalazioni'); // voce sempre visibile: form di invio per tutti, gestione solo con perm_gestione_segnalazioni
+    // Le segnalazioni dei volontari e tutto il bot Telegram, per lo staff, stanno in S.C.I. (sci.js)
+    if (hasPerm('sci') || hasPerm('eventi') || hasPerm('gestione_segnalazioni')) showSi('siSci');
     if (hasPerm('richieste'))    showSi('siRichieste');
     if (hasPerm('impostazioni')) showSi('siImpostazioni');
   }
@@ -468,7 +470,7 @@ function avviaDashboard() {
 
   // Badge richieste (solo per non-volontari)
   if (!isVol && hasPerm('richieste')) caricaBadgeRichieste();
-  if (!isVol && hasPerm('gestione_segnalazioni')) caricaBadgeSegnalazioni();
+  if (!isVol) sciAggiornaBadge();
 
   // Compleanno
   verificaCompleanni();
@@ -502,7 +504,7 @@ const PANEL_PERM = {
   volontari: ['volontari','documenti','visite'], visite: ['visite'], formazione: ['formazione'],
   interventi: ['interventi'], postazioni: ['postazioni'], dotazioni: ['dotazioni'],
   pianiCarico: ['pianicarico'], mezzi: ['mezzi'], tlc: ['tlc'], galleria: ['galleria'],
-  editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], eventi: ['eventi'], statistiche: ['statistiche'],
+  editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], eventi: ['eventi'], sci: ['sci','eventi','gestione_segnalazioni'], statistiche: ['statistiche'],
   db: ['db'], accessi: ['accessi'], richieste: ['richieste'], impostazioni: ['impostazioni'],
   aggDati: ['aggiornamento_dati'], verificaPiattaforme: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
 };
@@ -539,6 +541,7 @@ function showPanel(name, btn) {
   if (name === 'editorPdf') caricaEditorPdf();
   if (name === 'convocazioni') caricaConvocazioni();
   if (name === 'eventi') caricaEventi();
+  if (name === 'sci') caricaSci();
   if (name === 'schedapers') caricaSchedaPersonale();
   if (name === 'segnalazioni') caricaSegnalazioni();
   if (name === 'accessi') caricaAccessi();
@@ -788,7 +791,7 @@ let guidaCopiaTimer = null;
 async function caricaImpostazioni() {
   document.getElementById('guidaImpoBox').hidden = currentUser.tipo_accesso !== 'master';
   document.getElementById('guidaApri').href = GUIDA_URL;
-  document.getElementById('btImpoBox').hidden = !hasPerm('eventi');
+  document.getElementById('btImpoBox').hidden = !(hasPerm('eventi') || hasPerm('sci'));
   renderSchemaList();
   evCaricaListe();
 }
@@ -7013,21 +7016,9 @@ async function caricaSegnalazioni() {
     } catch(e) {
       content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
     }
-  } else if (!hasPerm('gestione_segnalazioni')) {
-    sub.textContent = 'Segnalazioni ricevute dai volontari';
-    content.innerHTML = '<div class="loading-msg">Non hai i permessi per gestire le segnalazioni.</div>';
   } else {
-    // Admin: lista tutte le segnalazioni
-    sub.textContent = 'Segnalazioni ricevute dai volontari';
-    content.innerHTML = '<div class="loading-msg">Caricamento…</div>';
-    try {
-      const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?select=*,volontario:volontario_id(id,cognome,nome,codice_fiscale)&order=gestita.asc,data_creazione.desc', { headers: H });
-      sbOk(res);
-      const arr = await res.json();
-      renderSegnalazioniAdmin(arr || []);
-    } catch(e) {
-      content.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>';
-    }
+    // Staff: le richieste dei volontari si gestiscono in S.C.I. -> Richieste volontari (sci.js)
+    sciApri('richieste');
   }
 }
 
@@ -7046,42 +7037,13 @@ function renderSegnalazioniVolontario(list) {
       const statoLbl = s.gestita ? '<span class="pill p-blue">Risolta</span>' : '<span class="pill p-yellow">In attesa</span>';
       html += '<div class="card">'
         + '<div class="vc"><div class="mid"><span class="sub">' + data + '</span></div>' + statoLbl + '</div>'
-        + '<p class="seg-text">' + (s.testo || '') + '</p>'
-        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note mt6">' + s.note_admin + '</p></div>' : '')
+        + '<p class="seg-text">' + aggEsc(s.testo || '') + '</p>'
+        + (s.note_admin ? '<div class="draft"><b>Risposta</b><p class="note mt6">' + aggEsc(s.note_admin) + '</p></div>' : '')
         + '</div>';
     });
     html += '</div>';
   }
   content.innerHTML = html;
-}
-
-function renderSegnalazioniAdmin(list) {
-  const content = document.getElementById('segnalazioniContent');
-  if (!list.length) {
-    content.innerHTML = '<div class="empty">Nessuna segnalazione.</div>';
-    return;
-  }
-  let html = '<div class="grid g3">';
-  list.forEach(s => {
-    const v    = s.volontario || {};
-    const data = new Date(s.data_creazione).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    const ini  = ((v.cognome || '?')[0] + ((v.nome || ' ')[0])).toUpperCase();
-    const statoLbl = s.gestita
-      ? '<span class="pill p-blue">Risolta</span>'
-      : '<span class="pill p-yellow">Da gestire</span>';
-    html += '<div class="card">'
-      + '<div class="vc"><span class="av">' + ini + '</span><div class="mid"><b>' + (v.cognome || '?') + ' ' + (v.nome || '') + '</b><span class="sub">' + data + ' · CF ' + (v.codice_fiscale || '—') + '</span></div>' + statoLbl + '</div>'
-      + '<p class="seg-text">' + (s.testo || '') + '</p>'
-      + '<label class="seg-nota">Risposta al volontario<textarea id="segNote_' + s.id + '" rows="2" placeholder="Facoltativa">' + (s.note_admin || '') + '</textarea></label>'
-      + '<div class="em-azioni">'
-      + (s.gestita
-          ? '<button class="btn sm" onclick="cambiaStatoSegnalazione(' + s.id + ', false)">Riapri</button>'
-          : '<button class="btn sm pri" onclick="cambiaStatoSegnalazione(' + s.id + ', true)">Segna come risolta</button>')
-      + '<button class="btn sm" onclick="salvaNoteSegnalazione(' + s.id + ')">Salva nota</button>'
-      + '</div>'
-      + '</div>';
-  });
-  content.innerHTML = html + '</div>';
 }
 
 async function inviaSegnalazione() {
@@ -7102,48 +7064,7 @@ async function inviaSegnalazione() {
   }
 }
 
-async function cambiaStatoSegnalazione(id, gestita) {
-  try {
-    const body = { gestita: gestita };
-    if (gestita) body.data_gestione = new Date().toISOString();
-    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error('errore');
-    caricaSegnalazioni();
-    caricaBadgeSegnalazioni();
-  } catch(e) { alert('Errore.'); }
-}
-
-async function salvaNoteSegnalazione(id) {
-  const note = document.getElementById('segNote_' + id).value;
-  try {
-    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?id=eq.' + id, {
-      method: 'PATCH',
-      headers: Object.assign({}, HJ, { 'Prefer': 'return=minimal' }),
-      body: JSON.stringify({ note_admin: note })
-    });
-    if (!res.ok) throw new Error('errore');
-    alert('Nota salvata.');
-  } catch(e) { alert('Errore.'); }
-}
-
-async function caricaBadgeSegnalazioni() {
-  try {
-    const res = await sbFetch(SUPA_URL + '/rest/v1/segnalazioni?gestita=eq.false&select=id', {
-      headers: Object.assign({}, H, { 'Prefer': 'count=exact', 'Range': '0-0' })
-    });
-    const cr = res.headers.get('Content-Range') || '';
-    const tot = parseInt(cr.split('/')[1] || '0');
-    const b = document.getElementById('siBadgeSegnalazioni');
-    if (b) {
-      if (tot > 0) { b.textContent = tot; b.classList.add('show'); }
-      else { b.classList.remove('show'); b.textContent = ''; }
-    }
-  } catch(e) {}
-}
+// Gestione delle richieste da parte dello staff (stato, risposta, badge): sci.js
 
 const GOOGLE_API_KEY    = 'AIzaSyAWKS-pik6t_YD6CReijjsgBEzj-qKReUg';
 const GALLERIA_FOLDER_ID = '1Ef-5hijyauKAuASNXPBSCmVJCbEExnP1';

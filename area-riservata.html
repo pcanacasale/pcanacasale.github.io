@@ -514,6 +514,60 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .seg-text{margin:12px 0 14px;white-space:pre-wrap}
 .seg-nota{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 
+/* ── S.C.I. ── */
+.sci-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.sci-tabs::-webkit-scrollbar{display:none}
+.sci-tabs .chip{flex-shrink:0}
+.sci-cruscotto{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.sci-tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;cursor:pointer;font:inherit;color:inherit;min-height:132px}
+.sci-tile b{font-size:30px;line-height:1.15}
+.sci-tile.sci-allerta b{font-size:20px}
+.sci-tile.al-verde{background:var(--al-verde);color:var(--al-on-verde);border-color:transparent}
+.sci-tile.al-giallo{background:var(--al-giallo);color:var(--al-on-giallo);border-color:transparent}
+.sci-tile.al-arancione{background:var(--al-arancione);color:var(--al-on-arancione);border-color:transparent}
+.sci-tile.al-rosso{background:var(--al-rosso);color:var(--al-on-rosso);border-color:transparent}
+.sci-tile.al-nd{background:var(--grey-bg);color:var(--fg)}
+.sci-tile-t{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.8}
+.sci-tile-s{font-size:13px;opacity:.85}
+.sci-tile.sci-attenzione b{color:var(--red)}
+.sci-tile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.sci-due{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));align-items:start}
+.sci-due>*{min-width:0}
+.sci-sq-m{display:none}
+@media (max-width:560px){
+ #panelSci .sci-sq{display:none}
+ #panelSci .sci-sq-m{display:block}
+ #panelSci .ev-tab .ev-az{white-space:normal;width:1%}
+ #panelSci .ev-tab .ev-az .btn{display:flex;width:100%;margin:0 0 6px}
+}
+.sci-filtri{align-items:flex-end}
+.sci-sel{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
+.sci-sel select{min-width:180px;max-width:100%}
+.sci-scelti{display:grid;gap:6px;max-height:260px;overflow:auto;margin:8px 0}
+.sci-scelti label[hidden]{display:none}
+#panelSci label.perm-check{flex-direction:row;margin:0}
+#panelSci label.perm-check input{width:auto;margin:0}
+#panelSci label[hidden]{display:none}
+.sci-cerca{max-width:none;margin-top:4px}
+.sci-avvisa{margin-top:10px}
+.sci-assegna{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sci-assegna select{flex:1 1 160px;min-width:0}
+.sci-invio summary{display:flex;cursor:pointer;list-style:none;width:100%}
+.sci-invio summary::-webkit-details-marker{display:none}
+.sci-invio{flex-direction:column;align-items:stretch}
+.sci-totale{font-size:16px}
+.sci-mappa-box{padding:0;overflow:hidden}
+.sci-mappa{height:min(65vh,560px);width:100%}
+.sci-popup img{width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:6px}
+@media (max-width:899px){
+ .sci-due{grid-template-columns:1fr}
+ .sci-sel{flex:1 1 140px}
+ .sci-sel select{min-width:0;width:100%}
+ .sci-tabs{width:calc(100% + 16px);padding-right:16px}
+ .sci-tile{min-height:110px}
+ .sci-tile b{font-size:26px}
+}
+
 /* ── accessi ── */
 .bt-ov{z-index:900}
 #btOv label.perm-check{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0}
@@ -1151,6 +1205,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <button id="siSchedaPersonale" class="sidebar-item" onclick="navTo('schedapers','La mia scheda',this)" style="display:none"></button>
     <button id="siConvocazioni" class="sidebar-item" onclick="navTo('convocazioni','Generatore convocazioni',this)" style="display:none"></button>
     <button id="siEventi" class="sidebar-item" onclick="navTo('eventi','Eventi',this)" style="display:none"></button>
+    <button id="siSci" class="sidebar-item" onclick="navTo('sci','S.C.I.',this)" style="display:none"><span class="si-badge" id="siBadgeSci"></span></button>
     <button id="siGalleria" class="sidebar-item" onclick="navTo('galleria','Galleria',this)" style="display:none"></button>
     <button id="siEditorPdf" class="sidebar-item" onclick="navTo('editorPdf','Editor PDF',this)" style="display:none"></button>
     <button id="siPostazioni" class="sidebar-item" onclick="navTo('postazioni','Postazioni',this)" style="display:none"></button>
@@ -1994,7 +2049,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <div class="panel" id="panelEventi">
       <div class="phead">
         <div><h1>Eventi</h1><span class="sub" id="evMostrati"></span></div>
-        <div class="pact"><button class="btn" onclick="evApriGeneriche()">Segnalazioni generiche<span class="nbadge" id="evGenN" hidden></span></button><button class="btn" onclick="btApriInvio()">Invia messaggio</button><button class="btn pri" id="evBtnNuovo" onclick="evApriForm()" hidden>Nuovo evento</button></div>
+        <div class="pact"><button class="btn" onclick="sciApri('foto',{evento:'generiche'})">Segnalazioni generiche<span class="nbadge" id="evGenN" hidden></span></button><button class="btn" onclick="btApriInvio()">Invia messaggio</button><button class="btn pri" id="evBtnNuovo" onclick="evApriForm()" hidden>Nuovo evento</button></div>
       </div>
       <div class="bar">
         <div id="evChips" class="chips"></div>
@@ -2004,6 +2059,13 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div id="evList"><div class="loading-msg">Caricamento…</div></div>
       <div class="ov" id="evOv" hidden></div>
       <div class="ov" id="evFormOv" hidden></div>
+    </div>
+
+    <!-- S.C.I. — Sistema di Comunicazione Interattivo (bot Telegram, segnalazioni; contenuto generato da sci.js) -->
+    <div class="panel" id="panelSci">
+      <div class="phead"><div><h1>S.C.I.</h1><span class="sub">Sistema di Comunicazione Interattivo</span></div></div>
+      <div class="chips mb18 sci-tabs" id="sciTabs" role="tablist"></div>
+      <div id="sciCorpo"><div class="loading-msg">Caricamento…</div></div>
     </div>
 
     <!-- AGGIORNAMENTO DATI (solo master — tutta la UI è generata da aggiornamento-dati.js) -->
@@ -2033,8 +2095,8 @@ body.cv-solo-vede .cv-gestione{display:none}
       </div>
       <div class="card impo-section" id="btImpoBox" hidden>
         <h2>Bot Telegram</h2>
-        <p class="note note-intro">Messaggi ai volontari collegati al bot.</p>
-        <button class="btn pri" onclick="btApriInvio()">Invia messaggio</button>
+        <p class="note note-intro">Messaggi, iscritti e segnalazioni del bot sono nella pagina S.C.I.</p>
+        <button class="btn pri" onclick="sciApri('messaggi')">Apri S.C.I.</button>
       </div>
       <div class="card impo-section" id="evListeBox">
         <h2>Liste degli eventi</h2>
@@ -2175,23 +2237,24 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=211"></script>
+<script src="area-riservata.js?v=212"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
 <script src="aggiornamento-dati.js?v=15"></script>
 <script src="verifica-piattaforme-core.js?v=1"></script>
 <script src="verifica-piattaforme.js?v=1"></script>
 <script src="informativa-testo.js?v=1"></script>
 <script src="modulo-cartaceo.js?v=1"></script>
-<script src="scheda-volontario.js?v=18"></script>
+<script src="scheda-volontario.js?v=19"></script>
 <script src="archivio-volontario.js?v=9"></script>
-<script src="allerta-home.js?v=2"></script>
+<script src="allerta-home.js?v=3"></script>
 <script src="editor-pdf.js?v=3"></script>
 <script src="formazione.js?v=17"></script>
 <script src="convocazioni.js?v=3"></script>
-<script src="eventi.js?v=3"></script>
+<script src="eventi.js?v=4"></script>
 <script src="eventi-polo.js?v=2"></script>
-<script src="gestione-accessi.js?v=4"></script>
-<script src="bot-telegram.js?v=1"></script>
+<script src="gestione-accessi.js?v=5"></script>
+<script src="bot-telegram.js?v=2"></script>
+<script src="sci.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

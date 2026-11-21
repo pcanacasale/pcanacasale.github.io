@@ -20,7 +20,7 @@ const GUIDA = {
   percorsi: {
     volontari: { titolo:"Sono un volontario", breve:"Volontari", icona:"ti-user", nota:"Entrare, vedere la tua scheda, aggiornare i dati e usare il bot Telegram." },
     staff:     { titolo:"Gestisco l'Area Riservata", breve:"Staff", icona:"ti-users", nota:"Volontari, interventi, eventi, logistica e amministrazione.",
-      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","visite","formazione","aggiornamento-dati","verifica-piattaforme","statistiche","segnalazioni-staff","richieste","db","accessi","gestione-accessi","impostazioni"] }
+      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","sci","visite","formazione","aggiornamento-dati","verifica-piattaforme","statistiche","richieste","db","accessi","gestione-accessi","impostazioni"] }
   }
 };
 
@@ -225,8 +225,8 @@ const PAGINE = [
   intro:"Benvenuto nella parte di gestione dell'Area Riservata. Prima di entrare nelle singole pagine, ti spiego come è organizzato il menu e chi vede cosa.",
   schermo: () => app("altro","Home", `<div class="m-pop" data-h="altroMenu">
       <div class="m-pop-g"><b>Logistica</b><span>Mezzi</span><span>Dotazioni</span><span>Piani di carico</span><span>TLC</span></div>
-      <div class="m-pop-g"><b>Strumenti</b><span>Postazioni</span><span>Galleria</span><span>Editor PDF</span><span>Generatore convocazioni</span><span>Eventi</span></div>
-      <div class="m-pop-g"><b>Amministrazione</b><span>Visite mediche</span><span>Formazione</span><span>Aggiornamento dati</span><span>Statistiche</span><span>Segnalazioni</span><span>Richieste</span><span>DB</span><span>Registro accessi</span><span>Gestione accessi</span><span>Impostazioni</span></div></div>`),
+      <div class="m-pop-g"><b>Strumenti</b><span>Postazioni</span><span>Galleria</span><span>Editor PDF</span><span>Generatore convocazioni</span><span>Eventi</span><span>S.C.I.</span></div>
+      <div class="m-pop-g"><b>Amministrazione</b><span>Visite mediche</span><span>Formazione</span><span>Aggiornamento dati</span><span>Statistiche</span><span>Richieste</span><span>DB</span><span>Registro accessi</span><span>Gestione accessi</span><span>Impostazioni</span></div></div>`),
   passi:[
     {t:"La barra in alto", d:"Home, Volontari e Interventi, le pagine più usate, sono sempre in vista. Dal telefono sono nella barra in basso.", h:"menu",
      v:"In alto hai sempre a portata di mano le tre pagine che si usano di più: Home, Volontari e Interventi. Dal telefono le trovi nella barra in basso."},
@@ -316,10 +316,10 @@ const PAGINE = [
   chi:"Chi ha il permesso Eventi.", video:"",
   intro:"Eventi serve a gestire esercitazioni ed emergenze mentre succedono: chi c'è, quando, con quali mezzi, e le segnalazioni che arrivano dal bot.",
   schermo: () => app("altro","Eventi", `
-    <div class="m-barra">${cerca("Cerca evento")}<span class="m-sp"></span>${btn("Invia messaggio","messaggio","scuro")}${btn("Nuovo evento","nuovo")}</div>
+    <div class="m-barra">${cerca("Cerca evento")}<span class="m-sp"></span>${btn("Segnalazioni generiche","generiche","grigio")}${btn("Invia messaggio","messaggio","scuro")}${btn("Nuovo evento","nuovo")}</div>
     <div class="m-modale"><div class="m-box-t">Esercitazione Mirabello ${tag("In corso","g")}</div>
       ${tabs(["Riepilogo","Volontari","Mezzi e materiali","Ospiti","Cucina","Segnalazioni"],"schede")}
-      <div class="m-card3" data-h="segnalazioni"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · via Roma</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso</small></div><div class="m-card"><div class="m-foto">📷</div><small>Generica ${btn("Assegna a evento…","","mini")}</small></div></div></div>`),
+      <div class="m-card3" data-h="segnalazioni"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · via Roma</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso</small></div><div class="m-card">${btn("Messaggio alla squadra","","mini")}</div></div></div>`),
   passi:[
     {t:"Nuovo evento", d:"Scegli Emergenza o Esercitazione, titolo, date e luogo. Stati: Pianificato, In corso, Concluso.", h:"nuovo",
      v:"Con Nuovo evento scegli se è un'emergenza o un'esercitazione, e inserisci titolo, date e luogo. Poi l'evento passa da pianificato, a in corso, a concluso."},
@@ -327,10 +327,12 @@ const PAGINE = [
      v:"Lo stato in corso è importante: finché l'evento è in corso, le foto che i volontari mandano al bot vengono collegate direttamente qui."},
     {t:"Il cruscotto", d:"Riepilogo, Volontari con le disponibilità giorno per giorno, Mezzi e materiali, Ospiti e Cucina con i pasti.", h:"schede",
      v:"Dentro l'evento hai il cruscotto. Il riepilogo con i totali. Volontari, con la disponibilità di ognuno giorno per giorno. Mezzi e materiali. Ospiti. E Cucina, con i pasti da preparare."},
-    {t:"Segnalazioni", d:"Le foto dal bot, con posizione. Quelle generiche si assegnano a un evento con Assegna a evento…. Su Telegram la notifica arriva solo a chi ha la spunta \"Riceve le segnalazioni del bot\" in Gestione accessi.", h:"segnalazioni",
-     v:"In Segnalazioni vedi le foto arrivate dal bot, con la posizione. Quelle arrivate quando non c'era niente in corso restano generiche: le puoi assegnare all'evento giusto con Assegna a evento. L'avviso su Telegram invece arriva solo a chi ha la spunta Riceve le segnalazioni del bot, in Gestione accessi."},
-    {t:"Messaggi", d:"Invia messaggio scrive a tutti i volontari collegati al bot Telegram.", h:"messaggio",
-     v:"Con Invia messaggio scrivi in un colpo solo a tutti i volontari collegati al bot Telegram. Utile per una convocazione veloce."},
+    {t:"Segnalazioni", d:"Nella scheda Segnalazioni dell'evento ci sono le foto dal bot, con posizione. Su Telegram la notifica arriva solo a chi ha la spunta \"Riceve le segnalazioni del bot\" in Gestione accessi.", h:"segnalazioni",
+     v:"Nella scheda Segnalazioni dell'evento vedi le foto arrivate dal bot, con la posizione. L'avviso su Telegram invece arriva solo a chi ha la spunta Riceve le segnalazioni del bot, in Gestione accessi."},
+    {t:"Segnalazioni generiche", d:"Il pulsante Segnalazioni generiche apre S.C.I. → Fotosegnalazioni con le foto arrivate senza evento in corso, da assegnare.", h:"generiche",
+     v:"Le foto arrivate quando non c'era niente in corso le trovi con il pulsante Segnalazioni generiche. Ti porta nella pagina S.C.I., dove le assegni all'evento giusto."},
+    {t:"Messaggi", d:"Invia messaggio, o Messaggio alla squadra dentro l'evento, apre S.C.I. → Messaggi, con la squadra dell'evento già scelta.", h:"messaggio",
+     v:"Con Invia messaggio, oppure con Messaggio alla squadra dentro un evento, vai nella pagina S.C.I. per scrivere ai volontari collegati al bot. Se parti dall'evento, la sua squadra è già scelta come destinatario."},
     {t:"A fine evento", d:"Quando lo concludi, l'app crea l'intervento contando solo i presenti, così le ore finiscono nelle schede.", h:"schede",
      v:"E quando l'evento finisce, non devi ricopiare niente: concludendolo, l'app crea da sola l'intervento, contando solo chi era presente, e le ore finiscono nelle schede dei volontari."}
   ]
@@ -578,14 +580,29 @@ const PAGINE = [
   ]
 },
 {
-  id:"segnalazioni-staff", percorso:["staff"], titolo:"Segnalazioni", icona:"ti-flag",
-  perche:"Le segnalazioni di errori che i volontari mandano dalla loro scheda.",
-  chi:"Chi ha il permesso Segnalazioni.", video:"",
-  intro:"Qui arrivano le segnalazioni dei volontari che hanno trovato un errore nella loro scheda.",
-  schermo: () => app("altro","Segnalazioni", tab([["Data","Volontario","Messaggio","Stato"],["28/10/2026","Rossi Mario","Il numero di telefono è cambiato",tag("Da gestire","g")+" "+btn("Segna come risolta","","mini")],["02/09/2026","Bianchi Laura","Manca l'attestato del corso base",tag("Risolta","b")]],"elenco")),
+  id:"sci", percorso:["staff"], titolo:"S.C.I.", icona:"ti-message-circle",
+  perche:"Tutto il bot Telegram in una pagina: messaggi, fotosegnalazioni, richieste dei volontari, mappa e iscritti.",
+  chi:"Chi ha il permesso S.C.I. o Eventi; le Richieste volontari con S.C.I. o Gestione segnalazioni.", video:"",
+  intro:"S.C.I. vuol dire Sistema di Comunicazione Interattivo: qui c'è tutto quello che passa dal bot Telegram, diviso in sei schede.",
+  schermo: () => app("altro","S.C.I.", `
+    ${tabs(["Cruscotto","Messaggi","Fotosegnalazioni","Richieste volontari","Mappa","Iscritti"],"schede")}
+    <div class="m-griglia2" data-h="cruscotto">${box("Iscritti al bot",["<b>6 su 67</b>"],"")}${box("Fotosegnalazioni",["<b>2</b> da gestire"],"")}${box("Richieste volontari",["<b>1</b> da gestire"],"")}${box("Allerta ARPA",["Allerta gialla"],"")}</div>
+    <div class="m-modale" data-h="messaggi"><div class="m-box-t">Nuovo messaggio</div><div class="m-campi"><span>Destinatari <b>Tutti · Una squadra · Squadra di un evento · Volontari scelti</b></span><span>Bollettino ARPA <b>☐</b></span></div>${btn("Anteprima","","mini")}</div>
+    <div class="m-card3" data-h="foto"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · Generica ${btn("Assegna a evento…","","mini")}</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso ${tag("Da gestire","g")}</small></div><div class="m-card" data-h="mappa"><div class="m-foto">🗺️</div><small>Mappa dei punti</small></div></div>
+    <div class="m-card3"><div class="m-card" data-h="richieste"><b>Rossi Mario</b><small>Il numero di telefono è cambiato</small><small>Avvisa su Telegram <b>☑</b> ${btn("Salva risposta","","mini")}</small></div><div class="m-card" data-h="iscritti"><b>Collegati 6 su 67</b><small>${btn("Link bot","","mini")} ${btn("Crea link","","mini")}</small></div></div>`),
   passi:[
-    {t:"Gestire", d:"Leggi la segnalazione, correggi la scheda del volontario e premi Segna come risolta. Puoi aggiungere una nota, o riaprirla.", h:"elenco",
-     v:"Leggi cosa ha scritto il volontario, correggi la sua scheda in Volontari, e premi Segna come risolta. Il volontario la vede risolta nella sua pagina. Se serve, puoi aggiungere una nota o riaprirla."}
+    {t:"Cruscotto", d:"Quanti volontari sono collegati al bot, le fotosegnalazioni e le richieste da gestire, lo stato dell'allerta. Tocca un riquadro per aprirlo.", h:"cruscotto",
+     v:"Il cruscotto ti dà il quadro in un colpo d'occhio: quanti volontari hanno collegato il bot, quante foto e quante richieste sono ancora da gestire, e com'è l'allerta ARPA. Tocchi un riquadro e vai dritto alla scheda giusta."},
+    {t:"Messaggi", d:"Scrivi il testo, scegli i destinatari (tutti, una squadra, la squadra di un evento o volontari scelti a mano), guarda l'anteprima e conferma. Sotto ci sono gli ultimi invii.", h:"messaggi",
+     v:"In Messaggi scrivi ai volontari collegati al bot. Puoi mandare a tutti, a una squadra, alla squadra di un evento, oppure scegliere tu le persone una per una. Prima di partire vedi l'anteprima con quante persone lo riceveranno, e sotto trovi gli ultimi invii."},
+    {t:"Fotosegnalazioni", d:"Le foto mandate al bot, con volontario, data, evento e posizione. Filtra per stato, evento e periodo; segna Gestita o Riapri; le generiche si assegnano a un evento.", h:"foto",
+     v:"Qui arrivano le foto che i volontari mandano al bot, con chi l'ha mandata, quando, per quale evento e la posizione su Google Maps. Le filtri come ti serve, le segni come gestite, e quelle generiche le assegni all'evento giusto."},
+    {t:"Richieste volontari", d:"Le correzioni che i volontari chiedono dalla loro scheda. Scrivi la risposta e premi Salva risposta; con Avvisa su Telegram gli arriva anche sul bot. Poi Segna come risolta.", h:"richieste",
+     v:"In Richieste volontari trovi le segnalazioni di errori che i volontari mandano dalla loro scheda. Correggi la scheda, scrivi una risposta e salvala. Se il volontario è collegato al bot, lasciando la spunta Avvisa su Telegram la risposta gli arriva anche sul telefono. Alla fine la segni come risolta."},
+    {t:"Mappa", d:"I punti delle fotosegnalazioni sulla mappa: rossi da gestire, grigi gestiti. Tocca un punto per vedere foto, nome, data ed evento.", h:"mappa",
+     v:"La mappa mette tutte le fotosegnalazioni sul territorio. I punti rossi sono da gestire, quelli grigi già gestiti. Tocchi un punto e vedi la foto, chi l'ha mandata e quando."},
+    {t:"Iscritti", d:"Chi è collegato al bot e chi no, con ricerca. Per i collegati Link bot e Scollega, per gli altri Crea link e il telefono per chiamarli.", h:"iscritti",
+     v:"In Iscritti vedi chi ha collegato il bot e chi manca ancora. A chi manca puoi creare il link personale, e hai il telefono sotto mano per chiamarlo. Chi è collegato lo puoi anche scollegare."}
   ]
 },
 {
@@ -642,22 +659,22 @@ const PAGINE = [
     {t:"I permessi", d:"Con la matrice dei permessi scegli pagina per pagina cosa vede ognuno.", h:"permessi",
      v:"E con la matrice dei permessi scegli, pagina per pagina, cosa può vedere e fare ognuno. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."},
     {t:"Avvisi del bot", d:"Nel gruppo Bot Telegram scegli chi riceve su Telegram le segnalazioni dei volontari e gli avvisi tecnici. Gli altri vedono le segnalazioni solo nell'app.", h:"bot",
-     v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, in Eventi."}
+     v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, nella pagina S.C.I."}
   ]
 },
 {
   id:"impostazioni", percorso:["staff"], titolo:"Impostazioni", icona:"ti-settings",
-  perche:"Messaggi del bot, liste degli eventi, campi della scheda volontario, categorie delle dotazioni.",
+  perche:"Liste degli eventi, campi della scheda volontario, categorie delle dotazioni, e il collegamento alla pagina S.C.I. del bot.",
   chi:"Chi ha il permesso Impostazioni.", video:"",
   intro:"In Impostazioni ci sono le regolazioni che valgono per tutta l'Area Riservata.",
   schermo: () => app("altro","Impostazioni", `<div class="m-griglia2">
-    ${box("Bot Telegram",["Messaggi ai volontari collegati al bot. "+btn("Invia messaggio","","mini")],"bot")}
+    ${box("Bot Telegram",["Messaggi, iscritti e segnalazioni del bot sono nella pagina S.C.I. "+btn("Apri S.C.I.","","mini")],"bot")}
     ${box("Campi volontari",["Gestisci i campi aggiuntivi della scheda volontario. "+btn("+ Nuovo campo","","mini")],"campi")}
     ${box("Liste degli eventi",["Tipologie ed esigenze alimentari"],"liste")}
     ${box("Categorie dotazioni",["Gestisci categorie e sottocategorie dell'inventario."],"categorie")}</div>`),
   passi:[
-    {t:"Bot Telegram", d:"Invia un messaggio a tutti i volontari collegati al bot.", h:"bot",
-     v:"Da qui puoi mandare un messaggio a tutti i volontari collegati al bot Telegram."},
+    {t:"Bot Telegram", d:"Il riquadro Bot Telegram porta alla pagina S.C.I., dove ci sono messaggi, iscritti e segnalazioni del bot.", h:"bot",
+     v:"Tutto quello che riguarda il bot Telegram adesso sta in una pagina sola, S.C.I. Da qui ci arrivi con Apri S.C.I."},
     {t:"Campi volontari", d:"Aggiungi campi alla scheda volontario: testo, sì o no, data o numero, in una delle sezioni della scheda.", h:"campi",
      v:"Se alla scheda volontario serve un dato in più, per esempio la taglia della divisa, lo aggiungi qui come nuovo campo, scegliendo il tipo e la sezione della scheda dove metterlo."},
     {t:"Liste e categorie", d:"Le liste usate negli Eventi e le categorie delle Dotazioni.", h:"liste",

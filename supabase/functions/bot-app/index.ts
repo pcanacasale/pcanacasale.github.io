@@ -1,8 +1,10 @@
 // Supabase Edge Function: bot-app
 //
-// Le azioni dell'area riservata sul bot: link personali, scollegamento, messaggi massivi.
+// Le azioni dell'area riservata sul bot (pagina S.C.I., Eventi, schede): link personali,
+// scollegamento, iscritti, messaggi massivi, risposta alle richieste dei volontari.
 // verify_jwt = false perché il controllo è qui: ogni richiesta porta il token della sessione e
-// passa da ho_permesso('eventi') eseguito con quel token, prima di qualunque altra cosa.
+// passa da ho_permesso eseguito con quel token, prima di qualunque altra cosa.
+// Azioni del bot: permesso 'eventi' o 'sci'. Risposta alle richieste: 'sci' o 'gestione_segnalazioni'.
 // Invio a un massimo di 25 messaggi al secondo. Una chat bloccata non ferma gli altri invii.
 
 import { ambiente, sha256, pulisci, statoAbilitato, dbLeggi, dbScrivi, tg, logAttivita } from '../_shared/bot.ts';
@@ -33,11 +35,14 @@ async function utenteAutorizzato(req: Request) {
     const r = await fetch(supaUrl + '/rest/v1/rpc/' + nome, { method: 'POST', headers: { apikey: anon, Authorization: auth, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
     return r.ok ? await r.json() : null;
   };
-  if ((await rpc('ho_permesso', { chiave: 'eventi' })) !== true) return null;
+  const ha = async (k: string) => (await rpc('ho_permesso', { chiave: k })) === true;
+  const [eventi, sci, gest] = await Promise.all([ha('eventi'), ha('sci'), ha('gestione_segnalazioni')]);
+  const bot = eventi || sci, richieste = sci || gest;
+  if (!bot && !richieste) return null;
   const p = await rpc('mio_profilo', {});
   const u = Array.isArray(p) ? p[0] : p;
   if (!u || !u.tipo || u.tipo === 'volontario') return null;
-  return [u.cognome, u.nome].filter(Boolean).join(' ') || 'Staff';
+  return { nome: [u.cognome, u.nome].filter(Boolean).join(' ') || 'Staff', bot, richieste };
 }
 
 // -- COLLEGAMENTO --
@@ -86,6 +91,11 @@ async function destinatari(b: any) {
   const tutti = await collegati();
   if (b.tipo === 'tutti') return { elenco: tutti, testo: 'Tutti i collegati' };
   if (b.tipo === 'squadra' && b.squadra) return { elenco: tutti.filter(x => x.squadra === b.squadra), testo: 'Squadra ' + b.squadra };
+  if (b.tipo === 'scelti' && Array.isArray(b.volontari) && b.volontari.length) {
+    const ids = new Set(b.volontari.map(Number));
+    const elenco = tutti.filter(x => ids.has(x.volontario_id));
+    return { elenco, testo: elenco.length === 1 ? elenco[0].nome : elenco.length + ' volontari scelti' };
+  }
   if (b.tipo === 'evento' && Number(b.evento_id)) {
     const id = Number(b.evento_id);
     const [ev] = await dbLeggi('eventi?id=eq.' + id + '&select=titolo');
@@ -94,6 +104,42 @@ async function destinatari(b: any) {
     return { elenco: tutti.filter(x => sq.some(s => s.volontario_id === x.volontario_id)), testo: 'Squadra dell\'evento: ' + ev.titolo };
   }
   return null;
+}
+
+// -- ISCRITTI --
+// Collegati (con data) e volontari attivi o sospesi non collegati (con telefono, per contattarli)
+async function iscritti() {
+  const [chat, vol] = await Promise.all([
+    dbLeggi('bot_chat?select=volontario_id,collegato_il'),
+    dbLeggi('volontari?select=id,cognome,nome,squadra,telefono,stato&order=cognome,nome&limit=5000'),
+  ]);
+  const quando = new Map(chat.map(c => [c.volontario_id, c.collegato_il]));
+  const attivi = vol.filter(v => statoAbilitato(v.stato));
+  return {
+    ok: true,
+    collegati: attivi.filter(v => quando.has(v.id)).map(v => ({ volontario_id: v.id, cognome: v.cognome, nome: v.nome, squadra: v.squadra || '', collegato_il: quando.get(v.id) })),
+    mancanti: attivi.filter(v => !quando.has(v.id)).map(v => ({ volontario_id: v.id, cognome: v.cognome, nome: v.nome, squadra: v.squadra || '', telefono: v.telefono || '' })),
+  };
+}
+
+// -- RISPOSTA ALLE RICHIESTE DEI VOLONTARI (tabella segnalazioni) --
+// Salva la risposta e, se richiesto e il volontario è collegato, gliela manda anche sul bot.
+async function rispondiRichiesta(b: any, utente: string) {
+  const id = Number(b.id);
+  const risposta = String(b.risposta ?? '').trim();
+  if (risposta.length > MAX_TESTO) return json({ ok: false, error: 'La risposta supera i ' + MAX_TESTO + ' caratteri.' }, 400);
+  const [s] = id ? await dbLeggi('segnalazioni?id=eq.' + id + '&select=id,volontario_id,data_creazione') : [];
+  if (!s) return json({ ok: false, error: 'Richiesta non trovata.' }, 400);
+  await dbScrivi('PATCH', 'segnalazioni?id=eq.' + id, { note_admin: risposta || null }, 'return=minimal');
+  const [c] = await dbLeggi('bot_chat?volontario_id=eq.' + Number(s.volontario_id) + '&select=chat_id');
+  let inviato = false;
+  if (b.avvisa && c && risposta) {
+    const data = new Date(s.data_creazione).toLocaleDateString('it-IT', { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit' });
+    const r = await inviaUno(Number(c.chat_id), '📩 Hai una risposta alla tua segnalazione del ' + data + ':\n«' + risposta + '»\n\nLa trovi anche in Area Riservata → Segnalazioni.');
+    inviato = r.ok;
+  }
+  await logAttivita(utente, 'ha risposto alla richiesta n. ' + id + (inviato ? ' (inviata anche sul bot)' : ''));
+  return json({ ok: true, collegato: !!c, inviato });
 }
 
 // -- ARPA --
@@ -157,12 +203,17 @@ async function invia(b: any, utente: string) {
 export async function gestisci(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, error: 'metodo non supportato' }, 405);
-  const utente = await utenteAutorizzato(req).catch(() => null);
-  if (!utente) return json({ ok: false, error: 'Non disponibile.' }, 403);
+  const chi = await utenteAutorizzato(req).catch(() => null);
+  if (!chi) return json({ ok: false, error: 'Non disponibile.' }, 403);
+  const utente = chi.nome;
   let b: any;
   try { b = await req.json(); } catch { return json({ ok: false, error: 'richiesta non valida' }, 400); }
+  const negato = () => json({ ok: false, error: 'Non disponibile.' }, 403);
   try {
+    if (b.azione === 'rispondi_richiesta') return chi.richieste ? await rispondiRichiesta(b, utente) : negato();
+    if (!chi.bot) return negato();
     switch (b.azione) {
+      case 'iscritti': return json(await iscritti());
       case 'stato': return json(await stato(b));
       case 'crea_link': return await creaLink(b, utente);
       case 'scollega': return await scollega(b, utente);

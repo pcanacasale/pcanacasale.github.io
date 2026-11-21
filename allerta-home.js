@@ -53,6 +53,34 @@ function alRigaRischio(s, r) {
   return '<div class="al-riga"><span>' + r[1] + '</span>' + celle + '</div>';
 }
 
+// Livello di oggi e freschezza del dato: stessa regola per la card in Home e per il cruscotto S.C.I.
+// Senza dati o con bollettino scaduto il livello è N/D, mai verde.
+function alSintesi(s, fonteInErrore) {
+  const oggi = alGiorno(Date.now());
+  if (!s || !s.aggiornato_il || !s.rischi) return { oggi, indice: -1, scaduto: true, nonAggiornato: true, livello: AL_ND, nessunDato: true };
+  const g0 = alGiorno(s.valido_dal), g1Data = alGiornoDopo(s.valido_dal), g1 = alGiorno(g1Data);
+  const indice = oggi === g0 ? 0 : (oggi === g1 ? 1 : -1);
+  const scaduto = indice < 0 || new Date(s.valido_al).getTime() < Date.now();
+  const nonAggiornato = scaduto || fonteInErrore || Date.now() - new Date(s.aggiornato_il).getTime() > AL_SCADUTO_ETA_MS;
+  return { oggi, g1Data, indice, scaduto, nonAggiornato, livello: scaduto ? AL_ND : alLivelloGiorno(s.rischi, indice) };
+}
+
+// Legge allerta_cache e, se vecchia, chiede l'aggiornamento: { stato, errore }
+async function alLeggi() {
+  let stato = null;
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/allerta_cache?id=eq.1&select=*', { headers: H });
+    if (res.ok) stato = (await res.json())[0] || null;
+  } catch(e) {}
+  const eta = stato && stato.aggiornato_il ? Date.now() - new Date(stato.aggiornato_il).getTime() : Infinity;
+  if (eta <= AL_MAX_ETA_MS) return { stato, errore: false };
+  try {
+    const res = await sbFetch(AL_FUNCTION_URL, { method: 'POST', headers: HJ, body: '{}', silenzioso: true });
+    const data = await res.json();
+    return { stato: data.stato || stato, errore: !data.ok };
+  } catch(e) { return { stato, errore: true }; }
+}
+
 function alRender(s, fonteInErrore) {
   const box = document.getElementById('homeAllerta');
   if (!box) return;
@@ -68,13 +96,7 @@ function alRender(s, fonteInErrore) {
     return;
   }
 
-  const oggi = alGiorno(Date.now());
-  const g0 = alGiorno(s.valido_dal), g1Data = alGiornoDopo(s.valido_dal), g1 = alGiorno(g1Data);
-  const indice = oggi === g0 ? 0 : (oggi === g1 ? 1 : -1);
-  const scaduto = indice < 0 || new Date(s.valido_al).getTime() < Date.now();
-  const nonAggiornato = scaduto || fonteInErrore || Date.now() - new Date(s.aggiornato_il).getTime() > AL_SCADUTO_ETA_MS;
-
-  const livello = scaduto ? AL_ND : alLivelloGiorno(s.rischi, indice);
+  const { oggi, g1Data, indice, scaduto, nonAggiornato, livello } = alSintesi(s, fonteInErrore);
   let sotto = zona;
   if (indice === 0 && !scaduto) {
     const domani = alLivelloGiorno(s.rischi, 1);
