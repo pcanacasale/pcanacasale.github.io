@@ -375,7 +375,7 @@
   }
 
   // ============================================================
-  // LOGICA DECISIONI (come riferimento-ui.html)
+  // LOGICA DECISIONI (stessa logica del prototipo iniziale della pagina)
   // ============================================================
   const P = k => S.DATA.find(p => p.key === k);
   function fv(p, f) {
