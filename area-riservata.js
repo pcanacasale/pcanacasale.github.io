@@ -279,6 +279,7 @@ const NAV_VOCI = [
   { id:'siAggDati',         label:'Aggiornamento dati', ic:'refresh', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siVerificaPiattaforme', label:'Verifica piattaforme', ic:'table', sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siStatistiche',     label:'Statistiche',        ic:'chart',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
+  { id:'siElenchi',         label:'Elenchi',            ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siSegnalazioni',    label:'Segnalazioni',       ic:'flag',    sez:'Amministrazione', ruoli:['volontario'] },
   { id:'siRichieste',       label:'Richieste',          ic:'inbox',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
   { id:'siDb',              label:'DB',                 ic:'table',   sez:'Amministrazione', ruoli:NAV_RUOLI_STAFF },
@@ -421,7 +422,7 @@ function avviaDashboard() {
       'siVolontari','siInterventi','siMezzi','siTlc','siDb',
       'siRichieste','siStatistiche','siImpostazioni','siAccessi',
       'siGalleria','siEditorPdf','siSegnalazioni','siPostazioni','siDotazioni','siPianiCarico',
-      'siVisite','siFormazione','siConvocazioni','siEventi','siSci','siGestioneAccessi'
+      'siVisite','siFormazione','siConvocazioni','siEventi','siSci','siGestioneAccessi','siElenchi'
     ];
     allSidebarIds.forEach(function(id) {
       var el = document.getElementById(id);
@@ -506,7 +507,7 @@ const PANEL_PERM = {
   pianiCarico: ['pianicarico'], mezzi: ['mezzi'], tlc: ['tlc'], galleria: ['galleria'],
   editorPdf: ['editor_pdf'], convocazioni: ['convocazioni'], eventi: ['eventi'], sci: ['sci','eventi','gestione_segnalazioni'], statistiche: ['statistiche'],
   db: ['db'], accessi: ['accessi'], richieste: ['richieste'], impostazioni: ['impostazioni'],
-  aggDati: ['aggiornamento_dati'], verificaPiattaforme: ['aggiornamento_dati'], schedapers: ['scheda_personale'],
+  aggDati: ['aggiornamento_dati'], verificaPiattaforme: ['aggiornamento_dati'], elenchi: ['elenchi'], schedapers: ['scheda_personale'],
 };
 function puoAprirePannello(name) {
   if (name === 'gestioneAccessi') return !!currentUser && currentUser.tipo_accesso === 'master';

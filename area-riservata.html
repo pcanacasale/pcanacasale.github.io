@@ -1240,6 +1240,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <button id="siFormazione" class="sidebar-item" onclick="navTo('formazione','Formazione',this)" style="display:none"></button>
     <button id="siAggDati" class="sidebar-item" onclick="navTo('aggDati','Aggiornamento dati',this)" style="display:none"></button>
     <button id="siVerificaPiattaforme" class="sidebar-item" onclick="navTo('verificaPiattaforme','Verifica piattaforme',this)" style="display:none"></button>
+    <button id="siElenchi" class="sidebar-item" onclick="navTo('elenchi','Elenchi',this)" style="display:none"></button>
     <button id="siAccessi" class="sidebar-item" onclick="navTo('accessi','Registro accessi',this)" style="display:none"></button>
     <button id="siGestioneAccessi" class="sidebar-item" onclick="navTo('gestioneAccessi','Gestione accessi',this)" style="display:none"></button>
     <button id="siStatistiche" class="sidebar-item" onclick="navTo('statistiche','Statistiche',this)" style="display:none"></button>
@@ -2103,6 +2104,12 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div id="vpRoot"><div class="loading-msg">caricamento...</div></div>
     </div>
 
+    <!-- ELENCHI (permesso elenchi — UI generata da elenchi.js) -->
+    <div class="panel" id="panelElenchi">
+      <div class="phead"><div><h1>Elenchi</h1><span class="sub">Elenchi di volontari, mezzi e dotazioni con i filtri che vuoi</span></div></div>
+      <div id="elRoot"><div class="loading-msg">caricamento...</div></div>
+    </div>
+
     <!-- IMPOSTAZIONI -->
     <div class="panel" id="panelImpostazioni">
       <div class="phead"><div><h1>Impostazioni</h1></div></div>
@@ -2260,7 +2267,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=215"></script>
+<script src="area-riservata.js?v=216"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
 <script src="aggiornamento-dati.js?v=15"></script>
 <script src="verifica-piattaforme-core.js?v=1"></script>
@@ -2275,9 +2282,10 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="convocazioni.js?v=3"></script>
 <script src="eventi.js?v=5"></script>
 <script src="eventi-polo.js?v=2"></script>
-<script src="gestione-accessi.js?v=5"></script>
+<script src="gestione-accessi.js?v=6"></script>
 <script src="bot-telegram.js?v=2"></script>
 <script src="sci.js?v=2"></script>
+<script src="elenchi.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

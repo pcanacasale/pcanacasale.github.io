@@ -20,7 +20,7 @@ const GUIDA = {
   percorsi: {
     volontari: { titolo:"Sono un volontario", breve:"Volontari", icona:"ti-user", nota:"Entrare, vedere la tua scheda, aggiornare i dati e usare il bot Telegram." },
     staff:     { titolo:"Gestisco l'Area Riservata", breve:"Staff", icona:"ti-users", nota:"Volontari, interventi, eventi, logistica e amministrazione.",
-      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","sci","visite","formazione","aggiornamento-dati","verifica-piattaforme","statistiche","richieste","db","accessi","gestione-accessi","impostazioni"] }
+      ordine:["benvenuto-staff","accesso","home-staff","volontari","interventi","mezzi","dotazioni","pianicarico","tlc","postazioni","galleria","editorpdf","convocazioni","eventi","sci","visite","formazione","aggiornamento-dati","verifica-piattaforme","statistiche","elenchi","richieste","db","accessi","gestione-accessi","impostazioni"] }
   }
 };
 
@@ -232,7 +232,7 @@ const PAGINE = [
   schermo: () => app("altro","Home", `<div class="m-pop" data-h="altroMenu">
       <div class="m-pop-g"><b>Logistica</b><span>Mezzi</span><span>Dotazioni</span><span>Piani di carico</span><span>TLC</span></div>
       <div class="m-pop-g"><b>Strumenti</b><span>Postazioni</span><span>Galleria</span><span>Editor PDF</span><span>Generatore convocazioni</span><span>Eventi</span><span>S.C.I.</span></div>
-      <div class="m-pop-g"><b>Amministrazione</b><span>Visite mediche</span><span>Formazione</span><span>Aggiornamento dati</span><span>Statistiche</span><span>Richieste</span><span>DB</span><span>Registro accessi</span><span>Gestione accessi</span><span>Impostazioni</span></div></div>`),
+      <div class="m-pop-g"><b>Amministrazione</b><span>Visite mediche</span><span>Formazione</span><span>Aggiornamento dati</span><span>Statistiche</span><span>Elenchi</span><span>Richieste</span><span>DB</span><span>Registro accessi</span><span>Gestione accessi</span><span>Impostazioni</span></div></div>`),
   passi:[
     {t:"La barra in alto", d:"Home, Volontari e Interventi, le pagine più usate, sono sempre in vista. Dal telefono sono nella barra in basso.", h:"menu",
      v:"In alto hai sempre a portata di mano le tre pagine che si usano di più: Home, Volontari e Interventi. Dal telefono le trovi nella barra in basso."},
@@ -583,6 +583,32 @@ const PAGINE = [
      v:"Vedi gli interventi mese per mese, divisi per tipo, e le ore fatte da ogni volontario."},
     {t:"Il PDF", d:"Scarica PDF per relazioni, assemblee e rendiconti.", h:"pdf",
      v:"Con Scarica PDF li hai pronti per una relazione, un'assemblea o un rendiconto."}
+  ]
+},
+{
+  id:"elenchi", percorso:["staff"], titolo:"Elenchi", icona:"ti-list-details",
+  perche:"Elenchi di volontari, mezzi e dotazioni scelti con i filtri che vuoi, da scaricare in Excel o PDF.",
+  chi:"Chi ha il permesso Elenchi. Si vedono solo i dati che il proprio accesso già permette di vedere.", video:"",
+  intro:"Elenchi ti fa preparare in pochi tocchi una lista su misura: per esempio i capisquadra con il corso scaduto, o i mezzi con la revisione in scadenza.",
+  schermo: () => app("altro","Elenchi", `
+    ${box("Elenchi salvati",[tag("Capisquadra 12 ore scadute","b")+" "+tag("Revisioni in scadenza","b")],"salvati")}
+    <div class="m-box" data-h="filtri"><div class="m-box-t">Elenco di ${sel("Volontari","argomento")}</div>
+      <div class="m-riga">${sel("Stato")} è uno di ${tag("Attivo","b")}</div>
+      <div class="m-riga">${sel("Corso 12 ore")} è uno di ${tag("Scaduto","b")} ${tag("Mai fatto","b")}</div>
+      <div class="m-riga">${btn("+ Aggiungi filtro","","mini")} ${btn("Colonne (5)","colonne","mini")}</div></div>
+    <div class="m-azioni" data-h="uscite">${btn("Excel","","grigio")}${btn("PDF","","grigio")}${btn("Stampa","","grigio")}${btn("Copia mail","","grigio")}${btn("Copia telefoni","","grigio")}${btn("Salva elenco","salva")}</div>
+    ${tab([["Cognome","Nome","Squadra","Telefono"],["Rossi","Mario","Squadra 1","333 …"],["Verdi","Paolo","Squadra 2","347 …"]],"risultato")}`),
+  passi:[
+    {t:"Cosa elencare", d:"In alto scegli se fare un elenco di volontari, di mezzi o di dotazioni.", h:"argomento",
+     v:"Per prima cosa scegli di cosa ti serve l'elenco: volontari, mezzi oppure dotazioni."},
+    {t:"I filtri", d:"Aggiungi un filtro alla volta: scegli il dato, la condizione e il valore. Valgono tutti insieme. Per i volontari ci sono anche corsi, visita, abilitazioni, interventi in un periodo, Telegram e taglie.", h:"filtri",
+     v:"Poi aggiungi i filtri, uno alla volta. Scegli il dato, per esempio la squadra o il corso dodici ore, e poi la condizione. I filtri valgono tutti insieme, quindi più ne metti e più l'elenco si stringe. Per i volontari trovi anche i corsi, la visita medica, le abilitazioni, le ore di intervento, Telegram e le taglie."},
+    {t:"Le colonne", d:"In Colonne spunti i dati da mostrare; con le frecce cambi l'ordine. Tocca il titolo di una colonna per ordinare l'elenco.", h:"colonne",
+     v:"Apri Colonne e spunta quello che vuoi vedere, per esempio telefono o scadenza della visita. Con le frecce cambi l'ordine delle colonne. E se tocchi il titolo di una colonna, l'elenco si ordina per quella."},
+    {t:"Scaricare e copiare", d:"Excel e PDF scaricano l'elenco; Stampa lo apre pronto da stampare su carta intestata. Copia mail e Copia telefoni copiano i contatti di tutti, per scrivere a tutti insieme.", h:"uscite",
+     v:"Quando l'elenco è pronto lo scarichi in Excel o in PDF, oppure premi Stampa. Il PDF esce su carta intestata, con i filtri scritti in alto. Con Copia mail e Copia telefoni copi in un colpo i contatti di tutti, così li incolli nella mail o nel telefono."},
+    {t:"Salvare gli elenchi", d:"Salva elenco lo mette tra gli Elenchi salvati con un nome. Quando lo riapri i dati sono sempre quelli di oggi.", h:"salvati",
+     v:"Se un elenco ti serve spesso, premi Salva elenco e dagli un nome. Lo ritrovi in alto tra gli elenchi salvati. Ogni volta che lo apri, i dati sono aggiornati a quel momento."}
   ]
 },
 {
