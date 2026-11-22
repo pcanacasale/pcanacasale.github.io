@@ -135,10 +135,12 @@ Il tuo compito, in ordine:
 8. Sii sintetico. Le domande devono essere brevi, dirette, in italiano, e poste solo quando davvero necessarie.`;
 }
 
-async function cercaVolontari(supaUrl: string, supaKey: string, query: string) {
+// Le letture usano il token della sessione di chi scrive (auth), non la chiave anon:
+// valgono le regole del database come nell'app (anon non può leggere volontari e interventi).
+async function cercaVolontari(supaUrl: string, supaKey: string, auth: string, query: string) {
   const res = await fetch(
     supaUrl + '/rest/v1/volontari?select=id,cognome,nome&stato=neq.DIMESSO&order=cognome',
-    { headers: { apikey: supaKey, Authorization: 'Bearer ' + supaKey } },
+    { headers: { apikey: supaKey, Authorization: auth } },
   );
   if (!res.ok) return { errore: 'impossibile leggere anagrafica volontari' };
   const tutti = await res.json();
@@ -152,10 +154,10 @@ async function cercaVolontari(supaUrl: string, supaKey: string, query: string) {
   return { candidati: candidati.slice(0, 10).map((v: any) => ({ id: v.id, cognome: v.cognome, nome: v.nome })) };
 }
 
-async function cercaInterventiRecenti(supaUrl: string, supaKey: string, termine: string | undefined, giorni: number | undefined) {
+async function cercaInterventiRecenti(supaUrl: string, supaKey: string, auth: string, termine: string | undefined, giorni: number | undefined) {
   const res = await fetch(
     supaUrl + '/rest/v1/interventi_con_stato?select=id,evento,data,luogo,tipo_attivita,stato_calcolato&order=data.desc&limit=25',
-    { headers: { apikey: supaKey, Authorization: 'Bearer ' + supaKey } },
+    { headers: { apikey: supaKey, Authorization: auth } },
   );
   if (!res.ok) return { errore: 'impossibile leggere interventi recenti' };
   let dati = await res.json();
@@ -169,12 +171,12 @@ async function cercaInterventiRecenti(supaUrl: string, supaKey: string, termine:
   return { interventi: dati.slice(0, 15) };
 }
 
-async function eseguiTool(block: any, supaUrl: string, supaKey: string) {
+async function eseguiTool(block: any, supaUrl: string, supaKey: string, auth: string) {
   if (block.name === 'cerca_volontari') {
-    return await cercaVolontari(supaUrl, supaKey, block.input?.query || '');
+    return await cercaVolontari(supaUrl, supaKey, auth, block.input?.query || '');
   }
   if (block.name === 'cerca_interventi_recenti') {
-    return await cercaInterventiRecenti(supaUrl, supaKey, block.input?.termine, block.input?.giorni);
+    return await cercaInterventiRecenti(supaUrl, supaKey, auth, block.input?.termine, block.input?.giorni);
   }
   return { errore: 'tool sconosciuto: ' + block.name };
 }
@@ -209,6 +211,7 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
   if (!SUPA_URL || !SUPA_KEY) return jsonResponse({ error: 'SUPABASE_URL/SUPABASE_ANON_KEY non disponibili' }, 500);
 
   const negato = await erroreSessione(req, SUPA_URL, SUPA_KEY);
+  const AUTH = req.headers.get('authorization') || '';   // già verificato da erroreSessione
   if (negato) return negato;
 
   let body: any;
@@ -276,7 +279,7 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
               content: 'Riepilogo mostrato a Federico. In attesa della sua conferma o di eventuali correzioni.',
             });
           } else {
-            const risultato = await eseguiTool(b, SUPA_URL, SUPA_KEY);
+            const risultato = await eseguiTool(b, SUPA_URL, SUPA_KEY, AUTH);
             toolResults.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(risultato) });
           }
         }
@@ -292,7 +295,7 @@ const handlerAutenticato = withSupabase({ auth: 'none' }, async (req: Request, _
       // solo tool di ricerca: eseguili e continua il loop
       const toolResults = [];
       for (const b of toolUseBlocks) {
-        const risultato = await eseguiTool(b, SUPA_URL, SUPA_KEY);
+        const risultato = await eseguiTool(b, SUPA_URL, SUPA_KEY, AUTH);
         toolResults.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(risultato) });
       }
       msgs = [...msgs, { role: 'user', content: toolResults }];
