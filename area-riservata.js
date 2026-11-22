@@ -443,7 +443,6 @@ function avviaDashboard() {
       var btnNuovo = document.getElementById('btnNuovoVolontario');
       if (btnNuovo) btnNuovo.style.display = '';
     }
-    if (hasPerm('visite')) document.getElementById('btnExportVisite').hidden = false;
     if (hasPerm('visite'))       showSi('siVisite');
     if (hasPerm('formazione'))   showSi('siFormazione');
     if (hasPerm('interventi'))   showSi('siInterventi');
@@ -922,9 +921,8 @@ function _renderVolCard(v) {
   card.onclick = (e) => { if (!e.target.closest('.vol-stato-sel')) apriDettaglio(v.id); };
 
   const badges = [];
+  // In fondo alla card solo la squadra
   if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
-  if (v.dae) badges.push('<span class="pill p-blue">DAE</span>');
-  if (v.pronto_impiego) badges.push('<span class="pill p-blue">PI</span>');
 
   // Dropdown stato inline (se può modificare) o pillola readonly
   const statoCls = 'pill ' + (VOL_STATO_PILL[stato] || VOL_STATO_PILL.ATTIVO)[1];
@@ -1749,7 +1747,6 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
       card.onclick = () => apriDettaglio(v.id);
       const badges = [];
       if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
-      if (v.dae)     badges.push('<span class="pill p-blue">DAE</span>');
       const st = v.stato || 'ATTIVO';
       card.innerHTML = _volCardHtml(v, st === 'ATTIVO' ? '' : '<span class="pill ' + (VOL_STATO_PILL[st] || ['', 'p-grey'])[1] + '">' + volStatoLabel(st) + '</span>', badges);
       body.appendChild(card);
@@ -7337,8 +7334,9 @@ const VISITA_STATI = {
   'COMPLETATA': { label: 'Completata', cls: 'vs-completata' }
 };
 
+// Esportazione visite: si apre solo dalla pagina Visite mediche e usa il suo elenco e la sua ricerca
 function apriExportVisite() {
-  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('volSearch').value || '(vuoto)';
+  document.getElementById('vexpTestoCorrente').textContent = document.getElementById('visiteSearch').value || '(vuoto)';
   document.getElementById('visiteExportErr').textContent = '';
   document.getElementById('visiteExportOverlay').classList.add('open');
 }
@@ -7353,9 +7351,9 @@ function generaExportVisitePDF() {
   const dataDa = document.getElementById('vexpDataDa').value;
   const dataA = document.getElementById('vexpDataA').value;
   const usaTesto = document.getElementById('vexpSoloTestoRicerca').checked;
-  const testo = usaTesto ? document.getElementById('volSearch').value.toLowerCase() : '';
+  const testo = usaTesto ? document.getElementById('visiteSearch').value.toLowerCase().trim() : '';
 
-  let dati = volontariData.filter(v => {
+  let dati = visiteData.filter(v => {
     if (v.stato === 'DIMESSO') return false;
     if (!statiSel.includes(visitaStatoNorm(v) || 'VUOTO')) return false;
     if (dataDa && (!v.data_visita || v.data_visita < dataDa)) return false;

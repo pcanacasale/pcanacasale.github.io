@@ -104,9 +104,8 @@ async function cambiaVisitaCampo(volId, campo, valore) {
   }
 }
 
-// L'esportazione lavora sull'elenco Volontari, che qui può non essere ancora caricato
+// Esporta PDF della pagina Visite: lavora su visiteData e sulla ricerca di questa pagina (area-riservata.js)
 function apriExportVisitePagina() {
-  if (!volontariData.length) volontariData = visiteData;
   apriExportVisite();
 }
 

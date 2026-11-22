@@ -268,7 +268,7 @@ const PAGINE = [
   chi:"Chi ha il permesso Volontari. Per modificare serve il permesso di modifica.", video:"",
   intro:"Volontari è il cuore dell'Area Riservata: l'anagrafica completa, con la scheda di ogni persona.",
   schermo: () => app("volontari","Volontari", `
-    <div class="m-barra">${cerca("Cerca per nome, squadra o CF","cerca")}${btn("Filtri","filtri","grigio")}<span class="m-sp"></span>${btn("Esporta visite PDF","","grigio")}${btn("Nuovo volontario","nuovo")}</div>
+    <div class="m-barra">${cerca("Cerca per nome, squadra o CF","cerca")}${btn("Filtri","filtri","grigio")}<span class="m-sp"></span>${btn("Nuovo volontario","nuovo")}</div>
     <div class="m-card3" data-h="card">
       <div class="m-card"><b>Rossi Mario</b><small>CASALE · LOGISTICA</small>${tag("Attivo","v")}</div>
       <div class="m-card"><b>Bianchi Laura</b><small>COLLINA · GENERICO</small>${tag("Da sistemare","g")}</div>
