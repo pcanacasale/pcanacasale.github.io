@@ -320,6 +320,8 @@ const PAGINE = [
      v:"C'è un modo molto più veloce. Premi Registra da messaggio, incolla il report che il caposquadra ha mandato su WhatsApp, e premi Analizza messaggio. L'app riconosce da sola evento, volontari e ore."},
     {t:"Controlla e conferma", d:"Niente viene salvato finché non confermi la bozza. Le ore sono arrotondate all'intero.", h:"bozza",
      v:"Ti mostra una bozza, e niente viene salvato finché non la controlli e confermi tu. Le ore vengono sempre arrotondate all'ora intera."},
+    {t:"Anche dal bot Telegram", d:"Se hai la spunta Registra interventi dal bot, nel bot premi Registra intervento, incolla o inoltra il report e rispondi alle domande. Sotto il riepilogo: ✅ Salva, ✏️ Correggi o ❌ Annulla. Dopo 30 minuti senza risposta si annulla da solo.", h:"messaggio",
+     v:"La stessa cosa la puoi fare anche dal telefono, con il bot Telegram, se in Gestione accessi hai la spunta Registra interventi dal bot. Premi Registra intervento, incolla o inoltra il messaggio, e rispondi se ti chiede qualcosa. Alla fine ti mostra il riepilogo: con Salva lo registri, con Correggi scrivi cosa cambiare, con Annulla lasci perdere."},
     {t:"Fogli firma", d:"Nella scheda dell'intervento, in Fogli firma, stampi il registro presenze con i nomi già scritti e carichi la scansione firmata di ogni giorno (PDF o foto). I fogli caricati restano allegati all'intervento. Un file caricato per errore lo può eliminare solo chi ha il permesso DB.", h:"fogli",
      v:"Se l'attività ha un foglio firma, aprendo l'intervento trovi la sezione Fogli firma. Da lì stampi il registro con i nomi, la squadra e il codice fiscale già scritti, e dopo carichi la scansione firmata di ogni giorno. Così la prova delle presenze resta sempre attaccata all'intervento. Se carichi il file sbagliato, avvisa chi ha il permesso DB: solo lui lo può eliminare."}
   ]
@@ -699,7 +701,7 @@ const PAGINE = [
   schermo: () => app("altro","Gestione accessi", `<div class="m-barra"><span class="m-sp"></span>${btn("Aggiungi staff","nuovo")}</div>
     ${tab([["Persona","Email di accesso","Tipo"],["Bianchi Laura","laura@…","standard"],["Rossi Mario","mario@…","volontario"]],"elenco")}
     <div class="m-modale" data-h="permessi"><div class="m-box-t">Permessi di Bianchi Laura</div><div class="m-campi"><span>Volontari <b>☑</b></span><span>Interventi <b>☑</b></span><span>Eventi <b>☐</b></span><span>Dotazioni <b>☑</b></span></div>
-      <div class="m-campi" data-h="bot"><b>Bot Telegram</b><span>Riceve le segnalazioni del bot <b>☑</b></span><span>Riceve gli avvisi tecnici <b>☐</b></span></div></div>`),
+      <div class="m-campi" data-h="bot"><b>Bot Telegram</b><span>Riceve le segnalazioni del bot <b>☑</b></span><span>Riceve gli avvisi tecnici <b>☐</b></span><span>Registra interventi dal bot <b>☐</b></span></div></div>`),
   passi:[
     {t:"Le email di accesso", d:"Per entrare, l'email di una persona deve essere abilitata qui. Ci sono anche i volontari senza email, da completare.", h:"elenco",
      v:"Per entrare, l'email di una persona deve essere abilitata qui. Se a qualcuno compare Questa mail non è abilitata, è qui che devi intervenire. C'è anche l'elenco dei volontari senza email, da completare."},
@@ -708,7 +710,9 @@ const PAGINE = [
     {t:"I permessi", d:"Con la matrice dei permessi scegli pagina per pagina cosa vede ognuno.", h:"permessi",
      v:"E con la matrice dei permessi scegli, pagina per pagina, cosa può vedere e fare ognuno. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."},
     {t:"Avvisi del bot", d:"Nel gruppo Bot Telegram scegli chi riceve su Telegram le segnalazioni dei volontari e gli avvisi tecnici. Gli altri vedono le segnalazioni solo nell'app.", h:"bot",
-     v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, nella pagina S.C.I."}
+     v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, nella pagina S.C.I."},
+    {t:"Interventi dal bot", d:"Registra interventi dal bot: chi ha questa spunta e il permesso Interventi trova nel bot il pulsante Registra intervento. I master ce l'hanno finché non la togli, gli standard solo se la metti.", h:"bot",
+     v:"Sempre nel gruppo Bot Telegram c'è Registra interventi dal bot. Chi ha questa spunta, e anche il permesso Interventi, nel bot trova il pulsante Registra intervento: incolla il report e, dopo aver controllato il riepilogo, lo salva con un tocco. Ai master è attiva finché non la togli, agli standard solo se la metti tu."}
   ]
 },
 {

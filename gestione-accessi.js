@@ -14,7 +14,7 @@ const GA_GRUPPI = [
   ['Logistica', [['mezzi', 'Mezzi'], ['dotazioni', 'Dotazioni'], ['pianicarico', 'Piani di carico'], ['tlc', 'TLC']]],
   ['Strumenti', [['postazioni', 'Postazioni'], ['galleria', 'Galleria'], ['editor_pdf', 'Editor PDF base'], ['editor_pdf_completo', 'Editor PDF completo'], ['convocazioni', 'Convocazioni (vede)'], ['convocazioni_gestione', 'Convocazioni: crea e gestisce liste'], ['eventi', 'Eventi'], ['sci', 'S.C.I. (Sistema di Comunicazione Interattivo)']]],
   ['Amministrazione', [['visite', 'Visite mediche'], ['formazione', 'Formazione'], ['aggiornamento_dati', 'Aggiornamento dati'], ['statistiche', 'Statistiche'], ['elenchi', 'Elenchi'], ['gestione_segnalazioni', 'Gestione segnalazioni'], ['richieste', 'Richieste'], ['db', 'DB avanzato'], ['accessi', 'Registro accessi'], ['impostazioni', 'Impostazioni']]],
-  ['Bot Telegram', [['bot_segnalazioni', 'Riceve le segnalazioni del bot'], ['bot_avvisi_tecnici', 'Riceve gli avvisi tecnici']]],
+  ['Bot Telegram', [['bot_segnalazioni', 'Riceve le segnalazioni del bot'], ['bot_avvisi_tecnici', 'Riceve gli avvisi tecnici'], ['bot_interventi', 'Registra interventi dal bot (serve anche Interventi)']]],
 ];
 const GA_PERMESSI = GA_GRUPPI.flatMap(g => g[1]);
 const GA_TIPI = { master: 'Master', standard: 'Standard' };
