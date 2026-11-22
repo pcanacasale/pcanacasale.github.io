@@ -320,8 +320,8 @@ const PAGINE = [
      v:"C'è un modo molto più veloce. Premi Registra da messaggio, incolla il report che il caposquadra ha mandato su WhatsApp, e premi Analizza messaggio. L'app riconosce da sola evento, volontari e ore."},
     {t:"Controlla e conferma", d:"Niente viene salvato finché non confermi la bozza. Le ore sono arrotondate all'intero.", h:"bozza",
      v:"Ti mostra una bozza, e niente viene salvato finché non la controlli e confermi tu. Le ore vengono sempre arrotondate all'ora intera."},
-    {t:"Fogli firma", d:"Nella scheda dell'intervento, in Fogli firma, stampi il registro presenze con i nomi già scritti e carichi la scansione firmata di ogni giorno (PDF o foto). I fogli caricati restano allegati all'intervento.", h:"fogli",
-     v:"Se l'attività ha un foglio firma, aprendo l'intervento trovi la sezione Fogli firma. Da lì stampi il registro con i nomi, la squadra e il codice fiscale già scritti, e dopo carichi la scansione firmata di ogni giorno. Così la prova delle presenze resta sempre attaccata all'intervento."}
+    {t:"Fogli firma", d:"Nella scheda dell'intervento, in Fogli firma, stampi il registro presenze con i nomi già scritti e carichi la scansione firmata di ogni giorno (PDF o foto). I fogli caricati restano allegati all'intervento. Un file caricato per errore lo può eliminare solo chi ha il permesso DB.", h:"fogli",
+     v:"Se l'attività ha un foglio firma, aprendo l'intervento trovi la sezione Fogli firma. Da lì stampi il registro con i nomi, la squadra e il codice fiscale già scritti, e dopo carichi la scansione firmata di ogni giorno. Così la prova delle presenze resta sempre attaccata all'intervento. Se carichi il file sbagliato, avvisa chi ha il permesso DB: solo lui lo può eliminare."}
   ]
 },
 {

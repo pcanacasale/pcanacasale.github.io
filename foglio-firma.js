@@ -178,8 +178,31 @@ function ffRenderFogli() {
   return '<div class="ev-scorri"><table class="ev-tab"><thead><tr><th class="sx">Giorno</th><th class="sx">File</th><th class="sx">Caricato</th><th></th></tr></thead><tbody>'
     + ff.fogli.map(f => '<tr><td class="sx">' + ffEsc(ffDataIt(f.giorno)) + '</td><td class="sx">' + ffEsc(f.nome_file || 'Foglio firma') + (f.note ? '<div class="sub">' + ffEsc(f.note) + '</div>' : '') + '</td>'
       + '<td class="sx"><span class="sub">' + ffEsc(ffDataIt(f.caricato_il)) + (f.caricato_da ? ' · ' + ffEsc(f.caricato_da) : '') + '</span></td>'
-      + '<td>' + sbLinkFile(f.file, f._file) + '</td></tr>').join('')
+      + '<td><span class="ff-riga">' + sbLinkFile(f.file, f._file)
+      + (hasPerm('db') ? '<button class="btn sm danger" onclick="ffElimina(' + f.id + ')">Elimina</button>' : '') + '</span></td></tr>').join('')
     + '</tbody></table></div>';
+}
+
+// Solo per un caricamento sbagliato: permesso DB (lo ricontrollano le regole del database e della cartella)
+async function ffElimina(id) {
+  const f = ff.fogli.find(x => x.id === id);
+  if (!f || !hasPerm('db')) return;
+  if (!confirm('Eliminare definitivamente questo foglio firmato?\n\n' + ffDataIt(f.giorno) + ' - ' + (f.nome_file || 'Foglio firma')
+    + '\n\nSi cancellano la riga e il file: non si può annullare.')) return;
+  try {
+    const res = await sbFetch(SUPA_URL + '/rest/v1/fogli_firma?id=eq.' + id, { method: 'DELETE', headers: Object.assign({}, H, { 'Prefer': 'return=representation' }) });
+    const tolte = res.ok ? await res.json() : [];
+    if (!res.ok || !Array.isArray(tolte) || !tolte.length) throw new Error('non consentito');
+    await sbEliminaFile(f.file);
+    await logAttivita('ha eliminato il foglio firma del ' + ffDataIt(f.giorno) + ' (' + (f.nome_file || '') + '): ' + (ff.rec.titolo || ''));
+    await ffCaricaFogli();
+    ffLeggiModulo();
+    ffRender();
+    if (ff.origine === 'intervento') ffRenderSezioneIntervento(ff.id);
+    sbAvviso('Foglio firmato eliminato.');
+  } catch(e) {
+    sbAvviso('Foglio non eliminato: serve il permesso DB.');
+  }
 }
 
 function ffRenderCarica(tutti) {
