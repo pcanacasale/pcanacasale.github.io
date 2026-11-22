@@ -129,7 +129,7 @@ function sbAvviso(testo) {
 // -- FILE NEI BUCKET PRIVATI --
 // Nel database un file è "bucket/percorso"; i record vecchi hanno l'URL pubblico intero e si
 // leggono uguale. I link durano un'ora e si firmano in blocco.
-const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni','eventi','foto-volontari'];
+const SB_BUCKET_PRIVATI = ['documenti','attestati','documenti-mezzi','documenti-tlc','mappe-postazioni','segnalazioni','eventi','foto-volontari','fogli-firma'];
 const SB_FILE_DURATA = 3600;
 
 function sbPercorso(bucket, path) {
