@@ -68,7 +68,7 @@ function ffConfBase(rec, salvata, corso) {
   if (c.argomenti == null) c.argomenti = '';
   if (!Array.isArray(c.convalide) || !c.convalide.length) c.convalide = [{ ruolo: 'Responsabile', nome: '' }, { ruolo: 'Tutor', nome: '' }];
   if (c.righe_vuote == null) c.righe_vuote = 10;
-  if (c.copertina == null) c.copertina = !!corso;
+  if (c.copertina == null) c.copertina = true;   // come nei registri cartacei: copertina sempre, si può togliere
   const tutti = ffGiorni(rec.dal, rec.al);
   c.giorni = Array.isArray(c.giorni) ? c.giorni.filter(g => tutti.includes(g)) : tutti.slice();
   if (!c.giorni.length) c.giorni = tutti.slice(0, 1);
