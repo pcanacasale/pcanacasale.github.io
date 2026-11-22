@@ -6,7 +6,7 @@
 //
 // Il volontario si collega inviando il proprio numero con il pulsante di Telegram: vale solo se
 // il contatto è quello dell'utente che scrive (contact.user_id = from.id, numero verificato da
-// Telegram) e corrisponde a una sola scheda ATTIVO o SOSPESO. In alternativa resta il link
+// Telegram) e corrisponde a una sola scheda ATTIVO o OP_RIDOTTA. In alternativa resta il link
 // personale monouso generato dall'app.
 // Una foto diventa una riga in evento_segnalazioni: per l'evento IN CORSO (emergenza o
 // esercitazione) oppure, se non ce n'è nessuno, come segnalazione generica (evento_id nullo).

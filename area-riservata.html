@@ -1266,7 +1266,7 @@ body.cv-solo-vede .cv-gestione{display:none}
     <!-- VOLONTARI -->
     <div class="panel" id="panelVolontari">
       <div class="phead">
-        <div><h1>Volontari</h1><span class="sub"><span id="volMostrati">—</span> mostrati su <span id="volTot">—</span></span></div>
+        <div><h1>Volontari</h1><span class="sub"><span id="volMostrati">—</span> mostrati su <span id="volTot">—</span><span id="volOpRid"></span></span></div>
         <div class="pact"><button class="btn" id="btnExportVisite" onclick="apriExportVisite()" hidden>Esporta visite PDF</button><button class="btn pri" id="btnNuovoVolontario" onclick="apriFormVolontario(null)" style="display:none"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuovo volontario</button></div>
       </div>
       <div class="bar">
@@ -1298,8 +1298,9 @@ body.cv-solo-vede .cv-gestione{display:none}
         <label>Stato
           <select id="filtroAttivo" onchange="filtraVolontari()">
             <option value="">Tutti</option>
-            <option value="true">Attivi</option>
-            <option value="false">Non attivi</option>
+            <option value="ATTIVO">Attivo</option>
+            <option value="OP_RIDOTTA">Op. ridotta</option>
+            <option value="SOSPESO">Sospeso</option>
           </select>
         </label>
         <label>Stato visita
@@ -2267,25 +2268,25 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=216"></script>
+<script src="area-riservata.js?v=217"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
-<script src="aggiornamento-dati.js?v=15"></script>
+<script src="aggiornamento-dati.js?v=16"></script>
 <script src="verifica-piattaforme-core.js?v=1"></script>
 <script src="verifica-piattaforme.js?v=2"></script>
 <script src="informativa-testo.js?v=1"></script>
 <script src="modulo-cartaceo.js?v=1"></script>
-<script src="scheda-volontario.js?v=21"></script>
+<script src="scheda-volontario.js?v=22"></script>
 <script src="archivio-volontario.js?v=9"></script>
 <script src="allerta-home.js?v=3"></script>
 <script src="editor-pdf.js?v=3"></script>
-<script src="formazione.js?v=17"></script>
+<script src="formazione.js?v=18"></script>
 <script src="convocazioni.js?v=3"></script>
 <script src="eventi.js?v=5"></script>
 <script src="eventi-polo.js?v=2"></script>
-<script src="gestione-accessi.js?v=6"></script>
+<script src="gestione-accessi.js?v=7"></script>
 <script src="bot-telegram.js?v=2"></script>
 <script src="sci.js?v=2"></script>
-<script src="elenchi.js?v=1"></script>
+<script src="elenchi.js?v=2"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

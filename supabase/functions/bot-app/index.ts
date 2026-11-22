@@ -56,7 +56,7 @@ async function stato(b: any) {
 async function creaLink(b: any, utente: string) {
   const id = Number(b.volontario_id);
   const [v] = id ? await dbLeggi('volontari?id=eq.' + id + '&select=id,cognome,nome,stato') : [];
-  if (!v || !statoAbilitato(v.stato)) return json({ ok: false, error: 'Il link si crea solo per volontari attivi o sospesi.' }, 400);
+  if (!v || !statoAbilitato(v.stato)) return json({ ok: false, error: 'Il link si crea solo per volontari attivi o in operatività ridotta.' }, 400);
   const me = await tg('getMe', {});
   if (!me.ok || !me.result?.username) throw new Error('getMe: ' + me.descrizione);
   const casuali = crypto.getRandomValues(new Uint8Array(32));
@@ -109,7 +109,7 @@ async function destinatari(b: any) {
 }
 
 // -- ISCRITTI --
-// Collegati (con data) e volontari attivi o sospesi non collegati (con telefono, per contattarli)
+// Collegati (con data) e volontari attivi o in op. ridotta non collegati (con telefono, per contattarli)
 async function iscritti() {
   const [chat, vol] = await Promise.all([
     dbLeggi('bot_chat?select=volontario_id,collegato_il'),

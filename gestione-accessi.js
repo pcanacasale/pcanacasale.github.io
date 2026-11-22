@@ -31,7 +31,7 @@ function gaSonoIo(id) { return gaIo() != null && Number(id) === Number(gaIo()); 
 function gaVol(id) { return gaVolontari.find(v => v.id === id) || null; }
 function gaNome(id) { const v = gaVol(id); return v ? (v.cognome + ' ' + v.nome).trim() : 'Volontario ' + id; }
 function gaMailDi(id) { return gaMail.filter(e => e.volontario_id === id); }
-function gaAttivoAnagrafica(v) { return ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO'); }
+function gaAttivoAnagrafica(v) { return (v.stato || 'ATTIVO') !== 'DIMESSO'; }
 function gaNorm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ''); }
 
 // Scrittura con la riga indietro: 0 righe vuol dire negata dalle regole. Il messaggio del database,

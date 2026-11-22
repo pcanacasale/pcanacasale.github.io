@@ -199,7 +199,7 @@ function svRenderTesta() {
     + '<div class="mid"><h2 id="volDetailTitle">' + aggEsc(v.cognome + ' ' + v.nome) + '</h2>'
     + '<span class="sub">' + aggEsc(riga.join(' · ')) + '</span></div>'
     + (svHaAgg() ? '<button class="btn sm" onclick="svModuloPdf()">Modulo cartaceo (PDF)</button>' : '')
-    + ((hasPerm('eventi') || hasPerm('sci')) && ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO') ? '<button class="btn sm" onclick="btApriLink(' + v.id + ',\'' + aggEsc(v.cognome + ' ' + v.nome).replace(/'/g, '&#39;') + '\')">Link bot</button>' : '')
+    + ((hasPerm('eventi') || hasPerm('sci')) && VOL_STATI_BOT.includes(v.stato || 'ATTIVO') ? '<button class="btn sm" onclick="btApriLink(' + v.id + ',\'' + aggEsc(v.cognome + ' ' + v.nome).replace(/'/g, '&#39;') + '\')">Link bot</button>' : '')
     + '<span class="pill ' + stato[1] + '">' + stato[0] + '</span>';
 }
 

@@ -235,8 +235,8 @@ function aggInitUI() {
         <select id="aggFiltroStato" onchange="aggFiltri.stato=this.value;aggApplicaFiltri()">
           <option value="">Tutti gli stati</option>
           <option value="ATTIVO">Attivo</option>
+          <option value="OP_RIDOTTA">Op. ridotta</option>
           <option value="SOSPESO">Sospeso</option>
-          <option value="DIMESSO">Dimesso</option>
         </select>
       </label>
     </div>
@@ -363,8 +363,24 @@ async function aggCaricaLista() {
     const [data, prop] = await Promise.all([aggCall('list', {}), aggCall('proposte_lista', {}).catch(aggErroreFase2)]);
     aggProposteAperte = {};
     (prop.proposte || []).forEach(p => { if (!aggProposteAperte[p.volontario_id]) aggProposteAperte[p.volontario_id] = p; });
-    aggVolontari = (data.cards || []).map(c => Object.assign(c, { proposta_aperta: !!aggProposteAperte[c.id] }));
-    aggContatori = data.contatori || {};
+    // I dimessi non si mostrano (stanno solo nell'Archivio dimessi di Volontari): vale lo stato
+    // in volontari, che è quello aggiornato; se non è leggibile, quello della copia in agg_volontari.
+    const dimessiVol = new Set();
+    try {
+      const r = await sbFetch(SUPA_URL + '/rest/v1/volontari?stato=eq.DIMESSO&select=id', { headers: H });
+      if (r.ok) (await r.json()).forEach(x => dimessiVol.add(Number(x.id)));
+    } catch (e) {}
+    const cards = (data.cards || []).filter(c => c.stato !== 'DIMESSO' && !dimessiVol.has(Number(c.volontario_id)));
+    aggVolontari = cards.map(c => Object.assign(c, { proposta_aperta: !!aggProposteAperte[c.id] }));
+    // contatori ricalcolati senza i dimessi (stesse regole di agg-api 'list')
+    const b = c => c.blocchi || {};
+    aggContatori = Object.assign({}, data.contatori || {}, {
+      totale: aggVolontari.length,
+      foto_mancante: aggVolontari.filter(c => !b(c).foto).length,
+      dpi_mancanti: aggVolontari.filter(c => !b(c).dpi_valutati).length,
+      documenti_mancanti: aggVolontari.filter(c => !b(c).carta_identita || !b(c).codice_fiscale || (b(c).patente === false)).length,
+      da_verificare: aggVolontari.filter(c => c.stato_verifica !== 'VERIFICATO').length,
+    });
     aggContatori.proposte = aggVolontari.filter(c => c.proposta_aperta).length;
     aggRenderContatori();
     aggPopolaFiltroSquadre();
@@ -444,10 +460,10 @@ function aggApplicaFiltri() {
   aggRenderGriglia(filtrati);
 }
 
-// Moduli cartacei (modulo-cartaceo.js): volontari dell'elenco mostrato, solo attivi e sospesi.
+// Moduli cartacei (modulo-cartaceo.js): volontari dell'elenco mostrato, solo in forza (non dimessi).
 let aggUltimiFiltrati = [];
 function aggModuliCartacei() {
-  mcScaricaZip(aggUltimiFiltrati.filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO')));
+  mcScaricaZip(aggUltimiFiltrati.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO'));
 }
 
 function aggRenderGriglia(list) {
@@ -820,7 +836,7 @@ function aggCampoHtml(key, label, v, tipo) {
   let input;
   if (tipo === 'select-stato') {
     input = '<select class="vol-form-inp' + (vuoto ? ' agg-field-missing' : '') + '" id="aggF_' + key + '" ' + onchange.replace('oninput', 'onchange') + '>'
-      + ['', 'ATTIVO', 'SOSPESO', 'DIMESSO'].map(o => '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + (o || '—') + '</option>').join('')
+      + ['', 'ATTIVO', 'OP_RIDOTTA', 'SOSPESO', 'DIMESSO'].map(o => '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + (o ? volStatoLabel(o) : '—') + '</option>').join('')
       + '</select>';
   } else {
     input = '<input class="vol-form-inp' + (vuoto ? ' agg-field-missing' : '') + '" id="aggF_' + key + '" type="' + tipo + '" value="' + String(val).replace(/"/g, '&quot;') + '" ' + onchange + '>';

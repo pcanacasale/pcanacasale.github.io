@@ -822,7 +822,9 @@ async function guidaCopiaLink() {
 }
 
 // -- VOLONTARI --
-let volontariData = [];
+let volontariData = [];   // solo i volontari in forza: i dimessi stanno in volDimessi (Archivio dimessi)
+let volDimessi = [];
+let volArchivioAperto = false;
 let volCorrenteId = null;
 
 // Avatar come nel riferimento: giallo chiaro o azzurro, testo blu
@@ -843,9 +845,12 @@ async function caricaVolontari() {
   try {
     const res  = await sbFetch(SUPA_URL + '/rest/v1/volontari?select=id,cognome,nome,squadra,tipo_volontario,mansione,specializzazione,telefono,quattro_ore,dodici_ore,esonero_12_ore,dae,pronto_impiego,stato_visita,attivo,stato,foto_url,codice_fiscale,data_visita,cdc_1_step,cdc_2_step&order=cognome', { headers: H });
     sbOk(res);
-    volontariData = await res.json();
+    const tutti = await res.json();
+    volDimessi = tutti.filter(volDimesso);
+    volontariData = tutti.filter(v => !volDimesso(v));
     await sbFirmaRighe(volontariData, 'foto_url');
-    document.getElementById('volTot').textContent = volontariData.length;
+    if (volArchivioAperto) await sbFirmaRighe(volDimessi, 'foto_url');
+    volAggiornaTotali();
     await svCaricaProblemi(volontariData);
     svRenderFiltri();
     if (svFiltro) filtraVolontari(); else renderVolontari(volontariData);
@@ -858,24 +863,49 @@ function renderVolontari(data) {
   document.getElementById('volMostrati').textContent = data.length;
   if (!data.length) { list.innerHTML = '<div class="empty full-row">Nessun volontario trovato.</div>'; return; }
 
-  // Separa attivi+sospesi da dimessi
-  const attiviSospesi = data.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
-  const dimessi       = data.filter(v => v.stato === 'DIMESSO');
-
   list.innerHTML = '';
-  attiviSospesi.forEach(v => list.appendChild(_renderVolCard(v)));
-
-  if (dimessi.length) {
-    const sep = document.createElement('div');
-    sep.className = 'grp';
-    sep.textContent = 'Dimessi (' + dimessi.length + ')';
-    list.appendChild(sep);
-    dimessi.forEach(v => list.appendChild(_renderVolCard(v)));
-  }
+  data.filter(v => !volDimesso(v)).forEach(v => list.appendChild(_renderVolCard(v)));
+  volRenderArchivio();
 }
 
-// Pillole di stato come nel riferimento: Attivo blu chiaro, Sospeso/Dimesso grigio
-const VOL_STATO_PILL = { ATTIVO:['Attivo','p-blue'], SOSPESO:['Sospeso','p-grey'], DIMESSO:['Dimesso','p-grey'] };
+// -- ARCHIVIO DIMESSI --
+// I dimessi non si cancellano mai (storico): non compaiono in nessun elenco, conteggio o scelta,
+// e si vedono solo qui, in fondo a Volontari, a richiesta. Da qui si apre la scheda o si cambia lo stato.
+function volRenderArchivio() {
+  const list = document.getElementById('volList');
+  if (!list || !volDimessi.length) return;
+  const box = document.createElement('div');
+  box.className = 'full-row vol-archivio';
+  box.innerHTML = '<button class="btn sm" onclick="volToggleArchivio()">' + (volArchivioAperto ? 'Chiudi' : 'Apri') + ' archivio dimessi (' + volDimessi.length + ')</button>'
+    + (volArchivioAperto ? '<p class="note">Non compaiono in elenchi, conteggi e scelte. Per riportarne uno in forza cambia lo stato.</p>' : '');
+  list.appendChild(box);
+  if (!volArchivioAperto) return;
+  const q = ((document.getElementById('volSearch') || {}).value || '').toLowerCase().trim();
+  volDimessi.filter(v => !q || (v.cognome + ' ' + v.nome + ' ' + (v.squadra || '') + ' ' + (v.codice_fiscale || '')).toLowerCase().includes(q))
+    .forEach(v => list.appendChild(_renderVolCard(v)));
+}
+async function volToggleArchivio() {
+  volArchivioAperto = !volArchivioAperto;
+  if (volArchivioAperto) await sbFirmaRighe(volDimessi, 'foto_url');
+  filtraVolontari();
+}
+function volAggiornaTotali() {
+  const tot = document.getElementById('volTot');
+  if (tot) tot.textContent = volontariData.length;
+  const op = document.getElementById('volOpRid');
+  const n = volontariData.filter(v => v.stato === 'OP_RIDOTTA').length;
+  if (op) op.textContent = n ? ' · di cui ' + n + ' op. ridotta' : '';
+}
+
+// Stati del volontario. In forza: Attivo, Op. ridotta (operatività ridotta: chi resta con noi con l'età,
+// compiti solo amministrativi), Sospeso. DIMESSO: solo nell'Archivio dimessi, mai cancellato.
+// Bot Telegram: valgono Attivo e Op. ridotta (supabase/functions/_shared/bot.ts, STATI_ABILITATI).
+const VOL_STATI = [['ATTIVO', 'Attivo'], ['OP_RIDOTTA', 'Op. ridotta'], ['SOSPESO', 'Sospeso'], ['DIMESSO', 'Dimesso']];
+const VOL_STATI_BOT = ['ATTIVO', 'OP_RIDOTTA'];
+function volDimesso(v) { return !!v && v.stato === 'DIMESSO'; }
+function volStatoLabel(stato) { const s = VOL_STATI.find(x => x[0] === (stato || 'ATTIVO')); return s ? s[1] : stato; }
+// Pillole di stato come nel riferimento: Attivo blu chiaro, gli altri grigio o sabbia
+const VOL_STATO_PILL = { ATTIVO:['Attivo','p-blue'], OP_RIDOTTA:['Op. ridotta','p-sand'], SOSPESO:['Sospeso','p-grey'], DIMESSO:['Dimesso','p-grey'] };
 function _volAvatar(v) { return sbAvatar(v, 'av'); }
 function _volCardHtml(v, statoHtml, tags) {
   return '<div class="vc">' + _volAvatar(v)
@@ -901,9 +931,7 @@ function _renderVolCard(v) {
   let statoSel;
   if (canModificaVolontari()) {
     statoSel = '<select class="vol-stato-sel ' + statoCls + '" onclick="event.stopPropagation()" onchange="cambiaStatoVolontario(' + v.id + ', this.value, this)" aria-label="Stato">'
-      + '<option value="ATTIVO"' + (stato==='ATTIVO'?' selected':'') + '>Attivo</option>'
-      + '<option value="SOSPESO"' + (stato==='SOSPESO'?' selected':'') + '>Sospeso</option>'
-      + '<option value="DIMESSO"' + (stato==='DIMESSO'?' selected':'') + '>Dimesso</option>'
+      + VOL_STATI.map(s => '<option value="' + s[0] + '"' + (stato === s[0] ? ' selected' : '') + '>' + s[1] + '</option>').join('')
       + '</select>';
   } else {
     statoSel = '<span class="' + statoCls + '">' + (VOL_STATO_PILL[stato] || [stato])[0] + '</span>';
@@ -919,14 +947,14 @@ async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
     return;
   }
   // Trova volontario in cache
-  const v = volontariData.find(x => x.id === volId);
+  const v = volontariData.find(x => x.id === volId) || volDimessi.find(x => x.id === volId);
   if (!v) return;
   const vecchio = v.stato || 'ATTIVO';
   if (vecchio === nuovoStato) return;
 
   // Conferma per DIMESSO
   if (nuovoStato === 'DIMESSO') {
-    if (!confirm('Spostare ' + v.cognome + ' ' + v.nome + ' tra i DIMESSI?')) {
+    if (!confirm('Spostare ' + v.cognome + ' ' + v.nome + ' tra i DIMESSI?\n\nNon comparirà più in elenchi, conteggi e scelte: resta nell\'Archivio dimessi in fondo a Volontari.')) {
       selEl.value = vecchio;
       return;
     }
@@ -943,7 +971,13 @@ async function cambiaStatoVolontario(volId, nuovoStato, selEl) {
     v.stato = nuovoStato;
     v.attivo = nuovoStato !== 'DIMESSO';
     await logAttivita('ha cambiato stato di ' + v.cognome + ' ' + v.nome + ' a ' + nuovoStato);
-    renderVolontari(volontariData);
+    // sposta tra in forza e archivio dimessi
+    const tutti = volontariData.concat(volDimessi);
+    volDimessi = tutti.filter(volDimesso);
+    volontariData = tutti.filter(x => !volDimesso(x)).sort((a, b) => (a.cognome || '').localeCompare(b.cognome || '', 'it'));
+    volAggiornaTotali();
+    if (typeof svRenderFiltri === 'function') svRenderFiltri();
+    filtraVolontari();
   } catch(e) {
     selEl.value = vecchio;
     alert('Errore salvataggio.');
@@ -956,7 +990,7 @@ function filtraVolontari() {
   const squadra = document.getElementById('filtroSquadra').value;
   const tipo    = document.getElementById('filtroTipo').value;
   const mansione = document.getElementById('filtroMansione').value;
-  const attivo  = document.getElementById('filtroAttivo').value;
+  const statoF  = document.getElementById('filtroAttivo').value;
   const visita  = document.getElementById('filtroVisita').value;
   const filtered = volontariData.filter(v => {
     const nome = (v.cognome + ' ' + v.nome + ' ' + (v.squadra||'') + ' ' + (v.codice_fiscale||'')).toLowerCase();
@@ -964,8 +998,7 @@ function filtraVolontari() {
     if (squadra && v.squadra !== squadra) return false;
     if (tipo && v.tipo_volontario !== tipo) return false;
     if (mansione && v.mansione !== mansione) return false;
-    if (attivo === 'true' && !v.attivo) return false;
-    if (attivo === 'false' && v.attivo) return false;
+    if (statoF && (v.stato || 'ATTIVO') !== statoF) return false;
     if (visita && (visitaStatoNorm(v) || 'VUOTO') !== visita) return false;
     return svPassaFiltro(v);
   });
@@ -1602,7 +1635,7 @@ function applicaVista(v) {
   if (filtri.dodici_ore)     dati = dati.filter(v => v.dodici_ore);
   if (filtri.pronto_impiego) dati = dati.filter(v => v.pronto_impiego);
   // vecchie viste salvate con "Attivo": fa fede lo Stato, non più la spunta attivo
-  if (filtri.attivo !== undefined) dati = dati.filter(v => ((v.stato || 'ATTIVO') === 'ATTIVO') === filtri.attivo);
+  if (filtri.attivo !== undefined) dati = dati.filter(v => VOL_STATI_BOT.includes(v.stato || 'ATTIVO') === filtri.attivo);
   if (filtri.stato_visita_not) dati = dati.filter(v => v.stato_visita !== filtri.stato_visita_not);
   // Filtri custom da jsonb (campi extra)
   Object.keys(filtri).forEach(k => {
@@ -1717,7 +1750,8 @@ function renderVolontariGrouped(tipo, campo, boolLabel) {
       const badges = [];
       if (v.squadra) badges.push('<span class="pill p-sand">' + v.squadra + '</span>');
       if (v.dae)     badges.push('<span class="pill p-blue">DAE</span>');
-      card.innerHTML = _volCardHtml(v, v.attivo ? '' : '<span class="pill p-grey">Non attivo</span>', badges);
+      const st = v.stato || 'ATTIVO';
+      card.innerHTML = _volCardHtml(v, st === 'ATTIVO' ? '' : '<span class="pill ' + (VOL_STATO_PILL[st] || ['', 'p-grey'])[1] + '">' + volStatoLabel(st) + '</span>', badges);
       body.appendChild(card);
     });
 
@@ -5007,7 +5041,7 @@ async function caricaDb() {
     var select  = visKeys.join(',');
     var order   = dbSortKey + '.' + (dbSortAsc ? 'asc' : 'desc') + '.nullslast';
     var url     = SUPA_URL + '/rest/v1/volontari?select=' + select + '&order=' + order
-                + '&limit=1000';
+                + '&and=(or(stato.is.null,stato.neq.DIMESSO))&limit=1000';   // i dimessi solo nell'Archivio dimessi
     if (dbSearchTerm) {
       url += '&or=(cognome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,nome.ilike.*' + encodeURIComponent(dbSearchTerm) + '*,squadra.ilike.*' + encodeURIComponent(dbSearchTerm) + '*)';
     }

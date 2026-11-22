@@ -1,7 +1,8 @@
 // Parti comuni alle Edge Function bot-telegram e bot-app.
 // Token del bot e service role vengono solo dai segreti e non finiscono mai nei log.
 
-export const STATI_ABILITATI = ['ATTIVO', 'SOSPESO'];
+// Ricevono e usano il bot: Attivo e Op. ridotta. Sospesi e dimessi no (stessa lista: VOL_STATI_BOT in area-riservata.js).
+export const STATI_ABILITATI = ['ATTIVO', 'OP_RIDOTTA'];
 export const NON_ABILITATO = 'Non sei abilitato. Contatta la segreteria.';
 
 export function ambiente() {

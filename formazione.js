@@ -161,7 +161,9 @@ async function caricaFormazione() {
     ]);
     document.getElementById('fzBtnCatalogo').hidden = !fzCatalogo.length;
     if (!res.ok) throw new Error('errore');
-    fzRighe = await res.json();
+    // le righe dei dimessi restano nel registro (storico) ma non si mostrano
+    const dimessi = new Set(fzVolontari.filter(v => v.stato === 'DIMESSO').map(v => v.id));
+    fzRighe = (await res.json()).filter(r => !dimessi.has(r.volontario_id));
     fzCalcolaAttuali();
     fzRenderDash();
     fzRenderChip();
@@ -229,7 +231,7 @@ function fzDashStato(volId, codice) {
   return u.righe.some(r => r.drive_file_id) ? 'ok' : 'senza';
 }
 function fzDashCalcola() {
-  const vol = fzVolontari.filter(v => ['ATTIVO', 'SOSPESO'].includes(v.stato || 'ATTIVO'));
+  const vol = fzVolontari.filter(v => (v.stato || 'ATTIVO') !== 'DIMESSO');
   return FZ_DASH.map(c => {
     const per = { mai: [], scaduto: [], scadenza: [], senza: [], esonero: [], ok: [] };
     const tocca = vol.filter(c.perChi);
@@ -271,7 +273,7 @@ function fzRenderDash() {
     html += '<div class="card fz-dash-l"><div class="fz-dash-h"><b>' + c.titolo + ' · ' + lab + ' (' + elenco.length + ')</b>'
       + '<span><button class="btn sm" onclick="fzDashCopia()">Copia nomi</button> <button class="btn sm" onclick="fzDashScegli()">Chiudi</button></span></div>'
       + elenco.map(v => '<div class="lr clk" onclick="apriDettaglio(' + v.id + ',\'formazione\')"><div class="mid"><b>' + aggEsc(v.cognome + ' ' + v.nome) + '</b>'
-        + '<span class="sub">' + aggEsc([v.squadra, v.stato === 'SOSPESO' ? 'sospeso' : '', det(v)].filter(Boolean).join(' · ')) + '</span></div>'
+        + '<span class="sub">' + aggEsc([v.squadra, v.stato === 'SOSPESO' ? 'sospeso' : v.stato === 'OP_RIDOTTA' ? 'op. ridotta' : '', det(v)].filter(Boolean).join(' · ')) + '</span></div>'
         + (c.esonero && canModificaVolontari() && c.esonero in v
           ? '<button class="btn sm" onclick="event.stopPropagation();fzEsonera(' + v.id + ',\'' + c.esonero + '\',' + (k !== 'esonero') + ')">' + (k === 'esonero' ? 'Togli esonero' : 'Esonera') + '</button>' : '')
         + '</div>').join('')

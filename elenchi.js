@@ -131,7 +131,8 @@ async function elCaricaArgomento(arg) {
       EL.fonti.telegram = !!(extra && extra.telegram);
       EL.fonti.taglie = !!(extra && extra.taglie);
       if (!cat) EL.fonti.formazione = false;
-      EL.dati.volontari = { righe: vol || [], reg: reg || [], cat: cat || [], int: int || [], extra: extra || {} };
+      // i dimessi non entrano mai negli elenchi (stanno solo nell'Archivio dimessi di Volontari)
+      EL.dati.volontari = { righe: (vol || []).filter(v => v.stato !== 'DIMESSO'), reg: reg || [], cat: cat || [], int: int || [], extra: extra || {} };
       elPreparaVolontari();
     } else if (arg === 'mezzi') {
       const m = await prova('mezzi', () => elLeggiTutto(R + 'mezzi?select=*&order=automezzo'));
@@ -287,7 +288,7 @@ function elCampiVolontari() {
     { k: 'patenti', l: 'Patenti', t: 'testo', g: 'Anagrafica' },
     { k: 'telefono', l: 'Telefono', t: 'testo', g: 'Contatti' },
     { k: 'email', l: 'Email', t: 'testo', g: 'Contatti' },
-    { k: 'stato', l: 'Stato', t: 'scelta', g: 'Unità', get: v => v.stato || 'ATTIVO' },
+    { k: 'stato', l: 'Stato', t: 'scelta', g: 'Unità', get: v => v.stato || 'ATTIVO', txt: v => volStatoLabel(v.stato), etichetta: x => volStatoLabel(x) },
     { k: 'squadra', l: 'Squadra', t: 'scelta', g: 'Unità' },
     { k: 'tipo_volontario', l: 'Tipo', t: 'scelta', g: 'Unità' },
     { k: 'mansione', l: 'Mansione', t: 'scelta', g: 'Unità' },
@@ -350,7 +351,7 @@ function elScelte(campo) {
   if (campo.t === 'corso') return EL_CORSO_STATI.map(s => [s[0], s[1]]);
   const set = new Set();
   elRigheArg().forEach(r => { const v = elValore(campo, r); set.add(v == null || v === '' ? '' : String(v)); });
-  return [...set].sort((a, b) => a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'it')).map(v => [v, v === '' ? EL_VUOTO : v]);
+  return [...set].sort((a, b) => a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'it')).map(v => [v, v === '' ? EL_VUOTO : campo.etichetta ? campo.etichetta(v) : v]);
 }
 
 // ============================================================
@@ -466,7 +467,7 @@ function elUsaPeriodo() {
 // ============================================================
 function elNuovo(arg, silenzioso) {
   EL.arg = arg; EL.id = null; EL.nome = '';
-  EL.filtri = arg === 'volontari' ? [{ c: 'stato', o: 'uno', v: ['ATTIVO'] }] : [];
+  EL.filtri = arg === 'volontari' ? [{ c: 'stato', o: 'uno', v: ['ATTIVO', 'OP_RIDOTTA'] }] : [];
   EL.colonne = EL_COLONNE_BASE[arg].slice();
   EL.ordine = null;
   if (!silenzioso) elRender();

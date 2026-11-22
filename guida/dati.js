@@ -272,14 +272,19 @@ const PAGINE = [
     <div class="m-card3" data-h="card">
       <div class="m-card"><b>Rossi Mario</b><small>CASALE · LOGISTICA</small>${tag("Attivo","v")}</div>
       <div class="m-card"><b>Bianchi Laura</b><small>COLLINA · GENERICO</small>${tag("Da sistemare","g")}</div>
-      <div class="m-card"><b>Verdi Paolo</b><small>ALFA · CAPO SQUADRA</small>${tag("Attivo","v")}</div></div>
+      <div class="m-card"><b>Verdi Paolo</b><small>ALFA · CAPO SQUADRA</small>${tag("Op. ridotta","g")}</div></div>
+    <div class="m-azioni">${btn("Apri archivio dimessi (3)","archivio","grigio")}</div>
     <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Abilitazioni","Attestati","Interventi","Taglie DPI"],"schede")}
       <div class="m-azioni">${btn("Link bot","link","grigio")}</div></div>`),
   passi:[
     {t:"Cercare", d:"Cerca per nome, squadra o codice fiscale.", h:"cerca",
      v:"Per trovare una persona scrivi nome, squadra o codice fiscale."},
-    {t:"Filtri", d:"Filtra per squadra, tipo, mansione, attivi o non attivi, e stato della visita medica.", h:"filtri",
-     v:"Con Filtri restringi l'elenco: per squadra, per tipo, per mansione, solo gli attivi o i non attivi, oppure per stato della visita medica."},
+    {t:"Filtri", d:"Filtra per squadra, tipo, mansione, stato (Attivo, Op. ridotta, Sospeso) e stato della visita medica.", h:"filtri",
+     v:"Con Filtri restringi l'elenco: per squadra, per tipo, per mansione, per stato, cioè attivo, operatività ridotta o sospeso, oppure per stato della visita medica."},
+    {t:"Lo stato", d:"Attivo, Op. ridotta (chi resta con noi con compiti ridotti o solo amministrativi), Sospeso o Dimesso. Op. ridotta conta nei totali, a parte. Il bot Telegram scrive solo ad Attivi e Op. ridotta. Corsi e visite seguono le spunte di esonero.", h:"card",
+     v:"Ogni volontario ha uno stato, che cambi direttamente dal riquadro. Attivo è chi è operativo. Operatività ridotta è per chi resta con noi ma con compiti ridotti, per l'età o perché fa solo lavoro amministrativo: conta tra i volontari, e in alto vedi quanti sono. Il bot Telegram scrive solo agli attivi e a chi è in operatività ridotta, non ai sospesi. Per corsi e visite valgono le spunte di esonero nella scheda."},
+    {t:"Archivio dimessi", d:"Chi è Dimesso sparisce da elenchi, conteggi e scelte in tutta l'app, ma non si cancella. Lo ritrovi in fondo con Apri archivio dimessi: da lì apri la scheda o lo rimetti in forza cambiando lo stato.", h:"archivio",
+     v:"Quando metti un volontario tra i dimessi, sparisce da tutti gli elenchi, dai conteggi e dalle scelte, così i numeri tornano. Non viene cancellato: in fondo alla pagina c'è Apri archivio dimessi, dove lo ritrovi con tutta la sua scheda. Se rientra, basta cambiargli lo stato."},
     {t:"Le schede", d:"Ogni riquadro è un volontario. Da sistemare indica dati o documenti mancanti.", h:"card",
      v:"Ogni riquadro è un volontario. Se compare Da sistemare, vuol dire che manca qualcosa nei suoi dati o nei documenti: aprendo la scheda vedi cosa."},
     {t:"Dentro la scheda", d:"Dati, Documenti, Visita medica, Formazione, Abilitazioni, Attestati, Interventi e Taglie DPI. Tocca il titolo di una sezione per chiuderla o riaprirla.", h:"schede",
@@ -544,7 +549,7 @@ const PAGINE = [
      v:"Quello che il volontario invia non finisce subito nella sua scheda: aspetta che tu lo controlli. Qui vedi quanti sono in attesa, i documenti mancanti, e le taglie da gestire. Se il volontario ha confermato la foto che c'era già, nella proposta trovi la scritta Foto confermata dal volontario: non c'è niente da approvare."},
     {t:"Catalogo DPI", d:"I capi tra cui scegliere la taglia si gestiscono nel Catalogo DPI. Esporta CSV per gli ordini.", h:"catalogo",
      v:"I capi di cui chiedere la taglia li gestisci nel Catalogo DPI. E quando devi fare un ordine, Esporta CSV ti dà l'elenco delle taglie."},
-    {t:"Modulo cartaceo", d:"Per chi non usa il link: Moduli cartacei crea uno ZIP con un PDF per ogni volontario dell'elenco (attivi e sospesi). Dalla scheda c'è anche Modulo cartaceo (PDF) per uno solo. Stampa su carta intestata, fai compilare e firmare, poi Carica modulo compilato: resta Modulo da registrare finché non riporti i dati e premi Segna registrato.", h:"moduli",
+    {t:"Modulo cartaceo", d:"Per chi non usa il link: Moduli cartacei crea uno ZIP con un PDF per ogni volontario dell'elenco (dimessi esclusi). Dalla scheda c'è anche Modulo cartaceo (PDF) per uno solo. Stampa su carta intestata, fai compilare e firmare, poi Carica modulo compilato: resta Modulo da registrare finché non riporti i dati e premi Segna registrato.", h:"moduli",
      v:"Per chi non usa il telefono c'è il modulo di carta. Moduli cartacei prepara un PDF per ogni volontario dell'elenco, tutti in un file ZIP; dalla scheda del volontario puoi farne anche uno solo. Lo stampi sulla carta intestata, il volontario lo compila a mano e firma. Poi lo scansioni e lo carichi con Carica modulo compilato: resta segnato come Modulo da registrare finché non hai riportato i dati in scheda e premuto Segna registrato."}
   ]
 },
@@ -593,7 +598,7 @@ const PAGINE = [
   schermo: () => app("altro","Elenchi", `
     ${box("Elenchi salvati",[tag("Capisquadra 12 ore scadute","b")+" "+tag("Revisioni in scadenza","b")],"salvati")}
     <div class="m-box" data-h="filtri"><div class="m-box-t">Elenco di ${sel("Volontari","argomento")}</div>
-      <div class="m-riga">${sel("Stato")} è uno di ${tag("Attivo","b")}</div>
+      <div class="m-riga">${sel("Stato")} è uno di ${tag("Attivo","b")} ${tag("Op. ridotta","b")}</div>
       <div class="m-riga">${sel("Corso 12 ore")} è uno di ${tag("Scaduto","b")} ${tag("Mai fatto","b")}</div>
       <div class="m-riga">${btn("+ Aggiungi filtro","","mini")} ${btn("Colonne (5)","colonne","mini")}</div></div>
     <div class="m-azioni" data-h="uscite">${btn("Excel","","grigio")}${btn("PDF","","grigio")}${btn("Stampa","","grigio")}${btn("Copia mail","","grigio")}${btn("Copia telefoni","","grigio")}${btn("Salva elenco","salva")}</div>
