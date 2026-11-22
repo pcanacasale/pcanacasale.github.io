@@ -9,13 +9,16 @@
 // Cucina, l'Excel e le liste stanno in eventi-polo.js.
 // ============================================================
 
-const EV_TIPI = { EMERGENZA: 'Emergenza', ESERCITAZIONE: 'Esercitazione' };
+// CORSO: collegato a una voce di formazione_catalogo (catalogo_id); il foglio firma sta in foglio-firma.js
+const EV_TIPI = { EMERGENZA: 'Emergenza', ESERCITAZIONE: 'Esercitazione', CORSO: 'Corso' };
+// Tipo dell'intervento creato a fine evento (i corsi negli interventi si chiamano CORSI)
+const EV_TIPO_INTERVENTO = { CORSO: 'CORSI' };
 const EV_STATI = { PIANIFICATO: ['Pianificato', 'p-sand'], 'IN CORSO': ['In corso', 'p-yellow'], CONCLUSO: ['Concluso', 'p-grey'] };
 const EV_CAMPI = [['cellulare', 'Cellulare'], ['patenti', 'Patenti'], ['servizi', 'Pasti e pernotti'], ['note', 'Note'], ['tipologia', 'Tipologia'], ['art39', 'Art. 39'], ['esigenze', 'Esigenze alimentari'], ['orari', 'Fasce orarie']];
 const EV_LIVELLI = { non_richiesto: 'Non richiesto', facoltativo: 'Facoltativo', obbligatorio: 'Obbligatorio' };
 // Come nel Polo: se la chiave manca, questi valgono "non richiesto", gli altri "facoltativo"
 const EV_SPENTI_SE_ASSENTI = ['tipologia', 'art39', 'esigenze', 'orari'];
-const EV_COL_EVENTO = 'id,tipo,titolo,luogo,data_inizio,data_fine,fine_finestra,stato,note,lat,lon,intervento_id,referente,campi';
+const EV_COL_EVENTO = 'id,tipo,titolo,luogo,data_inizio,data_fine,fine_finestra,stato,note,lat,lon,intervento_id,referente,campi,catalogo_id,foglio_firma';
 const EV_COL_SQUADRA = 'id,evento_id,volontario_id,ruolo,ore,presente,note,tipologia,art39,esigenze,esigenze_nota';
 const EV_FOTO_LATO = 1600, EV_FOTO_QUALITA = 0.8;
 
@@ -127,6 +130,7 @@ function evApriForm(id) {
     + '<div class="row2"><label>Tipo<select id="evTipo" onchange="evAggiornaFinestra()">' + opz(EV_TIPI, e ? e.tipo : 'ESERCITAZIONE', k => EV_TIPI[k]) + '</select></label>'
     + '<label>Stato<select id="evStato">' + opz(EV_STATI, e ? e.stato : 'PIANIFICATO', k => EV_STATI[k][0]) + '</select></label></div>'
     + '<label>Titolo<input id="evTitolo" value="' + aggEsc(e ? e.titolo : '') + '"></label>'
+    + '<label id="evCatalogoBox">Voce del catalogo Formazione (per registrare il corso ai presenti)<select id="evCatalogo"><option value="">— nessuna —</option></select></label>'
     + '<div class="row2"><label>Luogo<input id="evLuogo" value="' + aggEsc(e ? e.luogo || '' : '') + '"></label>'
     + '<label>Referente<input id="evReferente" value="' + aggEsc(e ? e.referente || '' : '') + '"></label></div>'
     + '<div class="row2"><label>Data inizio<input type="date" id="evInizio" value="' + aggEsc(e ? evGiorno(e.data_inizio) : '') + '"></label>'
@@ -141,9 +145,23 @@ function evApriForm(id) {
     + '<div class="actions"><button class="btn" onclick="evChiudiForm()">Annulla</button><button class="btn pri" id="evSalvaBtn" onclick="evSalva()">Salva</button></div></div></div>';
   ov.hidden = false;
   evAggiornaFinestra();
+  evRiempiCatalogo(e ? e.catalogo_id : null);
 }
 
-function evAggiornaFinestra() { evEl('evFinestraBox').hidden = evEl('evTipo').value !== 'EMERGENZA'; }
+function evAggiornaFinestra() {
+  evEl('evFinestraBox').hidden = evEl('evTipo').value !== 'EMERGENZA';
+  evEl('evCatalogoBox').hidden = evEl('evTipo').value !== 'CORSO';
+}
+
+// Voci del catalogo Formazione (formazione.js): servono solo per i corsi
+async function evRiempiCatalogo(scelta) {
+  if (typeof fzCatalogo === 'undefined') return;
+  if (!fzCatalogo.length) await fzCaricaCatalogo();
+  const sel = evEl('evCatalogo');
+  if (!sel) return;
+  const voci = fzCatalogo.filter(c => c.attivo || c.id === scelta);
+  sel.innerHTML = '<option value="">— nessuna —</option>' + voci.map(c => '<option value="' + c.id + '"' + (c.id === scelta ? ' selected' : '') + '>' + aggEsc(c.titolo) + '</option>').join('');
+}
 
 function evChiudiForm() {
   const ov = evEl('evFormOv');
@@ -176,6 +194,7 @@ async function evSalva() {
   const errore = t => { err.textContent = t; err.style.display = 'block'; };
   if (!titolo || !inizio) return errore('Titolo e data di inizio sono obbligatori.');
   if (tipo === 'ESERCITAZIONE' && !fine) return errore('Per un\'esercitazione la data di fine è obbligatoria.');
+  if (tipo === 'CORSO' && !fine) return errore('Per un corso la data di fine è obbligatoria (anche se è lo stesso giorno).');
   if (tipo === 'EMERGENZA' && !fine && !finestra) return errore('Per un\'emergenza indica la data di fine oppure la fine finestra.');
   if (fine && fine < inizio) return errore('La data di fine è precedente all\'inizio.');
   if (finestra && finestra < inizio) return errore('La fine finestra è precedente all\'inizio.');
@@ -189,6 +208,7 @@ async function evSalva() {
     campi: Object.fromEntries(EV_CAMPI.map(c => [c[0], evEl('evCampo_' + c[0]).value])),
     note: evEl('evNote').value.trim() || null,
     lat: lat === '' ? null : Number(lat), lon: lon === '' ? null : Number(lon),
+    catalogo_id: tipo === 'CORSO' && evEl('evCatalogo').value ? Number(evEl('evCatalogo').value) : null,
   };
   const id = evModificaId;
   const prima = id ? ((evElenco.find(x => x.id === id) || (evCorrente && evCorrente.e) || {}).stato) : null;
@@ -300,7 +320,9 @@ function evRender() {
     + '<div class="em-azioni ev-azioni">' + mappa
     + '<button class="btn sm" onclick="evEsportaExcel()">Excel</button>'
     + '<button class="btn sm" onclick="evStampa()">Stampa squadra</button>'
+    + '<button class="btn sm" onclick="ffApri(\'evento\',' + e.id + ')">Foglio firma</button>'
     + evAzioneIntervento()
+    + evAzioneFormazione()
     + '<button class="btn sm" onclick="btApriInvio(' + e.id + ')">Messaggio alla squadra</button>'
     + '<button class="btn sm" onclick="evChiudi();sciApri(\'mappa\',{evento:' + e.id + '})">Posizioni</button>'
     + '<button class="btn sm" onclick="evApriForm(' + e.id + ')">Modifica</button>'
@@ -453,6 +475,28 @@ function evAzioneIntervento() {
   return e.stato === 'CONCLUSO' ? '<button class="btn sm pri" id="evBtnIntervento" onclick="evCreaIntervento()">Crea intervento</button>' : '';
 }
 
+// Corso concluso: registra il corso in Formazione ai presenti (modulo di formazione.js già compilato)
+function evAzioneFormazione() {
+  const e = evCorrente.e;
+  return e.tipo === 'CORSO' && e.stato === 'CONCLUSO' && hasPerm('formazione') && typeof fzApriForm === 'function'
+    ? '<button class="btn sm" onclick="evRegistraFormazione()">Registra in Formazione</button>' : '';
+}
+
+async function evRegistraFormazione() {
+  const e = evCorrente.e, presenti = evPresenti().map(r => r.volontario_id);
+  if (!presenti.length) { sbAvviso('Nessun volontario presente da registrare.'); return; }
+  await fzApriForm(null);
+  if (!fzForm) return;
+  presenti.forEach(id => fzForm.scelti.add(id));
+  const sel = document.getElementById('fzCodice');
+  if (e.catalogo_id && sel && [...sel.options].some(o => o.value === 'c:' + e.catalogo_id)) sel.value = 'c:' + e.catalogo_id;
+  else if (document.getElementById('fzTitolo')) document.getElementById('fzTitolo').value = e.titolo;
+  document.getElementById('fzData').value = evGiorno(e.data_fine || e.data_inizio);
+  document.getElementById('fzNote').value = 'Evento: ' + e.titolo + (e.luogo ? ' - ' + e.luogo : '');
+  fzAggiornaCatalogo();
+  fzRenderPicker();
+}
+
 function evVaiIntervento(id) {
   evChiudi();
   showPanel('interventi', null);
@@ -475,7 +519,7 @@ async function evCreaIntervento() {
     if (ora.intervento_id) { e.intervento_id = ora.intervento_id; evRender(); return; }
     const [creato] = await evScrivi('POST', 'interventi', {
       evento: e.titolo, data: evGiorno(e.data_inizio), data_fine: evGiorno(e.data_fine || e.fine_finestra) || null,
-      tipo_attivita: e.tipo, luogo: e.luogo, n_volontari: righe.length, n_ore: nOre,
+      tipo_attivita: EV_TIPO_INTERVENTO[e.tipo] || e.tipo, luogo: e.luogo, n_volontari: righe.length, n_ore: nOre,
       volontari_ids: righe.map(r => r.volontario_id), utente: currentUser.nome,
     });
     intId = creato.id;
@@ -484,6 +528,7 @@ async function evCreaIntervento() {
     }
     const [agg] = await evScrivi('PATCH', 'eventi?id=eq.' + e.id, { intervento_id: intId });
     evCorrente.e = agg;
+    await ffPassaAIntervento(e.id, intId, e.foglio_firma);   // fogli firmati e impostazioni passano all'intervento
     await logAttivita('ha creato l\'intervento dall\'evento: ' + e.titolo);
     evRender();
     caricaEventi();

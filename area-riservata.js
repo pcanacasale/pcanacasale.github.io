@@ -2173,6 +2173,10 @@ async function apriDettaglioIntervento(id) {
         <div class="vol-section-head">Note</div>
         <div class="vol-section-body"><p class="note-text">${i.note}</p></div>
       </div>` : ''}
+      <div class="vol-section">
+        <div class="vol-section-head">Fogli firma</div>
+        <div class="vol-section-body" id="intFogliFirma"><div class="loading-msg">Caricamento…</div></div>
+      </div>
       <div class="int-azioni">
         <button class="btn" onclick="stampaIntervento(${i.id})">Esporta CF</button>
         <button class="btn" onclick="apriGeneratoreAttestati(${i.id})">Attestati</button>
@@ -2180,6 +2184,7 @@ async function apriDettaglioIntervento(id) {
         <button class="btn pri" onclick="apriFormIntervento(${i.id})">Modifica</button>
       </div>
       <button class="vol-delete-btn" onclick="eliminaIntervento()">Elimina intervento</button>`;
+    ffRenderSezioneIntervento(i.id);   // foglio-firma.js
 
   } catch(e) { body.innerHTML = '<div class="loading-msg bad">Non disponibile.</div>'; }
 }

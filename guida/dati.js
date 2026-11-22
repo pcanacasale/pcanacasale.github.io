@@ -307,6 +307,7 @@ const PAGINE = [
   schermo: () => app("interventi","Interventi", `
     <div class="m-barra">${cerca("Cerca evento, luogo o tipo","cerca")}<span class="m-sp"></span>${btn("Registra da messaggio","messaggio","scuro")}${btn("Nuovo intervento","nuovo")}</div>
     ${tab([["Data","Evento","Tipo","Volontari","Ore","Stato"],["12/10/2026","Esercitazione Mirabello","Esercitazione","14","112",tag("Svolto","v")],["20/11/2026","Mercatino Natale","Servizio","6","—",tag("Programmato","g")]],"elenco")}
+    <div class="m-azioni" data-h="fogli">${btn("Foglio firma: stampa o carica","","grigio")}</div>
     <div class="m-modale" data-h="bozza"><div class="m-box-t">Registra da messaggio</div><div class="m-firma">Incolla qui il messaggio del report…</div><div class="m-azioni">${btn("Analizza messaggio")}</div></div>`),
   passi:[
     {t:"L'elenco", d:"Tutti gli interventi con data, tipo, volontari, ore e stato.", h:"elenco",
@@ -318,22 +319,29 @@ const PAGINE = [
     {t:"Registra da messaggio", d:"Incolla il report mandato su WhatsApp e premi Analizza messaggio: l'app riconosce volontari e ore e ti mostra una bozza.", h:"messaggio",
      v:"C'è un modo molto più veloce. Premi Registra da messaggio, incolla il report che il caposquadra ha mandato su WhatsApp, e premi Analizza messaggio. L'app riconosce da sola evento, volontari e ore."},
     {t:"Controlla e conferma", d:"Niente viene salvato finché non confermi la bozza. Le ore sono arrotondate all'intero.", h:"bozza",
-     v:"Ti mostra una bozza, e niente viene salvato finché non la controlli e confermi tu. Le ore vengono sempre arrotondate all'ora intera."}
+     v:"Ti mostra una bozza, e niente viene salvato finché non la controlli e confermi tu. Le ore vengono sempre arrotondate all'ora intera."},
+    {t:"Fogli firma", d:"Nella scheda dell'intervento, in Fogli firma, stampi il registro presenze con i nomi già scritti e carichi la scansione firmata di ogni giorno (PDF o foto). I fogli caricati restano allegati all'intervento.", h:"fogli",
+     v:"Se l'attività ha un foglio firma, aprendo l'intervento trovi la sezione Fogli firma. Da lì stampi il registro con i nomi, la squadra e il codice fiscale già scritti, e dopo carichi la scansione firmata di ogni giorno. Così la prova delle presenze resta sempre attaccata all'intervento."}
   ]
 },
 {
   id:"eventi", percorso:["staff"], titolo:"Eventi", icona:"ti-alert-triangle",
-  perche:"Esercitazioni ed emergenze: squadra, disponibilità, mezzi, cucina e segnalazioni dal bot.",
+  perche:"Esercitazioni, corsi ed emergenze: squadra, disponibilità, mezzi, cucina, foglio firma e segnalazioni dal bot.",
   chi:"Chi ha il permesso Eventi.", video:"",
   intro:"Eventi serve a gestire esercitazioni ed emergenze mentre succedono: chi c'è, quando, con quali mezzi, e le segnalazioni che arrivano dal bot.",
   schermo: () => app("altro","Eventi", `
     <div class="m-barra">${cerca("Cerca evento")}<span class="m-sp"></span>${btn("Segnalazioni generiche","generiche","grigio")}${btn("Invia messaggio","messaggio","scuro")}${btn("Nuovo evento","nuovo")}</div>
     <div class="m-modale"><div class="m-box-t">Esercitazione Mirabello ${tag("In corso","g")}</div>
       ${tabs(["Riepilogo","Volontari","Mezzi e materiali","Ospiti","Cucina","Segnalazioni"],"schede")}
+      <div class="m-azioni" data-h="foglio">${btn("Foglio firma","","mini")}${btn("Registra in Formazione","","mini")}</div>
       <div class="m-card3" data-h="segnalazioni"><div class="m-card"><div class="m-foto">📷</div><small>Albero caduto · via Roma</small></div><div class="m-card"><div class="m-foto">📷</div><small>Allagamento sottopasso</small></div><div class="m-card">${btn("Messaggio alla squadra","","mini")}</div></div></div>`),
   passi:[
-    {t:"Nuovo evento", d:"Scegli Emergenza o Esercitazione, titolo, date e luogo. Stati: Pianificato, In corso, Concluso.", h:"nuovo",
-     v:"Con Nuovo evento scegli se è un'emergenza o un'esercitazione, e inserisci titolo, date e luogo. Poi l'evento passa da pianificato, a in corso, a concluso."},
+    {t:"Nuovo evento", d:"Scegli Emergenza, Esercitazione o Corso, titolo, date e luogo. Per un corso scegli anche la voce del catalogo Formazione. Stati: Pianificato, In corso, Concluso.", h:"nuovo",
+     v:"Con Nuovo evento scegli se è un'emergenza, un'esercitazione o un corso, e inserisci titolo, date e luogo. Se è un corso, scegli anche a quale voce della Formazione corrisponde. Poi l'evento passa da pianificato, a in corso, a concluso."},
+    {t:"Foglio firma", d:"Il pulsante Foglio firma prepara il registro presenze da stampare: intestazione, argomenti, chi convalida, un foglio per giorno con nomi, squadra e codice fiscale della squadra già scritti, più righe vuote. Dopo l'attività carichi qui la scansione firmata: passa da sola all'intervento.", h:"foglio",
+     v:"Per esercitazioni e corsi c'è il pulsante Foglio firma. Compili una volta l'intestazione, gli argomenti e chi deve convalidare, e l'app ti prepara il PDF da stampare, un foglio per ogni giorno, con i nomi della squadra già scritti e qualche riga vuota per chi arriva in più. Finita l'attività, carichi la scansione firmata, e quando crei l'intervento il foglio ci passa da solo."},
+    {t:"Registra in Formazione", d:"Per un corso concluso, Registra in Formazione apre la registrazione del corso già compilata con i presenti: controlli e salvi.", h:"foglio",
+     v:"Se l'evento è un corso, quando è concluso trovi Registra in Formazione. Si apre la registrazione del corso con tutti i presenti già scelti: controlli e salvi, e il corso compare nella scheda di ognuno."},
     {t:"In corso conta", d:"Mentre un evento è In corso, le foto mandate al bot finiscono lì.", h:"segnalazioni",
      v:"Lo stato in corso è importante: finché l'evento è in corso, le foto che i volontari mandano al bot vengono collegate direttamente qui."},
     {t:"Il cruscotto", d:"Riepilogo, Volontari con le disponibilità giorno per giorno, Mezzi e materiali, Ospiti e Cucina con i pasti.", h:"schede",
