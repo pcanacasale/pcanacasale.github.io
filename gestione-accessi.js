@@ -17,6 +17,41 @@ const GA_GRUPPI = [
   ['Bot Telegram', [['bot_segnalazioni', 'Riceve le segnalazioni del bot'], ['bot_avvisi_tecnici', 'Riceve gli avvisi tecnici'], ['bot_interventi', 'Registra interventi dal bot (serve anche Interventi)']]],
 ];
 const GA_PERMESSI = GA_GRUPPI.flatMap(g => g[1]);
+// Una riga di spiegazione per la finestra Permessi (una chiave nuova va aggiunta anche qui)
+const GA_DESCR = {
+  volontari: 'Vede l\'elenco e le schede dei volontari',
+  modifica_volontari: 'Modifica anagrafica, stato e dati dei volontari',
+  documenti: 'Documenti dei volontari nella scheda: li vede e li carica',
+  documenti_volontari: 'Apre attestati e documenti archiviati su Drive',
+  interventi: 'Registro interventi: crea, modifica, fogli firma',
+  mezzi: 'Mezzi con documenti e scadenze',
+  dotazioni: 'Magazzino e dotazioni',
+  pianicarico: 'Piani di carico dei mezzi',
+  tlc: 'Radio e apparati TLC',
+  postazioni: 'Postazioni e mappe dei servizi',
+  galleria: 'Galleria foto',
+  editor_pdf: 'Compila e firma PDF nel browser',
+  editor_pdf_completo: 'Anche modelli e firme a distanza',
+  convocazioni: 'Vede il generatore di convocazioni e lo storico',
+  convocazioni_gestione: 'Crea convocazioni e gestisce le liste dei destinatari',
+  eventi: 'Esercitazioni, corsi ed emergenze, con foglio firma',
+  sci: 'Bot Telegram: messaggi, fotosegnalazioni, mappa, iscritti',
+  visite: 'Visite mediche',
+  formazione: 'Registro dei corsi e catalogo',
+  aggiornamento_dati: 'Approva gli aggiornamenti dei volontari e la verifica piattaforme',
+  statistiche: 'Statistiche',
+  elenchi: 'Elenchi di volontari, mezzi e dotazioni (Excel, PDF)',
+  gestione_segnalazioni: 'Risponde alle richieste di correzione dei volontari',
+  richieste: 'Richieste di adesione dal sito',
+  db: 'Database avanzato; può anche eliminare i fogli firma',
+  accessi: 'Registro degli accessi (solo lettura)',
+  impostazioni: 'Impostazioni e liste dell\'app',
+  bot_segnalazioni: 'Riceve su Telegram le foto segnalate dai volontari',
+  bot_avvisi_tecnici: 'Riceve su Telegram gli avvisi tecnici (allerta ferma, backup…)',
+  bot_interventi: 'Nel bot trova il pulsante Registra intervento',
+};
+// Permessi che da soli non funzionano: accendere il primo accende il secondo, spegnere il secondo spegne il primo
+const GA_DIPENDE = { modifica_volontari: 'volontari', editor_pdf_completo: 'editor_pdf', convocazioni_gestione: 'convocazioni', bot_interventi: 'interventi' };
 const GA_TIPI = { master: 'Master', standard: 'Standard' };
 const GA_ND = 'Non disponibile.';
 
@@ -75,7 +110,7 @@ async function caricaGestioneAccessi() {
     + '<label class="search" for="gaCerca"><input type="search" id="gaCerca" placeholder="Cerca per nome o mail" autocomplete="off" oninput="gaRenderElenco()"></label></div>'
     + '<div id="gaElenco"></div>'
     + '<div class="grp mt14" id="gaSenzaTitolo"></div><p class="sub mb10">Senza la mail sulla scheda questi volontari non possono entrare.</p><div id="gaSenzaMail"></div>'
-    + '<div class="grp mt14">Matrice permessi</div><div class="card tbl mp-wrap"><table id="matricePermessi"></table></div>';
+    + '<details class="ga-matrice mt14"><summary class="grp">Matrice permessi (confronto veloce: ogni clic salva subito)</summary><div class="card tbl mp-wrap"><table id="matricePermessi"></table></div></details>';
   gaRenderChip();
   gaRenderElenco();
   gaRenderSenzaMail();
@@ -116,7 +151,7 @@ function gaRenderElenco() {
         + '<span class="pill ' + (s.attivo !== false ? 'p-blue' : 'p-grey') + '">' + (s.attivo !== false ? 'Attivo' : 'Disattivato') + '</span></div>'
         + '<p class="sub ga-mail">' + (mail.length ? mail.map(e => aggEsc(e.email)).join('<br>') : '<span class="bad">Nessuna mail di accesso</span>') + '</p>'
         + '<p class="sub">' + aggEsc(gaRiepilogoPermessi(s)) + '</p>'
-        + '<div class="em-azioni"><button class="btn sm" onclick="gaApri(' + id + ')">Modifica</button>'
+        + '<div class="em-azioni"><button class="btn sm pri" onclick="gaApriPermessi(' + id + ')">Permessi</button><button class="btn sm" onclick="gaApri(' + id + ')">Tipo e mail</button>'
         + (hasPerm('eventi') ? '<button class="btn sm" onclick="gaLinkBot(' + id + ')">Link bot</button>' : '')
         + (io ? '' : '<button class="btn sm" onclick="gaCambiaAttivo(' + id + ')">' + (s.attivo !== false ? 'Disattiva' : 'Riattiva') + '</button>'
           + '<button class="btn sm danger" onclick="gaRimuovi(' + id + ')">Rimuovi dallo staff</button>') + '</div></div>';
@@ -159,16 +194,102 @@ async function gaSalvaMailScheda(id) {
   } catch(e) { sbAvviso(e.message); }
 }
 
-// -- AGGIUNGI / MODIFICA --
-function gaPermessiHtml(s) {
-  const p = s ? s.permessi || {} : {}, master = s && s.tipo_accesso === 'master';
-  return '<div class="bar"><div class="grp m0 grow">Permessi</div><button type="button" class="btn sm" onclick="gaTuttiPermessi(true)">Seleziona tutto</button><button type="button" class="btn sm" onclick="gaTuttiPermessi(false)">Nessuno</button></div>'
-    + GA_GRUPPI.map(g => '<div class="sub mt10 mb6">' + g[0] + '</div><div class="perm-grid">' + g[1].map(x =>
-      '<label class="perm-check"><input type="checkbox" id="gaP_' + x[0] + '"' + ((master ? p[x[0]] !== false : p[x[0]] === true) ? ' checked' : '') + '> ' + aggEsc(x[1]) + '</label>').join('') + '</div>').join('');
+// -- PERMESSI (finestra per account) --
+// Regola della matrice e di ho_permesso: un master ha un permesso finché non è false, uno standard solo se è true.
+// Nella finestra si lavora sul valore effettivo (sì/no) e si salva solo con Salva, dopo il riepilogo.
+let gaPerm = null;   // { id, orig: {chiave: bool}, cur: {chiave: bool}, aperti: Set(gruppi) }
+
+function gaPermEffettivo(s, chiave) { const p = s.permessi || {}; return s.tipo_accesso === 'master' ? p[chiave] !== false : p[chiave] === true; }
+function gaPermDiStaff(s) { return Object.fromEntries(GA_PERMESSI.map(x => [x[0], gaPermEffettivo(s, x[0])])); }
+
+function gaApriPermessi(id) {
+  const s = gaStaff.find(x => x.volontario_id === id);
+  if (!s) return;
+  const orig = gaPermDiStaff(s);
+  gaPerm = { id, orig, cur: Object.assign({}, orig), aperti: new Set(GA_GRUPPI.map(g => g[0])) };
+  gaEl('gaOv').hidden = false;
+  gaRenderPermessi();
 }
 
-function gaTuttiPermessi(si) { GA_PERMESSI.forEach(x => { gaEl('gaP_' + x[0]).checked = si; }); }
+function gaRenderPermessi() {
+  const s = gaStaff.find(x => x.volontario_id === gaPerm.id), c = gaPerm.cur;
+  const attivi = GA_PERMESSI.filter(x => c[x[0]]).length;
+  const altri = gaStaff.filter(x => x.volontario_id !== gaPerm.id).sort((a, b) => gaNome(a.volontario_id).localeCompare(gaNome(b.volontario_id)));
+  const vecchia = document.querySelector('#gaOv .sheet .sbody'), scorri = vecchia ? vecchia.parentElement.scrollTop : 0;
+  gaEl('gaOv').innerHTML = '<div class="sheet wide" role="dialog" aria-modal="true" aria-label="Permessi"><div class="shead"><h2>Permessi di ' + aggEsc(gaNome(gaPerm.id)) + '</h2><button class="x" onclick="gaChiudiPermessi()" aria-label="Chiudi">✕</button></div><div class="sbody form">'
+    + '<div class="int-pills m0"><span class="pill ' + (s.tipo_accesso === 'master' ? 'p-yellow' : 'p-sand') + '">' + aggEsc(GA_TIPI[s.tipo_accesso] || s.tipo_accesso) + '</span>'
+    + '<span class="pill p-blue">' + attivi + ' permessi attivi su ' + GA_PERMESSI.length + '</span></div>'
+    + (s.tipo_accesso === 'master' ? '<p class="sub">Un master ha tutti i permessi, tranne quelli che togli qui. Anche i permessi nuovi aggiunti in futuro gli arrivano accesi.</p>'
+      : '<p class="sub">Uno standard ha solo i permessi accesi qui. Chi non ha il permesso di una pagina non la vede nemmeno nel menu.</p>')
+    + '<div class="ga-riga"><select id="gaPermCopia" aria-label="Copia permessi da"><option value="">Copia permessi da…</option>'
+    + altri.map(x => '<option value="' + x.volontario_id + '">' + aggEsc(gaNome(x.volontario_id)) + (x.tipo_accesso === 'master' ? ' (master)' : '') + '</option>').join('')
+    + '</select><button type="button" class="btn sm" onclick="gaPermCopia()">Copia</button><button type="button" class="btn sm" onclick="gaPermTutti(null,true)">Tutti</button><button type="button" class="btn sm" onclick="gaPermTutti(null,false)">Nessuno</button></div>'
+    + GA_GRUPPI.map((g, gi) => {
+      const n = g[1].filter(x => c[x[0]]).length;
+      return '<details class="ga-gruppo"' + (gaPerm.aperti.has(g[0]) ? ' open' : '') + ' ontoggle="gaPermToggle(' + gi + ',this.open)"><summary><b>' + aggEsc(g[0]) + '</b><span class="sub">' + n + ' su ' + g[1].length + '</span>'
+        + '<span class="grow"></span><button type="button" class="btn sm" onclick="event.preventDefault();gaPermTutti(' + gi + ',true)">Tutti</button><button type="button" class="btn sm" onclick="event.preventDefault();gaPermTutti(' + gi + ',false)">Nessuno</button></summary>'
+        + '<div class="ga-perm-grid">' + g[1].map(x => {
+          const cambiato = c[x[0]] !== gaPerm.orig[x[0]];
+          return '<label class="ga-perm' + (c[x[0]] ? ' on' : '') + (cambiato ? ' cambiato' : '') + '"><input type="checkbox"' + (c[x[0]] ? ' checked' : '') + ' onchange="gaPermCambia(\'' + x[0] + '\',this.checked)">'
+            + '<span><b>' + aggEsc(x[1]) + '</b><small>' + aggEsc(GA_DESCR[x[0]] || '') + (GA_DIPENDE[x[0]] ? ' · serve anche ' + aggEsc((GA_PERMESSI.find(y => y[0] === GA_DIPENDE[x[0]]) || [, ''])[1]) : '') + '</small></span></label>';
+        }).join('') + '</div></details>';
+    }).join('')
+    + '<div class="form-err" id="gaPermErr"></div>'
+    + '<div class="actions"><button class="btn" onclick="gaChiudiPermessi()">Annulla</button><button class="btn pri" id="gaPermSalvaBtn" onclick="gaSalvaPermessi()">Salva</button></div></div></div>';
+  const sheet = document.querySelector('#gaOv .sheet');
+  if (sheet) sheet.scrollTop = scorri;
+}
 
+function gaPermToggle(gi, aperto) { const g = GA_GRUPPI[gi][0]; if (aperto) gaPerm.aperti.add(g); else gaPerm.aperti.delete(g); }
+
+// Accende/spegne un permesso tenendo coerenti i collegamenti (GA_DIPENDE)
+function gaPermImposta(chiave, si) {
+  gaPerm.cur[chiave] = si;
+  if (si && GA_DIPENDE[chiave]) gaPermImposta(GA_DIPENDE[chiave], true);
+  if (!si) Object.keys(GA_DIPENDE).filter(k => GA_DIPENDE[k] === chiave).forEach(k => gaPermImposta(k, false));
+}
+function gaPermCambia(chiave, si) { gaPermImposta(chiave, si); gaRenderPermessi(); }
+function gaPermTutti(gi, si) { (gi === null ? GA_PERMESSI : GA_GRUPPI[gi][1]).forEach(x => gaPermImposta(x[0], si)); gaRenderPermessi(); }
+
+function gaPermCopia() {
+  const id = Number(gaEl('gaPermCopia').value);
+  const da = gaStaff.find(x => x.volontario_id === id);
+  if (!da) return;
+  gaPerm.cur = gaPermDiStaff(da);
+  gaRenderPermessi();
+  sbAvviso('Permessi copiati da ' + gaNome(id) + ': controlla e premi Salva.');
+}
+
+function gaChiudiPermessi(forza) {
+  if (!forza && gaPerm && GA_PERMESSI.some(x => gaPerm.cur[x[0]] !== gaPerm.orig[x[0]]) && !confirm('Chiudere senza salvare le modifiche ai permessi?')) return;
+  gaPerm = null;
+  gaChiudi();
+}
+
+async function gaSalvaPermessi() {
+  const s = gaStaff.find(x => x.volontario_id === gaPerm.id);
+  const piu = GA_PERMESSI.filter(x => gaPerm.cur[x[0]] && !gaPerm.orig[x[0]]).map(x => x[1]);
+  const meno = GA_PERMESSI.filter(x => !gaPerm.cur[x[0]] && gaPerm.orig[x[0]]).map(x => x[1]);
+  if (!piu.length && !meno.length) { gaChiudiPermessi(true); return; }
+  if (!confirm('Salvare i permessi di ' + gaNome(gaPerm.id) + '?\n\n' + (piu.length ? 'Aggiunti: ' + piu.join(', ') + '\n' : '') + (meno.length ? 'Tolti: ' + meno.join(', ') : ''))) return;
+  const btn = gaEl('gaPermSalvaBtn');
+  btn.disabled = true;
+  // Le chiavi non in elenco restano com'erano; quelle in elenco si scrivono sempre esplicite
+  const permessi = Object.assign({}, s.permessi || {}, Object.fromEntries(GA_PERMESSI.map(x => [x[0], !!gaPerm.cur[x[0]]])));
+  try {
+    const [riga] = await gaScrivi('PATCH', 'staff?volontario_id=eq.' + gaPerm.id, { permessi });
+    Object.assign(s, riga);
+    await logAttivita('ha modificato i permessi di ' + gaNome(gaPerm.id) + (piu.length ? ' (+ ' + piu.join(', ') + ')' : '') + (meno.length ? ' (- ' + meno.join(', ') + ')' : ''));
+    gaChiudiPermessi(true);
+    gaAggiornaElenchi();
+    sbAvviso('Permessi salvati.');
+  } catch(e) {
+    btn.disabled = false;
+    const el = gaEl('gaPermErr'); el.textContent = e.message; el.style.display = 'block';
+  }
+}
+
+// -- AGGIUNGI / MODIFICA (tipo e mail; i permessi stanno nella finestra Permessi) --
 function gaApri(id) {
   const s = id ? gaStaff.find(x => x.volontario_id === id) : null;
   if (id && !s) return;
@@ -182,7 +303,7 @@ function gaApri(id) {
     + (io ? '<p class="sub">Non puoi cambiare il tuo tipo di accesso.</p>' : '')
     + '<div class="grp">Mail di accesso</div><div id="gaMailLista"></div>'
     + '<div class="ga-riga"><input type="email" id="gaMailNuova" aria-label="Nuova mail di accesso" placeholder="nome@pcanacasale.com" onkeydown="if(event.key===\'Enter\')gaAggiungiMail()"><button type="button" class="btn sm" onclick="gaAggiungiMail()">Aggiungi mail</button></div>'
-    + gaPermessiHtml(s)
+    + '<p class="sub mt10">' + (s ? 'I permessi si cambiano con il pulsante Permessi sulla card.' : 'Dopo il salvataggio si apre la finestra Permessi per scegliere cosa può fare.') + '</p>'
     + '<div class="actions"><button class="btn" onclick="gaChiudi()">Annulla</button><button class="btn pri" id="gaSalvaBtn" onclick="gaSalva()">Salva</button></div></div></div>';
   ov.hidden = false;
   gaRenderMailForm();
@@ -253,12 +374,6 @@ async function gaTogliMail(id) {
   } catch(x) { gaErrore(x.message); }
 }
 
-function gaLeggiPermessi(vecchi) {
-  const p = Object.assign({}, vecchi || {});   // le chiavi non in elenco restano com'erano
-  GA_PERMESSI.forEach(x => { p[x[0]] = gaEl('gaP_' + x[0]).checked; });
-  return p;
-}
-
 async function gaSalva() {
   const btn = gaEl('gaSalvaBtn'), id = gaForm.id;
   gaEl('gaErr').style.display = 'none';
@@ -270,12 +385,15 @@ async function gaSalva() {
     if (id) {
       const s = gaStaff.find(x => x.volontario_id === id);
       if (gaSonoIo(id) && tipo !== s.tipo_accesso) throw new Error('Non puoi cambiare il tuo tipo di accesso.');
-      const [riga] = await gaScrivi('PATCH', 'staff?volontario_id=eq.' + id, { tipo_accesso: tipo, permessi: gaLeggiPermessi(s.permessi) });
-      Object.assign(s, riga);
-      await logAttivita('ha modificato lo staff: ' + gaNome(id));
+      if (tipo !== s.tipo_accesso) {
+        const [riga] = await gaScrivi('PATCH', 'staff?volontario_id=eq.' + id, { tipo_accesso: tipo });
+        Object.assign(s, riga);
+        await logAttivita('ha cambiato il tipo di accesso di ' + gaNome(id) + ' in ' + (GA_TIPI[tipo] || tipo));
+      }
     } else {
       const volId = gaForm.volontario_id;
-      const [riga] = await gaScrivi('POST', 'staff', { volontario_id: volId, tipo_accesso: tipo, attivo: true, permessi: gaLeggiPermessi() });
+      // Nuovo staff senza permessi (un master li ha comunque tutti): si scelgono subito dopo nella finestra Permessi
+      const [riga] = await gaScrivi('POST', 'staff', { volontario_id: volId, tipo_accesso: tipo, attivo: true, permessi: {} });
       try {
         const nuove = await gaScrivi('POST', 'email_accesso', gaForm.mail.map(email => ({ volontario_id: volId, email })));
         gaMail.push(...nuove);
@@ -285,6 +403,10 @@ async function gaSalva() {
       }
       gaStaff.push(riga);
       await logAttivita('ha aggiunto allo staff: ' + gaNome(volId) + ' (' + gaForm.mail.join(', ') + ')');
+      gaChiudi();
+      gaAggiornaElenchi();
+      gaApriPermessi(volId);
+      return;
     }
     gaChiudi();
     gaAggiornaElenchi();

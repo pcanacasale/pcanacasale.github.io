@@ -600,6 +600,10 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .ga-riga input{flex:1 1 200px;min-width:0;width:auto}
 #gaOv label.perm-check{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0}
 #gaOv label.perm-check input{width:auto;margin:0}
+.ga-gruppo{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;margin-top:10px;background:var(--surface)}.ga-gruppo>summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px;cursor:pointer;list-style:none}.ga-gruppo>summary::-webkit-details-marker{display:none}.ga-gruppo>summary::before{content:"\25B8";color:var(--muted);transition:transform .15s}.ga-gruppo[open]>summary::before{transform:rotate(90deg)}
+.ga-perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-top:6px}
+#gaOv label.ga-perm{display:flex;flex-direction:row;align-items:flex-start;gap:10px;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer;font-weight:400}#gaOv label.ga-perm input{width:auto;margin:3px 0 0}#gaOv label.ga-perm b{display:block;font-size:14px}#gaOv label.ga-perm small{display:block;color:var(--muted);font-size:12px;line-height:1.35;margin-top:2px}#gaOv label.ga-perm.on{border-color:var(--accent)}#gaOv label.ga-perm.cambiato{box-shadow:0 0 0 2px var(--yellow)}
+.ga-matrice>summary{cursor:pointer;list-style:none}.ga-matrice>summary::-webkit-details-marker{display:none}.ga-matrice>summary::before{content:"\25B8  "}.ga-matrice[open]>summary::before{content:"\25BE  "}
 #nuovoUtenteForm:not([style*="none"]){display:flex!important}
 .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
 .perm-check{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:14px;font-weight:600;color:var(--fg);cursor:pointer}
@@ -2333,7 +2337,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="eventi.js?v=6"></script>
 <script src="eventi-polo.js?v=2"></script>
 <script src="foglio-firma.js?v=3"></script>
-<script src="gestione-accessi.js?v=8"></script>
+<script src="gestione-accessi.js?v=9"></script>
 <script src="bot-telegram.js?v=2"></script>
 <script src="sci.js?v=2"></script>
 <script src="elenchi.js?v=2"></script>

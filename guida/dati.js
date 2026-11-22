@@ -700,15 +700,17 @@ const PAGINE = [
   intro:"Gestione accessi è riservata al master: da qui si decide chi entra e cosa può fare.",
   schermo: () => app("altro","Gestione accessi", `<div class="m-barra"><span class="m-sp"></span>${btn("Aggiungi staff","nuovo")}</div>
     ${tab([["Persona","Email di accesso","Tipo"],["Bianchi Laura","laura@…","standard"],["Rossi Mario","mario@…","volontario"]],"elenco")}
-    <div class="m-modale" data-h="permessi"><div class="m-box-t">Permessi di Bianchi Laura</div><div class="m-campi"><span>Volontari <b>☑</b></span><span>Interventi <b>☑</b></span><span>Eventi <b>☐</b></span><span>Dotazioni <b>☑</b></span></div>
+    <div class="m-modale" data-h="permessi"><div class="m-box-t">Permessi di Bianchi Laura · 12 permessi attivi su 30</div><div class="m-campi"><b>Principali</b><span>Volontari <b>☑</b></span><span>Interventi <b>☑</b></span><span>Eventi <b>☐</b></span><span>Dotazioni <b>☑</b></span></div>
       <div class="m-campi" data-h="bot"><b>Bot Telegram</b><span>Riceve le segnalazioni del bot <b>☑</b></span><span>Riceve gli avvisi tecnici <b>☐</b></span><span>Registra interventi dal bot <b>☐</b></span></div></div>`),
   passi:[
     {t:"Le email di accesso", d:"Per entrare, l'email di una persona deve essere abilitata qui. Ci sono anche i volontari senza email, da completare.", h:"elenco",
      v:"Per entrare, l'email di una persona deve essere abilitata qui. Se a qualcuno compare Questa mail non è abilitata, è qui che devi intervenire. C'è anche l'elenco dei volontari senza email, da completare."},
-    {t:"Aggiungi staff", d:"Lo staff ha accesso alle pagine di gestione, in base ai permessi.", h:"nuovo",
-     v:"Con Aggiungi staff dai a una persona l'accesso alla parte di gestione."},
-    {t:"I permessi", d:"Con la matrice dei permessi scegli pagina per pagina cosa vede ognuno.", h:"permessi",
-     v:"E con la matrice dei permessi scegli, pagina per pagina, cosa può vedere e fare ognuno. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."},
+    {t:"Aggiungi staff", d:"Scegli il volontario, il tipo e la mail di accesso. Dopo il salvataggio si apre subito la finestra Permessi. Per cambiare poi tipo o mail usa Tipo e mail sulla card.", h:"nuovo",
+     v:"Con Aggiungi staff dai a una persona l'accesso alla parte di gestione: scegli il volontario, il tipo e la mail. Appena salvi si apre la finestra dei permessi. Più avanti, per cambiare tipo o mail, usi il pulsante Tipo e mail sulla sua card."},
+    {t:"I permessi", d:"Pulsante Permessi sulla card: i permessi divisi per gruppi, con una riga che spiega cosa fa ciascuno, Tutti o Nessuno per gruppo e Copia permessi da un'altra persona. Alcuni si accendono insieme (es. Modifica volontari accende Volontari). Si salva solo con Salva, dopo il riepilogo delle modifiche.", h:"permessi",
+     v:"Per decidere cosa può fare una persona premi Permessi sulla sua card. Trovi i permessi divisi per gruppi, e sotto ognuno una riga che spiega a cosa serve. Puoi accendere o spegnere un gruppo intero, oppure copiare i permessi di un'altra persona e poi ritoccarli. Niente cambia finché non premi Salva: prima ti mostra cosa aggiungi e cosa togli. Chi non ha il permesso di una pagina, non la vede nemmeno nel menu."},
+    {t:"La matrice", d:"In fondo alla pagina, Matrice permessi apre la tabella di tutti contro tutti, comoda per un confronto veloce. Attenzione: lì ogni clic salva subito.", h:"permessi",
+     v:"In fondo alla pagina c'è anche la matrice dei permessi, chiusa: la apri quando vuoi confrontare tutti a colpo d'occhio. Attenzione, lì ogni clic salva subito, senza chiedere conferma."},
     {t:"Avvisi del bot", d:"Nel gruppo Bot Telegram scegli chi riceve su Telegram le segnalazioni dei volontari e gli avvisi tecnici. Gli altri vedono le segnalazioni solo nell'app.", h:"bot",
      v:"In fondo ai permessi c'è il gruppo Bot Telegram. Lì decidi chi riceve sul telefono le foto segnalate dai volontari e chi gli avvisi tecnici, per esempio quando l'allerta non si aggiorna. Chi non ha la spunta le segnalazioni le vede comunque nell'app, nella pagina S.C.I."},
     {t:"Interventi dal bot", d:"Registra interventi dal bot: chi ha questa spunta e il permesso Interventi trova nel bot il pulsante Registra intervento. I master ce l'hanno finché non la togli, gli standard solo se la metti.", h:"bot",
