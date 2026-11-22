@@ -1571,6 +1571,54 @@ body.cv-solo-vede .cv-gestione{display:none}
       <div id="pstEmpty" class="empty">Seleziona un intervento per gestire le postazioni.</div>
     </div>
 
+    <!-- MODALE NUOVA VISTA (Volontari, pulsante "+ Vista") -->
+    <div class="vista-form-overlay" id="vistaFormOverlay">
+      <div class="vista-form-card">
+        <div class="shead sheet-h"><h2 id="vistaFormTitle">Nuova vista</h2><button class="x" onclick="chiudiFormVista()" aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="form">
+          <label>Nome vista *<input id="vfNome" placeholder="es. DISPONIBILI"></label>
+          <label>Raggruppa per
+            <select id="vfTipoGruppo" onchange="aggiornaFormVista()">
+              <option value="">Nessun raggruppamento (uso i filtri sotto)</option>
+              <optgroup label="Per valore">
+                <option value="squadra">Squadra</option>
+                <option value="stato_visita">Stato visita</option>
+                <option value="mansione">Mansione</option>
+                <option value="tipo_volontario">Tipo volontario</option>
+              </optgroup>
+              <optgroup label="Per corso / abilitazione">
+                <option value="quattro_ore">4 Ore</option>
+                <option value="dodici_ore">12 Ore</option>
+                <option value="dae">DAE</option>
+                <option value="corso_caposq">Corso Caposquadra</option>
+                <option value="cdc_1_step">CDC 1° Step</option>
+                <option value="cdc_2_step">CDC 2° Step</option>
+                <option value="comm_unita">Commissione di Unità</option>
+                <option value="radio_ana">Radio ANA</option>
+                <option value="emercom">EMERCOM</option>
+                <option value="tutela_legale_cap">Tutela legale CAP</option>
+              </optgroup>
+            </select>
+          </label>
+          <div id="vfFiltriBox">
+            <div class="row2">
+              <label class="chk"><input type="checkbox" id="vfQ4"> Solo 4 Ore</label>
+              <label class="chk"><input type="checkbox" id="vfQ12"> Solo 12 Ore</label>
+            </div>
+            <div class="row2">
+              <label class="chk"><input type="checkbox" id="vfPI"> Solo Pronto impiego</label>
+              <label class="chk"><input type="checkbox" id="vfDae"> Solo DAE</label>
+            </div>
+            <div class="row2">
+              <label class="chk"><input type="checkbox" id="vfAttivo"> Solo in forza (Attivo / Op. ridotta)</label>
+              <label class="chk"><input type="checkbox" id="vfVisitaNonCompl"> Visita non completata</label>
+            </div>
+          </div>
+          <div class="actions"><button class="btn" onclick="chiudiFormVista()">Annulla</button><button class="btn pri" onclick="salvaVista()">Salva vista</button></div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODALE MODIFICA POSTAZIONE -->
     <div class="vista-form-overlay" id="pstEditOverlay">
       <div class="vista-form-card">
