@@ -490,6 +490,12 @@ select.pill{field-sizing:content;width:auto;height:auto;padding:4px 12px;border:
 .ev-orari{display:flex;gap:4px;margin-top:4px;justify-content:center}
 #evScheda .ev-orari input{width:92px;height:30px;padding:0 4px;font-size:12px}
 #evScheda input.ev-extra{width:64px;height:34px;padding:0 6px;text-align:center}
+.ref-riga{flex-wrap:wrap}
+.ref-azioni{display:flex;gap:6px;flex-wrap:wrap}
+.ref-impo-riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line)}
+.ref-impo-riga select{flex:1 1 180px;min-width:0;height:36px}
+.ref-impo-riga .ref-sq{width:80px;font-weight:700}
+.ref-impo-riga .ref-nome{flex:1 1 180px}
 .ev-liste-riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line)}
 .ev-liste-riga input.ev-nome{flex:1 1 130px;min-width:0;height:36px}
 .ev-liste-riga input.ev-ordine{width:64px;height:36px;padding:0 6px}
@@ -2182,6 +2188,11 @@ body.cv-solo-vede .cv-gestione{display:none}
         <p class="note note-intro">Messaggi, iscritti e segnalazioni del bot sono nella pagina S.C.I.</p>
         <button class="btn pri" onclick="sciApri('messaggi')">Apri S.C.I.</button>
       </div>
+      <div class="card impo-section" id="refImpoBox" hidden>
+        <h2>Referenti</h2>
+        <p class="note note-intro">Caposquadra referente di ogni squadra, coordinatore e segreteria: i volontari li vedono nella loro scheda personale.</p>
+        <div id="refImpo"><div class="loading-msg">Caricamento…</div></div>
+      </div>
       <div class="card impo-section" id="evListeBox">
         <h2>Liste degli eventi</h2>
         <p class="note note-intro">Tipologie di volontario ed esigenze alimentari disponibili negli eventi.</p>
@@ -2321,7 +2332,7 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="belfiore-comuni.js?v=1"></script>
-<script src="area-riservata.js?v=220"></script>
+<script src="area-riservata.js?v=221"></script>
 <script src="ottimizza-immagine.js?v=1"></script>
 <script src="aggiornamento-dati.js?v=16"></script>
 <script src="verifica-piattaforme-core.js?v=1"></script>
@@ -2337,10 +2348,11 @@ body.cv-solo-vede .cv-gestione{display:none}
 <script src="eventi.js?v=6"></script>
 <script src="eventi-polo.js?v=2"></script>
 <script src="foglio-firma.js?v=3"></script>
-<script src="gestione-accessi.js?v=9"></script>
+<script src="gestione-accessi.js?v=10"></script>
 <script src="bot-telegram.js?v=2"></script>
 <script src="sci.js?v=2"></script>
 <script src="elenchi.js?v=2"></script>
+<script src="referenti.js?v=1"></script>
 <script src="accesso.js?v=5"></script>
 </body>
 </html>

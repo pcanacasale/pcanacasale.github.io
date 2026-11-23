@@ -316,7 +316,9 @@ function _navVoci() {
 }
 function _navAttiva(x) { return document.getElementById(x.id).classList.contains('active'); }
 function _navBadge(x) { var s = document.getElementById(x.id).querySelector('.si-badge.show'); return s && s.textContent ? '<span class="nbadge">'+s.textContent+'</span>' : ''; }
-function _navAltroOn() { return _navVoci().some(function(x){ return x.sez && _navAttiva(x); }); }
+// Volontario: poche voci, tutte nella barra; al posto di "Altro" c'è direttamente "Esci"
+function _navSoloBarra() { return _navRuolo() === 'volontario'; }
+function _navAltroOn() { return !_navSoloBarra() && _navVoci().some(function(x){ return x.sez && _navAttiva(x); }); }
 function _navAltroHtml() {
   var voci = _navVoci().filter(function(x){ return x.sez; });
   var h = '';
@@ -331,15 +333,23 @@ function _navAltroHtml() {
 function renderNav() {
   var top = document.getElementById('topnav'), bot = document.getElementById('bottomnav');
   if (!top || !bot) return;
-  var barra = _navVoci().filter(function(x){ return !x.sez; });
+  var solo = _navSoloBarra();
+  var barra = _navVoci().filter(function(x){ return solo || !x.sez; });
   top.innerHTML = barra.map(function(x) {
     return '<button class="tab'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')">'+x.label+'</button>';
   }).join('');
   var ab = document.getElementById('altroBtn');
-  if (ab) ab.classList.toggle('on', _navAltroOn());
+  if (ab) {
+    ab.classList.toggle('on', _navAltroOn());
+    ab.innerHTML = solo ? 'Esci' : 'Altro <span aria-hidden="true">▾</span>';
+    ab.onclick = solo ? function(){ logout(); } : toggleAltro;
+    if (solo) ab.removeAttribute('aria-haspopup'); else ab.setAttribute('aria-haspopup', 'true');
+  }
   bot.innerHTML = barra.map(function(x) {
     return '<button class="bt'+(_navAttiva(x)?' on':'')+'" onclick="navVai(\''+x.id+'\')"><span class="pill-i">'+navIc(x.ic)+'</span>'+x.label+'</button>';
-  }).join('') + '<button class="bt'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>';
+  }).join('') + (solo
+    ? '<button class="bt" onclick="logout()"><span class="pill-i">'+navIc('logout')+'</span>Esci</button>'
+    : '<button class="bt'+(_navAltroOn()?' on':'')+'" onclick="toggleAltro()"><span class="pill-i">'+navIc('more')+'</span>Altro</button>');
   var pop = document.getElementById('altroPop');
   if (pop && !pop.hidden) pop.innerHTML = _navAltroHtml();
 }
@@ -794,6 +804,7 @@ async function caricaImpostazioni() {
   document.getElementById('btImpoBox').hidden = !(hasPerm('eventi') || hasPerm('sci'));
   renderSchemaList();
   evCaricaListe();
+  refCaricaImpostazioni();
 }
 
 function guidaCopiaFallback() {
@@ -7007,7 +7018,7 @@ function renderSchedaPersonale(v) {
     });
     html += '</div>';
   });
-  html += '<div class="card" id="spArcCorsi" hidden></div><div class="card" id="spFormazione" hidden></div><div class="card" id="spArcAbilitazioni" hidden></div><div class="card" id="spArcAttestati" hidden></div><div class="card" id="spDocumenti" hidden></div><div class="card" id="spArcDocumenti" hidden></div><div class="card" id="spListe" hidden></div></div>';
+  html += '<div class="card" id="spReferenti" hidden></div><div class="card" id="spArcCorsi" hidden></div><div class="card" id="spFormazione" hidden></div><div class="card" id="spArcAbilitazioni" hidden></div><div class="card" id="spArcAttestati" hidden></div><div class="card" id="spDocumenti" hidden></div><div class="card" id="spArcDocumenti" hidden></div><div class="card" id="spListe" hidden></div></div>';
 
   content.innerHTML = html;
   fzRenderPersonale(v.id);
@@ -7015,6 +7026,7 @@ function renderSchedaPersonale(v) {
   spRenderDocumenti(v.id);
   arcRenderPersonale(v);
   cvRenderPersonale();
+  refRenderPersonale();
 }
 
 // "Aggiorna i tuoi dati": apre aggiorna.html#area con la sessione dell'Area Riservata (niente link,

@@ -13,7 +13,7 @@ const GA_GRUPPI = [
   ['Principali', [['volontari', 'Volontari'], ['modifica_volontari', 'Modifica volontari'], ['documenti', 'Documenti volontari'], ['documenti_volontari', 'Vedere archivio documenti volontari'], ['interventi', 'Interventi']]],
   ['Logistica', [['mezzi', 'Mezzi'], ['dotazioni', 'Dotazioni'], ['pianicarico', 'Piani di carico'], ['tlc', 'TLC']]],
   ['Strumenti', [['postazioni', 'Postazioni'], ['galleria', 'Galleria'], ['editor_pdf', 'Editor PDF base'], ['editor_pdf_completo', 'Editor PDF completo'], ['convocazioni', 'Convocazioni (vede)'], ['convocazioni_gestione', 'Convocazioni: crea e gestisce liste'], ['eventi', 'Eventi'], ['sci', 'S.C.I. (Sistema di Comunicazione Interattivo)']]],
-  ['Amministrazione', [['visite', 'Visite mediche'], ['formazione', 'Formazione'], ['aggiornamento_dati', 'Aggiornamento dati'], ['statistiche', 'Statistiche'], ['elenchi', 'Elenchi'], ['gestione_segnalazioni', 'Gestione segnalazioni'], ['richieste', 'Richieste'], ['db', 'DB avanzato'], ['accessi', 'Registro accessi'], ['impostazioni', 'Impostazioni']]],
+  ['Amministrazione', [['visite', 'Visite mediche'], ['formazione', 'Formazione'], ['aggiornamento_dati', 'Aggiornamento dati'], ['statistiche', 'Statistiche'], ['elenchi', 'Elenchi'], ['gestione_segnalazioni', 'Gestione segnalazioni'], ['richieste', 'Richieste'], ['db', 'DB avanzato'], ['accessi', 'Registro accessi'], ['impostazioni', 'Impostazioni'], ['referenti', 'Referenti (caposquadra, coordinatore, segreteria)']]],
   ['Bot Telegram', [['bot_segnalazioni', 'Riceve le segnalazioni del bot'], ['bot_avvisi_tecnici', 'Riceve gli avvisi tecnici'], ['bot_interventi', 'Registra interventi dal bot (serve anche Interventi)']]],
 ];
 const GA_PERMESSI = GA_GRUPPI.flatMap(g => g[1]);
@@ -46,12 +46,13 @@ const GA_DESCR = {
   db: 'Database avanzato; può anche eliminare i fogli firma',
   accessi: 'Registro degli accessi (solo lettura)',
   impostazioni: 'Impostazioni e liste dell\'app',
+  referenti: 'Sceglie caposquadra referenti, coordinatore e segreteria',
   bot_segnalazioni: 'Riceve su Telegram le foto segnalate dai volontari',
   bot_avvisi_tecnici: 'Riceve su Telegram gli avvisi tecnici (allerta ferma, backup…)',
   bot_interventi: 'Nel bot trova il pulsante Registra intervento',
 };
 // Permessi che da soli non funzionano: accendere il primo accende il secondo, spegnere il secondo spegne il primo
-const GA_DIPENDE = { modifica_volontari: 'volontari', editor_pdf_completo: 'editor_pdf', convocazioni_gestione: 'convocazioni', bot_interventi: 'interventi' };
+const GA_DIPENDE = { modifica_volontari: 'volontari', editor_pdf_completo: 'editor_pdf', convocazioni_gestione: 'convocazioni', bot_interventi: 'interventi', referenti: 'impostazioni' };
 const GA_TIPI = { master: 'Master', standard: 'Standard' };
 const GA_ND = 'Non disponibile.';
 

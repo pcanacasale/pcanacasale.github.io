@@ -26,14 +26,14 @@ const GUIDA = {
 
 /* ---------- finta Area Riservata ---------- */
 const MENU_STAFF = [["home","Home"],["volontari","Volontari"],["interventi","Interventi"]];
-const MENU_VOL = [["home","Home"],["scheda","La mia scheda"]];
+const MENU_VOL = [["home","Home"],["scheda","La mia scheda"],["galleria","Galleria"],["segnalazioni","Segnalazioni"]];
 function app(attiva, titolo, corpo, vol){
   const menu = vol ? MENU_VOL : MENU_STAFF;
   return `<div class="m-app ar">
     <div class="m-top" data-h="menu">
       <span class="m-marchio"><img src="icon-192.png" alt="">PC ANA Casale</span>
       ${menu.map(([r,l]) => `<span class="m-tabtop${r===attiva?' on':''}">${l}</span>`).join("")}
-      <span class="m-tabtop${attiva==='altro'?' on':''}" data-h="altro">Altro ▾</span>
+      ${vol ? `<span class="m-tabtop" data-h="altro">Esci</span>` : `<span class="m-tabtop${attiva==='altro'?' on':''}" data-h="altro">Altro ▾</span>`}
       <span class="m-sp"></span><span class="m-av" data-h="utente">${vol?'MR':'LB'}</span>
     </div>
     <main class="m-main"><div class="m-titolo">${titolo}</div><div class="m-body">${corpo}</div></main>
@@ -59,8 +59,8 @@ const PAGINE = [
   passi:[
     {t:"A cosa serve", d:"Vedi la tua scheda personale, le foto degli eventi e lo stato di allerta, e segnali se qualcosa nei tuoi dati è sbagliato.", h:"cosa",
      v:"L'Area Riservata è il posto dove la Sezione tiene i dati di tutti i volontari. Tu da qui puoi vedere la tua scheda, cioè quello che la Sezione sa di te, guardare le foto degli eventi, e segnalare se qualcosa non è giusto."},
-    {t:"Il menu", d:"In alto trovi Home e La mia scheda. Le altre voci sono sotto Altro. Dal telefono il menu è in basso.", h:"menu",
-     v:"Il menu è in alto: Home, La mia scheda, e sotto la voce Altro trovi Galleria e Segnalazioni. Se sei dal telefono, le stesse voci le trovi nella barra in basso."},
+    {t:"Il menu", d:"In alto trovi tutte le voci: Home, La mia scheda, Galleria e Segnalazioni, più Esci. Dal telefono il menu è in basso.", h:"menu",
+     v:"Il menu è in alto e ha tutto a portata di mano: Home, La mia scheda, Galleria e Segnalazioni. In fondo c'è Esci, per uscire. Se sei dal telefono, le stesse voci le trovi nella barra in basso."},
     {t:"Il bot Telegram", d:"Oltre all'Area Riservata c'è il bot Telegram della Sezione, per mandare foto e posizione durante gli eventi.", h:"cosa",
      v:"E poi c'è il bot Telegram della Sezione, che è il modo più veloce per mandare foto e posizione quando sei in servizio. Ha una pagina tutta sua in questa guida."},
     {t:"Come usare la guida", d:"Tocca i numeri gialli sulla schermata, oppure premi Ascolta per sentire la spiegazione.", h:"cosa",
@@ -114,6 +114,7 @@ const PAGINE = [
   intro:"La mia scheda è la pagina più importante per te. Qui vedi tutto quello che la Sezione ha registrato su di te.",
   schermo: () => app("scheda","La mia scheda", `
     <div class="m-box" data-h="aggiorna"><div class="m-box-t">Aggiorna i tuoi dati</div><div class="m-riga">Dati obbligatori: 12 su 14 · Mancano: Civico, CAP</div><div class="m-riga">${btn("Aggiorna i tuoi dati","","mini")}</div></div>
+    <div class="m-box" data-h="riferimenti"><div class="m-box-t">I tuoi riferimenti</div><div class="m-riga">Mario Bianchi · Caposquadra · CASALE ${btn("Chiama","","mini")} ${btn("WhatsApp","","mini")} ${btn("Email","","mini")}</div><div class="m-riga">Coordinatore · Segreteria</div></div>
     <div class="m-modale">${tabs(["Dati","Documenti","Visita medica","Formazione","Dotazioni","Interventi"],"schede")}
       <div class="m-campi"><span>Cognome e nome <b>Rossi Mario</b></span><span>Squadra <b>CASALE</b></span><span>Mansione <b>LOGISTICA</b></span><span>Telefono <b>333 1234567</b></span></div></div>
     <div class="m-modale" data-h="archivio"><div class="m-box-t">Corsi obbligatori</div>
@@ -130,7 +131,9 @@ const PAGINE = [
     {t:"Attestati e documenti archiviati", d:"Corsi obbligatori: 4 ore, 12 ore e Caposquadra, con l'attestato in vigore. Abilitazioni: DAE, carrelli, escavatori e simili, solo quelle valide. Attestati: quelli dell'anno in corso; gli anni passati sono nei menu chiusi. Gli attestati vecchi o scaduti stanno in Storico attestati. Tocca una riga per aprire il PDF. Rosso = scaduto, giallo = scade entro due mesi.", h:"archivio",
      v:"Più in basso trovi gli attestati e i documenti che la Sezione ha archiviato per te. In Corsi obbligatori ci sono il 4 ore, il 12 ore e il caposquadra, ognuno con l'attestato in vigore. In Abilitazioni trovi il DAE, i carrelli, gli escavatori e simili. In Attestati vedi quelli di quest'anno, e quelli degli anni passati li apri dai menu sotto. Gli attestati vecchi o scaduti non spariscono: sono nel menu Storico attestati. Tocchi una riga e il PDF si apre."},
     {t:"Se c'è un errore", d:"Premi Segnala un errore e scrivi cosa non va: la segreteria lo corregge.", h:"errore",
-     v:"Se trovi qualcosa di sbagliato, non serve telefonare: premi Segnala un errore, scrivi cosa non va, e la segreteria lo corregge."}
+     v:"Se trovi qualcosa di sbagliato, non serve telefonare: premi Segnala un errore, scrivi cosa non va, e la segreteria lo corregge."},
+    {t:"I tuoi riferimenti", d:"Il riquadro I tuoi riferimenti mostra il caposquadra della tua squadra, il coordinatore e la segreteria. Tocca Chiama, WhatsApp o Email per contattarli.", h:"riferimenti",
+     v:"Nella scheda trovi anche il riquadro I tuoi riferimenti. Ci sono il caposquadra della tua squadra, il coordinatore e la segreteria. Se hai bisogno di loro, tocchi Chiama, WhatsApp o Email e li contatti subito."}
   ]
 },
 {
@@ -138,7 +141,7 @@ const PAGINE = [
   perche:"Le segnalazioni di errori nella tua scheda che hai mandato alla segreteria.",
   chi:"Tutti i volontari.", video:"",
   intro:"In Segnalazioni ritrovi le correzioni che hai chiesto alla segreteria.",
-  schermo: () => app("altro","Segnalazioni", `
+  schermo: () => app("segnalazioni","Segnalazioni", `
     <div class="m-azioni">${btn("Segnala errori nella tua scheda","nuova","giallo")}</div>
     ${tab([["Data","Messaggio","Stato"],["28/10/2026","Il numero di telefono è cambiato",tag("In attesa","g")],["02/09/2026","Manca l'attestato del corso base",tag("Risolta","b")]],"elenco")}`, true),
   passi:[
@@ -153,7 +156,7 @@ const PAGINE = [
   perche:"Gli album fotografici degli eventi della Sezione.",
   chi:"Volontari e staff.", video:"",
   intro:"La Galleria raccoglie le foto degli eventi, divise per album.",
-  schermo: () => app("altro","Galleria", `
+  schermo: () => app("galleria","Galleria", `
     <p class="m-sotto">Album fotografici degli eventi</p>
     <div class="m-card3" data-h="album">
       <div class="m-card"><div class="m-foto alta">🏕️</div><b>Esercitazione 2026</b><small>48 foto</small></div>
@@ -719,21 +722,24 @@ const PAGINE = [
 },
 {
   id:"impostazioni", percorso:["staff"], titolo:"Impostazioni", icona:"ti-settings",
-  perche:"Liste degli eventi, campi della scheda volontario, categorie delle dotazioni, e il collegamento alla pagina S.C.I. del bot.",
+  perche:"Liste degli eventi, campi della scheda volontario, categorie delle dotazioni, referenti delle squadre, e il collegamento alla pagina S.C.I. del bot.",
   chi:"Chi ha il permesso Impostazioni.", video:"",
   intro:"In Impostazioni ci sono le regolazioni che valgono per tutta l'Area Riservata.",
   schermo: () => app("altro","Impostazioni", `<div class="m-griglia2">
     ${box("Bot Telegram",["Messaggi, iscritti e segnalazioni del bot sono nella pagina S.C.I. "+btn("Apri S.C.I.","","mini")],"bot")}
     ${box("Campi volontari",["Gestisci i campi aggiuntivi della scheda volontario. "+btn("+ Nuovo campo","","mini")],"campi")}
     ${box("Liste degli eventi",["Tipologie ed esigenze alimentari"],"liste")}
-    ${box("Categorie dotazioni",["Gestisci categorie e sottocategorie dell'inventario."],"categorie")}</div>`),
+    ${box("Categorie dotazioni",["Gestisci categorie e sottocategorie dell'inventario."],"categorie")}
+    ${box("Referenti",["ALFA · CASALE · COLLINA… "+btn("Salva","","mini"),"Coordinatore · Segreteria "+btn("Aggiungi","","mini")],"referenti")}</div>`),
   passi:[
     {t:"Bot Telegram", d:"Il riquadro Bot Telegram porta alla pagina S.C.I., dove ci sono messaggi, iscritti e segnalazioni del bot.", h:"bot",
      v:"Tutto quello che riguarda il bot Telegram adesso sta in una pagina sola, S.C.I. Da qui ci arrivi con Apri S.C.I."},
     {t:"Campi volontari", d:"Aggiungi campi alla scheda volontario: testo, sì o no, data o numero, in una delle sezioni della scheda.", h:"campi",
      v:"Se alla scheda volontario serve un dato in più, per esempio la taglia della divisa, lo aggiungi qui come nuovo campo, scegliendo il tipo e la sezione della scheda dove metterlo."},
     {t:"Liste e categorie", d:"Le liste usate negli Eventi e le categorie delle Dotazioni.", h:"liste",
-     v:"E qui gestisci le liste usate negli eventi, come tipologie ed esigenze alimentari, e le categorie dell'inventario delle dotazioni."}
+     v:"E qui gestisci le liste usate negli eventi, come tipologie ed esigenze alimentari, e le categorie dell'inventario delle dotazioni."},
+    {t:"Referenti", d:"Scegli il caposquadra referente di ogni squadra (uno solo) e premi Salva; aggiungi o togli coordinatore e segreteria. I volontari li vedono nella loro scheda. Chi viene tolto resta nello storico.", h:"referenti",
+     v:"Nel riquadro Referenti decidi chi i volontari devono contattare. Per ogni squadra scegli un solo caposquadra referente e premi Salva. Sotto aggiungi o togli il coordinatore e le persone della segreteria. I volontari se li ritrovano nella loro scheda, con telefono ed email sempre presi dalla scheda aggiornata."}
   ]
 }
 ];
